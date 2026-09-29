@@ -76,7 +76,7 @@ export default async function ResultPage({ params }: Props) {
               <h2>The season</h2>
               <div className="prose">{(d.narrative as string[]).map((s, i) => <p key={i}>{s}</p>)}</div>
               <h2 style={{ marginTop: 32 }}>Slot grades</h2>
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
                 <table>
                   <thead><tr><th scope="col">Slot</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col" className="num">Grade</th><th scope="col" className="num">Letter</th></tr></thead>
                   <tbody>
@@ -94,7 +94,7 @@ export default async function ResultPage({ params }: Props) {
                 {(d.stats as StatLine[]).map((s) => <div key={s.key} className="stat"><span className="v">{s.key === 'ypc' ? (s.value / 10).toFixed(1) : s.value.toLocaleString('en-US')}</span><span className="l">{s.key === 'ypc' ? 'Yds / Carry' : s.label}</span></div>)}
               </div>
               <h2>The build</h2>
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
                 <table>
                   <thead><tr><th scope="col">Attribute</th><th scope="col" className="num">Value</th><th scope="col">Taken from</th></tr></thead>
                   <tbody>

@@ -75,7 +75,7 @@ export default async function BuildPositionPage({ params }: Props) {
         <section aria-labelledby="cats-h">
           <h2 id="cats-h" style={{ fontSize: '1.2rem' }}>The categories, and who owns each</h2>
           {pool.length === 0 ? <p className="muted">Ratings are not loaded yet.</p> : (
-            <div className="table-wrap">
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
               <table>
                 <caption className="sr-only">Best available value in each {pos} category</caption>
                 <thead><tr><th scope="col">Category</th><th scope="col">Best source</th><th scope="col" className="num">Value</th></tr></thead>

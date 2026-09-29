@@ -39,7 +39,7 @@ export default function PrivacyPage() {
       </p>
 
       <h2>2. What we collect</h2>
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
         <table>
           <thead>
             <tr><th scope="col">Data</th><th scope="col">When</th><th scope="col">Why</th></tr>
@@ -168,7 +168,7 @@ export default function PrivacyPage() {
       <p>No system is perfectly secure. If we learn of a breach affecting your data, we will notify you and regulators as the law requires.</p>
 
       <h2>13. Processors</h2>
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
         <table>
           <thead>
             <tr><th scope="col">Processor</th><th scope="col">Purpose</th><th scope="col">Data involved</th></tr>

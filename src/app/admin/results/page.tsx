@@ -18,7 +18,7 @@ export default async function FlaggedResultsPage() {
       <h1>Flagged results</h1>
       <p className="muted">Flagged runs are hidden from leaderboards until unflagged. Delete removes the row for good.</p>
       {rows.length === 0 ? <p>Nothing flagged.</p> : (
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
           <table>
             <thead><tr><th scope="col">When</th><th scope="col">User</th><th scope="col">Game</th><th scope="col" className="num">Score</th><th scope="col">Data</th><th scope="col">Action</th></tr></thead>
             <tbody>

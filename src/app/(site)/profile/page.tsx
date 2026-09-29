@@ -61,7 +61,7 @@ export default async function ProfilePage() {
       {stats.byType.length > 0 && (
         <section aria-labelledby="bytype-h" style={{ marginBottom: 32 }}>
           <h2 id="bytype-h">By game</h2>
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
             <table>
               <thead><tr><th scope="col">Game</th><th scope="col" className="num">Played</th><th scope="col" className="num">Best</th><th scope="col" className="num">Average</th></tr></thead>
               <tbody>
@@ -79,7 +79,7 @@ export default async function ProfilePage() {
         {stats.recent.length === 0 ? (
           <p className="muted">Nothing yet. <Link href="/games/17-0">Spin a 17-0 board</Link> and see where the roster lands.</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
             <table>
               <thead><tr><th scope="col">Date</th><th scope="col">Game</th><th scope="col">Mode</th><th scope="col" className="num">Score</th></tr></thead>
               <tbody>

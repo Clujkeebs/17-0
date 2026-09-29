@@ -12,7 +12,7 @@ export default async function AuditPage() {
       <span className="eyebrow">Admin</span>
       <h1>Audit log</h1>
       <p className="muted">Latest 200 entries.</p>
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
         <table>
           <thead><tr><th scope="col">When</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Target</th><th scope="col">Details</th></tr></thead>
           <tbody>

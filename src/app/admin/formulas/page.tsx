@@ -34,7 +34,7 @@ export default async function FormulasPage() {
       <section aria-labelledby="hist-h" style={{ marginTop: 32 }}>
         <h2 id="hist-h">Version history</h2>
         {history.length === 0 ? <p className="muted">No saved versions. Code defaults are in use.</p> : (
-          <div className="table-wrap">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
             <table>
               <thead><tr><th scope="col">Key</th><th scope="col" className="num">Version</th><th scope="col">Saved</th><th scope="col">By</th></tr></thead>
               <tbody>

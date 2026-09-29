@@ -1,12 +1,15 @@
 import type { Metadata, Viewport } from 'next';
-import '@fontsource-variable/inter/wght.css';
-import '@fontsource-variable/jetbrains-mono/wght.css';
+import localFont from 'next/font/local';
 import './globals.css';
 import { SITE } from '@/lib/site';
 import { SiteFooter } from '@/components/SiteFooter';
 import { CookieBanner } from '@/components/CookieBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { JsonLd } from '@/components/JsonLd';
+
+// Self-hosted, Latin subset, variable. next/font preloads them and generates metric-matched fallbacks (no CLS).
+const inter = localFont({ src: '../fonts/inter-latin-var.woff2', variable: '--font-inter', weight: '100 900', display: 'swap' });
+const mono = localFont({ src: '../fonts/jbmono-latin-var.woff2', variable: '--font-jbmono', weight: '100 800', display: 'swap', adjustFontFallback: 'Arial' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -23,7 +26,7 @@ export const viewport: Viewport = { themeColor: '#0A1128', width: 'device-width'
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const adsense = process.env.GOOGLE_ADSENSE_CLIENT;
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${mono.variable}`}>
       <head>
         {adsense ? <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsense}`} crossOrigin="anonymous" /> : null}
       </head>

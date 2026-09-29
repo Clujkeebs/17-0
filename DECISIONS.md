@@ -41,3 +41,23 @@ Non-obvious calls made while building Gridiron Lab, one paragraph each. Newest a
 **Rate limits fail open.** If Redis is down, rate limiting allows the request instead of blocking play. Server-side score validation still runs, so a Redis outage cannot be used to cheat, only to submit more often.
 
 **Cookie names.** Auth.js v5 uses `authjs.session-token` (`__Secure-` prefixed in production), not the `next-auth.session-token` the spec mentions. The cookie policy lists the real names.
+
+**Fonts via `next/font/local`.** The `@fontsource-variable` CSS imports caused a 0.21 CLS because the footer moved when Inter swapped in. The same Latin variable woff2 files now load through `next/font/local`, which preloads them and generates metric-matched fallbacks. CLS is 0.000 on every audited page.
+
+**Hover lift only on fine pointers.** The 2px hover translate made tap targets jitter on touch devices, and Playwright caught it as "element not stable". The lift now applies only under `@media (hover: hover) and (pointer: fine)`.
+
+**Rules card hidden before paint.** A tiny inline script in the game layout sets `data-rules="hidden"` on `<html>` when the rules were dismissed earlier. CSS hides the card before the first paint, so returning players see no layout shift.
+
+**Leaderboard cache cleared on signed-in results.** Without this, a player could wait up to a minute to see themselves on the board. Grading a signed-in result now clears the daily and all-time leaderboard cache keys.
+
+**The cache layer uses its own fail-fast Redis client.** The BullMQ connection has to queue commands indefinitely, which would hang page renders during a Redis outage. The cache client uses `enableOfflineQueue: false` and a 500 ms command timeout.
+
+**Register never auto signs in.** Signing in automatically would reveal whether the email already existed. Every registration shows the same success message. An existing email gets a notice email instead of a second account.
+
+**Sync safety rails beyond spec.** The sync aborts if the feed has duplicate IDs, or if it is smaller than half of the active players from a real sync. That stops a truncated feed from deactivating the league. Seed rows (`seed-2027`) are never overwritten by a re-seed once a real sync has replaced them. Slugs stay stable across syncs, so URLs never break.
+
+**Compare URLs are canonicalized alphabetically.** `/compare/b-vs-a` permanently redirects to `/compare/a-vs-b`, so there is one indexable URL per pair.
+
+**Only the current season page is indexable.** We store one ratings edition. Earlier `/seasons/[year]` pages exist for navigation but are `noindex`, to avoid thin content.
+
+**Offensive linemen are graded with the TE formula as a proxy.** Linemen are not draftable in either game. Position pages say so.

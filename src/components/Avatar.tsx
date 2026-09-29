@@ -12,7 +12,7 @@ export function Monogram({ name, color, size }: { name: string; color: string; s
     <svg width={size} height={size} viewBox="0 0 96 96" role="img" aria-label={`${name} monogram`}>
       <rect width="96" height="96" fill={color} />
       <path d="M0 96 L96 0" stroke="#0A1128" strokeOpacity=".35" strokeWidth="1" />
-      <text x="48" y="58" textAnchor="middle" fontFamily="JetBrains Mono Variable, monospace" fontWeight="700" fontSize="32" fill="#F8F9FA">{initials}</text>
+      <text x="48" y="58" textAnchor="middle" style={{ fontFamily: "var(--font-num)" }} fontWeight="700" fontSize="32" fill="#F8F9FA">{initials}</text>
     </svg>
   );
 }

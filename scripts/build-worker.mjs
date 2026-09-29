@@ -4,7 +4,7 @@ import { build } from 'esbuild';
 const common = {
   bundle: true, platform: 'node', target: 'node22', format: 'esm', sourcemap: true, logLevel: 'info',
   alias: { '@': './src' },
-  banner: { js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);" },
+  banner: { js: "import { createRequire as __glCreateRequire } from 'module'; const require = __glCreateRequire(import.meta.url);" },
   external: ['playwright-core', 'chromium-bidi'],
 };
 await build({ ...common, entryPoints: ['worker/index.ts'], outfile: 'dist/worker.mjs', external: ['playwright-core', 'chromium-bidi'] });

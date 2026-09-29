@@ -36,7 +36,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
       {error && <div role="alert" className="card card-error">The leaderboard is not responding. Scores are safe, try again in a minute.</div>}
       {tab === 'daily' ? (
         daily.length ? (
-          <div className="table-wrap"><table>
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table>
             <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col">Result</th><th scope="col" className="num">Score</th></tr></thead>
             <tbody>{daily.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td>{r.username}</td><td><Link href={`/results/${r.resultId}`} className="num">{r.summary}</Link></td><td className="num">{r.score.toLocaleString('en-US')}</td></tr>)}</tbody>
           </table></div>
@@ -48,7 +48,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
         <>
           <p className="muted">Points: one per win in 17-0, rating divided by ten in Build a Player. Ties go to whoever got there first.</p>
           {all.rows.length ? (
-            <div className="table-wrap"><table>
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table>
               <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Points</th><th scope="col" className="num">Games</th></tr></thead>
               <tbody>{all.rows.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td>{r.username}</td><td className="num">{r.points}</td><td className="num">{r.games}</td></tr>)}</tbody>
             </table></div>

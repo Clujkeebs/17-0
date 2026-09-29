@@ -97,7 +97,7 @@ export default async function ComparePage({ params }: Props) {
         {side(b, gradeB)}
       </div>
 
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
         <table>
           <caption className="sr-only">Attribute comparison. The higher value in each row is marked with a plus and the margin.</caption>
           <thead>

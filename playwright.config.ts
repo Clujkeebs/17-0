@@ -11,5 +11,5 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     { name: 'mobile', use: { ...devices['Pixel 5'], viewport: { width: 375, height: 812 } } },
   ],
-  webServer: process.env.E2E_BASE_URL ? undefined : { command: 'npm run start', url: `${baseURL}/api/health`, reuseExistingServer: true, timeout: 120_000 },
+  webServer: process.env.E2E_BASE_URL ? undefined : { command: 'node .next/standalone/server.js', url: `${baseURL}/api/health`, reuseExistingServer: true, timeout: 120_000 },
 });

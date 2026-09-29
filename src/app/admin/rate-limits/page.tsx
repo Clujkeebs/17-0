@@ -12,7 +12,7 @@ export default function RateLimitsPage() {
       <p className="muted">An override skips every limiter for that identifier until it expires. IP-scoped limits (spin, grade, newsletter, register) key on the hashed IP; per-user limits (gradeUser, delete) key on the user id.</p>
       <div className="card" style={{ margin: '24px 0' }}><RateOverrideForm /></div>
       <h2>Current limits</h2>
-      <div className="table-wrap">
+      <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
         <table>
           <thead><tr><th scope="col">Scope</th><th scope="col" className="num">Max</th><th scope="col" className="num">Window</th></tr></thead>
           <tbody>

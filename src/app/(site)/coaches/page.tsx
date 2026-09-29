@@ -26,7 +26,7 @@ export default async function CoachesPage() {
         <Link href="/blog/coach-impact-score-explained">How the score works</Link>.
       </p>
       {coaches.length === 0 ? <EmptyState title="Coaches are not loaded yet" /> : (
-        <div className="table-wrap" style={{ marginTop: 24 }}>
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table" style={{ marginTop: 24 }}>
           <table>
             <caption className="sr-only">NFL head coaches by impact score</caption>
             <thead><tr><th scope="col" className="num">#</th><th scope="col">Coach</th><th scope="col">Team</th><th scope="col" className="num">Record</th><th scope="col" className="num">SB</th><th scope="col" className="num">Impact</th></tr></thead>

@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { getFormulas, getSlotWeights } from './config';
+import { invalidatePrefix } from './redis';
 import { loadSession, type SpinPayload } from './games';
 import { positionGroup, type Attributes } from '@/lib/game/attributes';
 import { SLOTS, gradeRoster, slotAccepts, type Pick, type Slot } from '@/lib/game/seventeen';
@@ -18,7 +19,15 @@ async function openSession(ctx: Ctx, gameType: string) {
   return s;
 }
 
-async function saveResult(s: { id: string; isDaily: boolean; dailyDate: string | null }, ctx: Ctx, gameType: string, resultData: unknown, score: number, perfect: boolean) {
+async function saveResult(...args: Parameters<typeof saveResultTx>) {
+  const id = await saveResultTx(...args);
+  const [s, ctx, gameType] = args;
+  // Signed-in results change the leaderboards; clear their cache so the player sees themselves immediately.
+  if (ctx.userId) await Promise.all([s.isDaily ? invalidatePrefix(`lb:daily:${gameType}:`) : null, invalidatePrefix('lb:all:')]).catch(() => {});
+  return id;
+}
+
+async function saveResultTx(s: { id: string; isDaily: boolean; dailyDate: string | null }, ctx: Ctx, gameType: string, resultData: unknown, score: number, perfect: boolean) {
   return db.transaction(async (tx) => {
     const done = await tx.update(schema.gameSessions).set({ completed: true })
       .where(and(eq(schema.gameSessions.id, s.id), eq(schema.gameSessions.completed, false))).returning({ id: schema.gameSessions.id });

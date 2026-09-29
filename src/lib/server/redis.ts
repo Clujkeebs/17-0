@@ -38,7 +38,7 @@ export async function cached<T>(key: string, ttlSec: number, fn: () => Promise<T
 }
 
 export async function invalidatePrefix(prefix: string) {
-  const r = getRedis();
+  const r = getCacheRedis();
   const stream = r.scanStream({ match: `cache:${prefix}*`, count: 200 });
   for await (const keys of stream) if ((keys as string[]).length) await r.del(...(keys as string[]));
 }

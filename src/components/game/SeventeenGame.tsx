@@ -15,7 +15,7 @@ const STATE_KEY = 'gl-17-0-state';
 
 export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: ReelTeam[]; initialDaily?: boolean }) {
   const router = useRouter();
-  const [rulesOpen, setRulesOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(true);
   const [spin, setSpin] = useState<Spin | null>(null);
   const [revealed, setRevealed] = useState(0);
   const [picks, setPicks] = useState<Picks>({});
@@ -26,7 +26,6 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
   const [reelKey, setReelKey] = useState(0);
 
   useEffect(() => {
-    try { setRulesOpen(!localStorage.getItem(RULES_KEY)); } catch { /* ignore */ }
     try {
       const saved = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null');
       if (saved?.spin) { setSpin(saved.spin); setPicks(saved.picks ?? {}); setRevealed(saved.spin.teams.length); }
@@ -36,7 +35,7 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
     try { if (spin) sessionStorage.setItem(STATE_KEY, JSON.stringify({ spin, picks })); } catch { /* ignore */ }
   }, [spin, picks]);
 
-  const dismissRules = () => { setRulesOpen(false); try { localStorage.setItem(RULES_KEY, '1'); } catch {} };
+  const dismissRules = () => { setRulesOpen(false); try { localStorage.setItem(RULES_KEY, '1'); document.documentElement.dataset.rules = 'hidden'; } catch {} };
 
   async function doSpin(daily: boolean) {
     setBusy('spin'); setError(''); setPicks({}); setRevealed(0);
@@ -120,7 +119,7 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
       </div>
 
       {rulesOpen && (
-        <section className="card card-green" aria-labelledby="rules-h" style={{ marginBottom: 24, position: 'relative' }}>
+        <section className="card card-green rules-card" aria-labelledby="rules-h" style={{ marginBottom: 24, position: 'relative' }}>
           <h2 id="rules-h" style={{ fontSize: '1.1rem' }}>How it works</h2>
           <ol style={{ margin: 0, paddingLeft: 20 }}>
             <li>Spin. Six teams land, one at a time.</li>

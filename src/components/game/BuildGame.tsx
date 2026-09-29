@@ -159,7 +159,7 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
                 </div>
               </div>
               <p className="hint">For each attribute, choose whose number you want. One player can supply as many attributes as you like.</p>
-              <div className="table-wrap">
+              <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
                 <table className="build-grid">
                   <thead><tr><th scope="col">Attribute</th>{sources.map((s) => <th key={s!.id} scope="col" className="num">{s!.name.split(' ').slice(-1)[0]}</th>)}</tr></thead>
                   <tbody>

@@ -85,7 +85,7 @@ export default async function TeamPage({ params }: Props) {
                   <Link href={`/positions/${g.toLowerCase()}`}>{POSITION_NAMES[g]}</Link>
                   <span className="muted num" style={{ fontSize: '.9rem', fontWeight: 400 }}>avg {avg(ps.map((p) => p.overallRating)).toFixed(1)}</span>
                 </h2>
-                <div className="table-wrap">
+                <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
                   <table>
                     <caption className="sr-only">{name} {POSITION_NAMES[g]} ratings</caption>
                     <thead><tr><th scope="col">Player</th><th scope="col">Pos</th><th scope="col" className="num">#</th><th scope="col" className="num">Age</th><th scope="col" className="num">OVR</th></tr></thead>

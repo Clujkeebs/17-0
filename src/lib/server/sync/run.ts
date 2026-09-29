@@ -106,7 +106,7 @@ export async function runSync({ dryRun = false, fetcher = fetchRatings, throwOnE
 
     const v = validate(incoming, existing);
     summary.warnings.push(...v.warnings);
-    if (!v.ok) { summary.errors.push(...v.errors); throw new Error(`Validation failed: ${v.errors.slice(0, 5).join('; ')}`); }
+    if (!v.ok) { summary.errors.push(...v.errors); throw new Error(`Validation failed with ${v.errors.length} error(s)`); }
 
     const teams = await db.select({ id: schema.teams.id, slug: schema.teams.slug, name: schema.teams.name, city: schema.teams.city, abbreviation: schema.teams.abbreviation }).from(schema.teams);
     const resolveTeam = buildTeamResolver(teams);

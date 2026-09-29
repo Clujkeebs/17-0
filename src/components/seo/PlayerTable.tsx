@@ -12,7 +12,7 @@ export function PlayerTable({ players, teams, caption, showRank = true, extra }:
   extra?: { label: string; value: (p: PlayerRow) => string | number };
 }) {
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
       <table>
         <caption className="sr-only">{caption}</caption>
         <thead>

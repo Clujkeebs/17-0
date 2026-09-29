@@ -85,7 +85,7 @@ export default async function CoachPage({ params }: Props) {
       <section aria-labelledby="calc-h" style={{ marginTop: 40, maxWidth: 720 }}>
         <h2 id="calc-h">Where the score comes from</h2>
         <p className="muted">The impact score is capped at 99. The stored score is refreshed by the nightly sync, so the sum below can drift a point or two from it between updates.</p>
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
           <table>
             <caption className="sr-only">Coach impact score components for {c.fullName}</caption>
             <thead><tr><th scope="col">Input</th><th scope="col" className="num">Calculation</th><th scope="col" className="num">Points</th></tr></thead>

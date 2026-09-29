@@ -14,7 +14,7 @@ const Base = z.object({ sessionId: z.string().uuid(), token: z.string().min(10).
 const Seventeen = Base.extend({ picks: z.array(z.object({ slot: z.enum(SLOTS), id: z.string().max(60) })).length(6) });
 const Build = Base.extend({
   players: z.array(z.string().uuid()).min(1).max(8),
-  choices: z.record(z.enum(ATTRIBUTE_KEYS as [string, ...string[]]), z.number().int().min(0).max(7)),
+  choices: z.partialRecord(z.enum(ATTRIBUTE_KEYS as [string, ...string[]]), z.number().int().min(0).max(7)),
 });
 
 export async function POST(req: Request, { params }: { params: Promise<{ type: string }> }) {

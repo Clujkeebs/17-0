@@ -19,7 +19,7 @@ export default async function AdminHome() {
       <p className="muted">Latest 10 sync snapshots. A run fetches the EA Sports Madden NFL ratings source and updates players.</p>
       <div style={{ margin: '16px 0 24px' }}><RunSyncButton /></div>
       {snaps.length === 0 ? <p className="muted">No syncs recorded yet.</p> : (
-        <div className="table-wrap">
+        <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
           <table>
             <thead><tr><th scope="col">Started</th><th scope="col">Status</th><th scope="col" className="num">Parsed</th><th scope="col">Errors</th></tr></thead>
             <tbody>

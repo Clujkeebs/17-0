@@ -10,8 +10,8 @@
   --bone-dim: #B8C0CC; /* secondary text on navy, 9.6:1 */
   --surface: #111a36;  /* navy lifted 4% for cards */
   --steel-hi: #718096; /* steel lifted for UI component borders, 4.6:1 on navy (WCAG 1.4.11) */
-  --font-ui: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-num: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-ui: var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-num: var(--font-jbmono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --gutter: 16px;
   --maxw: 1200px;
   color-scheme: dark;
@@ -56,7 +56,7 @@ p { margin: 0 0 1em; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 20px; border-radius: 2px;
   font: 700 .95rem/1 var(--font-ui); letter-spacing: .01em; border: 1px solid var(--steel-hi); background: transparent; color: var(--bone);
   cursor: pointer; text-decoration: none; transition: transform .12s ease, background-color .12s ease, border-color .12s ease; }
-.btn:hover:not(:disabled) { transform: translateY(-2px); color: var(--bone); border-color: var(--bone-dim); }
+.btn:hover:not(:disabled) { color: var(--bone); border-color: var(--bone-dim); }
 .btn-primary { background: var(--orange); border-color: var(--orange); color: var(--navy); }
 .btn-primary:hover:not(:disabled) { color: var(--navy); border-color: var(--orange); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -148,7 +148,6 @@ td.num, th.num { text-align: right; }
 .plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
 .pbtn { display: flex; justify-content: space-between; gap: 8px; align-items: center; min-height: 44px; padding: 6px 10px; background: var(--navy); color: var(--bone);
   border: 1px solid var(--steel-hi); border-radius: 2px; cursor: pointer; font: inherit; text-align: left; transition: transform .12s ease; }
-.pbtn:hover:not(:disabled) { transform: translateY(-2px); }
 .pbtn[aria-pressed=true] { border-color: var(--orange); background: var(--green); }
 .pbtn:disabled { opacity: .35; cursor: not-allowed; }
 .pbtn .pos { font-size: .7rem; color: var(--bone-dim); letter-spacing: .08em; }
@@ -168,10 +167,17 @@ td.num, th.num { text-align: right; }
 .home-tiles { display: grid; grid-template-columns: 1.7fr 1fr; gap: 20px; }
 @media (max-width: 800px) { .home-tiles { grid-template-columns: 1fr; } }
 .tile { display: flex; flex-direction: column; text-decoration: none; color: var(--bone); border: 1px solid var(--steel); padding: 28px; border-radius: 2px; transition: transform .12s ease, border-color .12s ease; }
-.tile:hover { transform: translateY(-2px); border-color: var(--orange); color: var(--bone); }
+.tile:hover { border-color: var(--orange); color: var(--bone); }
 .tile-wide { background: var(--green); min-height: 300px; }
 .tile-tall { background: var(--surface); min-height: 420px; }
 @media (max-width: 800px) { .tile-tall { min-height: 300px; } }
 .blog-cards { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: auto auto; gap: 20px; }
 .blog-cards > :first-child { grid-row: span 2; }
 @media (max-width: 800px) { .blog-cards { grid-template-columns: 1fr; } .blog-cards > :first-child { grid-row: auto; } }
+
+/* The 2px lift only on devices with a real hover. On touch it causes tap jitter. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled), .tile:hover { transform: translateY(-2px); }
+  .pbtn:hover:not(:disabled) { transform: translateY(-2px); }
+}
+html[data-rules=hidden] .rules-card { display: none; }
