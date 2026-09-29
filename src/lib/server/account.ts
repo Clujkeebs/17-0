@@ -1,0 +1,114 @@
+import { createHash } from 'node:crypto';
+import { and, desc, eq, ne, sql as dsql } from 'drizzle-orm';
+import { db, schema } from '@/db';
+import { computeStreak, dailyDateET } from '@/lib/game/daily';
+import { audit } from './audit';
+import { accountDeleted, sendEmail } from './email';
+
+export const deletedUsername = (userId: string) =>
+  `deleted-user-${createHash('sha256').update(userId).digest('hex').slice(0, 8)}`;
+
+export async function getUserById(id: string) {
+  const [u] = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
+  return u && !u.deletedAt ? u : null;
+}
+
+/** Case-insensitive availability check. */
+export async function isUsernameAvailable(username: string, exceptUserId?: string): Promise<boolean> {
+  const cond = dsql`lower(${schema.users.username}) = ${username.toLowerCase()}`;
+  const [r] = await db.select({ id: schema.users.id }).from(schema.users)
+    .where(exceptUserId ? and(cond, ne(schema.users.id, exceptUserId)) : cond).limit(1);
+  return !r;
+}
+
+/** Public-safe account view (never includes the password hash). */
+export function publicAccount(u: typeof schema.users.$inferSelect) {
+  return {
+    id: u.id, email: u.email, username: u.username, displayName: u.name, image: u.image,
+    emailVerified: u.emailVerified, createdAt: u.createdAt, newsletterOptIn: u.newsletterOptIn,
+    newsletterConfirmedAt: u.newsletterConfirmedAt, soundEnabled: u.soundEnabled,
+    hasPassword: !!u.hashedPassword,
+  };
+}
+
+/** Distinct ET play dates for a user: daily_date when present, else created_at converted to ET. */
+export async function getPlayDates(userId: string): Promise<string[]> {
+  const rows = await db.select({ dailyDate: schema.gameResults.dailyDate, createdAt: schema.gameResults.createdAt })
+    .from(schema.gameResults).where(eq(schema.gameResults.userId, userId));
+  return [...new Set(rows.map((r) => r.dailyDate ?? dailyDateET(r.createdAt)))];
+}
+
+export async function getStreak(userId: string) {
+  const dates = await getPlayDates(userId);
+  const today = dailyDateET();
+  return { streak: computeStreak(dates, today), playedToday: dates.includes(today), today };
+}
+
+export async function getUserStats(userId: string) {
+  const [totals, byType, recent, streak] = await Promise.all([
+    db.select({ n: dsql<number>`count(*)::int`, avg: dsql<number | null>`avg(${schema.gameResults.score})::float` })
+      .from(schema.gameResults).where(eq(schema.gameResults.userId, userId)),
+    db.select({
+      gameType: schema.gameResults.gameType,
+      n: dsql<number>`count(*)::int`,
+      best: dsql<number>`max(${schema.gameResults.score})::int`,
+      avg: dsql<number>`avg(${schema.gameResults.score})::float`,
+    }).from(schema.gameResults).where(eq(schema.gameResults.userId, userId)).groupBy(schema.gameResults.gameType),
+    db.select({
+      id: schema.gameResults.id, gameType: schema.gameResults.gameType, score: schema.gameResults.score,
+      isDaily: schema.gameResults.isDaily, dailyDate: schema.gameResults.dailyDate, createdAt: schema.gameResults.createdAt,
+    }).from(schema.gameResults).where(eq(schema.gameResults.userId, userId)).orderBy(desc(schema.gameResults.createdAt)).limit(10),
+    getStreak(userId),
+  ]);
+  return { played: totals[0]?.n ?? 0, average: totals[0]?.avg ?? null, byType, recent, ...streak };
+}
+
+export async function exportAccount(userId: string) {
+  const u = await getUserById(userId);
+  if (!u) return null;
+  const [results, subscriber, oauth] = await Promise.all([
+    db.select({
+      id: schema.gameResults.id, gameType: schema.gameResults.gameType, isDaily: schema.gameResults.isDaily,
+      dailyDate: schema.gameResults.dailyDate, score: schema.gameResults.score, resultData: schema.gameResults.resultData,
+      username: schema.gameResults.username, createdAt: schema.gameResults.createdAt,
+    }).from(schema.gameResults).where(eq(schema.gameResults.userId, userId)).orderBy(desc(schema.gameResults.createdAt)),
+    db.select({
+      email: schema.newsletterSubscribers.email, confirmed: schema.newsletterSubscribers.confirmed, source: schema.newsletterSubscribers.source,
+      referrer: schema.newsletterSubscribers.referrer, subscribedAt: schema.newsletterSubscribers.subscribedAt,
+      confirmedAt: schema.newsletterSubscribers.confirmedAt, unsubscribedAt: schema.newsletterSubscribers.unsubscribedAt,
+    }).from(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.email, u.email.toLowerCase())).limit(1),
+    db.select({ provider: schema.accounts.provider, type: schema.accounts.type }).from(schema.accounts).where(eq(schema.accounts.userId, userId)),
+  ]);
+  const { hasPassword, ...account } = publicAccount(u);
+  return {
+    exportedAt: new Date().toISOString(),
+    account: { ...account, signInMethods: [...(hasPassword ? ['password'] : []), ...oauth.map((o) => o.provider)] },
+    results,
+    newsletterSubscriber: subscriber[0] ?? null,
+  };
+}
+
+/**
+ * Hard delete. Results are kept for leaderboard integrity but detached and renamed to an
+ * anonymous label derived from a hash of the id. Everything else tied to the user goes.
+ */
+export async function deleteAccount(userId: string): Promise<boolean> {
+  const u = await getUserById(userId);
+  if (!u) return false;
+  const label = deletedUsername(userId);
+  const email = u.email.toLowerCase();
+  await db.transaction(async (tx) => {
+    await tx.update(schema.gameResults).set({ userId: null, username: label }).where(eq(schema.gameResults.userId, userId));
+    await tx.update(schema.gameSessions).set({ userId: null }).where(eq(schema.gameSessions.userId, userId));
+    await tx.delete(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.email, email));
+    await tx.delete(schema.accounts).where(eq(schema.accounts.userId, userId));
+    await tx.delete(schema.sessions).where(eq(schema.sessions.userId, userId));
+    await tx.delete(schema.verificationTokens).where(eq(schema.verificationTokens.identifier, email));
+    await tx.delete(schema.users).where(eq(schema.users.id, userId));
+  });
+  // No email or id in the audit row: only the anonymous label.
+  await audit(null, 'account.deleted', 'user', label);
+  const mail = accountDeleted(null);
+  void sendEmail({ to: u.email, ...mail }).catch(() => undefined);
+  return true;
+}

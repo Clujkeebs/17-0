@@ -28,7 +28,7 @@ export function buildNarrative(seed: string, slots: SlotLike[], wins: number, lo
   let closing: string;
   const rec = `${wins}-${losses}`;
   const pd = `${diff >= 0 ? '+' : ''}${diff}`;
-  if (wins === 17) closing = `Seventeen games, zero losses, point differential of ${pd}. Perfect.`;
+  if (wins === 17) closing = `17-0. Seventeen games, zero losses, point differential of ${pd}. Perfect.`;
   else if (wins >= 13) closing = rng.pick([`You finished ${rec} with a point differential of ${pd} and the top seed in sight.`, `A ${rec} finish and a ${pd} point differential. Not perfect, but January will be fun.`]);
   else if (wins >= 10) closing = rng.pick([`A late surge against divisional opponents pushed you into the wild card at ${rec}, point differential ${pd}.`, `You closed ${rec} with a ${pd} differential. Wild card weekend, on the road.`]);
   else if (wins >= 7) closing = rng.pick([`${rec}. Point differential ${pd}. The kind of season that gets a coordinator fired.`, `You finished ${rec} with a ${pd} point differential and a lot of questions.`]);

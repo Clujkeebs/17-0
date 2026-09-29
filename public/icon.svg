@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" role="img" aria-label="Gridiron Lab">
+  <rect width="24" height="24" fill="#0A1128"/>
+  <g fill="none" stroke-width="2" stroke-linecap="square" transform="translate(2.4 2.6) scale(0.8)">
+    <path d="M3 20 L12 4 L21 20" stroke="#F8F9FA"/>
+    <path d="M9.5 20 V17 H14.5 V20" stroke="#F8F9FA"/>
+    <path d="M7 14 H17" stroke="#E76F51"/>
+  </g>
+</svg>
