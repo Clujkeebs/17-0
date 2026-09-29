@@ -48,7 +48,7 @@ const POSTS: BlogPost[] = [
         h2: 'Why 17-0 is hard on purpose',
         paragraphs: [
           'A perfect season requires two things at once: team strength of roughly 95.5 or better, and the best possible luck roll. Neither is common. Most competent rosters land between 10 and 13 wins, which is also roughly where good real teams land. The name of the game is the goal, not the expected result.',
-          'When you do not get there, the results screen tells you which slot cost you the most. Usually it is the one you filled last, from the only team left.',
+          'When you do not get there, the season recap names the slot that got exposed. Usually it is the one you filled last, from the only team left.',
         ],
       },
     ],
@@ -127,13 +127,13 @@ const POSTS: BlogPost[] = [
         h2: 'The threshold for 17-0',
         paragraphs: [
           'To reach 17 wins after rounding, strength / 99 x 14 plus jitter has to be at least 16.5. The maximum jitter is 3, so strength / 99 x 14 must be at least 13.5, which means team strength of at least 95.5. With a jitter of plus 2, even a perfect 99 roster tops out at 16 wins.',
-          'So a perfect season needs two things: a roster at 95.5 or above, and the one-in-six top roll. For 16-1, the bar drops to 88.4 with a plus 3 roll, or 95.5 with a plus 2. That is why the leaderboard is mostly 14s and 15s, and why a 17-0 on the daily board gets noticed.',
+          'So a perfect season needs two things: a roster at 95.5 or above, and the one-in-six top roll. For 16-1, the bar drops to 88.4 with a plus 3 roll, or 95.5 with a plus 2. That is why even very good rosters usually finish 14-3 or 15-2, and why a 17-0 on the daily board gets noticed.',
         ],
       },
       {
         h2: 'Why seeded luck and not pure randomness',
         paragraphs: [
-          'Deterministic luck means results are reproducible. Your result page can be shared and reloaded and it will always say the same thing. It also means the daily puzzle is fair: the seed for the daily roll is built from the session, so no one gets to reroll a bad draw by grading twice.',
+          'Deterministic luck means results are reproducible. Your result page can be shared and reloaded and it will always say the same thing. It also means there is no rerolling a bad draw: grading the same session twice gives the same answer.',
           'The score on the leaderboard is wins times 1,000 plus team strength times 10. Wins decide the ranking, and strength breaks ties. Two 15-2 rosters are ordered by who built the better team, not who got the better roll.',
         ],
       },
@@ -263,7 +263,7 @@ const POSTS: BlogPost[] = [
         h2: 'What it misses',
         paragraphs: [
           'Scheme, play calling, game management, player development, and culture are not in the formula, because none of them can be measured cleanly from public data. The score is an outcome measure, not a talent evaluation. A brilliant first-year coach with an inherited roster will score lower than he deserves until the results catch up.',
-          'Scores are recomputed on a schedule and each coach page keeps a history, so you can watch a coach climb or slide as seasons are added and dropped from the three-year window. Each coach page also shows the calculation term by term.',
+          'Scores are recomputed on a schedule and the site keeps a history of each one, so a coach climbs or slides as seasons enter and leave the three-year window. Each coach page shows the calculation term by term.',
         ],
       },
     ],

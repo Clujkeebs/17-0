@@ -26,7 +26,7 @@ export function playerSummary(s: SummaryInput): string {
   const last = lastWord(s.fullName);
   const plural = GROUP_PLURAL[s.group];
   const posName = POSITION_NAMES[s.group].toLowerCase();
-  const ovrPhrase = rankPhrase(s.ovrRank, s.groupSize, plural);
+  const ovrPhrase = rankPhrase(s.ovrRank, s.groupSize, plural) + (s.ovrRank <= 2 ? ` at ${posName}` : '');
   const top = s.topAttr;
   const topLabel = top ? ATTRIBUTE_LABELS[top.key].toLowerCase() : null;
   const topPhrase = top ? rankPhrase(top.rank, top.total, plural) : null;
@@ -36,7 +36,8 @@ export function playerSummary(s: SummaryInput): string {
     top ? `At ${top.value}, ${possessive(last)} ${topLabel} is ${topPhrase}.` : `A ${s.ovr} overall puts ${last} ${ovrPhrase}.`,
     `${s.ovr} overall. That is ${ovrPhrase}, and it makes ${s.fullName} one of the names that matters for ${teamBit}.`,
     `Ranked ${ordinal(s.ovrRank)} of ${s.groupSize || 1} ${plural} by overall, ${s.fullName} carries a ${s.ovr} into this season for ${teamBit}.`,
-    top ? `${capitalize(topLabel!)} is the calling card: a ${top.value} that sits ${topPhrase}.` : `Among ${plural}, a ${s.ovr} overall puts ${s.fullName} ${ovrPhrase.replace(/ among .*$/, '')}.`,
+    top ? `${capitalize(topLabel!)} is the calling card: a ${top.value}, which is ${topPhrase}.`
+      : `Among ${plural}, ${s.ovrRank === 1 ? 'nobody rates' : s.ovrRank === 2 ? 'only one player rates' : `only ${s.ovrRank - 1} rate`} higher than ${s.fullName} at ${s.ovr} overall.`,
     `For ${teamBit}, the ${posName} spot belongs to ${s.fullName}, a ${s.ovr} overall who ranks ${ordinal(s.ovrRank)} at the position.`,
   ];
 

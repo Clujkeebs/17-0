@@ -1,6 +1,6 @@
 import IORedis from 'ioredis';
 
-const g = globalThis as unknown as { redis?: IORedis };
+const g = globalThis as unknown as { redis?: IORedis; cacheRedis?: IORedis };
 
 export function getRedis(): IORedis {
   if (!g.redis) {
@@ -14,9 +14,20 @@ export function getRedis(): IORedis {
   return g.redis;
 }
 
+/** Separate fail-fast client for the cache layer: a Redis outage must never hang a page render. */
+function getCacheRedis(): IORedis {
+  if (!g.cacheRedis) {
+    g.cacheRedis = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+      maxRetriesPerRequest: 1, enableOfflineQueue: false, commandTimeout: 500, connectTimeout: 2000,
+    });
+    g.cacheRedis.on('error', () => { /* logged by main client */ });
+  }
+  return g.cacheRedis;
+}
+
 /** Cross-instance cache for public data only. Never store user-specific data here. */
 export async function cached<T>(key: string, ttlSec: number, fn: () => Promise<T>): Promise<T> {
-  const r = getRedis();
+  const r = getCacheRedis();
   try {
     const hit = await r.get(`cache:${key}`);
     if (hit) return JSON.parse(hit) as T;
