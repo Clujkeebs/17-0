@@ -38,7 +38,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         )}
       </div>
       <p style={{ marginTop: 16 }}>Already have one? <Link href="/login">Sign in</Link>.</p>
-      <p className="fine">By creating an account you agree to the <Link href="/terms">terms</Link> and <Link href="/privacy">privacy policy</Link>.</p>
+      <p className="fine">By creating an account you agree to the <Link href="/legal/terms">terms</Link> and <Link href="/legal/privacy">privacy policy</Link>.</p>
     </div>
   );
 }

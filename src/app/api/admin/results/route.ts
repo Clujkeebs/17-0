@@ -1,3 +1,4 @@
+import { invalidatePrefix } from '@/lib/server/redis';
 export const runtime = 'nodejs';
 
 import { desc, eq } from 'drizzle-orm';
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
     ? await db.update(schema.gameResults).set({ flagged: false }).where(eq(schema.gameResults.id, id)).returning({ id: schema.gameResults.id, score: schema.gameResults.score })
     : await db.delete(schema.gameResults).where(eq(schema.gameResults.id, id)).returning({ id: schema.gameResults.id, score: schema.gameResults.score });
   if (!rows.length) return errorJson(404, 'Result not found.');
+  await invalidatePrefix('lb:').catch(() => {});
   await audit(s.user.id, `result.${action}`, 'game_result', id, { score: rows[0].score });
   return json({ ok: true });
 }
