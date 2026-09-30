@@ -17,7 +17,7 @@ interface EspnCoach { id: string; firstName: string; lastName: string; experienc
 export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
   const teams = await db.select().from(schema.teams);
   const espnIndex = new Map<string, { teamId: number; a: EspnAthlete }>();
-  let coachesChanged = 0;
+  let coachesChanged = 0, coachesSeen = 0;
   for (const t of teams) {
     const code = t.logoUrl?.match(/\/nfl\/500\/([a-z]+)\.png/)?.[1] ?? t.abbreviation.toLowerCase();
     try {
@@ -26,6 +26,7 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
       const body = (await res.json()) as { athletes?: { items?: EspnAthlete[] }[]; coach?: EspnCoach[] };
       for (const a of (body.athletes ?? []).flatMap((g) => g.items ?? [])) espnIndex.set(norm(a.fullName), { teamId: t.id, a });
       const hc = body.coach?.[0];
+      if (hc) coachesSeen++;
       if (hc) coachesChanged += await setHeadCoach(t.id, `${hc.firstName} ${hc.lastName}`.trim(), hc.experience);
     } catch (e) { console.warn(`[espn] ${code} failed`, (e as Error).message); }
   }
@@ -42,7 +43,7 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
     if (espnIndex.size >= 1000 && p.teamId !== hit.teamId) { set.teamId = hit.teamId; moved++; }
     await db.update(schema.players).set(set).where(eq(schema.players.id, p.id));
   }
-  console.log(`[espn] matched ${matched}/${players.length}, moved ${moved} to current teams, head coaches changed ${coachesChanged}`);
+  console.log(`[espn] matched ${matched}/${players.length}, moved ${moved} to current teams, head coaches seen ${coachesSeen}, changed ${coachesChanged}`);
   return { matched, moved, coachesChanged };
 }
 
