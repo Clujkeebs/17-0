@@ -10,7 +10,7 @@ export const revalidate = 86400;
 
 export const metadata: Metadata = pageMeta({
   title: 'NFL head coaches ranked by impact score',
-  description: 'Every NFL head coach ranked by the Gridiron Lab coach impact score: roster quality, recent win rate, playoff trips, rings, and tenure.',
+  description: 'Every NFL head coach ranked by the Unbeaten coach impact score: roster quality, recent win rate, playoff trips, rings, and tenure.',
   path: '/coaches',
 });
 

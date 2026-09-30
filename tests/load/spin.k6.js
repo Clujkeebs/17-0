@@ -1,4 +1,4 @@
-// k6 run -e BASE=https://staging.gridironlab.example tests/load/spin.k6.js
+// k6 run -e BASE=https://staging.unbeaten.example tests/load/spin.k6.js
 // 1,000 concurrent virtual users spinning 17-0. Rate limits are keyed by IP, so run
 // against staging with a rate-limit override for the load generator IP (see /admin/rate-limits).
 import http from 'k6/http';

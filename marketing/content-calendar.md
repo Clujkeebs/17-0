@@ -32,7 +32,7 @@ Cadence: week 1 three posts; weeks 2 to 4 two per week; weeks 5 to 12 two to thr
 | 11 | 26 | Accessibility in a game with a spinning reel: what we built | Engineering | Blog |
 | 12 | 27 | 12 weeks of 17-0: the numbers, the records, the changes we made | Data recap | Blog, newsletter, X |
 | 12 | 28 | Formula changelog: every weight we adjusted and the argument that changed it | Methodology | Blog |
-| 12 | 29 | What is next for Gridiron Lab | Roadmap | Newsletter |
+| 12 | 29 | What is next for Unbeaten | Roadmap | Newsletter |
 
 Notes:
 

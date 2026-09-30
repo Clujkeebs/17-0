@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { SITE } from '@/lib/site';
+import { ContactLink, contactVerb } from '@/components/ContactLink';
 import { LegalPage } from '../_components/LegalPage';
 
 export const metadata: Metadata = {
@@ -18,7 +19,7 @@ export default function AccessibilityPage() {
           <li>Our target is WCAG 2.2 Level AA across the whole site, including the games.</li>
           <li>Everything works with a keyboard, focus is always visible, and motion respects your settings.</li>
           <li>Ads and some team logos are outside our full control. We say so below.</li>
-          <li>Found a barrier? Email {SITE.contactEmail}. We reply within 5 business days.</li>
+          <li>Found a barrier? Tell us through <ContactLink kind="accessibility" />. We reply within 5 business days.</li>
         </ul>
       }
     >
@@ -53,7 +54,7 @@ export default function AccessibilityPage() {
 
       <h2>Report a barrier</h2>
       <p>
-        Email {SITE.contactEmail} with the page, what you were trying to do, and the device, browser, and assistive technology you use if you are willing
+        Reach us through <ContactLink kind="accessibility" /> with the page, what you were trying to do, and the device, browser, and assistive technology you use if you are willing
         to share it. We will reply within 5 business days with either a fix or a plan and a date. If something blocks you from playing, we treat it as a
         bug with top priority.
       </p>

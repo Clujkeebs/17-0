@@ -1,4 +1,4 @@
-/* Gridiron Lab design system. See DESIGN.md. Palette is strict: six tokens, one accent. */
+/* Unbeaten design system. See DESIGN.md. Palette is strict: six tokens, one accent. */
 :root {
   --navy: #0A1128;
   --green: #1B4332;
@@ -181,3 +181,69 @@ td.num, th.num { text-align: right; }
   .pbtn:hover:not(:disabled) { transform: translateY(-2px); }
 }
 html[data-rules=hidden] .rules-card { display: none; }
+
+/* ===== v2 visual layer ===== */
+.wordmark { font-weight: 900; letter-spacing: .14em; font-size: 1rem; }
+.brand-badge { font-size: .7rem; font-weight: 800; color: var(--navy); background: var(--orange); padding: 2px 6px; border-radius: 2px; letter-spacing: 0; }
+.site-header { position: sticky; top: 0; z-index: 40; background: rgba(10, 17, 40, .92); backdrop-filter: saturate(1.4) blur(8px); }
+.btn-lg { min-height: 52px; padding: 14px 26px; font-size: 1rem; }
+.btn-primary { box-shadow: 0 2px 0 #b8543a; }
+
+/* Field texture: yard lines + hash marks, drawn with repeating lines. */
+.field { position: relative; overflow: hidden; border-bottom: 1px solid var(--steel); }
+.field::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(248,249,250,.06) 0 1px, transparent 1px 120px),
+    repeating-linear-gradient(90deg, transparent 0 58px, rgba(248,249,250,.05) 58px 60px, transparent 60px 120px);
+  background-size: 120px 100%, 120px 14px; background-repeat: repeat, repeat-x; background-position: 0 0, 0 40%; }
+.hero { padding: 72px 0 64px; }
+.hero-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; align-items: center; position: relative; }
+@media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } .hero { padding: 40px 0; } }
+.kicker { display: inline-flex; gap: 10px; align-items: center; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--bone-dim); border: 1px solid var(--steel); padding: 6px 12px; border-radius: 999px; margin-bottom: 22px; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.hero-h1 { font-size: clamp(2.6rem, 6.4vw, 5.2rem); font-weight: 850; letter-spacing: -0.045em; line-height: .98; margin-bottom: 24px; }
+.hero-sub { font-size: 1.12rem; color: var(--bone-dim); max-width: 50ch; margin-bottom: 28px; }
+.scoreboard { background: #060b1c; border: 1px solid var(--steel); border-radius: 6px; padding: 18px 22px 20px; box-shadow: 0 4px 0 var(--green); transform: rotate(-1.5deg); }
+.sb-top { display: flex; justify-content: space-between; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--bone-dim); font-weight: 700; }
+.sb-num { font-size: clamp(5rem, 13vw, 10rem); font-weight: 800; line-height: 1; color: var(--orange); letter-spacing: -0.06em; text-align: center; margin: 8px 0 14px; font-variant-numeric: tabular-nums; }
+.sb-dash { color: var(--steel); margin: 0 .04em; }
+.sb-slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.sb-slots span { text-align: center; font-size: .7rem; font-weight: 800; letter-spacing: .06em; padding: 6px 0; border: 1px solid var(--steel); border-radius: 2px; color: var(--bone); background: var(--surface); }
+.sb-slots span:first-child { border-color: var(--orange); }
+
+.today { padding-top: 28px; }
+.today-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.today-teams { list-style: none; margin: 0 0 24px; padding: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+@media (max-width: 900px) { .today-teams { grid-template-columns: repeat(3, 1fr); } }
+.today-teams li { position: relative; background: var(--surface); border: 1px solid var(--steel); border-top: 4px solid var(--team); border-radius: 2px; padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+.today-i { position: absolute; top: 8px; right: 10px; font-size: .7rem; color: var(--bone-dim); }
+.today-abbr { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; }
+.today-name { font-size: .78rem; color: var(--bone-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.tile { position: relative; overflow: hidden; }
+.tile::after { content: ''; position: absolute; left: 0; top: 0; height: 3px; width: 0; background: var(--orange); transition: width .25s ease; }
+.tile:hover::after { width: 100%; }
+.tile-h { font-size: clamp(1.8rem, 3.4vw, 2.6rem); letter-spacing: -0.035em; }
+.tile-ghost { position: absolute; right: -10px; bottom: -30px; font-size: 13rem; font-weight: 800; color: rgba(248,249,250,.05); line-height: 1; pointer-events: none; letter-spacing: -0.06em; }
+.tile-cta { display: inline-flex; gap: 6px; align-items: center; font-weight: 800; color: var(--orange); margin-left: auto; }
+.mini-reel { display: flex; gap: 6px; margin: 8px 0 28px; flex-wrap: wrap; }
+.mini-reel span { font-family: var(--font-num); font-weight: 800; font-size: .85rem; padding: 6px 10px; border: 1px solid rgba(248,249,250,.25); border-radius: 2px; }
+.mini-reel span.on { background: var(--orange); color: var(--navy); border-color: var(--orange); }
+.bars { display: grid; gap: 10px; margin: 20px 0 28px; }
+.bar { display: grid; grid-template-columns: 40px 1fr 28px; gap: 10px; align-items: center; font-size: .78rem; }
+.track { height: 6px; background: var(--navy); border-radius: 3px; overflow: hidden; }
+.track span { display: block; height: 100%; background: var(--bone); border-radius: 3px; }
+.bar:first-child .track span { background: var(--orange); }
+.blog-cards .tile h3 { letter-spacing: -0.02em; }
+.brand .brand-badge { color: var(--navy); }
+.blog-cards > :first-child { min-height: 0 !important; }
+.blog-cards > :first-child::before { content: 'Read'; position: absolute; right: 28px; bottom: 24px; font-weight: 800; color: var(--orange); }
+.pregame { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; border: 1px solid var(--steel); border-radius: 4px; padding: 40px; background: var(--surface); }
+@media (max-width: 800px) { .pregame { grid-template-columns: 1fr; padding: 20px; gap: 24px; } }
+.pregame-board { transform: rotate(-1deg); }
+.pregame .stack > .btn { width: 100%; }
+.pregame > *, .hero-grid > * { min-width: 0; }
+@media (max-width: 480px) { .sb-slots { gap: 4px; } .sb-slots span { font-size: .6rem; letter-spacing: 0; } .scoreboard { padding: 14px; } }
+html, body { overflow-x: clip; }
+.today-teams li { min-width: 0; }

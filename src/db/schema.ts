@@ -198,6 +198,18 @@ export const newsletterEvents = pgTable('newsletter_events', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const contactMessages = pgTable('contact_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  kind: text('kind').notNull(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  subject: text('subject').notNull(),
+  message: text('message').notNull(),
+  ipHash: text('ip_hash'),
+  status: text('status').notNull().default('open'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('contact_messages_created_idx').on(t.createdAt)]);
+
 export type Player = typeof players.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Coach = typeof coaches.$inferSelect;

@@ -33,12 +33,15 @@ COPY --from=builder --chown=app:app /app/node_modules/@fontsource/inter/files ./
 COPY --from=builder --chown=app:app /app/node_modules/@fontsource/jetbrains-mono/files ./node_modules/@fontsource/jetbrains-mono/files
 COPY --from=builder --chown=app:app /app/drizzle ./drizzle
 COPY --from=builder --chown=app:app /app/dist/migrate.mjs ./migrate.mjs
+COPY --from=builder --chown=app:app /app/dist/seed.mjs ./seed.mjs
 RUN mkdir -p .next/cache && chown -R app:app .next/cache
 USER app
-EXPOSE 3000
-ENV PORT=3000 HOSTNAME=0.0.0.0
-HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["sh", "-c", "node migrate.mjs && node server.js"]
+EXPOSE 8080
+ENV PORT=8080 HOSTNAME=0.0.0.0
+HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+# Migrate, then seed (idempotent: never overwrites rows a live sync has replaced), then serve.
+COPY --from=builder --chown=app:app /app/scripts/start.sh ./start.sh
+CMD ["sh", "start.sh"]
 
 # ---- worker: BullMQ + Playwright Chromium ----
 FROM base-runtime AS worker

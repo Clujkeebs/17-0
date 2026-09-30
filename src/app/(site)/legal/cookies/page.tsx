@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
+import { ContactLink, contactVerb } from '@/components/ContactLink';
 import { LegalPage } from '../_components/LegalPage';
 
 export const metadata: Metadata = {
@@ -103,7 +104,7 @@ export default function CookiesPage() {
 
       <h2>Contact</h2>
       <p>
-        Questions: {SITE.legalEmail}. See also our <Link href="/legal/privacy">Privacy Policy</Link>.
+        Questions: <ContactLink kind="privacy" />. See also our <Link href="/legal/privacy">Privacy Policy</Link>.
       </p>
     </LegalPage>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
+import { ContactLink, contactVerb } from '@/components/ContactLink';
 import { LegalPage } from '../_components/LegalPage';
 
 export const metadata: Metadata = {
@@ -34,8 +35,8 @@ export default function PrivacyPage() {
     >
       <h2>1. Who we are</h2>
       <p>
-        {SITE.name} (&quot;we,&quot; &quot;us&quot;) runs {SITE.url} from the State of Delaware, United States. For the purposes of the EU and UK General Data Protection
-        Regulation, {SITE.name} is the data controller for the personal data described here. Contact: {SITE.legalEmail}, {SITE.mailingAddress}.
+        {SITE.name} (&quot;we,&quot; &quot;us&quot;) runs {SITE.url} from the State of California, United States. For the purposes of the EU and UK General Data Protection
+        Regulation, {SITE.name} is the data controller for the personal data described here. Contact: <ContactLink kind="privacy" />, or by mail at {SITE.mailingAddress}.
       </p>
 
       <h2>2. What we collect</h2>
@@ -95,13 +96,13 @@ export default function PrivacyPage() {
         <li><strong>Opt-out:</strong> unsubscribe from the newsletter with the link in any email, and opt out of personalized ads using the links in the <Link href="/legal/cookies">Cookie Policy</Link>.</li>
       </ul>
       <p>
-        For anything you cannot do yourself, email {SITE.legalEmail}. We respond within 30 days (45 days where California law permits, with notice).
+        For anything you cannot do yourself, {contactVerb('privacy')} <ContactLink kind="privacy" />. We respond within 30 days, or within 45 days for California requests, extendable once by 45 more with notice.
         We may need to verify your identity, usually by confirming control of your account email. You can use an authorized agent where the law allows.
       </p>
 
       <h2>7. GDPR (EU and UK users)</h2>
       <p><strong>Controller:</strong> {SITE.name}, {SITE.mailingAddress}.</p>
-      <p><strong>Data protection contact (DPO):</strong> {SITE.legalEmail}, subject line &quot;Data Protection.&quot;</p>
+      <p><strong>Data protection contact:</strong> <ContactLink kind="privacy" subject="Data Protection" />. Put &quot;Data Protection&quot; in the subject line.</p>
       <p><strong>Legal bases:</strong></p>
       <ul>
         <li>Performance of a contract: account, game results, leaderboards, transactional email.</li>
@@ -133,8 +134,29 @@ export default function PrivacyPage() {
         characteristics about you.
       </p>
       <p>
-        You have the right to know, delete, and correct your personal information, and to limit use of sensitive personal information (we already limit
-        it). We will not discriminate against you for exercising any of these rights: same Service, same features, same leaderboards.
+        {SITE.name} is based in California, so the CCPA is our home-state law and we apply it as written. California residents have the right to:
+      </p>
+      <ul>
+        <li><strong>Know and access</strong> the categories and specific pieces of personal information we collected, the sources, the purposes, and the categories of third parties we disclosed it to.</li>
+        <li><strong>Delete</strong> personal information we collected from you, subject to the exceptions the law allows.</li>
+        <li><strong>Correct</strong> inaccurate personal information.</li>
+        <li><strong>Opt out of sale or sharing.</strong> We do neither. We still honor Global Privacy Control signals as an opt-out request.</li>
+        <li><strong>Limit use of sensitive personal information.</strong> We already use it only to sign you in, which the law permits without an opt-out.</li>
+        <li><strong>Non-discrimination.</strong> Exercising any of these rights gets you the same Service, same features, and same leaderboards.</li>
+      </ul>
+      <p>
+        <strong>How to submit a request:</strong> {contactVerb('privacy')} <ContactLink kind="privacy" /> or write to {SITE.mailingAddress}. Most access,
+        export, and deletion requests you can complete yourself in <Link href="/settings">Settings</Link>. We confirm receipt within 10 business days and
+        respond within 45 days, extendable once by 45 more with notice. We verify requests by confirming control of the account email; requests for
+        specific pieces of information need a higher level of verification. An authorized agent may submit a request with your signed permission, and we
+        may still ask you to verify your identity directly.
+      </p>
+      <p>
+        <strong>Retention:</strong> we keep each category only as long as described in Section 5, then delete or anonymize it.
+      </p>
+      <p>
+        <strong>Shine the Light (Cal. Civ. Code 1798.83):</strong> we do not disclose personal information to third parties for their own direct
+        marketing purposes.
       </p>
 
       <h2>9. Canada (CASL)</h2>
@@ -154,7 +176,7 @@ export default function PrivacyPage() {
       <h2>11. Children</h2>
       <p>
         The Service is not directed to children under 13, and we do not knowingly collect personal information from them. If you believe a child under 13
-        has given us personal information, email {SITE.legalEmail} and we will delete it.
+        has given us personal information, {contactVerb('privacy')} <ContactLink kind="privacy" /> and we will delete it.
       </p>
 
       <h2>12. Security</h2>
@@ -188,7 +210,7 @@ export default function PrivacyPage() {
       </p>
 
       <h2>15. Contact</h2>
-      <p>Privacy questions and requests: {SITE.legalEmail}. General: {SITE.contactEmail}. Mail: {SITE.mailingAddress}.</p>
+      <p>Privacy questions and requests: <ContactLink kind="privacy" />. General: <ContactLink kind="general" />. Mail: {SITE.mailingAddress}.</p>
     </LegalPage>
   );
 }

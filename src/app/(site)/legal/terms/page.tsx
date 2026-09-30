@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
+import { ContactLink, contactVerb } from '@/components/ContactLink';
 import { LegalPage } from '../_components/LegalPage';
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ export default function TermsPage() {
       <h2>1. Acceptance of these terms</h2>
       <p>
         These Terms of Service (the &quot;Terms&quot;) are an agreement between you and {SITE.name} (&quot;{SITE.name},&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;),
-        operated from the State of Delaware, United States. By accessing or using the website at {SITE.url} and any related services (the &quot;Service&quot;),
+        operated from the State of California, United States. By accessing or using the website at {SITE.url} and any related services (the &quot;Service&quot;),
         you agree to these Terms and to our <Link href="/legal/privacy">Privacy Policy</Link>. If you do not agree, do not use the Service.
       </p>
 
@@ -42,7 +43,7 @@ export default function TermsPage() {
       <p>You can play without an account. Some features, such as the leaderboard and saved history, require one. If you create an account:</p>
       <ul>
         <li>Give us accurate information and keep your email address current.</li>
-        <li>Keep your password confidential. You are responsible for activity under your account. Tell us at {SITE.contactEmail} if you believe it has been compromised.</li>
+        <li>Keep your password confidential. You are responsible for activity under your account. Tell us through <ContactLink kind="general" /> if you believe it has been compromised.</li>
         <li>One person, one account. Accounts are not transferable.</li>
         <li>
           Usernames must not be obscene, hateful, harassing, or sexually explicit; must not impersonate a real person, player, team, league, or company; must
@@ -64,7 +65,7 @@ export default function TermsPage() {
       </ul>
       <p>
         We may remove results, reset leaderboards, and suspend or terminate accounts that we reasonably believe violate this section. Found a security
-        issue? Report it to {SITE.legalEmail} and we will not pursue good-faith research that follows responsible disclosure.
+        issue? Report it through <ContactLink kind="legal" /> and we will not pursue good-faith research that follows responsible disclosure.
       </p>
 
       <h2>5. User content</h2>
@@ -124,9 +125,10 @@ export default function TermsPage() {
 
       <h2>11. Governing law</h2>
       <p>
-        These Terms are governed by the laws of the State of Delaware and applicable U.S. federal law, including the Federal Arbitration Act, without regard
-        to conflict-of-laws rules. Subject to Section 12, the state and federal courts located in Delaware have exclusive jurisdiction, and you and we
-        consent to venue there.
+        These Terms are governed by the laws of the State of California and applicable U.S. federal law, including the Federal Arbitration Act, without
+        regard to conflict-of-laws rules. Subject to Section 12, the state courts located in Los Angeles County, California, and the United States District
+        Court for the Central District of California have exclusive jurisdiction, and you and we consent to personal jurisdiction and venue there. Nothing in
+        these Terms takes away a consumer protection right you have under the law of the place where you live.
       </p>
 
       <h2>12. Dispute resolution: binding individual arbitration</h2>
@@ -135,7 +137,7 @@ export default function TermsPage() {
       </p>
       <h3>12.1 Informal resolution first</h3>
       <p>
-        Before filing a claim, you agree to email {SITE.legalEmail} with your name, account email, a description of the dispute, and the relief you want.
+        Before filing a claim, you agree to contact us through <ContactLink kind="legal" /> with your name, account email, a description of the dispute, and the relief you want.
         We will try to resolve it informally within 60 days. We will do the same before bringing a claim against you.
       </p>
       <h3>12.2 Agreement to arbitrate</h3>
@@ -144,7 +146,9 @@ export default function TermsPage() {
         binding arbitration on an individual basis, administered by the American Arbitration Association (&quot;AAA&quot;) under its Consumer Arbitration
         Rules then in effect, available at adr.org. The arbitrator, not a court, decides questions of scope, enforceability, and arbitrability, except
         that a court decides the validity of the class action waiver below. Arbitration may be conducted by video, by phone, or on written submissions. Fee
-        allocation follows the AAA Consumer Arbitration Rules. Judgment on the award may be entered in any court with jurisdiction.
+        allocation follows the AAA Consumer Arbitration Rules and, where they apply, California Code of Civil Procedure sections 1281.97 through
+        1281.99, including our obligation to pay required fees on time. Any in-person hearing takes place in the county where you live or in Los Angeles
+        County, California, at your choice. The arbitrator may award any individual relief a court could. Judgment on the award may be entered in any court with jurisdiction.
       </p>
       <h3>12.3 Class action waiver</h3>
       <p>
@@ -155,12 +159,14 @@ export default function TermsPage() {
       </p>
       <h3>12.4 Small claims carve-out</h3>
       <p>
-        Either party may instead bring an individual claim in small claims court in the county where you live or in New Castle County, Delaware, if the
+        Either party may instead bring an individual claim in small claims court in the county where you live or in Los Angeles County, California, if the
         claim qualifies and stays in that court. Either party may also seek injunctive relief in court for infringement or misuse of intellectual property.
+        Nothing in this section waives your right to seek public injunctive relief in court where California law provides it; any such claim is stayed until
+        the individual arbitration ends.
       </p>
       <h3>12.5 30-day opt-out</h3>
       <p>
-        You can opt out of this arbitration agreement by emailing {SITE.legalEmail} within 30 days after you first accept these Terms. Include your name,
+        You can opt out of this arbitration agreement by sending notice through <ContactLink kind="legal" /> or by mail to {SITE.mailingAddress} within 30 days after you first accept these Terms. Include your name,
         account email, and a clear statement that you opt out of arbitration. Opting out does not affect any other part of these Terms. If you opt out,
         Section 11 governs where disputes are heard.
       </p>
@@ -190,7 +196,7 @@ export default function TermsPage() {
 
       <h2>16. Contact</h2>
       <p>
-        Questions about these Terms: {SITE.legalEmail}. Everything else: {SITE.contactEmail}. By mail: {SITE.mailingAddress}.
+        Questions about these Terms: <ContactLink kind="legal" />. Everything else: <ContactLink kind="general" />. By mail: {SITE.mailingAddress}.
       </p>
     </LegalPage>
   );

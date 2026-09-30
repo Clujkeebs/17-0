@@ -3,6 +3,7 @@ import path from 'node:path';
 import { eq, inArray, lt, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { getRedis, invalidatePrefix } from '@/lib/server/redis';
+import { alertAdmins } from '@/lib/server/alert';
 import { fetchRatings, type RawRatings } from './fetch';
 import { parseRatings } from './parse';
 import { diffPlayers, matchExisting, validate } from './diff';
@@ -18,14 +19,6 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 export class SyncError extends Error {
   constructor(message: string, readonly summary: SyncSummary) { super(message); this.name = 'SyncError'; }
-}
-
-async function notifySlack(text: string) {
-  const url = process.env.SLACK_WEBHOOK_URL;
-  if (!url) return;
-  try {
-    await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(10_000) });
-  } catch (e) { console.error('[sync] slack notify failed', (e as Error).message); }
 }
 
 /** Team label from the feed ("Kansas City Chiefs", "Chiefs", "KC") -> teams.id. */
@@ -184,7 +177,7 @@ export async function runSync({ dryRun = false, fetcher = fetchRatings, throwOnE
       await db.update(schema.syncSnapshots).set({ status: 'failed', parsedCount: summary.parsed, errors: [...summary.errors, ...summary.warnings] })
         .where(eq(schema.syncSnapshots.id, snap.id));
     } catch (e2) { console.error('[sync] could not mark snapshot failed', (e2 as Error).message); }
-    await notifySlack(`Ratings sync failed (snapshot ${snap.id}): ${msg}`);
+    await alertAdmins('Ratings sync failed', `Ratings sync failed (snapshot ${snap.id}): ${msg}`);
     finish();
     if (throwOnError) throw new SyncError(msg, summary);
     return summary;

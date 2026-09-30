@@ -1,8 +1,8 @@
-# Gridiron Lab
+# Unbeaten
 
 **Six picks. Seventeen games. One perfect season.**
 
-Gridiron Lab has two NFL roster games built on EA Sports Madden NFL ratings:
+Unbeaten has two NFL roster games built on EA Sports Madden NFL ratings:
 
 - **17-0**: spin six teams and draft a QB, RB, WR/TE, defender, kicker and head coach, one from each team. The server grades the roster and projects a 17-game record. A daily puzzle resets at midnight ET and has its own leaderboard.
 - **Build a Player**: pick a position and spin five teams. Take one player from each team, then assemble a custom player one attribute at a time. The build gets graded and simulated over a 17-game season.
@@ -20,7 +20,7 @@ The site also has about 8,000 programmatic SEO pages (players, teams, coaches, p
 | Email | Resend (logs to the console when no API key is set) |
 | Images | ESPN CDN headshots, cached to Cloudflare R2, with a deterministic SVG monogram fallback |
 | Share cards | `next/og` at `/api/og/game-result` |
-| Monitoring | Sentry (PII scrubbed), `/api/health`, Slack alerts |
+| Monitoring | Sentry (PII scrubbed), `/api/health`, email alerts to `ADMIN_EMAILS` |
 | Hosting | Railway: `web`, `worker`, `cron`, `backup`, Postgres, Redis |
 
 ## Architecture
@@ -89,16 +89,15 @@ To make yourself an admin, add your email to `ADMIN_EMAILS`, register, and open 
 | `DATABASE_URL` | web, worker, backup | `${{Postgres.DATABASE_URL}}` |
 | `REDIS_URL` | web, worker | `${{Redis.REDIS_URL}}` |
 | `AUTH_SECRET` (or `NEXTAUTH_SECRET`) | web | `openssl rand -base64 32` |
-| `NEXTAUTH_URL`, `SITE_URL` | web | Public origin, for example `https://gridironlab.com` |
+| `NEXTAUTH_URL`, `SITE_URL` | web | Public origin, for example `https://unbeaten.com` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | web | The Google button is hidden when these are unset |
 | `RESEND_API_KEY`, `EMAIL_FROM` | web, worker | Email is logged to stdout when unset |
 | `MAILING_ADDRESS` | web, worker | Physical address in every email (CAN-SPAM) |
 | `GOOGLE_ADSENSE_CLIENT`, `NEXT_PUBLIC_ADSENSE_CLIENT` | web (the second at build time) | Ads render nothing when unset |
-| `ADMIN_EMAILS` | web | Comma-separated admin whitelist |
 | `CRON_SECRET` | web, cron | Bearer token for `/api/internal/cron/*` |
 | `SENTRY_DSN` | web, worker | Optional |
 | `IP_HASH_SALT` | web | Salt for hashed IPs used by rate limits |
-| `SLACK_WEBHOOK_URL` | web, worker | Alerts for sync failures and queue health |
+| `ADMIN_EMAILS` | web, worker | Comma-separated admin whitelist. Admin access, plus email alerts for sync failures, queue health, and contact form messages |
 | `INTERNAL_WEB_URL` | cron, worker | `http://web.railway.internal:3000` |
 | `MADDEN_RATINGS_URL` | worker | Ratings source (default is EA's public ratings endpoint) |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL`, `R2_BACKUP_BUCKET` | web, worker, backup | Image cache and backups |

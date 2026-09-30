@@ -5,7 +5,7 @@ import { auth } from '@/auth';
 
 export const metadata: Metadata = {
   title: 'Download your data',
-  description: 'Export everything Gridiron Lab stores about your account as a JSON file.',
+  description: 'Export everything Unbeaten stores about your account as a JSON file.',
   alternates: { canonical: '/settings/export' },
   robots: { index: false, follow: false },
 };

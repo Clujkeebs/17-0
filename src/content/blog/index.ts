@@ -67,7 +67,7 @@ const POSTS: BlogPost[] = [
         ],
       },
       {
-        h2: 'Why Gridiron Lab grades on attributes',
+        h2: 'Why Unbeaten grades on attributes',
         paragraphs: [
           'The games on this site do not use overall directly. Each position group has its own short formula of five to seven attributes with published weights, and every player page shows the result as the 17-0 grade. The formulas are deliberately simple so you can check the math yourself. The position pages list every weight.',
           'The reason is transparency, not contrarianism. When a player grades well above or below his overall, you can see exactly which attribute is doing it. If a receiver with a 92 overall grades 86 here, it is almost always because his catching or route running trails his speed, and the formula puts a quarter of the weight on hands.',
@@ -90,7 +90,7 @@ const POSTS: BlogPost[] = [
       {
         h2: 'How we source and refresh them',
         paragraphs: [
-          'Ratings are pulled on a schedule and stored with the edition they came from. Every player page shows that edition. When a sync goes stale, a banner at the top of the site says so, with the date of the last successful update. We reference the ratings as factual data. Gridiron Lab is an independent fan project and is not affiliated with EA Sports or the NFL.',
+          'Ratings are pulled on a schedule and stored with the edition they came from. Every player page shows that edition. When a sync goes stale, a banner at the top of the site says so, with the date of the last successful update. We reference the ratings as factual data. Unbeaten is an independent fan project and is not affiliated with EA Sports or the NFL.',
           'If you think a rating is wrong, you are probably right about some of them. The games still use them as published, because a shared, fixed scale is what makes the leaderboard fair.',
         ],
       },

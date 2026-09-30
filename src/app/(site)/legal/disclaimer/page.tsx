@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
+import { ContactLink, contactVerb } from '@/components/ContactLink';
 import { LegalPage } from '../_components/LegalPage';
 
 export const metadata: Metadata = {
@@ -63,7 +64,7 @@ export default function DisclaimerPage() {
       <h2>Player images</h2>
       <p>
         Player headshots come from public sports media and are shown at small sizes solely to identify the player being discussed. We believe this is fair
-        use. Rights belong to their owners. If you own an image and want it removed, email {SITE.legalEmail}. We remove images within 48 hours of a
+        use. Rights belong to their owners. If you own an image and want it removed, {contactVerb('dmca')} <ContactLink kind="dmca" />. We remove images within 48 hours of a
         request, no argument required. Formal copyright notices can also follow our <Link href="/legal/dmca">DMCA Policy</Link>. Every player page falls back
         to a plain monogram when no image is shown.
       </p>
@@ -92,7 +93,7 @@ export default function DisclaimerPage() {
       </p>
 
       <h2>Contact</h2>
-      <p>{SITE.legalEmail}. {SITE.mailingAddress}.</p>
+      <p><ContactLink kind="legal" />. By mail: {SITE.mailingAddress}.</p>
     </LegalPage>
   );
 }

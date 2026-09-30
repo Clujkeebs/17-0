@@ -34,6 +34,7 @@ export function SiteFooter() {
               <li><Link href="/legal/disclaimer">Disclaimer</Link></li>
               <li><Link href="/legal/dmca">DMCA</Link></li>
               <li><Link href="/legal/accessibility">Accessibility</Link></li>
+              <li><Link href="/contact">Contact</Link></li>
             </ul>
           </div>
         </div>

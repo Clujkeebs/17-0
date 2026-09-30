@@ -26,7 +26,7 @@ export async function renderCard(c: CardInput) {
         <div style={{ display: 'flex', flexDirection: 'column', width: 640 }}>
           <div style={{ fontSize: 26, letterSpacing: 5, textTransform: 'uppercase', color: '#B8C0CC', fontWeight: 700 }}>{c.eyebrow}</div>
           <div style={{ fontFamily: 'Mono', fontSize: 220, fontWeight: 800, lineHeight: 1, marginTop: 24, color: c.perfect ? '#E76F51' : '#F8F9FA', letterSpacing: -10 }}>{c.headline}</div>
-          <div style={{ marginTop: 'auto', fontSize: 28, fontWeight: 700, display: 'flex' }}>Gridiron<span style={{ color: '#E76F51' }}>Lab</span><span style={{ color: '#B8C0CC', fontWeight: 400, marginLeft: 16 }}>{c.footer}</span></div>
+          <div style={{ marginTop: 'auto', fontSize: 28, fontWeight: 700, display: 'flex' }}>UNBEATEN<span style={{ color: '#E76F51', marginLeft: 10 }}>17-0</span><span style={{ color: '#B8C0CC', fontWeight: 400, marginLeft: 16 }}>{c.footer}</span></div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, borderLeft: '2px solid #4A5568', paddingLeft: 40, justifyContent: 'center' }}>
           {c.lines.slice(0, 6).map((l) => (

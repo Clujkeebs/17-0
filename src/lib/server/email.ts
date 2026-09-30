@@ -21,8 +21,9 @@ export interface SendResult { ok: boolean; id?: string; error?: string }
 
 const C = { navy: '#0A1128', green: '#1B4332', bone: '#F8F9FA', orange: '#E76F51', steel: '#4A5568', boneDim: '#B8C0CC' };
 
-const from = () => process.env.EMAIL_FROM ?? `${SITE.name} <${SITE.contactEmail}>`;
-const unsubscribeMailto = () => process.env.EMAIL_UNSUBSCRIBE_MAILTO ?? `mailto:${SITE.contactEmail}?subject=unsubscribe`;
+const from = () => process.env.EMAIL_FROM ?? `${SITE.name} <onboarding@resend.dev>`;
+const unsubscribeMailto = (): string | null =>
+  process.env.EMAIL_UNSUBSCRIBE_MAILTO ?? (SITE.contactEmail ? `mailto:${SITE.contactEmail}?subject=unsubscribe` : null);
 
 let client: Resend | null = null;
 function getClient(): Resend | null {
@@ -42,7 +43,8 @@ export async function sendEmail(opts: SendOptions): Promise<SendResult> {
   const headers: Record<string, string> = {};
   if (opts.marketing) {
     if (!opts.unsubscribeUrl) return { ok: false, error: 'marketing email requires an unsubscribe URL' };
-    headers['List-Unsubscribe'] = `<${opts.unsubscribeUrl}>, <${unsubscribeMailto()}>`;
+    const mailto = unsubscribeMailto();
+    headers['List-Unsubscribe'] = mailto ? `<${opts.unsubscribeUrl}>, <${mailto}>` : `<${opts.unsubscribeUrl}>`;
     headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
   }
   const resend = getClient();
@@ -92,7 +94,7 @@ function layout(i: LayoutInput): { html: string; text: string } {
 <body style="margin:0;padding:0;background:${C.navy};font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.navy};"><tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-<tr><td style="padding:0 0 16px;border-bottom:1px solid ${C.steel};font-weight:800;font-size:18px;color:${C.bone};">Gridiron<span style="color:${C.orange};font-family:'JetBrains Mono',Menlo,monospace;">Lab</span></td></tr>
+<tr><td style="padding:0 0 16px;border-bottom:1px solid ${C.steel};font-weight:800;font-size:18px;color:${C.bone};">Unbeaten</td></tr>
 <tr><td style="padding:24px 0 8px;">
 <h1 style="margin:0 0 16px;font-size:24px;line-height:1.2;color:${C.bone};">${escapeHtml(i.heading)}</h1>
 ${i.paragraphs.map(p).join('\n')}
@@ -122,7 +124,7 @@ export function newsletterConfirm(confirmUrl: string, unsubscribeUrl: string): E
     subject: `Confirm your ${SITE.name} subscription`,
     ...layout({
       heading: 'One click to confirm',
-      paragraphs: ['Someone, hopefully you, asked to get the Gridiron Lab newsletter at this address. Confirm and you are in.'],
+      paragraphs: ['Someone, hopefully you, asked to get the Unbeaten newsletter at this address. Confirm and you are in.'],
       cta: { label: 'Confirm subscription', url: confirmUrl },
       after: ['The link expires in 24 hours. If you did not ask for this, ignore it and you will not hear from us again.'],
       unsubscribeUrl,
@@ -140,7 +142,9 @@ export function accountDeleted(unsubscribeUrl?: string | null): Email {
         'Your account and profile data are gone. Past game results stay on public leaderboards under an anonymous name with no link back to you.',
         'Any newsletter subscription tied to this address was removed too. This is the last email you will get about this account.',
       ],
-      after: [`If you did not do this, reply to ${escapeHtml(SITE.contactEmail)} right away.`],
+      after: [SITE.contactEmail
+        ? `If you did not do this, email ${escapeHtml(SITE.contactEmail)} right away.`
+        : `If you did not do this, tell us right away: ${SITE.url}/contact?kind=privacy`],
       unsubscribeUrl,
       footerNote: 'You are getting this one-time notice because an account using this address was deleted.',
     }),
@@ -153,7 +157,7 @@ export function registrationNotice(loginUrl: string, unsubscribeUrl?: string | n
     ...layout({
       heading: 'You already have an account',
       paragraphs: [
-        'Someone tried to create a new Gridiron Lab account with this email address. You already have one, so nothing changed.',
+        'Someone tried to create a new Unbeaten account with this email address. You already have one, so nothing changed.',
         'If that was you, sign in instead. If it was not, you can ignore this. Your password was not changed.',
       ],
       cta: { label: 'Sign in', url: loginUrl },

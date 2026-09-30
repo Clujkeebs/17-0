@@ -22,7 +22,7 @@ type Entry = MetadataRoute.Sitemap[number];
 const STATIC: [string, Entry['changeFrequency'], number][] = [
   ['/', 'daily', 1], ['/games/17-0', 'daily', 0.9], ['/games/build-a-player', 'daily', 0.9], ['/leaderboard', 'hourly', 0.7],
   ['/players', 'daily', 0.8], ['/teams', 'weekly', 0.7], ['/coaches', 'weekly', 0.6], ['/positions', 'weekly', 0.7],
-  ['/compare', 'weekly', 0.5], ['/blog', 'weekly', 0.6], ['/seasons', 'monthly', 0.4], ['/about', 'monthly', 0.3],
+  ['/compare', 'weekly', 0.5], ['/blog', 'weekly', 0.6], ['/seasons', 'monthly', 0.4], ['/about', 'monthly', 0.3], ['/contact', 'yearly', 0.2],
   ['/legal/terms', 'yearly', 0.1], ['/legal/privacy', 'yearly', 0.1], ['/legal/cookies', 'yearly', 0.1],
   ['/legal/disclaimer', 'yearly', 0.1], ['/legal/dmca', 'yearly', 0.1], ['/legal/accessibility', 'yearly', 0.1],
 ];

@@ -1,4 +1,4 @@
-# Gridiron Lab design system
+# Unbeaten design system
 
 The site should look like a film room, not a casino. Dark, flat, numeric, confident. Every rule below exists to keep it that way. The source of truth for tokens is `src/app/globals.css`; this file explains the why.
 

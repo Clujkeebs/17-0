@@ -1,6 +1,6 @@
 # Decisions
 
-Non-obvious calls made while building Gridiron Lab, one paragraph each. Newest at the bottom.
+Non-obvious calls made while building Unbeaten, one paragraph each. Newest at the bottom.
 
 **Drizzle over Prisma.** Drizzle has no query-engine binary. That keeps the Docker image small, cold starts fast, and avoids a Rust engine download through restrictive build proxies. It also bundles into the worker with esbuild. Migrations live in `drizzle/` and run on web boot (`node migrate.mjs && node server.js`). Drizzle migrations are idempotent, so running them from every replica is safe.
 
@@ -30,7 +30,7 @@ Non-obvious calls made while building Gridiron Lab, one paragraph each. Newest a
 
 **One cron service, time-dispatched.** Railway runs one cron service every 15 minutes (`scripts/cron.mjs`). The script decides which internal endpoints are due: sync at 10:00 UTC (6 AM ET during DST), coach recompute Mondays at 11:00 UTC, maintenance at 08:00 UTC, and queue health on every run. That is one service instead of four. A separate cron service runs the nightly `pg_dump` to R2, because it needs `pg_dump` and different credentials.
 
-**Queue health uses a worker heartbeat.** The worker writes `worker:heartbeat` to Redis every 30 seconds. The queue-health cron alerts Slack if the heartbeat is older than 5 minutes or any queue backs up past 500 waiting jobs.
+**Queue health uses a worker heartbeat.** The worker writes `worker:heartbeat` to Redis every 30 seconds. The queue-health cron emails `ADMIN_EMAILS` if the heartbeat is older than 5 minutes or any queue backs up past 500 waiting jobs.
 
 **Share cards render on the web service.** The `og-image` queue pre-warms each result's card by requesting it right after grading, so the first social crawler hit is fast. Rendering stays in one place (`next/og`) instead of being duplicated in the worker. Satori cannot read woff2, so static `@fontsource` woff files are copied into the web image for rendering.
 

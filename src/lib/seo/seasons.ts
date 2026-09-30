@@ -30,7 +30,7 @@ export const ERAS: Era[] = [
   { key: 'reveal', name: 'Ratings as an event', from: 2014, to: 2019,
     summary: 'Ratings reveals turned into a preseason ritual, and players started arguing with their own numbers in public. More attributes, more granular archetypes, more scrutiny.' },
   { key: 'live', name: 'The live ratings era', from: 2020, to: 9999,
-    summary: 'In-season adjustments are routine and the attribute set is the most granular it has been. This is the era Gridiron Lab is built on: the ratings behind every page here come from the current edition.' },
+    summary: 'In-season adjustments are routine and the attribute set is the most granular it has been. This is the era Unbeaten is built on: the ratings behind every page here come from the current edition.' },
 ];
 
 export const eraFor = (y: number) => ERAS.find((e) => y >= e.from && y <= e.to) ?? ERAS[ERAS.length - 1];

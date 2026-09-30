@@ -83,7 +83,7 @@ export default async function PlayerPage({ params }: Props) {
     ['Experience', p.yearsPro != null ? (p.yearsPro === 0 ? 'Rookie' : `${p.yearsPro} yr${p.yearsPro === 1 ? '' : 's'}`) : null],
     ['College', p.college],
     ['Archetype', p.archetype],
-    ['Ratings edition', p.maddenVersion],
+    ['Ratings edition', p.maddenVersion.startsWith('seed') ? 'Preseason baseline' : p.maddenVersion.replace('madden-', 'Madden NFL ')],
   ];
 
   return (

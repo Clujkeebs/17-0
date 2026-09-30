@@ -43,7 +43,7 @@ html, body { width: 1200px; height: 630px; background: #0A1128; color: #F8F9FA; 
 <div class="rule"></div>
 <div class="lines"><span>SEED 0x17</span><span>W 17 &nbsp; L 0</span></div>
 <div class="frame">
-  <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="#F8F9FA" stroke-width="2" stroke-linecap="square"><path d="M3 20 L12 4 L21 20"/><path d="M7 14 H17" stroke="#E76F51"/><path d="M9.5 20 V17 H14.5 V20"/></svg>Gridiron Lab</div>
+  <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="#F8F9FA" stroke-width="2" stroke-linecap="square"><path d="M3 20 L12 4 L21 20"/><path d="M7 14 H17" stroke="#E76F51"/><path d="M9.5 20 V17 H14.5 V20"/></svg>Unbeaten</div>
   <div class="score">17-0</div>
   <div class="tag">Six picks. Seventeen games.<br>One perfect season.</div>
 </div>

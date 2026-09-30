@@ -14,7 +14,7 @@ What is left before and after launch. Priority: P0 blocks launch, P1 is launch w
 | 8 | AdSense approval, then set `GOOGLE_ADSENSE_CLIENT` and `NEXT_PUBLIC_ADSENSE_CLIENT` (build arg) and enable rows in `ad_placements`. | Founder | P1 |
 | 9 | Headshot coverage: only ~45 seed players have ESPN IDs; the rest use monograms. After the live sync, backfill `espn_id` and run the R2 cache (`cacheImageToR2`). | Eng | P1 |
 | 10 | Enable Railway Postgres PITR; run one restore of an R2 dump into a scratch DB to prove backups. | Ops | P1 |
-| 11 | UptimeRobot on `/api/health`, Sentry DSN on web and worker, Slack webhook. | Ops | P1 |
+| 11 | UptimeRobot on `/api/health`, Sentry DSN on web and worker, `ADMIN_EMAILS` set on web and worker for alerts. | Ops | P1 |
 | 12 | Run the k6 load test (`tests/load/spin.k6.js`) against staging with a rate-limit override for the load generator. | Eng | P1 |
 | 13 | Submit the sitemaps (`/robots.txt` lists them) in Google Search Console. | Growth | P1 |
 | 14 | Refresh the JWT username after a change (`unstable_update`) so the header name updates without re-login. | Eng | P2 |

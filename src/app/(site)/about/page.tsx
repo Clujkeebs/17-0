@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
+import { ContactLink, contactVerb } from '@/components/ContactLink';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -41,14 +42,14 @@ export default function AboutPage() {
 
         <h2>Who runs it</h2>
         <p>
-          A small independent team operating out of Delaware. We write the engine, the copy, and the bug fixes. If a formula looks wrong to you, it might
+          A small independent team operating out of Pacoima, California. We write the engine, the copy, and the bug fixes. If a formula looks wrong to you, it might
           be, and we would like to hear the argument.
         </p>
 
         <h2>Get in touch</h2>
         <p>
-          Feedback, bug reports, and formula disputes: <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>. Legal and privacy:{' '}
-          <a href={`mailto:${SITE.legalEmail}`}>{SITE.legalEmail}</a>.
+          Feedback, bug reports, and formula disputes: <ContactLink kind="general" />. Legal and privacy: <ContactLink kind="legal" />. Or skip the
+          small talk and go straight to the <Link href="/contact">contact page</Link>.
         </p>
         <p>
           <Link className="btn btn-primary" href="/games/17-0">Play today&apos;s 17-0</Link>

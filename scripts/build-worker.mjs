@@ -9,5 +9,6 @@ const common = {
 };
 await build({ ...common, entryPoints: ['worker/index.ts'], outfile: 'dist/worker.mjs', external: ['playwright-core', 'chromium-bidi'] });
 await build({ ...common, entryPoints: ['scripts/migrate.ts'], outfile: 'dist/migrate.mjs', external: [] });
+await build({ ...common, entryPoints: ['scripts/seed.ts'], outfile: 'dist/seed.mjs', external: [] });
 await build({ ...common, entryPoints: ['scripts/cron.mjs'], outfile: 'dist/cron.mjs', external: [] });
 await build({ ...common, entryPoints: ['scripts/backup.mjs'], outfile: 'dist/backup.mjs', external: [] });

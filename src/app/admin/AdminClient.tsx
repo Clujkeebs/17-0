@@ -155,3 +155,23 @@ export function ResultActions({ id }: { id: string }) {
     </div>
   );
 }
+
+export function MessageActions({ id, status }: { id: string; status: string }) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const next = status === 'resolved' ? 'open' : 'resolved';
+  async function act() {
+    setPending(true); setError('');
+    const r = await call('/api/admin/messages', 'POST', { id, status: next }).catch(() => null);
+    setPending(false);
+    if (!r || !r.ok) { setError(r?.data.error ?? 'Failed.'); return; }
+    router.refresh();
+  }
+  return (
+    <div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>
+      <button className="btn btn-sm" type="button" disabled={pending} onClick={act}>{next === 'resolved' ? 'Mark resolved' : 'Reopen'}</button>
+      {error && <span role="alert" className="field-error">{error}</span>}
+    </div>
+  );
+}

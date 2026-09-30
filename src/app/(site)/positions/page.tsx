@@ -12,7 +12,7 @@ export const revalidate = 86400;
 
 export const metadata: Metadata = pageMeta({
   title: 'NFL position rankings and rating formulas',
-  description: 'Top players at all 11 position groups by EA Sports Madden NFL ratings, plus the exact attribute weights Gridiron Lab uses to grade each position.',
+  description: 'Top players at all 11 position groups by EA Sports Madden NFL ratings, plus the exact attribute weights Unbeaten uses to grade each position.',
   path: '/positions',
 });
 

@@ -4,7 +4,7 @@ import { ConfirmedBeacon } from './ConfirmedBeacon';
 
 export const metadata: Metadata = {
   title: 'Subscription confirmed',
-  description: 'Your Gridiron Lab newsletter subscription is confirmed.',
+  description: 'Your Unbeaten newsletter subscription is confirmed.',
   alternates: { canonical: '/newsletter/confirmed' },
   robots: { index: false, follow: true },
 };

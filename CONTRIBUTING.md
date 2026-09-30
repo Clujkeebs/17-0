@@ -1,4 +1,4 @@
-# Contributing to Gridiron Lab
+# Contributing to Unbeaten
 
 Thanks for helping. This is a small codebase with strict taste. Read `DESIGN.md` before touching UI or copy.
 

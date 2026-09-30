@@ -40,7 +40,7 @@ describe('validateUsername', () => {
   });
 
   it('rejects reserved names anywhere in the string', () => {
-    for (const n of ['admin', 'Admin_Bob', 'the_moderator', 'GridironLab', 'gr1d1ronl4b', 'official_qb', '4dm1n']) {
+    for (const n of ['admin', 'Admin_Bob', 'the_moderator', 'Unbeaten', 'unb34t3n', 'official_qb', '4dm1n']) {
       expect(validateUsername(n), n).toMatchObject({ ok: false, code: 'reserved' });
     }
   });

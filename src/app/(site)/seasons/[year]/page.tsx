@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return pageMeta({
     title: cur ? `${y} NFL player ratings` : `${y} NFL season ratings era`,
     description: cur
-      ? `The ${y} season on Gridiron Lab: ${editionFor(y)} ratings, the top players by overall, and the games built on them.`
+      ? `The ${y} season on Unbeaten: ${editionFor(y)} ratings, the top players by overall, and the games built on them.`
       : `What the ${y} season looked like in ${editionFor(y)} terms, and where it sits in the history of the ratings.`,
     path: `/seasons/${y}`,
     noindex: !cur,
@@ -65,7 +65,7 @@ export default async function SeasonPage({ params }: Props) {
         </>
       ) : (
         <div className="card" style={{ maxWidth: 640, marginTop: 24 }}>
-          <p style={{ marginTop: 0 }}>We do not keep player-level ratings for {y}. Gridiron Lab only stores the current edition, so there is no table here to pretend otherwise.</p>
+          <p style={{ marginTop: 0 }}>We do not keep player-level ratings for {y}. Unbeaten only stores the current edition, so there is no table here to pretend otherwise.</p>
           <div className="row">
             <Link className="btn btn-primary btn-sm" href={`/seasons/${cur}`}>See the {cur} ratings</Link>
             <Link className="btn btn-sm" href="/seasons">All seasons</Link>

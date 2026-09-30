@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Unsubscribed',
-  description: 'You have been removed from the Gridiron Lab newsletter.',
+  description: 'You have been removed from the Unbeaten newsletter.',
   alternates: { canonical: '/newsletter/unsubscribed' },
   robots: { index: false, follow: true },
 };
@@ -25,7 +25,7 @@ export default async function UnsubscribedPage({ searchParams }: { searchParams:
           <p className="muted">Changed your mind? You can sign up again any time from the <Link href="/newsletter">newsletter page</Link>.</p>
         </>
       )}
-      <p><Link href="/">Back to Gridiron Lab</Link></p>
+      <p><Link href="/">Back to Unbeaten</Link></p>
     </div>
   );
 }

@@ -28,7 +28,7 @@ export function normalizeLeet(s: string): string {
 }
 
 /** Reserved names: blocked anywhere in the (normalized) username. */
-const RESERVED = ['admin', 'moderator', 'gridironlab', 'official'];
+const RESERVED = ['admin', 'moderator', 'unbeaten', 'official'];
 
 /**
  * Strong terms blocked as substrings (after normalization and dropping separators).

@@ -132,15 +132,19 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
       )}
 
       {!spin && (
-        <div className="wide-card card">
-          <div>
-            <p className="big-num accent" aria-hidden="true">17-0</p>
-            <p className="muted">Nobody goes 17-0 by accident. Mahomes helps. So does a kicker who can hit from 55.</p>
+        <div className="pregame field">
+          <div className="scoreboard pregame-board" aria-hidden="true">
+            <div className="sb-top"><span>Projected record</span><span>{initialDaily ? 'Daily' : 'Practice'}</span></div>
+            <div className="sb-num num">?<span className="sb-dash">-</span>?</div>
+            <div className="sb-slots">{SLOTS.map((s) => <span key={s}>{SLOT_LABELS[s]}</span>)}</div>
           </div>
-          <div className="stack">
-            <button className="btn btn-primary" onClick={() => doSpin(initialDaily)} disabled={!!busy}><ReelIcon size={18} /> {busy === 'spin' ? 'Spinning' : initialDaily ? 'Spin the daily' : 'Spin'}</button>
-            <button className="btn" onClick={() => doSpin(!initialDaily)} disabled={!!busy}>{initialDaily ? 'Practice spin instead' : "Play today's daily"}</button>
-            <p className="hint">Daily results count toward the leaderboard when you are signed in.</p>
+          <div className="pregame-copy">
+            <p className="hero-sub" style={{ marginBottom: 20 }}>Nobody goes 17-0 by accident. Mahomes helps. So does a kicker who can hit from 55.</p>
+            <div className="stack" style={{ maxWidth: 360 }}>
+              <button className="btn btn-primary btn-lg" onClick={() => doSpin(initialDaily)} disabled={!!busy}><ReelIcon size={18} /> {busy === 'spin' ? 'Spinning' : initialDaily ? 'Spin the daily' : 'Spin'}</button>
+              <button className="btn btn-lg" onClick={() => doSpin(!initialDaily)} disabled={!!busy}>{initialDaily ? 'Practice spin instead' : "Play today's daily"}</button>
+            </div>
+            <p className="hint" style={{ marginTop: 12 }}>Daily results count toward the leaderboard when you are signed in.</p>
           </div>
         </div>
       )}

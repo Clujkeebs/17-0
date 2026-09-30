@@ -96,3 +96,12 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
     return { id, name: t.name, city: t.city, abbreviation: t.abbreviation, slug: t.slug, color: t.primaryColor, logoUrl: t.logoUrl, players: list };
   });
 }
+
+/** Today's six 17-0 teams, identical to what the daily spin will deal. Public by design: it's a shared puzzle. */
+export async function dailyTeamsPreview() {
+  const date = dailyDateET();
+  const teams = await getTeams();
+  const ids = teams.map((t) => t.id).sort((a, b) => a - b);
+  const order = createRng(`spin:${dailySeed('17-0:', date)}`).shuffle(ids).slice(0, TEAMS_PER_GAME);
+  return { date, teams: order.map((id) => teams.find((t) => t.id === id)!) };
+}

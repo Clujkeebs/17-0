@@ -1,6 +1,6 @@
 # Launch copy
 
-All copy follows `DESIGN.md` section 6. No em-dashes, no emoji, no banned words, no "Madden" as branding, no user counts. Replace `https://gridironlab.example` with the production URL before posting.
+All copy follows `DESIGN.md` section 6. No em-dashes, no emoji, no banned words, no "Madden" as branding, no user counts. Replace `https://unbeaten.example` with the production URL before posting.
 
 ## Tagline options
 
@@ -14,7 +14,7 @@ All copy follows `DESIGN.md` section 6. No em-dashes, no emoji, no banned words,
 
 ## Product Hunt
 
-**Name:** Gridiron Lab
+**Name:** Unbeaten
 
 **Tagline (60 chars max):** Six picks. Seventeen games. One perfect season.
 
@@ -23,7 +23,7 @@ A daily NFL puzzle. Six teams are spun, you draft one player from each, and a se
 
 **First comment (maker):**
 
-Hey Product Hunt. I built Gridiron Lab because my group chat kept arguing about whether a random roster could go undefeated, and nobody could prove anything.
+Hey Product Hunt. I built Unbeaten because my group chat kept arguing about whether a random roster could go undefeated, and nobody could prove anything.
 
 How it works:
 
@@ -42,11 +42,11 @@ I would like feedback on the formulas more than anything. If you think a slot co
 
 ## Show HN
 
-**Title:** Show HN: Gridiron Lab, a daily NFL roster puzzle with a deterministic season simulator
+**Title:** Show HN: Unbeaten, a daily NFL roster puzzle with a deterministic season simulator
 
 **Body:**
 
-Gridiron Lab is a daily puzzle: six NFL teams are drawn, you draft one player from each, and the site simulates a 17-game season. The goal is 17-0. https://gridironlab.example
+Unbeaten is a daily puzzle: six NFL teams are drawn, you draft one player from each, and the site simulates a 17-game season. The goal is 17-0. https://unbeaten.example
 
 The game part is simple. The engineering problems were more interesting than I expected:
 
@@ -80,7 +80,7 @@ The part I care about: it is not just "add up the overalls." Positions are weigh
 
 Everyone gets the same six teams each day, so there is a daily leaderboard. No money involved, no ads for sportsbooks, just a puzzle.
 
-It is free and you do not need an account to play: https://gridironlab.example
+It is free and you do not need an account to play: https://unbeaten.example
 
 I would love to hear which picks people think are overrated by the engine. I have my own opinions about how it values off-ball linebackers.
 
@@ -98,7 +98,7 @@ Ratings update when EA updates them, and each player page shows the rating histo
 
 There is a second mode, Build a Player, where you assemble one player attribute by attribute from the day's teams.
 
-Not affiliated with EA, just a fan project. Free, no account needed: https://gridironlab.example
+Not affiliated with EA, just a fan project. Free, no account needed: https://unbeaten.example
 
 Open to feedback on the position weights. If you think I have throw accuracy under or over-weighted, I want to hear it.
 
@@ -112,7 +112,7 @@ It is a draft, but you only get one pick per team and you have to fill a real ro
 
 After you draft, it sims a 17-game season. Same teams for everyone each day, so you can compare against your league-mates.
 
-Not fantasy scoring, and not a contest. Nothing to win, nothing to pay. Just a daily puzzle to argue about in the group chat: https://gridironlab.example
+Not fantasy scoring, and not a contest. Nothing to win, nothing to pay. Just a daily puzzle to argue about in the group chat: https://unbeaten.example
 
 ### r/webdev
 
@@ -120,7 +120,7 @@ Not fantasy scoring, and not a contest. Nothing to win, nothing to pay. Just a d
 
 **Body:**
 
-Side project, launched this week: https://gridironlab.example (daily NFL roster puzzle, the goal is a 17-0 season).
+Side project, launched this week: https://unbeaten.example (daily NFL roster puzzle, the goal is a 17-0 season).
 
 A few things that might be useful to others:
 
@@ -141,8 +141,8 @@ Six NFL teams. One player from each. A 17-game season.
 
 Can your roster go 17-0?
 
-Gridiron Lab is live. A new puzzle every morning, same six teams for everyone.
-https://gridironlab.example
+Unbeaten is live. A new puzzle every morning, same six teams for everyone.
+https://unbeaten.example
 
 2/
 It is not "sum the overalls."
@@ -164,7 +164,7 @@ Second mode: Build a Player. Assemble one player attribute by attribute from the
 Free. No account needed to play. No gambling, no prizes, no odds. Not affiliated with EA or the NFL.
 
 Post your record. Somebody has to go 17-0 first.
-https://gridironlab.example
+https://unbeaten.example
 
 ---
 
@@ -176,7 +176,7 @@ Hi {first name},
 
 I have been reading/listening to {publication or show} since {specific episode or post, with one sentence on why it stuck with you}.
 
-I built Gridiron Lab, a free daily puzzle: six NFL teams are drawn, you draft one player from each, and a simulation plays a 17-game season. Everyone gets the same six teams, so it works well as a recurring segment ("today's board: here is my roster, here is my record, beat it").
+I built Unbeaten, a free daily puzzle: six NFL teams are drawn, you draft one player from each, and a simulation plays a 17-game season. Everyone gets the same six teams, so it works well as a recurring segment ("today's board: here is my roster, here is my record, beat it").
 
 A few things that might be useful for {publication or show}:
 
@@ -184,12 +184,12 @@ A few things that might be useful for {publication or show}:
 - Share cards that render your roster and record as an image, ready for social.
 - I am happy to walk through how the simulation weights positions. It makes for a decent argument.
 
-No affiliation with EA or the NFL, no gambling, nothing to sell. Here is today's puzzle: https://gridironlab.example
+No affiliation with EA or the NFL, no gambling, nothing to sell. Here is today's puzzle: https://unbeaten.example
 
 If it is not a fit, no reply needed. Thanks for reading this far.
 
 {Name}
-Gridiron Lab
+Unbeaten
 {mailing address}
 
 ---
@@ -198,10 +198,10 @@ Gridiron Lab
 
 Use only if we run a promotional giveaway (for example, signed merch for launch). The prize is never tied to game performance. This avoids any appearance of a game of skill or chance for consideration.
 
-**Gridiron Lab Launch Giveaway: Official Rules**
+**Unbeaten Launch Giveaway: Official Rules**
 
 1. **NO PURCHASE OR PAYMENT NECESSARY TO ENTER OR WIN.** A purchase or payment will not increase your chances of winning.
-2. **Sponsor:** Gridiron Lab, {mailing address}.
+2. **Sponsor:** Unbeaten, {mailing address}.
 3. **Eligibility:** Legal residents of the 50 United States and D.C., 18 or older at time of entry. Void where prohibited. Employees of the Sponsor and their immediate families are not eligible.
 4. **Entry period:** {start date and time ET} to {end date and time ET}.
 5. **How to enter:** Submit the free entry form at {URL} with your name and email. Limit one entry per person. Alternative method of entry: mail a 3x5 card with your name, email, and mailing address to the Sponsor address above, postmarked by {date}. Mail-in entries are treated identically.
@@ -210,7 +210,7 @@ Use only if we run a promotional giveaway (for example, signed merch for launch)
 8. **Prize:** {description}. Approximate retail value: ${ARV}. No cash alternative or substitution except by Sponsor if the prize becomes unavailable. Winner is responsible for any taxes.
 9. **Notification:** Winners notified by email within 7 days of the draw and must respond within 7 days, or an alternate winner will be drawn.
 10. **Privacy:** Entry information is used only to administer this giveaway and is deleted within 90 days after it ends, except the winner list kept as required by law. Entering does not subscribe you to the newsletter unless you separately opt in.
-11. **General:** Not sponsored, endorsed, or administered by, or associated with, Electronic Arts, EA Sports, the NFL, the NFLPA, any team, or any social platform. Sponsor may cancel or modify the giveaway if fraud or technical failure compromises it. Governed by Delaware law.
+11. **General:** Not sponsored, endorsed, or administered by, or associated with, Electronic Arts, EA Sports, the NFL, the NFLPA, any team, or any social platform. Sponsor may cancel or modify the giveaway if fraud or technical failure compromises it. Governed by California law.
 12. **Winner list:** Send a request to {legal email} within 60 days after the end date.
 
 Check state requirements before launch: New York and Florida require registration and bonding for prizes over $5,000 in total value. Keep total ARV under $5,000 to avoid that.

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
+import { ContactLink, contactVerb } from '@/components/ContactLink';
 import { LegalPage } from '../_components/LegalPage';
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ export default function DmcaPage() {
       title="DMCA and Copyright Policy"
       summary={
         <ul>
-          <li>If you own something on this site and want it down, email {SITE.legalEmail}.</li>
+          <li>If you own something on this site and want it down, {contactVerb('dmca')} <ContactLink kind="dmca" />.</li>
           <li>Player images come down within 48 hours of any request. No formal notice needed.</li>
           <li>For everything else, a DMCA notice needs the six items listed below.</li>
           <li>If we removed your content by mistake, you can send a counter-notice.</li>
@@ -25,19 +26,17 @@ export default function DmcaPage() {
     >
       <h2>Designated agent</h2>
       <address className="card" style={{ fontStyle: 'normal', margin: '0 0 1em' }}>
-        <strong>Gridiron Lab DMCA Agent</strong>
+        <strong>{SITE.name}, Attn: DMCA Agent</strong>
         <br />
-        {SITE.mailingAddress}
+        {SITE.mailingAddress.replace(/^Unbeaten, /, '')}
         <br />
-        Email: <a href={`mailto:${SITE.legalEmail}`}>{SITE.legalEmail}</a>
-        <br />
-        <span className="muted" style={{ fontSize: '.88rem' }}>Registered with the U.S. Copyright Office, registration number pending.</span>
+        Online: <ContactLink kind="dmca" />
       </address>
 
       <h2>48-hour image takedown</h2>
       <p>
-        Player images are shown for identification only. If you are the rights holder (or the person pictured) and want an image removed, email{' '}
-        {SITE.legalEmail} with the page URL. We remove it within 48 hours. You do not need to send a formal DMCA notice for this.
+        Player images are shown for identification only. If you are the rights holder (or the person pictured) and want an image removed, {contactVerb('dmca')}{' '}
+        <ContactLink kind="dmca" /> with the page URL. We remove it within 48 hours. You do not need to send a formal DMCA notice for this.
       </p>
 
       <h2>Filing a DMCA notice</h2>
@@ -86,7 +85,7 @@ export default function DmcaPage() {
 
       <h2>Trademark and other concerns</h2>
       <p>
-        For trademark or other rights concerns that are not copyright, email {SITE.legalEmail}. See also our <Link href="/legal/disclaimer">Disclaimer</Link>.
+        For trademark or other rights concerns that are not copyright, {contactVerb('legal')} <ContactLink kind="legal" />. See also our <Link href="/legal/disclaimer">Disclaimer</Link>.
       </p>
     </LegalPage>
   );

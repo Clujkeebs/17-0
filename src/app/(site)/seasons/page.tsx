@@ -9,7 +9,7 @@ export const revalidate = 86400;
 
 export const metadata: Metadata = pageMeta({
   title: 'NFL ratings by season, 1996 to today',
-  description: 'A short guide to three decades of EA Sports Madden NFL ratings eras, from roster files on a disc to in-season live updates, and which season Gridiron Lab covers now.',
+  description: 'A short guide to three decades of EA Sports Madden NFL ratings eras, from roster files on a disc to in-season live updates, and which season Unbeaten covers now.',
   path: '/seasons',
 });
 
@@ -22,7 +22,7 @@ export default function SeasonsPage() {
       <span className="eyebrow">Ratings eras</span>
       <h1>Thirty years of ratings, one season of data</h1>
       <p className="muted" style={{ maxWidth: '64ch' }}>
-        Gridiron Lab stores ratings for the current edition only. The older seasons below are context, not a database. The <Link href={`/seasons/${cur}`}>{cur} season</Link> is the one the games use.
+        Unbeaten stores ratings for the current edition only. The older seasons below are context, not a database. The <Link href={`/seasons/${cur}`}>{cur} season</Link> is the one the games use.
       </p>
       {[...ERAS].reverse().map((era) => {
         const ys = years.filter((y) => y >= era.from && y <= era.to);

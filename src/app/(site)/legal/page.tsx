@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
+import { ContactLink, contactVerb } from '@/components/ContactLink';
 import { LAST_UPDATED } from './_components/LegalPage';
 
 export const metadata: Metadata = {
@@ -37,7 +38,7 @@ export default function LegalIndexPage() {
         ))}
       </ul>
       <p className="muted" style={{ marginTop: 32 }}>
-        Legal questions: {SITE.legalEmail}. Everything else: {SITE.contactEmail}.
+        Legal questions: <ContactLink kind="legal" />. Everything else: <ContactLink kind="general" />.
       </p>
     </div>
   );

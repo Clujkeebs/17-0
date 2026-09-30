@@ -92023,6 +92023,7 @@ __export(schema_exports, {
   adPlacements: () => adPlacements,
   auditLog: () => auditLog,
   coaches: () => coaches,
+  contactMessages: () => contactMessages,
   gameConfigs: () => gameConfigs,
   gameResults: () => gameResults,
   gameSessions: () => gameSessions,
@@ -92215,6 +92216,17 @@ var newsletterEvents = pgTable("newsletter_events", {
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
 });
+var contactMessages = pgTable("contact_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  ipHash: text("ip_hash"),
+  status: text("status").notNull().default("open"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+}, (t2) => [index("contact_messages_created_idx").on(t2.createdAt)]);
 
 // src/db/index.ts
 var globalForDb = globalThis;
@@ -92222,617 +92234,6 @@ var url = process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:54
 var client = globalForDb.pg ?? src_default(url, { max: Number(process.env.DB_POOL_MAX ?? 10), prepare: false });
 if (process.env.NODE_ENV !== "production") globalForDb.pg = client;
 var db = drizzle(client, { schema: schema_exports });
-
-// src/lib/site.ts
-var SITE = {
-  name: "Gridiron Lab",
-  tagline: "Six picks. Seventeen games. One perfect season.",
-  url: (process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000").replace(/\/$/, ""),
-  description: "Spin six NFL teams, draft one player from each, and find out if your roster can go 17-0. Built on EA Sports Madden NFL ratings.",
-  contactEmail: "hello@gridironlab.example",
-  legalEmail: "legal@gridironlab.example",
-  mailingAddress: process.env.MAILING_ADDRESS ?? "Gridiron Lab, 1000 N West St Suite 1200, Wilmington, DE 19801"
-};
-var slugify = (s3) => s3.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-
-// src/lib/game/attributes.ts
-var ATTRIBUTE_LABELS = {
-  speed: "Speed",
-  acceleration: "Acceleration",
-  agility: "Agility",
-  strength: "Strength",
-  awareness: "Awareness",
-  stamina: "Stamina",
-  jumping: "Jumping",
-  throwPower: "Throw Power",
-  throwAccuracyShort: "Short Accuracy",
-  throwAccuracyMid: "Mid Accuracy",
-  throwAccuracyDeep: "Deep Accuracy",
-  throwUnderPressure: "Throw Under Pressure",
-  throwOnTheRun: "Throw on the Run",
-  playAction: "Play Action",
-  carrying: "Carrying",
-  breakTackle: "Break Tackle",
-  jukeMove: "Juke Move",
-  trucking: "Trucking",
-  bcVision: "Ball Carrier Vision",
-  catching: "Catching",
-  catchInTraffic: "Catch in Traffic",
-  spectacularCatch: "Spectacular Catch",
-  routeRunning: "Route Running",
-  release: "Release",
-  runBlock: "Run Block",
-  passBlock: "Pass Block",
-  tackle: "Tackle",
-  hitPower: "Hit Power",
-  pursuit: "Pursuit",
-  playRecognition: "Play Recognition",
-  blockShedding: "Block Shedding",
-  powerMoves: "Power Moves",
-  finesseMoves: "Finesse Moves",
-  manCoverage: "Man Coverage",
-  zoneCoverage: "Zone Coverage",
-  press: "Press",
-  kickPower: "Kick Power",
-  kickAccuracy: "Kick Accuracy"
-};
-var ATTRIBUTE_KEYS = Object.keys(ATTRIBUTE_LABELS);
-
-// src/lib/server/sync/parse.ts
-var STAT_ALIASES = {
-  ballcarriervision: "bcVision",
-  bcv: "bcVision",
-  carryingvision: "bcVision",
-  throwaccuracy: "throwAccuracyMid",
-  shortaccuracy: "throwAccuracyShort",
-  mediumaccuracy: "throwAccuracyMid",
-  midaccuracy: "throwAccuracyMid",
-  deepaccuracy: "throwAccuracyDeep",
-  throwaccuracymedium: "throwAccuracyMid",
-  throwaccuracymed: "throwAccuracyMid",
-  catchintraffic: "catchInTraffic",
-  cit: "catchInTraffic",
-  spectacularcatch: "spectacularCatch",
-  runblocking: "runBlock",
-  passblocking: "passBlock",
-  blockshed: "blockShedding",
-  powermove: "powerMoves",
-  finessemove: "finesseMoves",
-  mancover: "manCoverage",
-  zonecover: "zoneCoverage",
-  presscoverage: "press",
-  kickaccuracy: "kickAccuracy",
-  kickpower: "kickPower",
-  jumpingability: "jumping",
-  playrec: "playRecognition",
-  hitpower: "hitPower"
-};
-var ROUTE_PARTS = ["shortrouterunning", "mediumrouterunning", "deeprouterunning"];
-var norm = (s3) => s3.toLowerCase().replace(/[^a-z0-9]/g, "");
-var KEY_LOOKUP = Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [norm(k), k]));
-var isObj = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
-function num2(v2) {
-  if (typeof v2 === "number" && Number.isFinite(v2)) return v2;
-  if (typeof v2 === "string" && v2.trim() !== "" && Number.isFinite(Number(v2))) return Number(v2);
-  if (isObj(v2)) return num2(v2.value ?? v2.rating ?? v2.val);
-  return null;
-}
-function str(v2) {
-  if (typeof v2 === "string") return v2.trim() || null;
-  if (typeof v2 === "number") return String(v2);
-  if (isObj(v2)) return str(v2.shortLabel ?? v2.abbreviation ?? v2.label ?? v2.name ?? v2.value ?? null);
-  return null;
-}
-function parseHeight(v2) {
-  if (typeof v2 === "number") return v2 > 0 && v2 < 100 ? Math.round(v2) : null;
-  if (typeof v2 !== "string") return null;
-  const m4 = v2.match(/^\s*(\d)\s*['\-\s]\s*(\d{1,2})/);
-  if (m4) return Number(m4[1]) * 12 + Number(m4[2]);
-  const n2 = Number(v2);
-  return Number.isFinite(n2) && n2 > 0 && n2 < 100 ? Math.round(n2) : null;
-}
-function parseStats(stats) {
-  const raw = {};
-  if (Array.isArray(stats)) {
-    for (const s3 of stats) {
-      if (!isObj(s3)) continue;
-      const id = str(s3.id ?? s3.key ?? s3.name);
-      const val = num2(s3.value ?? s3.rating);
-      if (id && val != null) raw[norm(id)] = val;
-    }
-  } else if (isObj(stats)) {
-    for (const [id, v2] of Object.entries(stats)) {
-      const val = num2(v2);
-      if (val != null) raw[norm(id)] = val;
-    }
-  }
-  const out = {};
-  for (const [id, val] of Object.entries(raw)) {
-    const key = KEY_LOOKUP[id] ?? STAT_ALIASES[id];
-    if (key && !(key in out)) out[key] = Math.round(val);
-  }
-  if (out.routeRunning === void 0) {
-    const parts = ROUTE_PARTS.map((p3) => raw[p3]).filter((v2) => v2 != null);
-    if (parts.length) out.routeRunning = Math.round(parts.reduce((a2, b3) => a2 + b3, 0) / parts.length);
-  }
-  if (out.runBlock === void 0 && raw.runblockpower != null && raw.runblockfinesse != null) {
-    out.runBlock = Math.round((raw.runblockpower + raw.runblockfinesse) / 2);
-  }
-  if (out.passBlock === void 0 && raw.passblockpower != null && raw.passblockfinesse != null) {
-    out.passBlock = Math.round((raw.passblockpower + raw.passblockfinesse) / 2);
-  }
-  return out;
-}
-function extractItems(payload) {
-  if (Array.isArray(payload)) {
-    if (payload.every((p3) => isObj(p3) && Array.isArray(p3.items))) return payload.flatMap((p3) => extractItems(p3));
-    return payload.filter(isObj);
-  }
-  if (!isObj(payload)) return [];
-  for (const k of ["items", "players", "results", "data", "ratings"]) {
-    const v2 = payload[k];
-    if (Array.isArray(v2)) return extractItems(v2);
-    if (isObj(v2)) {
-      const inner = extractItems(v2);
-      if (inner.length) return inner;
-    }
-  }
-  return [];
-}
-function parseItem(item) {
-  const first = str(item.firstName) ?? "";
-  const last = str(item.lastName) ?? "";
-  const fullName = (str(item.fullName) ?? str(item.name) ?? `${first} ${last}`).replace(/\s+/g, " ").trim();
-  const position = str(item.position ?? item.positionShort ?? item.pos)?.toUpperCase() ?? null;
-  const overall = num2(item.overallRating ?? item.overall ?? item.ovr);
-  if (!fullName || !position || overall == null) return null;
-  const [f2, ...rest] = fullName.split(" ");
-  const slug = slugify(fullName);
-  const id = str(item.id ?? item.playerId ?? item.maddenId);
-  const team = item.team;
-  const teamLabel = isObj(team) ? str(team.label ?? team.name ?? team.abbreviation) : str(team ?? item.teamName ?? item.teamLabel);
-  const archetype = str(isObj(item.archetype) ? item.archetype.label : item.archetype);
-  return {
-    maddenId: id ? `ea-${id}` : `ea-${slug}-${slugify(teamLabel ?? "fa")}`,
-    fullName,
-    firstName: first || f2,
-    lastName: last || rest.join(" ") || f2,
-    slug,
-    position,
-    teamLabel,
-    overallRating: Math.round(overall),
-    attributes: parseStats(item.stats ?? item.attributes ?? item.ratings),
-    archetype,
-    heightInches: parseHeight(item.height),
-    weightLbs: num2(item.weight),
-    college: str(item.college),
-    jerseyNumber: num2(item.jerseyNum ?? item.jerseyNumber ?? item.jersey),
-    age: num2(item.age),
-    yearsPro: num2(item.yearsPro ?? item.experience),
-    imageUrl: str(item.avatarUrl ?? item.headshotUrl ?? item.imageUrl)
-  };
-}
-function parseRatings(payload) {
-  const out = [];
-  const seen = /* @__PURE__ */ new Set();
-  for (const item of extractItems(payload)) {
-    const p3 = parseItem(item);
-    if (!p3 || seen.has(p3.maddenId)) continue;
-    seen.add(p3.maddenId);
-    out.push(p3);
-  }
-  return out;
-}
-
-// src/lib/server/sync/fetch.ts
-var DEFAULT_JSON_URL = "https://drop-api.ea.com/rating/madden-nfl";
-var DEFAULT_PAGE_URL = "https://www.ea.com/games/madden-nfl/ratings";
-var PAGE_LIMIT = 100;
-var MAX_PAGES = 60;
-var UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36";
-var isJsonEndpoint = (url2) => /drop-api\.ea\.com/.test(url2);
-function jsonBase() {
-  const env2 = process.env.MADDEN_RATINGS_URL;
-  return env2 && isJsonEndpoint(env2) ? env2 : DEFAULT_JSON_URL;
-}
-function pageUrl() {
-  const env2 = process.env.MADDEN_RATINGS_PAGE_URL ?? process.env.MADDEN_RATINGS_URL;
-  return env2 && !isJsonEndpoint(env2) ? env2 : DEFAULT_PAGE_URL;
-}
-async function fetchJsonPages(base = jsonBase(), fetchImpl = fetch) {
-  const pages = [];
-  let itemCount = 0;
-  for (let i2 = 0; i2 < MAX_PAGES; i2++) {
-    const url2 = new URL(base);
-    url2.searchParams.set("locale", url2.searchParams.get("locale") ?? "en");
-    url2.searchParams.set("limit", String(PAGE_LIMIT));
-    url2.searchParams.set("offset", String(i2 * PAGE_LIMIT));
-    const res = await fetchImpl(url2, { headers: { accept: "application/json", "user-agent": UA }, signal: AbortSignal.timeout(2e4) });
-    if (!res.ok) throw new Error(`Ratings endpoint ${url2.host} returned ${res.status}`);
-    const body = await res.json();
-    const items = extractItems(body);
-    pages.push(body);
-    itemCount += items.length;
-    const total = typeof body?.totalItems === "number" ? body.totalItems : null;
-    if (items.length < PAGE_LIMIT || total != null && itemCount >= total) break;
-  }
-  if (itemCount === 0) throw new Error("Ratings endpoint returned no items");
-  return { sourceUrl: base, method: "json", pages, itemCount };
-}
-async function fetchWithBrowser(url2 = pageUrl()) {
-  const { chromium } = await import("playwright-core");
-  const browser = await chromium.launch({
-    headless: true,
-    executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || void 0,
-    args: ["--no-sandbox", "--disable-dev-shm-usage"]
-  });
-  const pages = [];
-  const seenUrls = /* @__PURE__ */ new Set();
-  let itemCount = 0;
-  try {
-    const ctx = await browser.newContext({ userAgent: UA });
-    const page = await ctx.newPage();
-    page.on("response", async (res) => {
-      const u2 = res.url();
-      if (seenUrls.has(u2) || !/rating/i.test(u2) || !(res.headers()["content-type"] ?? "").includes("json")) return;
-      seenUrls.add(u2);
-      try {
-        const body = await res.json();
-        const n2 = extractItems(body).length;
-        if (n2) {
-          pages.push(body);
-          itemCount += n2;
-        }
-      } catch {
-      }
-    });
-    for (let p3 = 1; p3 <= MAX_PAGES; p3++) {
-      const before = itemCount;
-      const target = new URL(url2);
-      if (p3 > 1) target.searchParams.set("page", String(p3));
-      await page.goto(target.toString(), { waitUntil: "networkidle", timeout: 45e3 });
-      if (p3 === 1 && itemCount === 0) {
-        const embedded = await page.evaluate(() => document.getElementById("__NEXT_DATA__")?.textContent ?? null);
-        if (embedded) {
-          try {
-            const body = JSON.parse(embedded);
-            const n2 = extractItems(findItemsDeep(body)).length;
-            if (n2) {
-              pages.push(findItemsDeep(body));
-              itemCount += n2;
-            }
-          } catch {
-          }
-        }
-      }
-      if (itemCount === before) break;
-    }
-  } finally {
-    await browser.close().catch(() => {
-    });
-  }
-  if (itemCount === 0) throw new Error(`Browser fetch of ${url2} captured no ratings`);
-  return { sourceUrl: url2, method: "browser", pages, itemCount };
-}
-function findItemsDeep(node3, depth = 0) {
-  if (depth > 8 || node3 === null || typeof node3 !== "object") return null;
-  if (extractItems(node3).some((i2) => "overallRating" in i2 || "firstName" in i2)) return node3;
-  for (const v2 of Object.values(node3)) {
-    const hit = findItemsDeep(v2, depth + 1);
-    if (hit) return hit;
-  }
-  return null;
-}
-async function fetchRatings() {
-  try {
-    return await fetchJsonPages();
-  } catch (jsonErr) {
-    console.warn("[sync] JSON endpoint failed, trying browser:", jsonErr.message);
-    try {
-      return await fetchWithBrowser();
-    } catch (browserErr) {
-      throw new Error(`Ratings fetch failed. json: ${jsonErr.message}; browser: ${browserErr.message}`);
-    }
-  }
-}
-
-// src/lib/server/sync/diff.ts
-var DROP_FLAG_THRESHOLD = 15;
-var MIN_TEAM_SIZE = 53;
-var sameAttrs = (a2, b3) => {
-  const ka = Object.keys(a2), kb = Object.keys(b3);
-  return ka.length === kb.length && ka.every((k) => a2[k] === b3[k]);
-};
-function matchExisting(incoming, existing) {
-  const byId = new Map(existing.map((e2) => [e2.maddenId, e2]));
-  const seedBySlug = new Map(existing.filter((e2) => e2.maddenVersion.startsWith("seed")).map((e2) => [e2.slug, e2]));
-  const claimed = /* @__PURE__ */ new Set();
-  const pairs = [];
-  for (const p3 of incoming) {
-    let match2 = byId.get(p3.maddenId) ?? null;
-    if (match2 && claimed.has(match2.id)) match2 = null;
-    if (!match2) {
-      const s3 = seedBySlug.get(p3.slug);
-      if (s3 && !claimed.has(s3.id)) match2 = s3;
-    }
-    if (match2) claimed.add(match2.id);
-    pairs.push({ incoming: p3, existing: match2 });
-  }
-  return { pairs, claimed };
-}
-function diffPlayers(existing, incoming) {
-  const { pairs, claimed } = matchExisting(incoming, existing);
-  const diff = { added: [], changed: [], unchanged: [], missing: [] };
-  for (const { incoming: p3, existing: e2 } of pairs) {
-    if (!e2) {
-      diff.added.push(p3);
-      continue;
-    }
-    const attributesChanged = !sameAttrs(e2.attributes ?? {}, p3.attributes);
-    const ovrDelta = p3.overallRating - e2.overallRating;
-    if (ovrDelta !== 0 || attributesChanged || e2.maddenId !== p3.maddenId || !e2.isActive) {
-      diff.changed.push({ incoming: p3, existing: e2, ovrDelta, attributesChanged });
-    } else {
-      diff.unchanged.push({ incoming: p3, existing: e2 });
-    }
-  }
-  diff.missing = existing.filter((e2) => !claimed.has(e2.id) && e2.isActive && !e2.isAllTimeGreat);
-  return diff;
-}
-function validate(incoming, previous = []) {
-  const errors = [];
-  const warnings = [];
-  const flaggedDrops = [];
-  if (incoming.length === 0) errors.push("Feed parsed to zero players");
-  const ids = /* @__PURE__ */ new Set();
-  for (const p3 of incoming) {
-    if (!Number.isInteger(p3.overallRating) || p3.overallRating < 0 || p3.overallRating > 99) {
-      errors.push(`OVR out of range for ${p3.fullName} (${p3.maddenId}): ${p3.overallRating}`);
-    }
-    if (!p3.fullName.trim()) errors.push(`Missing name for ${p3.maddenId}`);
-    if (ids.has(p3.maddenId)) errors.push(`Duplicate maddenId ${p3.maddenId}`);
-    ids.add(p3.maddenId);
-    for (const [k, v2] of Object.entries(p3.attributes)) {
-      if (v2 < 0 || v2 > 99) {
-        warnings.push(`Attribute ${k}=${v2} out of range for ${p3.fullName}`);
-        break;
-      }
-    }
-  }
-  const activeReal = previous.filter((e2) => e2.isActive && !e2.isAllTimeGreat && !e2.maddenVersion.startsWith("seed")).length;
-  if (activeReal > 200 && incoming.length < activeReal * 0.5) {
-    errors.push(`Feed has ${incoming.length} players vs ${activeReal} active; refusing to deactivate half the league`);
-  }
-  const { pairs } = matchExisting(incoming, previous);
-  for (const { incoming: p3, existing: e2 } of pairs) {
-    if (e2 && e2.overallRating - p3.overallRating > DROP_FLAG_THRESHOLD) {
-      flaggedDrops.push({ maddenId: p3.maddenId, fullName: p3.fullName, from: e2.overallRating, to: p3.overallRating });
-    }
-  }
-  if (flaggedDrops.length) {
-    warnings.push(`${flaggedDrops.length} player(s) dropped more than ${DROP_FLAG_THRESHOLD} OVR: ${flaggedDrops.slice(0, 10).map((d4) => `${d4.fullName} ${d4.from}->${d4.to}`).join(", ")}`);
-  }
-  const perTeam = /* @__PURE__ */ new Map();
-  for (const p3 of incoming) if (p3.teamLabel) perTeam.set(p3.teamLabel, (perTeam.get(p3.teamLabel) ?? 0) + 1);
-  const small = [...perTeam].filter(([, n2]) => n2 < MIN_TEAM_SIZE);
-  if (small.length) warnings.push(`${small.length} team(s) under ${MIN_TEAM_SIZE} players: ${small.map(([t2, n2]) => `${t2}=${n2}`).join(", ")}`);
-  return { ok: errors.length === 0, errors, warnings, flaggedDrops };
-}
-
-// src/lib/server/sync/run.ts
-var MAX_RAW_BYTES = 5 * 1024 * 1024;
-var SYNC_CHANNEL = "gl:sync";
-var snapshotDir = () => process.env.SNAPSHOT_DIR ?? "./snapshots";
-var maddenVersion = () => process.env.MADDEN_VERSION ?? "madden-27";
-var norm2 = (s3) => s3.toLowerCase().replace(/[^a-z0-9]/g, "");
-var SyncError = class extends Error {
-  constructor(message, summary) {
-    super(message);
-    this.summary = summary;
-    this.name = "SyncError";
-  }
-  summary;
-};
-async function notifySlack(text2) {
-  const url2 = process.env.SLACK_WEBHOOK_URL;
-  if (!url2) return;
-  try {
-    await fetch(url2, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: text2 }), signal: AbortSignal.timeout(1e4) });
-  } catch (e2) {
-    console.error("[sync] slack notify failed", e2.message);
-  }
-}
-function buildTeamResolver(teams2) {
-  const map = /* @__PURE__ */ new Map();
-  for (const t2 of teams2) {
-    for (const k of [t2.slug, t2.name, `${t2.city} ${t2.name}`, t2.abbreviation]) map.set(norm2(k), t2.id);
-  }
-  map.set("was", map.get("was") ?? map.get("wsh") ?? -1);
-  map.set("wsh", map.get("was") ?? -1);
-  return (label) => {
-    if (!label) return null;
-    const key = norm2(label);
-    if (key === "freeagent" || key === "freeagents" || key === "fa") return null;
-    const id = map.get(key);
-    return id != null && id > 0 ? id : void 0;
-  };
-}
-function uniqueSlug(p3, used) {
-  const candidates = [p3.slug, `${p3.slug}-${p3.position.toLowerCase()}`, `${p3.slug}-${norm2(p3.teamLabel ?? "fa")}`, `${p3.slug}-${norm2(p3.maddenId)}`];
-  for (const c2 of candidates) if (c2 && !used.has(c2)) {
-    used.add(c2);
-    return c2;
-  }
-  const fallback = `${p3.slug}-${Date.now().toString(36)}`;
-  used.add(fallback);
-  return fallback;
-}
-async function writeSnapshotFile(id, raw) {
-  try {
-    const dir = snapshotDir();
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, `${id}.json`), raw, "utf8");
-  } catch (e2) {
-    console.warn("[sync] snapshot file write skipped:", e2.message);
-  }
-}
-async function afterCommit(summary) {
-  try {
-    await Promise.all(["player:", "roster:", "teams:"].map((p3) => invalidatePrefix(p3)));
-    await getRedis().publish(SYNC_CHANNEL, JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), snapshotId: summary.snapshotId, updated: summary.updated, added: summary.added }));
-  } catch (e2) {
-    console.warn("[sync] cache invalidation failed:", e2.message);
-  }
-}
-async function runSync({ dryRun = false, fetcher = fetchRatings, throwOnError = true } = {}) {
-  const started = Date.now();
-  const summary = {
-    ok: false,
-    dryRun,
-    snapshotId: null,
-    sourceUrl: "",
-    parsed: 0,
-    added: 0,
-    updated: 0,
-    unchanged: 0,
-    deactivated: 0,
-    historyRows: 0,
-    unresolvedTeams: [],
-    errors: [],
-    warnings: [],
-    durationMs: 0
-  };
-  const [snap] = await db.insert(schema_exports.syncSnapshots).values({ sourceUrl: "pending", status: dryRun ? "dry-run" : "running" }).returning({ id: schema_exports.syncSnapshots.id });
-  summary.snapshotId = snap.id;
-  try {
-    const raw = await fetcher();
-    summary.sourceUrl = raw.sourceUrl;
-    const rawJson = JSON.stringify(raw.pages);
-    await db.update(schema_exports.syncSnapshots).set({ sourceUrl: raw.sourceUrl, rawHtml: rawJson.length > MAX_RAW_BYTES ? rawJson.slice(0, MAX_RAW_BYTES) : rawJson }).where(eq(schema_exports.syncSnapshots.id, snap.id));
-    await writeSnapshotFile(snap.id, rawJson);
-    const incoming = parseRatings(raw.pages);
-    summary.parsed = incoming.length;
-    const existing = await db.select({
-      id: schema_exports.players.id,
-      maddenId: schema_exports.players.maddenId,
-      slug: schema_exports.players.slug,
-      overallRating: schema_exports.players.overallRating,
-      attributes: schema_exports.players.attributes,
-      maddenVersion: schema_exports.players.maddenVersion,
-      isActive: schema_exports.players.isActive,
-      isAllTimeGreat: schema_exports.players.isAllTimeGreat
-    }).from(schema_exports.players);
-    const v2 = validate(incoming, existing);
-    summary.warnings.push(...v2.warnings);
-    if (!v2.ok) {
-      summary.errors.push(...v2.errors);
-      throw new Error(`Validation failed with ${v2.errors.length} error(s)`);
-    }
-    const teams2 = await db.select({ id: schema_exports.teams.id, slug: schema_exports.teams.slug, name: schema_exports.teams.name, city: schema_exports.teams.city, abbreviation: schema_exports.teams.abbreviation }).from(schema_exports.teams);
-    const resolveTeam = buildTeamResolver(teams2);
-    const unresolved = /* @__PURE__ */ new Set();
-    const teamIdFor = (p3) => {
-      const id = resolveTeam(p3.teamLabel);
-      if (id === void 0) {
-        unresolved.add(p3.teamLabel ?? "");
-        return null;
-      }
-      return id;
-    };
-    const diff = diffPlayers(existing, incoming);
-    const { pairs } = matchExisting(incoming, existing);
-    summary.added = diff.added.length;
-    summary.updated = diff.changed.length;
-    summary.unchanged = diff.unchanged.length;
-    summary.deactivated = diff.missing.length;
-    summary.historyRows = diff.added.length + diff.changed.length;
-    if (dryRun) {
-      for (const p3 of incoming) teamIdFor(p3);
-      summary.unresolvedTeams = [...unresolved];
-      summary.ok = true;
-      await db.update(schema_exports.syncSnapshots).set({ parsedCount: incoming.length, status: "dry-run", errors: summary.warnings }).where(eq(schema_exports.syncSnapshots.id, snap.id));
-      return finish();
-    }
-    const version3 = maddenVersion();
-    const changedIds = new Set(diff.changed.map((c2) => c2.existing.id));
-    const now = /* @__PURE__ */ new Date();
-    await db.transaction(async (tx) => {
-      const usedSlugs = new Set(existing.map((e2) => e2.slug));
-      const history = [];
-      for (const { incoming: p3, existing: e2 } of pairs) {
-        const fields = {
-          maddenId: p3.maddenId,
-          fullName: p3.fullName,
-          firstName: p3.firstName,
-          lastName: p3.lastName,
-          position: p3.position,
-          teamId: teamIdFor(p3),
-          heightInches: p3.heightInches,
-          weightLbs: p3.weightLbs,
-          college: p3.college,
-          jerseyNumber: p3.jerseyNumber,
-          age: p3.age,
-          yearsPro: p3.yearsPro,
-          overallRating: p3.overallRating,
-          attributes: p3.attributes,
-          archetype: p3.archetype,
-          isActive: true,
-          maddenVersion: version3,
-          lastSyncedAt: now
-        };
-        if (e2) {
-          await tx.update(schema_exports.players).set({ ...fields, imageUrl: sql`coalesce(${schema_exports.players.imageUrl}, ${p3.imageUrl})` }).where(eq(schema_exports.players.id, e2.id));
-          if (changedIds.has(e2.id)) history.push({ playerId: e2.id, maddenVersion: version3, overallRating: p3.overallRating, attributes: p3.attributes });
-        } else {
-          const [row] = await tx.insert(schema_exports.players).values({ ...fields, slug: uniqueSlug(p3, usedSlugs), imageUrl: p3.imageUrl }).returning({ id: schema_exports.players.id });
-          history.push({ playerId: row.id, maddenVersion: version3, overallRating: p3.overallRating, attributes: p3.attributes });
-        }
-      }
-      for (let i2 = 0; i2 < history.length; i2 += 500) await tx.insert(schema_exports.maddenRatingsHistory).values(history.slice(i2, i2 + 500));
-      const missingIds = diff.missing.map((m4) => m4.id);
-      for (let i2 = 0; i2 < missingIds.length; i2 += 500) {
-        await tx.update(schema_exports.players).set({ isActive: false }).where(inArray(schema_exports.players.id, missingIds.slice(i2, i2 + 500)));
-      }
-      summary.unresolvedTeams = [...unresolved];
-      if (unresolved.size) summary.warnings.push(`Unresolved team labels (players set to no team): ${[...unresolved].join(", ")}`);
-      await tx.update(schema_exports.syncSnapshots).set({ parsedCount: incoming.length, status: "success", errors: summary.warnings }).where(eq(schema_exports.syncSnapshots.id, snap.id));
-    });
-    summary.ok = true;
-    await afterCommit(summary);
-    return finish();
-  } catch (e2) {
-    const msg = e2.message;
-    if (!summary.errors.includes(msg)) summary.errors.unshift(msg);
-    summary.ok = false;
-    try {
-      await db.update(schema_exports.syncSnapshots).set({ status: "failed", parsedCount: summary.parsed, errors: [...summary.errors, ...summary.warnings] }).where(eq(schema_exports.syncSnapshots.id, snap.id));
-    } catch (e22) {
-      console.error("[sync] could not mark snapshot failed", e22.message);
-    }
-    await notifySlack(`Ratings sync failed (snapshot ${snap.id}): ${msg}`);
-    finish();
-    if (throwOnError) throw new SyncError(msg, summary);
-    return summary;
-  }
-  function finish() {
-    summary.durationMs = Date.now() - started;
-    return summary;
-  }
-}
-
-// src/lib/server/alert.ts
-async function alertSlack(text2) {
-  const url2 = process.env.SLACK_WEBHOOK_URL;
-  if (!url2) {
-    console.warn("[alert]", text2);
-    return;
-  }
-  try {
-    await fetch(url2, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: `[Gridiron Lab] ${text2}` }) });
-  } catch (e2) {
-    console.error("[alert] slack failed", e2.message);
-  }
-}
 
 // node_modules/postal-mime/src/decode-strings.js
 var textEncoder = new TextEncoder();
@@ -98064,10 +97465,24 @@ var Resend = class {
   }
 };
 
+// src/lib/site.ts
+var SITE = {
+  name: "Unbeaten",
+  tagline: "Six picks. Seventeen games. One perfect season.",
+  url: (process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000").replace(/\/$/, ""),
+  description: "Spin six NFL teams, draft one player from each, and find out if your roster can go 17-0. Built on EA Sports Madden NFL ratings.",
+  /** Set CONTACT_EMAIL / LEGAL_EMAIL once the domain mailboxes exist. Until then the site routes people to /contact. */
+  contactEmail: process.env.CONTACT_EMAIL ?? null,
+  legalEmail: process.env.LEGAL_EMAIL ?? process.env.CONTACT_EMAIL ?? null,
+  mailingAddress: process.env.MAILING_ADDRESS ?? "Unbeaten, 12831 Muscatine Street, Suite A, Pacoima, CA 91331",
+  state: "California"
+};
+var slugify = (s3) => s3.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
 // src/lib/server/email.ts
 var C = { navy: "#0A1128", green: "#1B4332", bone: "#F8F9FA", orange: "#E76F51", steel: "#4A5568", boneDim: "#B8C0CC" };
-var from = () => process.env.EMAIL_FROM ?? `${SITE.name} <${SITE.contactEmail}>`;
-var unsubscribeMailto = () => process.env.EMAIL_UNSUBSCRIBE_MAILTO ?? `mailto:${SITE.contactEmail}?subject=unsubscribe`;
+var from = () => process.env.EMAIL_FROM ?? `${SITE.name} <onboarding@resend.dev>`;
+var unsubscribeMailto = () => process.env.EMAIL_UNSUBSCRIBE_MAILTO ?? (SITE.contactEmail ? `mailto:${SITE.contactEmail}?subject=unsubscribe` : null);
 var client2 = null;
 function getClient2() {
   const key = process.env.RESEND_API_KEY;
@@ -98080,7 +97495,8 @@ async function sendEmail(opts) {
   const headers = {};
   if (opts.marketing) {
     if (!opts.unsubscribeUrl) return { ok: false, error: "marketing email requires an unsubscribe URL" };
-    headers["List-Unsubscribe"] = `<${opts.unsubscribeUrl}>, <${unsubscribeMailto()}>`;
+    const mailto = unsubscribeMailto();
+    headers["List-Unsubscribe"] = mailto ? `<${opts.unsubscribeUrl}>, <${mailto}>` : `<${opts.unsubscribeUrl}>`;
     headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
   }
   const resend = getClient2();
@@ -98127,7 +97543,7 @@ function layout(i2) {
 <body style="margin:0;padding:0;background:${C.navy};font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.navy};"><tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-<tr><td style="padding:0 0 16px;border-bottom:1px solid ${C.steel};font-weight:800;font-size:18px;color:${C.bone};">Gridiron<span style="color:${C.orange};font-family:'JetBrains Mono',Menlo,monospace;">Lab</span></td></tr>
+<tr><td style="padding:0 0 16px;border-bottom:1px solid ${C.steel};font-weight:800;font-size:18px;color:${C.bone};">Unbeaten</td></tr>
 <tr><td style="padding:24px 0 8px;">
 <h1 style="margin:0 0 16px;font-size:24px;line-height:1.2;color:${C.bone};">${escapeHtml2(i2.heading)}</h1>
 ${i2.paragraphs.map(p3).join("\n")}
@@ -98167,6 +97583,592 @@ function dailyPuzzle(date2, teams2, unsubscribeUrl) {
   };
 }
 
+// src/lib/server/alert.ts
+var adminEmails = () => (process.env.ADMIN_EMAILS ?? "").split(",").map((e2) => e2.trim()).filter(Boolean);
+async function alertAdmins(subject, text2) {
+  console.warn("[alert]", subject, text2);
+  const to = adminEmails();
+  await Promise.all(to.map(
+    (addr) => sendEmail({ to: addr, subject: `[Unbeaten] ${subject}`, text: text2, html: `<pre style="white-space:pre-wrap;font-family:monospace">${escapeHtml2(text2)}</pre>` }).catch((e2) => console.error("[alert] email failed", e2.message))
+  ));
+}
+
+// src/lib/game/attributes.ts
+var ATTRIBUTE_LABELS = {
+  speed: "Speed",
+  acceleration: "Acceleration",
+  agility: "Agility",
+  strength: "Strength",
+  awareness: "Awareness",
+  stamina: "Stamina",
+  jumping: "Jumping",
+  throwPower: "Throw Power",
+  throwAccuracyShort: "Short Accuracy",
+  throwAccuracyMid: "Mid Accuracy",
+  throwAccuracyDeep: "Deep Accuracy",
+  throwUnderPressure: "Throw Under Pressure",
+  throwOnTheRun: "Throw on the Run",
+  playAction: "Play Action",
+  carrying: "Carrying",
+  breakTackle: "Break Tackle",
+  jukeMove: "Juke Move",
+  trucking: "Trucking",
+  bcVision: "Ball Carrier Vision",
+  catching: "Catching",
+  catchInTraffic: "Catch in Traffic",
+  spectacularCatch: "Spectacular Catch",
+  routeRunning: "Route Running",
+  release: "Release",
+  runBlock: "Run Block",
+  passBlock: "Pass Block",
+  tackle: "Tackle",
+  hitPower: "Hit Power",
+  pursuit: "Pursuit",
+  playRecognition: "Play Recognition",
+  blockShedding: "Block Shedding",
+  powerMoves: "Power Moves",
+  finesseMoves: "Finesse Moves",
+  manCoverage: "Man Coverage",
+  zoneCoverage: "Zone Coverage",
+  press: "Press",
+  kickPower: "Kick Power",
+  kickAccuracy: "Kick Accuracy"
+};
+var ATTRIBUTE_KEYS = Object.keys(ATTRIBUTE_LABELS);
+
+// src/lib/server/sync/parse.ts
+var STAT_ALIASES = {
+  ballcarriervision: "bcVision",
+  bcv: "bcVision",
+  carryingvision: "bcVision",
+  throwaccuracy: "throwAccuracyMid",
+  shortaccuracy: "throwAccuracyShort",
+  mediumaccuracy: "throwAccuracyMid",
+  midaccuracy: "throwAccuracyMid",
+  deepaccuracy: "throwAccuracyDeep",
+  throwaccuracymedium: "throwAccuracyMid",
+  throwaccuracymed: "throwAccuracyMid",
+  catchintraffic: "catchInTraffic",
+  cit: "catchInTraffic",
+  spectacularcatch: "spectacularCatch",
+  runblocking: "runBlock",
+  passblocking: "passBlock",
+  blockshed: "blockShedding",
+  powermove: "powerMoves",
+  finessemove: "finesseMoves",
+  mancover: "manCoverage",
+  zonecover: "zoneCoverage",
+  presscoverage: "press",
+  kickaccuracy: "kickAccuracy",
+  kickpower: "kickPower",
+  jumpingability: "jumping",
+  playrec: "playRecognition",
+  hitpower: "hitPower"
+};
+var ROUTE_PARTS = ["shortrouterunning", "mediumrouterunning", "deeprouterunning"];
+var norm = (s3) => s3.toLowerCase().replace(/[^a-z0-9]/g, "");
+var KEY_LOOKUP = Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [norm(k), k]));
+var isObj = (v2) => typeof v2 === "object" && v2 !== null && !Array.isArray(v2);
+function num2(v2) {
+  if (typeof v2 === "number" && Number.isFinite(v2)) return v2;
+  if (typeof v2 === "string" && v2.trim() !== "" && Number.isFinite(Number(v2))) return Number(v2);
+  if (isObj(v2)) return num2(v2.value ?? v2.rating ?? v2.val);
+  return null;
+}
+function str(v2) {
+  if (typeof v2 === "string") return v2.trim() || null;
+  if (typeof v2 === "number") return String(v2);
+  if (isObj(v2)) return str(v2.shortLabel ?? v2.abbreviation ?? v2.label ?? v2.name ?? v2.value ?? null);
+  return null;
+}
+function parseHeight(v2) {
+  if (typeof v2 === "number") return v2 > 0 && v2 < 100 ? Math.round(v2) : null;
+  if (typeof v2 !== "string") return null;
+  const m4 = v2.match(/^\s*(\d)\s*['\-\s]\s*(\d{1,2})/);
+  if (m4) return Number(m4[1]) * 12 + Number(m4[2]);
+  const n2 = Number(v2);
+  return Number.isFinite(n2) && n2 > 0 && n2 < 100 ? Math.round(n2) : null;
+}
+function parseStats(stats) {
+  const raw = {};
+  if (Array.isArray(stats)) {
+    for (const s3 of stats) {
+      if (!isObj(s3)) continue;
+      const id = str(s3.id ?? s3.key ?? s3.name);
+      const val = num2(s3.value ?? s3.rating);
+      if (id && val != null) raw[norm(id)] = val;
+    }
+  } else if (isObj(stats)) {
+    for (const [id, v2] of Object.entries(stats)) {
+      const val = num2(v2);
+      if (val != null) raw[norm(id)] = val;
+    }
+  }
+  const out = {};
+  for (const [id, val] of Object.entries(raw)) {
+    const key = KEY_LOOKUP[id] ?? STAT_ALIASES[id];
+    if (key && !(key in out)) out[key] = Math.round(val);
+  }
+  if (out.routeRunning === void 0) {
+    const parts = ROUTE_PARTS.map((p3) => raw[p3]).filter((v2) => v2 != null);
+    if (parts.length) out.routeRunning = Math.round(parts.reduce((a2, b3) => a2 + b3, 0) / parts.length);
+  }
+  if (out.runBlock === void 0 && raw.runblockpower != null && raw.runblockfinesse != null) {
+    out.runBlock = Math.round((raw.runblockpower + raw.runblockfinesse) / 2);
+  }
+  if (out.passBlock === void 0 && raw.passblockpower != null && raw.passblockfinesse != null) {
+    out.passBlock = Math.round((raw.passblockpower + raw.passblockfinesse) / 2);
+  }
+  return out;
+}
+function extractItems(payload) {
+  if (Array.isArray(payload)) {
+    if (payload.every((p3) => isObj(p3) && Array.isArray(p3.items))) return payload.flatMap((p3) => extractItems(p3));
+    return payload.filter(isObj);
+  }
+  if (!isObj(payload)) return [];
+  for (const k of ["items", "players", "results", "data", "ratings"]) {
+    const v2 = payload[k];
+    if (Array.isArray(v2)) return extractItems(v2);
+    if (isObj(v2)) {
+      const inner = extractItems(v2);
+      if (inner.length) return inner;
+    }
+  }
+  return [];
+}
+function parseItem(item) {
+  const first = str(item.firstName) ?? "";
+  const last = str(item.lastName) ?? "";
+  const fullName = (str(item.fullName) ?? str(item.name) ?? `${first} ${last}`).replace(/\s+/g, " ").trim();
+  const position = str(item.position ?? item.positionShort ?? item.pos)?.toUpperCase() ?? null;
+  const overall = num2(item.overallRating ?? item.overall ?? item.ovr);
+  if (!fullName || !position || overall == null) return null;
+  const [f2, ...rest] = fullName.split(" ");
+  const slug = slugify(fullName);
+  const id = str(item.id ?? item.playerId ?? item.maddenId);
+  const team = item.team;
+  const teamLabel = isObj(team) ? str(team.label ?? team.name ?? team.abbreviation) : str(team ?? item.teamName ?? item.teamLabel);
+  const archetype = str(isObj(item.archetype) ? item.archetype.label : item.archetype);
+  return {
+    maddenId: id ? `ea-${id}` : `ea-${slug}-${slugify(teamLabel ?? "fa")}`,
+    fullName,
+    firstName: first || f2,
+    lastName: last || rest.join(" ") || f2,
+    slug,
+    position,
+    teamLabel,
+    overallRating: Math.round(overall),
+    attributes: parseStats(item.stats ?? item.attributes ?? item.ratings),
+    archetype,
+    heightInches: parseHeight(item.height),
+    weightLbs: num2(item.weight),
+    college: str(item.college),
+    jerseyNumber: num2(item.jerseyNum ?? item.jerseyNumber ?? item.jersey),
+    age: num2(item.age),
+    yearsPro: num2(item.yearsPro ?? item.experience),
+    imageUrl: str(item.avatarUrl ?? item.headshotUrl ?? item.imageUrl)
+  };
+}
+function parseRatings(payload) {
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const item of extractItems(payload)) {
+    const p3 = parseItem(item);
+    if (!p3 || seen.has(p3.maddenId)) continue;
+    seen.add(p3.maddenId);
+    out.push(p3);
+  }
+  return out;
+}
+
+// src/lib/server/sync/fetch.ts
+var DEFAULT_JSON_URL = "https://drop-api.ea.com/rating/madden-nfl";
+var DEFAULT_PAGE_URL = "https://www.ea.com/games/madden-nfl/ratings";
+var PAGE_LIMIT = 100;
+var MAX_PAGES = 60;
+var UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36";
+var isJsonEndpoint = (url2) => /drop-api\.ea\.com/.test(url2);
+function jsonBase() {
+  const env2 = process.env.MADDEN_RATINGS_URL;
+  return env2 && isJsonEndpoint(env2) ? env2 : DEFAULT_JSON_URL;
+}
+function pageUrl() {
+  const env2 = process.env.MADDEN_RATINGS_PAGE_URL ?? process.env.MADDEN_RATINGS_URL;
+  return env2 && !isJsonEndpoint(env2) ? env2 : DEFAULT_PAGE_URL;
+}
+async function fetchJsonPages(base = jsonBase(), fetchImpl = fetch) {
+  const pages = [];
+  let itemCount = 0;
+  for (let i2 = 0; i2 < MAX_PAGES; i2++) {
+    const url2 = new URL(base);
+    url2.searchParams.set("locale", url2.searchParams.get("locale") ?? "en");
+    url2.searchParams.set("limit", String(PAGE_LIMIT));
+    url2.searchParams.set("offset", String(i2 * PAGE_LIMIT));
+    const res = await fetchImpl(url2, { headers: { accept: "application/json", "user-agent": UA }, signal: AbortSignal.timeout(2e4) });
+    if (!res.ok) throw new Error(`Ratings endpoint ${url2.host} returned ${res.status}`);
+    const body = await res.json();
+    const items = extractItems(body);
+    pages.push(body);
+    itemCount += items.length;
+    const total = typeof body?.totalItems === "number" ? body.totalItems : null;
+    if (items.length < PAGE_LIMIT || total != null && itemCount >= total) break;
+  }
+  if (itemCount === 0) throw new Error("Ratings endpoint returned no items");
+  return { sourceUrl: base, method: "json", pages, itemCount };
+}
+async function fetchWithBrowser(url2 = pageUrl()) {
+  const { chromium } = await import("playwright-core");
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || void 0,
+    args: ["--no-sandbox", "--disable-dev-shm-usage"]
+  });
+  const pages = [];
+  const seenUrls = /* @__PURE__ */ new Set();
+  let itemCount = 0;
+  try {
+    const ctx = await browser.newContext({ userAgent: UA });
+    const page = await ctx.newPage();
+    page.on("response", async (res) => {
+      const u2 = res.url();
+      if (seenUrls.has(u2) || !/rating/i.test(u2) || !(res.headers()["content-type"] ?? "").includes("json")) return;
+      seenUrls.add(u2);
+      try {
+        const body = await res.json();
+        const n2 = extractItems(body).length;
+        if (n2) {
+          pages.push(body);
+          itemCount += n2;
+        }
+      } catch {
+      }
+    });
+    for (let p3 = 1; p3 <= MAX_PAGES; p3++) {
+      const before = itemCount;
+      const target = new URL(url2);
+      if (p3 > 1) target.searchParams.set("page", String(p3));
+      await page.goto(target.toString(), { waitUntil: "networkidle", timeout: 45e3 });
+      if (p3 === 1 && itemCount === 0) {
+        const embedded = await page.evaluate(() => document.getElementById("__NEXT_DATA__")?.textContent ?? null);
+        if (embedded) {
+          try {
+            const body = JSON.parse(embedded);
+            const n2 = extractItems(findItemsDeep(body)).length;
+            if (n2) {
+              pages.push(findItemsDeep(body));
+              itemCount += n2;
+            }
+          } catch {
+          }
+        }
+      }
+      if (itemCount === before) break;
+    }
+  } finally {
+    await browser.close().catch(() => {
+    });
+  }
+  if (itemCount === 0) throw new Error(`Browser fetch of ${url2} captured no ratings`);
+  return { sourceUrl: url2, method: "browser", pages, itemCount };
+}
+function findItemsDeep(node3, depth = 0) {
+  if (depth > 8 || node3 === null || typeof node3 !== "object") return null;
+  if (extractItems(node3).some((i2) => "overallRating" in i2 || "firstName" in i2)) return node3;
+  for (const v2 of Object.values(node3)) {
+    const hit = findItemsDeep(v2, depth + 1);
+    if (hit) return hit;
+  }
+  return null;
+}
+async function fetchRatings() {
+  try {
+    return await fetchJsonPages();
+  } catch (jsonErr) {
+    console.warn("[sync] JSON endpoint failed, trying browser:", jsonErr.message);
+    try {
+      return await fetchWithBrowser();
+    } catch (browserErr) {
+      throw new Error(`Ratings fetch failed. json: ${jsonErr.message}; browser: ${browserErr.message}`);
+    }
+  }
+}
+
+// src/lib/server/sync/diff.ts
+var DROP_FLAG_THRESHOLD = 15;
+var MIN_TEAM_SIZE = 53;
+var sameAttrs = (a2, b3) => {
+  const ka = Object.keys(a2), kb = Object.keys(b3);
+  return ka.length === kb.length && ka.every((k) => a2[k] === b3[k]);
+};
+function matchExisting(incoming, existing) {
+  const byId = new Map(existing.map((e2) => [e2.maddenId, e2]));
+  const seedBySlug = new Map(existing.filter((e2) => e2.maddenVersion.startsWith("seed")).map((e2) => [e2.slug, e2]));
+  const claimed = /* @__PURE__ */ new Set();
+  const pairs = [];
+  for (const p3 of incoming) {
+    let match2 = byId.get(p3.maddenId) ?? null;
+    if (match2 && claimed.has(match2.id)) match2 = null;
+    if (!match2) {
+      const s3 = seedBySlug.get(p3.slug);
+      if (s3 && !claimed.has(s3.id)) match2 = s3;
+    }
+    if (match2) claimed.add(match2.id);
+    pairs.push({ incoming: p3, existing: match2 });
+  }
+  return { pairs, claimed };
+}
+function diffPlayers(existing, incoming) {
+  const { pairs, claimed } = matchExisting(incoming, existing);
+  const diff = { added: [], changed: [], unchanged: [], missing: [] };
+  for (const { incoming: p3, existing: e2 } of pairs) {
+    if (!e2) {
+      diff.added.push(p3);
+      continue;
+    }
+    const attributesChanged = !sameAttrs(e2.attributes ?? {}, p3.attributes);
+    const ovrDelta = p3.overallRating - e2.overallRating;
+    if (ovrDelta !== 0 || attributesChanged || e2.maddenId !== p3.maddenId || !e2.isActive) {
+      diff.changed.push({ incoming: p3, existing: e2, ovrDelta, attributesChanged });
+    } else {
+      diff.unchanged.push({ incoming: p3, existing: e2 });
+    }
+  }
+  diff.missing = existing.filter((e2) => !claimed.has(e2.id) && e2.isActive && !e2.isAllTimeGreat);
+  return diff;
+}
+function validate(incoming, previous = []) {
+  const errors = [];
+  const warnings = [];
+  const flaggedDrops = [];
+  if (incoming.length === 0) errors.push("Feed parsed to zero players");
+  const ids = /* @__PURE__ */ new Set();
+  for (const p3 of incoming) {
+    if (!Number.isInteger(p3.overallRating) || p3.overallRating < 0 || p3.overallRating > 99) {
+      errors.push(`OVR out of range for ${p3.fullName} (${p3.maddenId}): ${p3.overallRating}`);
+    }
+    if (!p3.fullName.trim()) errors.push(`Missing name for ${p3.maddenId}`);
+    if (ids.has(p3.maddenId)) errors.push(`Duplicate maddenId ${p3.maddenId}`);
+    ids.add(p3.maddenId);
+    for (const [k, v2] of Object.entries(p3.attributes)) {
+      if (v2 < 0 || v2 > 99) {
+        warnings.push(`Attribute ${k}=${v2} out of range for ${p3.fullName}`);
+        break;
+      }
+    }
+  }
+  const activeReal = previous.filter((e2) => e2.isActive && !e2.isAllTimeGreat && !e2.maddenVersion.startsWith("seed")).length;
+  if (activeReal > 200 && incoming.length < activeReal * 0.5) {
+    errors.push(`Feed has ${incoming.length} players vs ${activeReal} active; refusing to deactivate half the league`);
+  }
+  const { pairs } = matchExisting(incoming, previous);
+  for (const { incoming: p3, existing: e2 } of pairs) {
+    if (e2 && e2.overallRating - p3.overallRating > DROP_FLAG_THRESHOLD) {
+      flaggedDrops.push({ maddenId: p3.maddenId, fullName: p3.fullName, from: e2.overallRating, to: p3.overallRating });
+    }
+  }
+  if (flaggedDrops.length) {
+    warnings.push(`${flaggedDrops.length} player(s) dropped more than ${DROP_FLAG_THRESHOLD} OVR: ${flaggedDrops.slice(0, 10).map((d4) => `${d4.fullName} ${d4.from}->${d4.to}`).join(", ")}`);
+  }
+  const perTeam = /* @__PURE__ */ new Map();
+  for (const p3 of incoming) if (p3.teamLabel) perTeam.set(p3.teamLabel, (perTeam.get(p3.teamLabel) ?? 0) + 1);
+  const small = [...perTeam].filter(([, n2]) => n2 < MIN_TEAM_SIZE);
+  if (small.length) warnings.push(`${small.length} team(s) under ${MIN_TEAM_SIZE} players: ${small.map(([t2, n2]) => `${t2}=${n2}`).join(", ")}`);
+  return { ok: errors.length === 0, errors, warnings, flaggedDrops };
+}
+
+// src/lib/server/sync/run.ts
+var MAX_RAW_BYTES = 5 * 1024 * 1024;
+var SYNC_CHANNEL = "gl:sync";
+var snapshotDir = () => process.env.SNAPSHOT_DIR ?? "./snapshots";
+var maddenVersion = () => process.env.MADDEN_VERSION ?? "madden-27";
+var norm2 = (s3) => s3.toLowerCase().replace(/[^a-z0-9]/g, "");
+var SyncError = class extends Error {
+  constructor(message, summary) {
+    super(message);
+    this.summary = summary;
+    this.name = "SyncError";
+  }
+  summary;
+};
+function buildTeamResolver(teams2) {
+  const map = /* @__PURE__ */ new Map();
+  for (const t2 of teams2) {
+    for (const k of [t2.slug, t2.name, `${t2.city} ${t2.name}`, t2.abbreviation]) map.set(norm2(k), t2.id);
+  }
+  map.set("was", map.get("was") ?? map.get("wsh") ?? -1);
+  map.set("wsh", map.get("was") ?? -1);
+  return (label) => {
+    if (!label) return null;
+    const key = norm2(label);
+    if (key === "freeagent" || key === "freeagents" || key === "fa") return null;
+    const id = map.get(key);
+    return id != null && id > 0 ? id : void 0;
+  };
+}
+function uniqueSlug(p3, used) {
+  const candidates = [p3.slug, `${p3.slug}-${p3.position.toLowerCase()}`, `${p3.slug}-${norm2(p3.teamLabel ?? "fa")}`, `${p3.slug}-${norm2(p3.maddenId)}`];
+  for (const c2 of candidates) if (c2 && !used.has(c2)) {
+    used.add(c2);
+    return c2;
+  }
+  const fallback = `${p3.slug}-${Date.now().toString(36)}`;
+  used.add(fallback);
+  return fallback;
+}
+async function writeSnapshotFile(id, raw) {
+  try {
+    const dir = snapshotDir();
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, `${id}.json`), raw, "utf8");
+  } catch (e2) {
+    console.warn("[sync] snapshot file write skipped:", e2.message);
+  }
+}
+async function afterCommit(summary) {
+  try {
+    await Promise.all(["player:", "roster:", "teams:"].map((p3) => invalidatePrefix(p3)));
+    await getRedis().publish(SYNC_CHANNEL, JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), snapshotId: summary.snapshotId, updated: summary.updated, added: summary.added }));
+  } catch (e2) {
+    console.warn("[sync] cache invalidation failed:", e2.message);
+  }
+}
+async function runSync({ dryRun = false, fetcher = fetchRatings, throwOnError = true } = {}) {
+  const started = Date.now();
+  const summary = {
+    ok: false,
+    dryRun,
+    snapshotId: null,
+    sourceUrl: "",
+    parsed: 0,
+    added: 0,
+    updated: 0,
+    unchanged: 0,
+    deactivated: 0,
+    historyRows: 0,
+    unresolvedTeams: [],
+    errors: [],
+    warnings: [],
+    durationMs: 0
+  };
+  const [snap] = await db.insert(schema_exports.syncSnapshots).values({ sourceUrl: "pending", status: dryRun ? "dry-run" : "running" }).returning({ id: schema_exports.syncSnapshots.id });
+  summary.snapshotId = snap.id;
+  try {
+    const raw = await fetcher();
+    summary.sourceUrl = raw.sourceUrl;
+    const rawJson = JSON.stringify(raw.pages);
+    await db.update(schema_exports.syncSnapshots).set({ sourceUrl: raw.sourceUrl, rawHtml: rawJson.length > MAX_RAW_BYTES ? rawJson.slice(0, MAX_RAW_BYTES) : rawJson }).where(eq(schema_exports.syncSnapshots.id, snap.id));
+    await writeSnapshotFile(snap.id, rawJson);
+    const incoming = parseRatings(raw.pages);
+    summary.parsed = incoming.length;
+    const existing = await db.select({
+      id: schema_exports.players.id,
+      maddenId: schema_exports.players.maddenId,
+      slug: schema_exports.players.slug,
+      overallRating: schema_exports.players.overallRating,
+      attributes: schema_exports.players.attributes,
+      maddenVersion: schema_exports.players.maddenVersion,
+      isActive: schema_exports.players.isActive,
+      isAllTimeGreat: schema_exports.players.isAllTimeGreat
+    }).from(schema_exports.players);
+    const v2 = validate(incoming, existing);
+    summary.warnings.push(...v2.warnings);
+    if (!v2.ok) {
+      summary.errors.push(...v2.errors);
+      throw new Error(`Validation failed with ${v2.errors.length} error(s)`);
+    }
+    const teams2 = await db.select({ id: schema_exports.teams.id, slug: schema_exports.teams.slug, name: schema_exports.teams.name, city: schema_exports.teams.city, abbreviation: schema_exports.teams.abbreviation }).from(schema_exports.teams);
+    const resolveTeam = buildTeamResolver(teams2);
+    const unresolved = /* @__PURE__ */ new Set();
+    const teamIdFor = (p3) => {
+      const id = resolveTeam(p3.teamLabel);
+      if (id === void 0) {
+        unresolved.add(p3.teamLabel ?? "");
+        return null;
+      }
+      return id;
+    };
+    const diff = diffPlayers(existing, incoming);
+    const { pairs } = matchExisting(incoming, existing);
+    summary.added = diff.added.length;
+    summary.updated = diff.changed.length;
+    summary.unchanged = diff.unchanged.length;
+    summary.deactivated = diff.missing.length;
+    summary.historyRows = diff.added.length + diff.changed.length;
+    if (dryRun) {
+      for (const p3 of incoming) teamIdFor(p3);
+      summary.unresolvedTeams = [...unresolved];
+      summary.ok = true;
+      await db.update(schema_exports.syncSnapshots).set({ parsedCount: incoming.length, status: "dry-run", errors: summary.warnings }).where(eq(schema_exports.syncSnapshots.id, snap.id));
+      return finish();
+    }
+    const version3 = maddenVersion();
+    const changedIds = new Set(diff.changed.map((c2) => c2.existing.id));
+    const now = /* @__PURE__ */ new Date();
+    await db.transaction(async (tx) => {
+      const usedSlugs = new Set(existing.map((e2) => e2.slug));
+      const history = [];
+      for (const { incoming: p3, existing: e2 } of pairs) {
+        const fields = {
+          maddenId: p3.maddenId,
+          fullName: p3.fullName,
+          firstName: p3.firstName,
+          lastName: p3.lastName,
+          position: p3.position,
+          teamId: teamIdFor(p3),
+          heightInches: p3.heightInches,
+          weightLbs: p3.weightLbs,
+          college: p3.college,
+          jerseyNumber: p3.jerseyNumber,
+          age: p3.age,
+          yearsPro: p3.yearsPro,
+          overallRating: p3.overallRating,
+          attributes: p3.attributes,
+          archetype: p3.archetype,
+          isActive: true,
+          maddenVersion: version3,
+          lastSyncedAt: now
+        };
+        if (e2) {
+          await tx.update(schema_exports.players).set({ ...fields, imageUrl: sql`coalesce(${schema_exports.players.imageUrl}, ${p3.imageUrl})` }).where(eq(schema_exports.players.id, e2.id));
+          if (changedIds.has(e2.id)) history.push({ playerId: e2.id, maddenVersion: version3, overallRating: p3.overallRating, attributes: p3.attributes });
+        } else {
+          const [row] = await tx.insert(schema_exports.players).values({ ...fields, slug: uniqueSlug(p3, usedSlugs), imageUrl: p3.imageUrl }).returning({ id: schema_exports.players.id });
+          history.push({ playerId: row.id, maddenVersion: version3, overallRating: p3.overallRating, attributes: p3.attributes });
+        }
+      }
+      for (let i2 = 0; i2 < history.length; i2 += 500) await tx.insert(schema_exports.maddenRatingsHistory).values(history.slice(i2, i2 + 500));
+      const missingIds = diff.missing.map((m4) => m4.id);
+      for (let i2 = 0; i2 < missingIds.length; i2 += 500) {
+        await tx.update(schema_exports.players).set({ isActive: false }).where(inArray(schema_exports.players.id, missingIds.slice(i2, i2 + 500)));
+      }
+      summary.unresolvedTeams = [...unresolved];
+      if (unresolved.size) summary.warnings.push(`Unresolved team labels (players set to no team): ${[...unresolved].join(", ")}`);
+      await tx.update(schema_exports.syncSnapshots).set({ parsedCount: incoming.length, status: "success", errors: summary.warnings }).where(eq(schema_exports.syncSnapshots.id, snap.id));
+    });
+    summary.ok = true;
+    await afterCommit(summary);
+    return finish();
+  } catch (e2) {
+    const msg = e2.message;
+    if (!summary.errors.includes(msg)) summary.errors.unshift(msg);
+    summary.ok = false;
+    try {
+      await db.update(schema_exports.syncSnapshots).set({ status: "failed", parsedCount: summary.parsed, errors: [...summary.errors, ...summary.warnings] }).where(eq(schema_exports.syncSnapshots.id, snap.id));
+    } catch (e22) {
+      console.error("[sync] could not mark snapshot failed", e22.message);
+    }
+    await alertAdmins("Ratings sync failed", `Ratings sync failed (snapshot ${snap.id}): ${msg}`);
+    finish();
+    if (throwOnError) throw new SyncError(msg, summary);
+    return summary;
+  }
+  function finish() {
+    summary.durationMs = Date.now() - started;
+    return summary;
+  }
+}
+
 // src/lib/server/email-jobs.ts
 async function dispatchEmailJob(kind, data) {
   let opts;
@@ -98197,7 +98199,13 @@ if (process.env.SENTRY_DSN) init({ dsn: process.env.SENTRY_DSN, tracesSampleRate
 var connection2 = getRedis();
 var concurrency = { [QUEUE_NAMES.sync]: 1, [QUEUE_NAMES.newsletter]: 5, [QUEUE_NAMES.og]: 2 };
 var handlers2 = {
-  [QUEUE_NAMES.sync]: async () => runSync({ dryRun: false }),
+  [QUEUE_NAMES.sync]: async () => {
+    const summary = await runSync({ dryRun: false });
+    const base = process.env.INTERNAL_WEB_URL ?? "http://localhost:3000";
+    await fetch(`${base}/api/internal/revalidate`, { method: "POST", headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } }).catch(() => {
+    });
+    return summary;
+  },
   [QUEUE_NAMES.newsletter]: async (job) => dispatchEmailJob(job.name, job.data),
   [QUEUE_NAMES.og]: async (job) => renderResultCard(job.data.resultId)
 };
@@ -98206,7 +98214,7 @@ var workers = Object.entries(handlers2).map(([name, fn2]) => {
   w2.on("failed", (job, err) => {
     console.error(`[${name}] job ${job?.id} failed:`, err.message);
     captureException(err, { tags: { queue: name } });
-    if (name === QUEUE_NAMES.sync && job && job.attemptsMade >= (job.opts.attempts ?? 1)) void alertSlack(`Ratings sync failed: ${err.message}`);
+    if (name === QUEUE_NAMES.sync && job && job.attemptsMade >= (job.opts.attempts ?? 1)) void alertAdmins("Ratings sync failed", `Ratings sync failed: ${err.message}`);
   });
   w2.on("completed", (job) => console.log(`[${name}] job ${job.id} done`));
   return w2;

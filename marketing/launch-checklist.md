@@ -10,7 +10,7 @@ Owner key: **Lead** (engineering lead), **Eng** (any engineer), **Content** (cop
 | [ ] | Build a Player playable end to end on mobile and desktop | Eng |
 | [ ] | Server replays every submitted result; forged submissions rejected | Lead |
 | [ ] | Leaderboard shows daily and all-time; flagged results excluded | Eng |
-| [ ] | Share cards render at 1200x630 and unfurl on X, iMessage, Slack, Discord | Eng |
+| [ ] | Share cards render at 1200x630 and unfurl on X, iMessage, Discord | Eng |
 | [ ] | Guest play works without an account | Eng |
 | [ ] | Account deletion anonymizes results immediately and deletes the account within 30 days | Eng |
 | [ ] | `/settings/export` returns complete JSON | Eng |
@@ -88,7 +88,7 @@ Owner key: **Lead** (engineering lead), **Eng** (any engineer), **Content** (cop
 |---|---|---|
 | [ ] | Web, worker, and cron services healthy on Railway | Ops |
 | [ ] | Postgres backups enabled and a restore tested | Ops |
-| [ ] | Uptime monitor on `/` and `/api/health` with alerts to Slack | Ops |
+| [ ] | Uptime monitor on `/` and `/api/health` with alerts to admin email | Ops |
 | [ ] | Custom domain with TLS; `www` redirects to apex (or the reverse) | Ops |
 | [ ] | Load test: 50 concurrent game submissions without errors | Eng |
 | [ ] | Rollback procedure documented and rehearsed | Lead |

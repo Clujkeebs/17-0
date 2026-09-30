@@ -7,7 +7,7 @@ export function SiteHeader({ minimal = false }: { minimal?: boolean }) {
     <header className="site-header">
       <div className="container">
         <Link href="/" className="brand" aria-label={`${SITE.name} home`}>
-          <LogoMark /> <span>Gridiron<span className="num">Lab</span></span>
+          <LogoMark /> <span className="wordmark">UNBEATEN</span><span className="brand-badge num">17-0</span>
         </Link>
         {!minimal && (
           <nav aria-label="Primary">

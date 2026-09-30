@@ -3,7 +3,7 @@ import { Worker, type Job } from 'bullmq';
 import { getRedis } from '@/lib/server/redis';
 import { QUEUE_NAMES } from '@/lib/server/queue';
 import { runSync } from '@/lib/server/sync';
-import { alertSlack } from '@/lib/server/alert';
+import { alertAdmins } from '@/lib/server/alert';
 import { dispatchEmailJob } from '@/lib/server/email-jobs';
 import { renderResultCard } from './og';
 
@@ -13,7 +13,13 @@ const connection = getRedis();
 const concurrency = { [QUEUE_NAMES.sync]: 1, [QUEUE_NAMES.newsletter]: 5, [QUEUE_NAMES.og]: 2 };
 
 const handlers: Record<string, (job: Job) => Promise<unknown>> = {
-  [QUEUE_NAMES.sync]: async () => runSync({ dryRun: false }),
+  [QUEUE_NAMES.sync]: async () => {
+    const summary = await runSync({ dryRun: false });
+    // Fresh ratings: purge the web service's ISR pages so player pages update now, not in a day.
+    const base = process.env.INTERNAL_WEB_URL ?? 'http://localhost:3000';
+    await fetch(`${base}/api/internal/revalidate`, { method: 'POST', headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } }).catch(() => {});
+    return summary;
+  },
   [QUEUE_NAMES.newsletter]: async (job) => dispatchEmailJob(job.name, job.data),
   [QUEUE_NAMES.og]: async (job) => renderResultCard(job.data.resultId),
 };
@@ -23,7 +29,7 @@ const workers = Object.entries(handlers).map(([name, fn]) => {
   w.on('failed', (job, err) => {
     console.error(`[${name}] job ${job?.id} failed:`, err.message);
     Sentry.captureException(err, { tags: { queue: name } });
-    if (name === QUEUE_NAMES.sync && job && job.attemptsMade >= (job.opts.attempts ?? 1)) void alertSlack(`Ratings sync failed: ${err.message}`);
+    if (name === QUEUE_NAMES.sync && job && job.attemptsMade >= (job.opts.attempts ?? 1)) void alertAdmins('Ratings sync failed', `Ratings sync failed: ${err.message}`);
   });
   w.on('completed', (job) => console.log(`[${name}] job ${job.id} done`));
   return w;

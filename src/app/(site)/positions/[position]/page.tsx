@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!g) return pageMeta({ title: 'Position not found', description: 'No such position group.', path: '/positions', noindex: true });
   return pageMeta({
     title: `Best NFL ${GROUP_PLURAL[g]}: top 50 ${g} ratings`,
-    description: `The top 50 ${GROUP_PLURAL[g]} by EA Sports Madden NFL ratings, plus the attribute weights Gridiron Lab uses to grade a ${POSITION_NAMES[g].toLowerCase()}.`,
+    description: `The top 50 ${GROUP_PLURAL[g]} by EA Sports Madden NFL ratings, plus the attribute weights Unbeaten uses to grade a ${POSITION_NAMES[g].toLowerCase()}.`,
     path: `/positions/${positionSlug(g)}`,
   });
 }
