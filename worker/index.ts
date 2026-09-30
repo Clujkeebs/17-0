@@ -55,15 +55,13 @@ void (async () => {
       const rd = pp.ratingDetails ?? {};
       console.log(`[probe5] ratingDetails keys=${Object.keys(rd).join(',')} total=${rd.totalItems} n=${rd.items?.length} first.team=${JSON.stringify(rd.items?.[0]?.team)} first.position=${JSON.stringify(rd.items?.[0]?.position)} iter=${JSON.stringify(rd.items?.[0]?.iteration)}`);
       for (const m of html.matchAll(/.{0,200}drop-api\.ea\.com.{0,300}/g)) console.log(`[probe5] ctx=${m[0]}`);
-      const tries = [
-        `https://www.ea.com/_next/data/${nd.buildId}/games/madden-nfl/player-ratings.json?page=2`,
-        `https://www.ea.com/_next/data/${nd.buildId}/en/games/madden-nfl/player-ratings.json?page=2`,
-        'https://drop-api.ea.com/rating/madden-nfl?locale=en&limit=5&offset=0&iteration=madden-ratings-week-2&productId=madden-nfl-27',
-        'https://drop-api.ea.com/rating/madden-nfl-27?locale=en&limit=5&offset=0&iteration=madden-ratings-week-2',
-        'https://drop-api.ea.com/rating/madden?locale=en&limit=5&offset=0',
-        'https://drop-api.ea.com/rating/madden-nfl?locale=en-us&limit=5&offset=0',
-      ];
-      for (const t of tries) { const r = await get(t); console.log(`[probe5] ${t} -> ${r.status} ${r.text.slice(0, 300)}`); }
+      console.log(`[probe6] ratingsFilters=${JSON.stringify(pp.ratingsFilters).slice(0, 1500)}`);
+      console.log(`[probe6] params=${JSON.stringify(pp.params)}`);
+      for (const q of ['?page=2', '?offset=100', '?team=2', '?teams=2', '?team=cincinnati-bengals', '?position=QB']) {
+        const { status, text } = await get(`https://www.ea.com/games/madden-nfl/ratings${q}`);
+        const d = JSON.parse(text.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)?.[1] ?? '{}')?.props?.pageProps?.ratingDetails ?? {};
+        console.log(`[probe6] ${q} -> ${status} total=${d.totalItems} n=${d.items?.length} first=${d.items?.[0]?.firstName} ${d.items?.[0]?.lastName} team=${d.items?.[0]?.team?.label} pos=${d.items?.[0]?.position?.id}`);
+      }
     } catch (e) { console.log('[probe5] failed', (e as Error).message); }
   }
   if (process.env.SYNC_ON_BOOT === '1') {
