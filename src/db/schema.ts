@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   pgTable, uuid, text, integer, boolean, jsonb, timestamp, serial, primaryKey, index, uniqueIndex,
 } from 'drizzle-orm/pg-core';
@@ -145,7 +146,12 @@ export const gameResults = pgTable('game_results', {
   score: integer('score').notNull(),
   flagged: boolean('flagged').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index('results_daily_idx').on(t.dailyDate, t.score), index('results_user_idx').on(t.userId)]);
+}, (t) => [
+  index('results_daily_idx').on(t.dailyDate, t.score),
+  index('results_user_idx').on(t.userId),
+  // Ranked "Today" games: one result per user, per game, per day.
+  uniqueIndex('results_one_daily_per_user').on(t.userId, t.gameType, t.dailyDate).where(sql`${t.isDaily} and ${t.userId} is not null`),
+]);
 
 export const gameConfigs = pgTable('game_configs', {
   id: serial('id').primaryKey(),

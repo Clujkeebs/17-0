@@ -7,7 +7,8 @@ export interface DailyRow { rank: number; username: string; score: number; summa
 
 function summarize(gameType: string, data: Record<string, unknown>): string {
   if (gameType === '17-0') return `${data.wins}-${data.losses}`;
-  return `${data.position} ${Number(data.rating).toFixed(1)}`;
+  if (gameType === 'build-a-player') return `${data.position} ${Number(data.rating).toFixed(1)}`;
+  return String(data.summary ?? '');
 }
 
 export async function dailyLeaderboard(gameType: string, date = dailyDateET(), limit = 100): Promise<DailyRow[]> {

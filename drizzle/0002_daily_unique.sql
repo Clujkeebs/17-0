@@ -1,0 +1,2 @@
+DELETE FROM "game_results" a USING "game_results" b WHERE a."is_daily" AND b."is_daily" AND a."user_id" = b."user_id" AND a."game_type" = b."game_type" AND a."daily_date" = b."daily_date" AND a."created_at" > b."created_at";--> statement-breakpoint
+CREATE UNIQUE INDEX "results_one_daily_per_user" ON "game_results" USING btree ("user_id","game_type","daily_date") WHERE "game_results"."is_daily" and "game_results"."user_id" is not null;
