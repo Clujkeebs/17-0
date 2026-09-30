@@ -52,48 +52,38 @@ void (async () => {
       const { chromium } = await import('playwright-core');
       const b = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
       const pg = await b.newPage({ viewport: { width: 1280, height: 900 } });
-      const log = async (tag: string) => {
-        const txt = (await pg.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ').slice(0, 3000);
-        const btns = await pg.$$eval('button, a, [role=button]', (els) => els.map((e) => (e.textContent || '').trim()).filter(Boolean).slice(0, 40));
-        console.log(`[stm] ${tag} url=${pg.url()} text=${txt}`);
-        console.log(`[stm] ${tag} buttons=${JSON.stringify(btns)}`);
-      };
-      await pg.goto('https://sticktothemodel.com', { waitUntil: 'networkidle', timeout: 60_000 });
-      await pg.getByText('Games', { exact: true }).first().hover().catch(() => {});
-      await pg.getByText('Games', { exact: true }).first().click().catch(() => {});
-      await pg.waitForTimeout(1500);
-      const all = await pg.$$eval('a', (as) => [...new Set(as.map((a) => (a as HTMLAnchorElement).href))]);
-      const games = all.filter((h) => /game|17-0|spin|daily|grid|puzzle|trivia|play/i.test(h) && !/historical-games|all-games/.test(h));
-      console.log(`[stm2] gameLinks=${JSON.stringify(games)}`);
-      for (const g of games.slice(0, 8)) {
-        await pg.goto(g, { waitUntil: 'networkidle', timeout: 45_000 }).catch(() => {});
-        const txt = (await pg.evaluate(() => document.querySelector('main')?.innerText ?? document.body.innerText)).replace(/\s+/g, ' ');
-        const i = txt.search(/17-0|spin|perfect season/i);
-        console.log(`[stm2] ${g} :: ${i >= 0 ? txt.slice(Math.max(0, i - 300), i + 1500) : txt.slice(0, 400)}`);
+      const main = async () => (await pg.evaluate(() => (document.querySelector('main') ?? document.body).innerText)).replace(/\s+/g, ' ');
+      const chunks = (tag: string, t: string) => { for (let i = 0; i < Math.min(t.length, 9000); i += 1500) console.log(`[stm4] ${tag} ${i}: ${t.slice(i, i + 1500)}`); };
+      for (const url of ['https://sticktothemodel.com/games/build-a-17-0-team', 'https://sticktothemodel.com/games/build-a-player']) {
+        await pg.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+        await pg.waitForTimeout(6000);
+        chunks(`page ${url}`, await main());
       }
-      const target = games.find((h) => /17/.test(h)) ?? games[0];
-      if (target) {
-        await pg.goto(target, { waitUntil: 'networkidle', timeout: 45_000 });
-        const html = await pg.evaluate(() => (document.querySelector('main') ?? document.body).outerHTML);
-        console.log(`[stm3] html=${html.replace(/\s+/g, ' ').replace(/<svg[\s\S]*?<\/svg>/g, '<svg/>').slice(0, 6000)}`);
-        for (let step = 0; step < 8; step++) {
-          const btn = pg.locator('main button:visible').filter({ hasText: /spin|start|play|roll|draft|next|pick|sim/i }).first();
-          const fallback = pg.locator('main button:visible').first();
-          const use = (await btn.count()) ? btn : fallback;
-          const label = (await use.textContent().catch(() => ''))?.trim();
-          await use.click().catch(() => {});
+      await pg.goto('https://sticktothemodel.com/games/build-a-17-0-team', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await pg.waitForTimeout(6000);
+      for (let step = 0; step < 14; step++) {
+        const spin = pg.locator('button:visible').filter({ hasText: /spin|start|play the season|simulate|sim|next|reveal/i }).first();
+        if (await spin.count()) {
+          const label = (await spin.textContent())?.trim();
+          await spin.click().catch(() => {});
           const frames: string[] = [];
-          for (let f = 0; f < 6; f++) { await pg.waitForTimeout(350); frames.push((await pg.evaluate(() => (document.querySelector('main') ?? document.body).innerText)).replace(/\s+/g, ' ').slice(0, 220)); }
-          console.log(`[stm3] step${step} clicked="${label}" frames=${JSON.stringify(frames)}`);
+          for (let f = 0; f < 8; f++) { await pg.waitForTimeout(300); const t = await main(); frames.push(t.slice(t.search(/spin|team|round/i), t.search(/spin|team|round/i) + 160)); }
+          console.log(`[stm5] step${step} clicked "${label}" frames=${JSON.stringify(frames)}`);
+          await pg.waitForTimeout(2500);
+        } else {
+          const cand = pg.locator('button:visible').filter({ hasText: /[A-Z][a-z]+ [A-Z]/ });
+          const n = await cand.count();
+          const labels = await cand.evaluateAll((els) => els.map((e) => (e.textContent || '').trim().slice(0, 60)).slice(0, 30));
+          console.log(`[stm5] step${step} choices(${n})=${JSON.stringify(labels)}`);
+          const skip = /spin|sign|menu|search|upgrade|share|nfl|college|current|all-time|games|draft|fantasy|betting/i;
+          let clicked = false;
+          for (let i = 0; i < n && !clicked; i++) { const t = (await cand.nth(i).textContent()) ?? ''; if (!skip.test(t)) { await cand.nth(i).click().catch(() => {}); clicked = true; console.log(`[stm5] picked ${t.slice(0, 60)}`); } }
           await pg.waitForTimeout(1500);
-          const txt = (await pg.evaluate(() => (document.querySelector('main') ?? document.body).innerText)).replace(/\s+/g, ' ').slice(0, 1800);
-          const btns = await pg.$$eval('main button', (els) => els.map((e) => (e.textContent || '').trim()).filter(Boolean).slice(0, 40));
-          console.log(`[stm3] step${step} after=${txt}`);
-          console.log(`[stm3] step${step} buttons=${JSON.stringify(btns)}`);
-          // If players are listed, pick the first player-like button.
-          const player = pg.locator('main button:visible').filter({ hasText: /\b\d{2}\b/ }).first();
-          if (await player.count()) { await player.click().catch(() => {}); await pg.waitForTimeout(800); }
         }
+        const t = await main();
+        const i = t.search(/Build a 17-0 Team/);
+        console.log(`[stm5] step${step} state=${t.slice(Math.max(0, i), i + 1400)}`);
+        if (/went \d+-\d+|\d+-\d+ season|final record/i.test(t) && step > 6) { chunks('result', t.slice(i)); break; }
       }
       await b.close();
     } catch (e) { console.log('[stm] failed', (e as Error).message); }
