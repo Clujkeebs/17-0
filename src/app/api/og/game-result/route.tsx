@@ -1,3 +1,5 @@
+import { SITE } from '@/lib/site';
+import { getMiniGame } from '@/lib/minigames/registry';
 import { getResult } from '@/lib/server/leaderboard';
 import { renderCard } from '@/lib/server/og/card';
 import { SLOT_LABELS, type SlotResult } from '@/lib/game/seventeen';
@@ -19,6 +21,15 @@ export async function GET(req: Request) {
     res = await renderCard({
       eyebrow: r.isDaily ? `Daily 17-0 · ${r.dailyDate}` : '17-0 projected record', headline: `${d.wins}-${d.losses}`, perfect: d.wins === 17,
       lines: d.slots.map((s) => ({ k: SLOT_LABELS[s.slot] ?? s.slot, v: `${last(s.name)}  ${s.letter}` })), footer: 'Can you beat it?',
+    });
+  } else if (r.gameType !== 'build-a-player') {
+    const g = getMiniGame(r.gameType);
+    const d = r.resultData as { summary?: string; perfect?: boolean };
+    const [main, ...rest] = String(d.summary ?? '').split(' · ');
+    res = await renderCard({
+      eyebrow: `${g?.name ?? 'Unbeaten'}${r.isDaily ? ` · Today · ${r.dailyDate}` : ''}`, headline: main || String(r.score), perfect: !!d.perfect,
+      lines: [...rest.map((x) => ({ k: 'Score', v: x })), { k: 'Game', v: g?.name ?? r.gameType }, ...(g ? [{ k: 'Play', v: `${new URL(SITE.url).host}/games/${g.slug}` }] : [])],
+      footer: 'Can you beat it?',
     });
   } else {
     const d = r.resultData as { position: string; rating: number; letter: string; stats: StatLine[]; attributes: Record<string, number> };

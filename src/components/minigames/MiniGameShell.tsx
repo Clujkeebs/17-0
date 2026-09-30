@@ -99,8 +99,10 @@ export function MiniGameShell<P>({ slug, name, tagline, howTo, signedIn, render,
           <p className="m-kicker">{data?.played ? 'You already played Today' : result.perfect ? 'Perfect' : 'Final'}</p>
           <p className="m-score num">{result.summary}</p>
           {renderResult(result, (data?.puzzle as P) ?? null)}
+          <div style={{ marginTop: 20 }}>
+            <ShareButton text={`${name}: ${result.summary}${mode === 'today' ? ` (Today, ${data?.date})` : ''}. Beat it on Unbeaten.`} url={`/results/${result.id}`} imageUrl={`/api/og/game-result?id=${result.id}`} fileName={`unbeaten-${slug}.png`} />
+          </div>
           <div className="row" style={{ marginTop: 20 }}>
-            <ShareButton text={`${name}: ${result.summary}${mode === 'today' ? ` (Today, ${data?.date})` : ''}`} url={`/games/${slug}`} />
             <button className="btn btn-primary" onClick={() => { setMode('casual'); setRound((r) => r + 1); }}>{mode === 'casual' ? 'Play again' : 'Play Casual'}</button>
             {mode === 'today' && <Link className="btn" href={`/leaderboard?tab=daily&game=${slug}`}>Leaderboard</Link>}
             <Link className="btn" href="/games">More games</Link>

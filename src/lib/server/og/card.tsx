@@ -25,7 +25,7 @@ export async function renderCard(c: CardInput) {
           <div style={{ fontSize: 24, letterSpacing: 2, textTransform: 'uppercase', color: '#5E5C57', fontWeight: 700 }}>{c.eyebrow}</div>
           <div style={{ fontSize: 210, fontWeight: 700, lineHeight: 1, marginTop: 28, color: c.perfect ? '#C8102E' : '#0A0A0A', letterSpacing: -12 }}>{c.headline}</div>
           <div style={{ marginTop: 'auto', fontSize: 30, fontWeight: 700, display: 'flex', alignItems: 'center', letterSpacing: -1 }}>
-            <svg width={40} height={40} viewBox="0 0 24 24" style={{ marginRight: 14 }}><rect width="24" height="24" rx="6" fill="#0A0A0A" /><path d="M7 6.5 V13 a5 5 0 0 0 10 0 V6.5" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" /></svg>
+            <svg width={40} height={40} viewBox="0 0 24 24" style={{ marginRight: 14 }}><rect width="24" height="24" rx="6.5" fill="#0A0A0A" /><path d="M7.4 4.6 V10.6 Q7.4 14.2 11 14.2 H13 Q16.6 14.2 16.6 10.6 V4.6" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" /><path d="M12 14.2 V19.6" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" /><ellipse cx="12" cy="8.4" rx="2.5" ry="1.55" fill="#E11D2E" transform="rotate(-32 12 8.4)" /></svg>
             Unbeaten<span style={{ color: '#5E5C57', fontWeight: 400, marginLeft: 16, fontSize: 24, letterSpacing: 0 }}>{c.footer}</span>
           </div>
         </div>

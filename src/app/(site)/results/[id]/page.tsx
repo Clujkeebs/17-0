@@ -1,3 +1,4 @@
+import { getMiniGame } from '@/lib/minigames/registry';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -19,7 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const r = await getResult(id).catch(() => null);
   if (!r) return { title: 'Result not found', robots: { index: false } };
   const d = r.resultData as Record<string, unknown>;
-  const title = r.gameType === '17-0' ? `Went ${d.wins}-${d.losses} in 17-0` : `Built a ${Number(d.rating).toFixed(1)} ${d.position}`;
+  const mg = r.gameType !== '17-0' && r.gameType !== 'build-a-player' ? getMiniGame(r.gameType) : null;
+  const title = mg ? `${mg.name}: ${String(d.summary ?? '')}` : r.gameType === '17-0' ? `Went ${d.wins}-${d.losses} in 17-0` : `Built a ${Number(d.rating).toFixed(1)} ${d.position}`;
   return {
     title, description: 'Think you can beat it? Spin your own roster.',
     robots: { index: false, follow: true },
@@ -36,6 +38,8 @@ export default async function ResultPage({ params }: Props) {
   const teams = await getTeams().catch(() => []);
   const teamName = (tid: number) => { const t = teams.find((x) => x.id === tid); return t ? `${t.abbreviation}` : ''; };
   const d = r.resultData as Record<string, unknown>;
+  const mini = r.gameType !== '17-0' && r.gameType !== 'build-a-player' ? getMiniGame(r.gameType) : null;
+  if (mini) return <MiniResultPage r={r} name={mini.name} slug={mini.slug} tagline={mini.tagline} />;
   const is17 = r.gameType === '17-0';
   const headline = is17 ? `${d.wins}-${d.losses}` : Number(d.rating).toFixed(1);
   const schedule = is17 && Array.isArray(d.schedule) ? (d.schedule as GameLine[]).filter((g) => g && typeof g.week === 'number') : [];
@@ -64,7 +68,7 @@ export default async function ResultPage({ params }: Props) {
             </div>
           </div>
           <div className="row" style={{ margin: '20px 0' }}>
-            <ShareButton text={shareText} url={`/results/${r.id}`} />
+            <ShareButton text={shareText} url={`/results/${r.id}`} imageUrl={`/api/og/game-result?id=${r.id}`} fileName={`unbeaten-${r.gameType}.png`} />
             <Link className="btn btn-primary" href={is17 ? '/games/17-0' : '/games/build-a-player'}>Play again</Link>
             <Link className="btn" href={is17 ? '/games/build-a-player' : '/games/17-0'}>Try {is17 ? 'Build a Player' : '17-0'}</Link>
           </div>
@@ -150,6 +154,23 @@ export default async function ResultPage({ params }: Props) {
           <AdSlot slot="result-inline" className="section" />
         </div>
       </div>
+    </div>
+  );
+}
+
+function MiniResultPage({ r, name, slug, tagline }: { r: { id: string; isDaily: boolean; dailyDate: string | null; resultData: unknown }; name: string; slug: string; tagline: string }) {
+  const d = r.resultData as { summary?: string; perfect?: boolean };
+  const text = `${name}: ${d.summary}${r.isDaily ? ` (Today, ${r.dailyDate})` : ''}. Beat it on Unbeaten.`;
+  return (
+    <div className="container section" style={{ maxWidth: 880 }}>
+      <span className="eyebrow">{name}{r.isDaily ? ` · Today ${r.dailyDate}` : ' · Casual'}</span>
+      <figure style={{ margin: '0 0 24px' }}>
+        <img src={`/api/og/game-result?id=${r.id}`} alt={`Score card: ${text}`} width={1200} height={630} style={{ width: '100%', height: 'auto', aspectRatio: '1200 / 630', border: '1px solid var(--steel)', borderRadius: 16 }} />
+      </figure>
+      <p className="big-num" style={{ margin: '0 0 8px', color: d.perfect ? 'var(--orange)' : undefined }}>{d.summary}</p>
+      <p className="muted">{tagline}</p>
+      <div style={{ margin: '20px 0' }}><ShareButton text={text} url={`/results/${r.id}`} imageUrl={`/api/og/game-result?id=${r.id}`} fileName={`unbeaten-${slug}.png`} /></div>
+      <div className="row"><Link className="btn btn-primary" href={`/games/${slug}`}>Play {name}</Link><Link className="btn" href="/games">More games</Link></div>
     </div>
   );
 }
