@@ -64,3 +64,30 @@ test('17-0 re-roll swaps the team on the clock', async ({ page }) => {
   await reroll.click();
   await expect(page.getByRole('button', { name: /Re-roll 1/ })).toBeVisible({ timeout: 20_000 });
 });
+
+test('17-0 hard mode: type to find players, overalls hidden', async ({ page }) => {
+  await page.goto('/games/17-0?mode=casual');
+  await page.getByRole('switch', { name: /Hard mode/ }).click();
+  await expect(page.getByRole('switch', { name: /Hard mode/ })).toHaveAttribute('aria-checked', 'true');
+  const box = page.getByRole('searchbox');
+  await expect(box).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.g-player')).toHaveCount(0);
+  // Type the first two letters of each name we can find via the API-free way: try common letters until a match shows.
+  for (const q of ['ja', 'ma', 'da', 'jo', 'ch', 'br', 'mi', 'ke', 'de', 'an']) {
+    await box.fill(q);
+    if (await page.locator('.g-player').count()) break;
+  }
+  await expect(page.locator('.g-player').first()).toBeVisible();
+  await expect(page.locator('.g-player .g-ovr').first()).toHaveText('??');
+});
+
+test('reel still spins with reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/games/17-0?mode=casual');
+  const strip = page.locator('.reel2-strip').first();
+  await expect(strip).toBeVisible({ timeout: 20_000 });
+  const t1 = await strip.evaluate((el) => getComputedStyle(el).transform);
+  await page.waitForTimeout(400);
+  const t2 = await page.locator('.reel2-strip').first().evaluate((el) => getComputedStyle(el).transform);
+  expect(t1).not.toEqual(t2);
+});

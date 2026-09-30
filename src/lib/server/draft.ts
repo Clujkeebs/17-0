@@ -14,6 +14,7 @@ export interface DraftState {
   respinsLeft: number;
   picks: { teamId: number; id: string; slot?: Slot; trait?: string; value?: number; name: string; position: string; ovr: number; team: string; teamColor: string; logoUrl: string | null }[];
   done: boolean;
+  hard: boolean;
 }
 
 /** Builds the client view. Only the team currently on the clock is revealed; future teams stay server-side. */
@@ -24,15 +25,18 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
   const pickedTeams = picks.map((x) => x.teamId);
   const [current, ...past] = await publicTeams(done ? pickedTeams : [p.teams[index], ...pickedTeams], gameType, p.position);
   const pastTeams = done ? [current, ...past] : past;
+  // Hard mode: overall ratings never leave the server until the result page.
+  const hide = <T extends { ovr: number }>(x: T): T => (p.hard ? { ...x, ovr: -1 } : x);
+  const team = done ? null : current ? { ...current, players: current.players.map(hide) } : null;
   return {
-    sessionId, index, total: p.teams.length, done,
-    team: done ? null : current,
+    sessionId, index, total: p.teams.length, done, hard: !!p.hard,
+    team,
     respinsLeft: MAX_RESPINS - p.respinsUsed,
     picks: picks.map((x, i) => {
       const t = pastTeams[i];
       const pl = t?.players.find((y) => y.id === x.id);
       const tr = p.position && x.trait ? TRAITS[p.position].find((t) => t.key === x.trait) : undefined;
-      return { ...x, value: tr && pl?.attrs ? traitValue(pl.attrs as never, tr) : undefined, name: pl?.name ?? 'Unknown', position: pl?.position ?? '', ovr: pl?.ovr ?? 0, team: t ? `${t.city} ${t.name}` : '', teamColor: t?.color ?? '#999', logoUrl: t?.logoUrl ?? null };
+      return { ...x, value: tr && pl?.attrs ? traitValue(pl.attrs as never, tr) : undefined, name: pl?.name ?? 'Unknown', position: pl?.position ?? '', ovr: p.hard ? -1 : pl?.ovr ?? 0, team: t ? `${t.city} ${t.name}` : '', teamColor: t?.color ?? '#999', logoUrl: t?.logoUrl ?? null };
     }),
   };
 }

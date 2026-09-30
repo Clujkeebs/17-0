@@ -6,7 +6,7 @@ import { dailyDateET } from '@/lib/game/daily';
 export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string }
 
 function summarize(gameType: string, data: Record<string, unknown>): string {
-  if (gameType === '17-0') return `${data.wins}-${data.losses}`;
+  if (gameType === '17-0') return `${data.wins}-${data.losses}${data.hard ? ' · Hard' : ''}`;
   if (gameType === 'build-a-player') return `${data.position} ${Number(data.rating).toFixed(1)}`;
   return String(data.summary ?? '');
 }

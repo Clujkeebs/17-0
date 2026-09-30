@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 
 const Auth = { sessionId: z.string().uuid(), token: z.string().min(10).max(100) };
 const Body = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('start'), daily: z.boolean().optional(), position: z.enum(BUILD_POSITIONS).optional() }),
+  z.object({ action: z.literal('start'), daily: z.boolean().optional(), hard: z.boolean().optional(), position: z.enum(BUILD_POSITIONS).optional() }),
   z.object({ action: z.literal('respin'), ...Auth }),
   z.object({ action: z.literal('pick'), ...Auth, playerId: z.string().max(60), slot: z.enum(SLOTS).optional(), trait: z.string().max(20).optional() }),
 ]);
@@ -40,7 +40,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ type: s
       const done = await todaysResult(session.user.id, type);
       if (done) return errorJson(409, 'You already played Today. Casual is unlimited.', { resultId: done });
     }
-    const { session: s, token, payload } = await createGameSession({ gameType: type, userId: session?.user?.id, daily: body.daily, position: body.position });
+    const { session: s, token, payload } = await createGameSession({ gameType: type, userId: session?.user?.id, daily: body.daily, hard: body.hard, position: body.position });
     return json({ ...(await draftState(s.id, type, payload)), token, daily: s.isDaily, date: s.dailyDate, position: payload.position ?? null });
   } catch (e) {
     if (e instanceof DraftError) return errorJson(e.status, e.message);

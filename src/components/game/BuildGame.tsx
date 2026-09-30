@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Reel, type ReelTeam } from './Reel';
+import { Reel, SpinningReel, usePreloadLogos, type ReelTeam } from './Reel';
 import { SoundToggle } from './SoundToggle';
 import { PlayerFace } from './PlayerFace';
 import { track } from '@/lib/analytics';
@@ -27,6 +27,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
   const [mode, setMode] = useState<Mode>(initialMode);
   const [playedId, setPlayedId] = useState<string | null>(playedTodayId);
   const router = useRouter();
+  usePreloadLogos(reelPool);
   const [position, setPosition] = useState<BuildPosition>(initialPosition ?? positionOfDay);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [spinKey, setSpinKey] = useState(0);
@@ -121,7 +122,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
             </div>
           </section>
         ) : mode === 'today' ? (
-          <section className="g-stage" aria-busy="true"><div className="g-team"><div className="reel2" /></div>{error && <p role="alert" className="field-error" style={{ padding: 16 }}>{error}</p>}</section>
+          <section className="g-stage" aria-busy="true"><div className="g-team"><SpinningReel pool={reelPool} /><div className="g-spin-status"><p className="g-kicker" style={{ margin: 0 }}>Spinning</p></div></div>{error && <p role="alert" className="field-error" style={{ padding: 16 }}>{error}</p>}</section>
         ) : (
           <section className="g-intro" style={{ maxWidth: 'none', paddingTop: 16 }}>
             <h2 className="g-title">Five spins.<br />One player.</h2>

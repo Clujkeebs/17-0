@@ -119,3 +119,17 @@
 .g-modes { display: inline-flex; padding: 4px; border: 1px solid var(--steel); border-radius: 999px; background: var(--green); }
 .g-modes button { border: 0; background: transparent; padding: 8px 18px; border-radius: 999px; font: 600 .9rem var(--font-ui); color: var(--bone-dim); cursor: pointer; min-height: 40px; }
 .g-modes button.on { background: var(--bone); color: var(--navy); }
+/* Looping reel while the server picks the team. Always animates: the spin is the game. */
+.reel2-loop .reel2-strip { animation: reelloop 1.6s linear infinite; }
+@keyframes reelloop { from { transform: translateY(0); } to { transform: translateY(calc(-148px * 32)); } }
+@media (prefers-reduced-motion: reduce) {
+  .reel2 .reel2-strip { transition-duration: 1300ms !important; }
+  .reel2-loop .reel2-strip { animation-duration: 3.2s !important; animation-iteration-count: infinite !important; }
+}
+.g-hard { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--steel-hi); background: var(--surface); color: var(--bone); font: 600 .88rem var(--font-ui); cursor: pointer; }
+.g-hard-dot { width: 26px; height: 16px; border-radius: 999px; background: var(--steel); position: relative; transition: background .15s; }
+.g-hard-dot::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.g-hard.on { border-color: var(--bone); }
+.g-hard.on .g-hard-dot { background: var(--orange); }
+.g-hard.on .g-hard-dot::after { transform: translateX(10px); }
+.g-hardsearch input { font-size: 1.05rem; min-height: 52px; border-radius: 14px; }

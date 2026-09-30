@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Reel, type ReelTeam } from './Reel';
+import { Reel, SpinningReel, usePreloadLogos, type ReelTeam } from './Reel';
 import { SoundToggle } from './SoundToggle';
 import { PlayerFace } from './PlayerFace';
 import { track } from '@/lib/analytics';
@@ -25,6 +25,7 @@ type Mode = 'today' | 'casual';
 
 export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }: { reelPool: ReelTeam[]; signedIn: boolean; playedTodayId: string | null; initialMode: Mode }) {
   const router = useRouter();
+  usePreloadLogos(reelPool);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [playedId, setPlayedId] = useState<string | null>(playedTodayId);
@@ -36,9 +37,14 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
   const stageRef = useRef<HTMLElement>(null);
   useEffect(() => { if (spinKey > 1) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [spinKey]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Hard mode: find players by typing their name; overall ratings stay hidden until the result.
+  const [hard, setHard] = useState(false);
+  const hardRef = useRef(false);
+  const [query, setQuery] = useState('');
 
   // Resume an in-progress draft after a refresh.
   useEffect(() => {
+    try { hardRef.current = localStorage.getItem('gl-17-0-hard') === '1'; setHard(hardRef.current); } catch { /* ignore */ }
     try {
       const saved = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Draft | null;
       if (saved?.sessionId && !saved.done && saved.daily === (initialMode === 'today') && (saved.picks ?? []).every((p) => (SLOTS as readonly string[]).includes(p.slot ?? ''))) { setDraft(saved); setLanded(true); return; }
@@ -65,12 +71,12 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
   async function start(daily: boolean) {
     setBusy('start'); setError(''); setDraft(null);
     try {
-      const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'start', daily }) });
+      const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'start', daily, hard: hardRef.current }) });
       const d = await res.json().catch(() => ({}));
       if (res.status === 409 && d.resultId) { setPlayedId(d.resultId); return; }
       if (!res.ok) throw new Error(d.error ?? 'Something went wrong. Try again.');
       setDraft(d); setLanded(false); setSpinKey((k) => k + 1);
-      track('game_started', { game: '17-0', daily });
+      track('game_started', { game: '17-0', daily, hard: hardRef.current });
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
@@ -80,7 +86,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
     try {
       const d = await post({ ...body, sessionId: draft.sessionId, token: draft.token });
       setDraft({ ...draft, ...d });
-      if (!d.done) { setLanded(false); setSpinKey((k) => k + 1); }
+      if (!d.done) { setLanded(false); setQuery(''); setSpinKey((k) => k + 1); }
       return d as DraftState;
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
@@ -105,10 +111,23 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
 
   function reset() { try { sessionStorage.removeItem(STATE_KEY); } catch {} setError(''); void start(mode === 'today' && !playedId); }
 
+  function toggleHard() {
+    if (draft && draft.picks.length > 0 && !draft.done && !window.confirm('Switching difficulty starts a new game. Continue?')) return;
+    const next = !hardRef.current;
+    hardRef.current = next; setHard(next);
+    try { localStorage.setItem('gl-17-0-hard', next ? '1' : '0'); sessionStorage.removeItem(STATE_KEY); } catch {}
+    if (mode === 'casual' || (signedIn && !playedId)) void start(mode === 'today');
+  }
+
   const tabs = (
-    <div className="g-modes" role="tablist" aria-label="Mode">
-      <button role="tab" aria-selected={mode === 'today'} className={mode === 'today' ? 'on' : ''} onClick={() => switchMode('today')}>Today</button>
-      <button role="tab" aria-selected={mode === 'casual'} className={mode === 'casual' ? 'on' : ''} onClick={() => switchMode('casual')}>Casual</button>
+    <div className="row" style={{ gap: 8 }}>
+      <div className="g-modes" role="tablist" aria-label="Mode">
+        <button role="tab" aria-selected={mode === 'today'} className={mode === 'today' ? 'on' : ''} onClick={() => switchMode('today')}>Today</button>
+        <button role="tab" aria-selected={mode === 'casual'} className={mode === 'casual' ? 'on' : ''} onClick={() => switchMode('casual')}>Casual</button>
+      </div>
+      <button type="button" className={`g-hard ${hard ? 'on' : ''}`} role="switch" aria-checked={hard} onClick={toggleHard} title="Search players by name. Overalls hidden.">
+        <span className="g-hard-dot" aria-hidden="true" /> Hard mode
+      </button>
     </div>
   );
 
@@ -143,7 +162,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
         ) : error ? (
           <section className="g-done"><p role="alert" className="field-error">{error}</p><button className="btn btn-primary" onClick={() => start(mode === 'today')}>Try again</button></section>
         ) : (
-          <section className="g-stage" aria-busy="true"><div className="g-team"><div className="reel2" /></div><div className="g-roster-wait">{[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div></section>
+          <section className="g-stage" aria-busy="true"><div className="g-team"><SpinningReel pool={reelPool} /><div className="g-spin-status"><p className="g-kicker" style={{ margin: 0 }}>Spinning</p></div></div><div className="g-roster-wait">{[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div></section>
         )}
       </div>
     );
@@ -155,7 +174,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
       <div className="g-main">
         <header className="g-head">
           <div>
-            <h1 className="g-kicker" style={{ margin: 0 }}>17-0 · {draft.daily ? `Today, ranked` : 'Casual'} · {draft.done ? 'Draft complete' : `Spin ${draft.index + 1} of ${draft.total}`}</h1>
+            <h1 className="g-kicker" style={{ margin: 0 }}>17-0 · {draft.daily ? `Today, ranked` : 'Casual'}{draft.hard ? ' · Hard' : ''} · {draft.done ? 'Draft complete' : `Spin ${draft.index + 1} of ${draft.total}`}</h1>
             <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={draft.total} aria-valuenow={draft.picks.length} aria-label="Picks made">
               {Array.from({ length: draft.total }, (_, i) => <span key={i} className={i < draft.picks.length ? 'on' : i === draft.index ? 'now' : ''} />)}
             </div>
@@ -187,7 +206,9 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
               </div>
             </div>
 
-            {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : <div className="g-roster in">
+            {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : draft.hard ? (
+              <HardSearch team={team} openSlots={openSlots} query={query} setQuery={setQuery} busy={!!busy} onPick={pick} />
+            ) : <div className="g-roster in">
               {openSlots.map((slot) => {
                 const all = team.players.filter((p) => p.slots?.includes(slot)).sort((a, b) => b.ovr - a.ovr);
                 if (!all.length) return null;
@@ -241,7 +262,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
                     <span className="g-slot-v">
                       {p.logoUrl ? <img src={p.logoUrl} alt="" width={22} height={22} /> : <span className="g-dot" style={{ background: p.teamColor }} />}
                       <span className="g-slot-name">{p.name}</span>
-                      <span className="num g-slot-ovr">{p.ovr}</span>
+                      <span className="num g-slot-ovr">{p.ovr >= 0 ? p.ovr : ""}</span>
                     </span>
                   ) : <span className="g-slot-empty">Open</span>}
                 </li>
@@ -252,6 +273,36 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
           <button className="btn-link g-reset" onClick={reset}>Start over</button>
         </div>
       </aside>
+    </div>
+  );
+}
+
+/** Hard mode picker: type a name from the team on the clock. No list to browse, no overalls. */
+function HardSearch({ team, openSlots, query, setQuery, busy, onPick }: {
+  team: NonNullable<DraftState['team']>; openSlots: Slot[]; query: string; setQuery: (q: string) => void; busy: boolean; onPick: (p: PublicPlayer) => void;
+}) {
+  const norm = (x: string) => x.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, '');
+  const q = norm(query).trim();
+  const eligible = team.players.filter((p) => p.slots?.some((s) => openSlots.includes(s)));
+  const hits = q.length >= 2 ? eligible.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 6) : [];
+  const miss = q.length >= 3 && hits.length === 0;
+  return (
+    <div className="g-roster in g-hardsearch">
+      <label htmlFor="hard-q" className="g-group-h" style={{ display: 'block' }}>Name a {team.name} player for an open slot ({openSlots.map((s) => SLOT_LABELS[s]).join(', ')})</label>
+      <input id="hard-q" type="search" autoComplete="off" autoFocus placeholder={`Type a ${team.name} player's name`} value={query} onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && hits.length === 1) onPick(hits[0]); }} />
+      <p className="hint" aria-live="polite">{miss ? `No ${team.name} player by that name fits an open slot.` : q.length < 2 ? 'Two letters to start. Overalls stay hidden until the season is played.' : `${hits.length} match${hits.length === 1 ? '' : 'es'}`}</p>
+      <ul className="g-list" style={{ marginTop: 8 }}>
+        {hits.map((p) => (
+          <li key={p.id}>
+            <button type="button" className="g-player" onClick={() => onPick(p)} disabled={busy} aria-label={`Draft ${p.name}, ${p.position === 'HC' ? 'head coach' : p.position}`}>
+              <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
+              <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position} · {SLOT_LABELS[p.slots!.find((s) => openSlots.includes(s))!]}</span></span>
+              <span className="g-ovr num" aria-hidden="true">??</span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

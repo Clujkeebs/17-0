@@ -46,13 +46,13 @@ export default async function ResultPage({ params }: Props) {
   const is17 = r.gameType === '17-0';
   const headline = is17 ? `${d.wins}-${d.losses}` : Number(d.rating).toFixed(1);
   const schedule = is17 && Array.isArray(d.schedule) ? (d.schedule as GameLine[]).filter((g) => g && typeof g.week === 'number') : [];
-  const shareText = is17 ? (Number(d.wins) === 17 ? `I went 17-0. Perfect season on Unbeaten. Your turn.` : Number(d.wins) === 16 ? `16-1. One loss from a perfect season in 17-0.` : `My roster went ${d.wins}-${d.losses} in 17-0.`) : `I built a ${Number(d.rating).toFixed(1)} ${d.position} in Build a Player.`;
+  const shareText = is17 ? (Number(d.wins) === 17 ? `I went 17-0. Perfect season on Unbeaten. Your turn.` : Number(d.wins) === 16 ? `16-1. One loss from a perfect season in 17-0.` : `My roster went ${d.wins}-${d.losses} in 17-0.`) + (d.hard ? ' Hard mode, no overalls.' : '') : `I built a ${Number(d.rating).toFixed(1)} ${d.position} in Build a Player.`;
 
   return (
     <div className="container section">
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 32 }} className="result-grid">
         <div>
-          <span className="eyebrow">{is17 ? '17-0' : 'Build a Player'}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
+          <span className="eyebrow">{is17 ? '17-0' : 'Build a Player'}{d.hard ? ' · Hard mode' : ''}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
           <Celebration tier={is17 ? seasonTier(Number(d.wins)) : buildTier(Number(d.rating))} />
           {/* Share card preview */}
           <figure style={{ margin: '0 0 24px' }}>

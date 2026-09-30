@@ -18,6 +18,8 @@ export interface SpinPayload {
   reserves: number[];
   respinsUsed: number;
   position?: BuildPosition;
+  /** Hard mode: search players by name, overall ratings hidden until the result. */
+  hard?: boolean;
   /** Server-side draft log. One entry per revealed team, in order. The next team is revealed only after a pick. */
   picks?: { teamId: number; id: string; slot?: Slot; trait?: string }[];
 }
@@ -41,7 +43,7 @@ async function eligibleTeamPool(gameType: GameType, position?: BuildPosition): P
   return rows.map((r) => r.teamId).filter((x): x is number => x !== null);
 }
 
-export async function createGameSession(opts: { gameType: GameType; userId?: string | null; daily?: boolean; position?: BuildPosition }) {
+export async function createGameSession(opts: { gameType: GameType; userId?: string | null; daily?: boolean; position?: BuildPosition; hard?: boolean }) {
   const { gameType } = opts;
   const date = dailyDateET();
   const seed = opts.daily ? dailySeed(`${gameType}:${opts.position ?? ''}`, date) : newToken(12);
@@ -49,7 +51,7 @@ export async function createGameSession(opts: { gameType: GameType; userId?: str
   const count = gameType === '17-0' ? TEAMS_PER_GAME : BUILD_TEAMS;
   if (pool.length < count + MAX_RESPINS) throw new Error('Not enough teams with eligible players. Has the database been seeded?');
   const { teams, reserves } = draftOrder(seed, pool, count);
-  const payload: SpinPayload = { teams, reserves, respinsUsed: 0, position: opts.position };
+  const payload: SpinPayload = { teams, reserves, respinsUsed: 0, position: opts.position, hard: !!opts.hard };
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
     userId: opts.userId ?? null, gameType, seed, spinPayload: payload, token: hashToken(tok),

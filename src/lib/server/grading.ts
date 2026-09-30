@@ -85,7 +85,7 @@ export async function gradeSeventeen(ctx: Ctx) {
   const teamRows = await db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation }).from(schema.teams);
   const opponents = teamRows.filter((t) => !usedTeams.has(t.id)).map((t) => t.abbr);
   const result = gradeRoster(seed, full, formulas, weights, opponents);
-  const resultData = { ...result, picks: full.map(({ slot, name, teamId, group, overall }) => ({ slot, name, teamId, group, overall })) };
+  const resultData = { ...result, hard: !!payload.hard, picks: full.map(({ slot, name, teamId, group, overall }) => ({ slot, name, teamId, group, overall })) };
   const id = await saveResult(s, ctx, '17-0', resultData, result.score, result.wins === 17);
   return { id, result: resultData, daily: s.isDaily };
 }
