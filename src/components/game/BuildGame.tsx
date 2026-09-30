@@ -38,6 +38,7 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [announce, setAnnounce] = useState('');
+  const [showAll, setShowAll] = useState(false);
 
   const cats = position ? BUILD_CATEGORIES[position] : [];
   const complete = !!draft?.done && cats.every((c) => choices[c] !== undefined);
@@ -65,7 +66,7 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
       const d = await post({ ...body, sessionId: draft.sessionId, token: draft.token });
       setDraft({ ...draft, ...d });
       if (picked) setSources((s) => [...s, picked]);
-      if (!d.done) { setLanded(false); setSpinKey((k) => k + 1); }
+      if (!d.done) { setLanded(false); setShowAll(false); setSpinKey((k) => k + 1); }
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
@@ -145,7 +146,7 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
               <div className="g-group">
                 <h3 className="g-group-h"><span>{position}s</span><span className="muted">Take one. You can mix his numbers with the others later.</span></h3>
                 <ul className="g-list">
-                  {team.players.map((p) => {
+                  {[...team.players].sort((a, b) => b.ovr - a.ovr).slice(0, showAll ? undefined : 6).map((p) => {
                     const top = cats.map((c) => [c, p.attrs?.[c] ?? 0] as const).sort((a, b) => b[1] - a[1]).slice(0, 2);
                     return (
                       <li key={p.id}>
@@ -161,6 +162,7 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
                   })}
                   {!team.players.length && <li className="muted">No eligible players on this team. Re-spin.</li>}
                 </ul>
+                {team.players.length > 6 && <button type="button" className="btn-link g-more" onClick={() => setShowAll((v) => !v)}>{showAll ? 'Show fewer' : `Show all ${team.players.length}`}</button>}
               </div>
             </div>
           </section>

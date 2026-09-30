@@ -33,7 +33,9 @@ export function buildTeamResolver(teams: { id: number; slug: string; name: strin
     if (!label) return null;
     const key = norm(label);
     if (key === 'freeagent' || key === 'freeagents' || key === 'fa') return null;
-    const id = map.get(key);
+    let id = map.get(key);
+    // Short city labels like "NY Giants" or "LA Rams": fall back to a unique nickname suffix match.
+    if (id === undefined) { const hits = teams.filter((t) => key.endsWith(norm(t.name))); if (hits.length === 1) id = hits[0].id; }
     return id != null && id > 0 ? id : undefined; // undefined = unresolved
   };
 }

@@ -29,6 +29,7 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [announce, setAnnounce] = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // Resume an in-progress draft after a refresh.
   useEffect(() => {
@@ -134,8 +135,11 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
 
             <div className={`g-roster ${landed ? 'in' : ''}`}>
               {openSlots.map((slot) => {
-                const options = team.players.filter((p) => p.slots?.includes(slot));
-                if (!options.length) return null;
+                const all = team.players.filter((p) => p.slots?.includes(slot)).sort((a, b) => b.ovr - a.ovr);
+                if (!all.length) return null;
+                const cap = slot === 'DEF' ? 6 : slot === 'WRTE' ? 4 : 2;
+                const key = `${team.id}-${slot}`;
+                const options = expanded.has(key) ? all : all.slice(0, cap);
                 return (
                   <div key={slot} className="g-group">
                     <h3 className="g-group-h"><span>{SLOT_LABELS[slot]}</span><span className="muted">{SLOT_HINT[slot]}</span></h3>
@@ -151,6 +155,11 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
                         </li>
                       ))}
                     </ul>
+                    {all.length > cap && (
+                      <button type="button" className="btn-link g-more" onClick={() => setExpanded((e) => { const n = new Set(e); if (n.has(key)) n.delete(key); else n.add(key); return n; })}>
+                        {expanded.has(key) ? 'Show fewer' : `Show all ${all.length}`}
+                      </button>
+                    )}
                   </div>
                 );
               })}

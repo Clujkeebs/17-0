@@ -93,3 +93,4 @@
   .g-slot-v img, .g-slot-v .face, .g-dot, .g-slot-ovr { display: none; }
   .g-slot-name, .g-slot-empty { font-size: .78rem; }
 }
+.g-more { margin-top: 10px; font-size: .88rem; }
