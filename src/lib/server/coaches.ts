@@ -26,11 +26,18 @@ export async function recomputeCoachImpact(): Promise<number> {
     superBowlWins: c.superBowlWins,
     yearsWithTeam: c.yearsWithTeam,
   }));
-  // The raw formula lands in the 30s to 70s. Coaches are graded on the same scale as players,
-  // so rescale the current head coaches onto 72 (worst) to 97 (best); legends are capped at 99.
-  const current = raw.filter((_, i) => coaches[i].teamId != null);
-  const lo = Math.min(...current), hi = Math.max(...current);
-  const scale = (v: number) => Math.round(Math.min(99, 72 + ((v - lo) / Math.max(1, hi - lo)) * 25));
+  // The raw formula lands in the 30s to 70s and bunches up, so a straight rescale left most coaches
+  // near the floor. Grade current head coaches by rank instead: evenly spread from 80 (worst) to 97 (best).
+  // A coach is part of the team you draft, so none should read as a liability. Legends interpolate and cap at 99.
+  const current = raw.filter((_, i) => coaches[i].teamId != null).sort((x, y) => x - y);
+  const n = current.length;
+  const scale = (v: number) => {
+    if (n < 2) return 88;
+    const below = current.filter((x) => x < v).length, same = current.filter((x) => x === v).length;
+    const rank = (below + Math.max(0, same - 1) / 2) / (n - 1);
+    const extra = v > current[n - 1] ? 2 : 0;
+    return Math.round(Math.min(99, 80 + Math.min(1, rank) * 17 + extra));
+  };
   for (const [i, c] of coaches.entries()) {
     const score = scale(raw[i]);
     const impactHistory = [...(c.impactHistory ?? []), { at, score }].slice(-HISTORY_CAP);

@@ -10,7 +10,7 @@ export const SLOT_LABELS: Record<Slot, string> = { QB: 'QB', RB: 'RB', WR: 'WR',
 export const SLOT_WEIGHTS: Record<Slot, number> = { QB: 0.25, DEF: 0.2, RB: 0.15, WR: 0.15, TE: 0.1, HC: 0.15 };
 export const TEAMS_PER_GAME = 6;
 export const MAX_RESPINS = 2;
-export const WIN_FLOOR = 66;
+export const WIN_FLOOR = 67;
 export const WIN_SPAN = 26;
 
 export function slotAccepts(slot: Slot, group: PositionGroup | 'HC'): boolean {

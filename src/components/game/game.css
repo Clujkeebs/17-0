@@ -96,7 +96,7 @@
   .g-side { position: sticky; top: 56px; z-index: 5; margin: 0 -16px 16px; }
   .g-side-inner { border-radius: 0; border-left: 0; border-right: 0; padding: 10px 16px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); }
   .g-side .g-kicker, .g-reset { display: none; }
-  .g-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .g-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .g-slots li { border: 1px solid var(--steel) !important; border-radius: 10px; padding: 4px 8px; min-height: 0; grid-template-columns: 1fr; gap: 0; }
   .g-slots li.filled { border-color: var(--bone) !important; }
   .g-slot-k { font-size: .65rem; }
@@ -133,3 +133,14 @@
 .g-hard.on .g-hard-dot { background: var(--orange); }
 .g-hard.on .g-hard-dot::after { transform: translateX(10px); }
 .g-hardsearch input { font-size: 1.05rem; min-height: 52px; border-radius: 14px; }
+
+/* Phones: the header stacks and its controls wrap instead of pushing the page wider than the screen. */
+.g-main, .g-board > * { min-width: 0; }
+@media (max-width: 640px) {
+  .g-head { flex-direction: column; align-items: stretch; }
+  .g-head .row, .g-head .g-modes { flex-wrap: wrap; max-width: 100%; }
+}
+@media (max-width: 900px) {
+  .g-board .g-slots li { grid-template-columns: auto minmax(0, 1fr); column-gap: 6px; min-width: 0; }
+  .g-slots li > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

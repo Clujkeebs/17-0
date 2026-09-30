@@ -7,7 +7,6 @@ import { TeamLogo } from '@/components/TeamLogo';
 import { notFound } from 'next/navigation';
 import { getResult } from '@/lib/server/leaderboard';
 import { getTeams } from '@/lib/server/data';
-import { NewsletterForm } from '@/components/NewsletterForm';
 import { AdSlot } from '@/components/AdSlot';
 import { ShareButton } from '@/components/game/ShareButton';
 import { ATTRIBUTE_LABELS, type AttributeKey } from '@/lib/game/attributes';
@@ -151,10 +150,6 @@ export default async function ResultPage({ params }: Props) {
             </>
           )}
 
-          <section className="card card-green" style={{ marginTop: 40 }} aria-labelledby="nl-h">
-            <h2 id="nl-h" style={{ fontSize: '1.2rem' }}>Get the daily puzzle in your inbox.</h2>
-            <NewsletterForm source="result" />
-          </section>
           <AdSlot slot="result-inline" className="section" />
         </div>
       </div>

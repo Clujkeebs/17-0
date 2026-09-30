@@ -67,7 +67,7 @@ async function setHeadCoach(teamId: number, fullName: string, experience?: numbe
   await db.update(schema.coaches).set({ teamId: null }).where(and(eq(schema.coaches.teamId, teamId), ne(schema.coaches.slug, slug)));
   const [existing] = await db.select().from(schema.coaches).where(eq(schema.coaches.slug, slug)).limit(1);
   if (existing) await db.update(schema.coaches).set({ teamId, yearsWithTeam: existing.teamId === teamId ? existing.yearsWithTeam : 0 }).where(eq(schema.coaches.id, existing.id));
-  else await db.insert(schema.coaches).values({ slug, fullName, teamId, yearsWithTeam: Math.max(0, Math.min(experience ?? 0, 1)), coachImpactScore: 65 });
+  else await db.insert(schema.coaches).values({ slug, fullName, teamId, yearsWithTeam: Math.max(0, Math.min(experience ?? 0, 1)), coachImpactScore: 85 });
   return 1;
 }
 
