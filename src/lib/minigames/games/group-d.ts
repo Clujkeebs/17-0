@@ -89,5 +89,5 @@ export const oddOneOut: MiniGame<PickPuzzle, PickAnswer> = {
   score: scorePicks,
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export const groupD: MiniGame<any, any>[] = [speedTrap, oddOneOut];

@@ -10,7 +10,7 @@ export function Avatar({ name, src, color = '#0A0A0A', size = 96, decorative = f
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
+       
       <img src={src} alt={decorative ? '' : `${name} headshot`} width={size} height={size} loading={size > 120 ? 'eager' : 'lazy'} decoding="async"
         onError={() => setFailed(true)}
         style={{ width: size, height: size, flex: 'none', background: '#F5F4F0', objectFit: 'cover', objectPosition: 'top', borderRadius: Math.round(size * 0.12) }} />

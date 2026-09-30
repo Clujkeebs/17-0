@@ -219,6 +219,6 @@ export const guessTheOvr: MiniGame<GOPuzzle, GOAnswer> = {
   },
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export const groupB: MiniGame<any, any>[] = [blindResume, ratingMatch, guessTheOvr];
 

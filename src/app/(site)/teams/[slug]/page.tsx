@@ -58,7 +58,7 @@ export default async function TeamPage({ params }: Props) {
 
       <header className="profile-hero">
         {t.logoUrl
-          // eslint-disable-next-line @next/next/no-img-element
+           
           ? <img className="team-logo" src={t.logoUrl} alt={`${name} logo`} width={160} height={160} />
           : <div className="portrait"><Monogram name={name} color={t.primaryColor} size={200} /></div>}
         <div>
