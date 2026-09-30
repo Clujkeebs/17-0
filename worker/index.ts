@@ -47,6 +47,34 @@ console.log('worker started:', Object.keys(handlers).join(', '));
 
 // Boot tasks: probe the ratings feed shape (logged for parser debugging), kick a sync, backfill headshots.
 void (async () => {
+  if (process.env.PROBE_STM === '1') {
+    try {
+      const { chromium } = await import('playwright-core');
+      const b = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+      const pg = await b.newPage({ viewport: { width: 1280, height: 900 } });
+      const log = async (tag: string) => {
+        const txt = (await pg.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ').slice(0, 3000);
+        const btns = await pg.$$eval('button, a, [role=button]', (els) => els.map((e) => (e.textContent || '').trim()).filter(Boolean).slice(0, 40));
+        console.log(`[stm] ${tag} url=${pg.url()} text=${txt}`);
+        console.log(`[stm] ${tag} buttons=${JSON.stringify(btns)}`);
+      };
+      await pg.goto('https://sticktothemodel.com', { waitUntil: 'networkidle', timeout: 60_000 });
+      await log('home');
+      const styles = await pg.evaluate(() => { const cs = getComputedStyle(document.body); return { bg: cs.backgroundColor, color: cs.color, font: cs.fontFamily }; });
+      console.log(`[stm] styles=${JSON.stringify(styles)}`);
+      const links = await pg.$$eval('a', (as) => as.map((a) => (a as HTMLAnchorElement).href).slice(0, 40));
+      console.log(`[stm] links=${JSON.stringify(links)}`);
+      for (const label of [/17-0|nfl|football/i, /play|start|spin/i, /spin|roll/i]) {
+        const el = pg.getByRole('button', { name: label }).or(pg.getByRole('link', { name: label })).first();
+        if (await el.count()) { await el.click().catch(() => {}); await pg.waitForTimeout(3500); await log(`after ${label}`); }
+      }
+      for (let i = 0; i < 3; i++) {
+        const any = pg.locator('button:visible').nth(1);
+        if (await any.count()) { await any.click().catch(() => {}); await pg.waitForTimeout(3500); await log(`click${i}`); }
+      }
+      await b.close();
+    } catch (e) { console.log('[stm] failed', (e as Error).message); }
+  }
   if (process.env.SYNC_ON_BOOT === '1') {
     await getQueue(QUEUE_NAMES.sync).add('sync', { by: 'boot' }, { attempts: 1 }).catch(() => {});
   }
