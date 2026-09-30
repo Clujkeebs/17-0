@@ -19,14 +19,20 @@ export async function recomputeCoachImpact(): Promise<number> {
 
   const coaches = await db.select().from(schema.coaches);
   const at = new Date().toISOString();
-  for (const c of coaches) {
-    const score = coachImpact({
-      teamRosterAvgOvr: c.teamId != null ? avgs.get(c.teamId) ?? leagueAvg : leagueAvg,
-      recent3yrWinPct: c.recent3yrWinPct / 1000,
-      playoffAppearances3yr: c.playoffAppearances3yr,
-      superBowlWins: c.superBowlWins,
-      yearsWithTeam: c.yearsWithTeam,
-    });
+  const raw = coaches.map((c) => coachImpact({
+    teamRosterAvgOvr: c.teamId != null ? avgs.get(c.teamId) ?? leagueAvg : leagueAvg,
+    recent3yrWinPct: c.recent3yrWinPct / 1000,
+    playoffAppearances3yr: c.playoffAppearances3yr,
+    superBowlWins: c.superBowlWins,
+    yearsWithTeam: c.yearsWithTeam,
+  }));
+  // The raw formula lands in the 30s to 70s. Coaches are graded on the same scale as players,
+  // so rescale the current head coaches onto 72 (worst) to 97 (best); legends are capped at 99.
+  const current = raw.filter((_, i) => coaches[i].teamId != null);
+  const lo = Math.min(...current), hi = Math.max(...current);
+  const scale = (v: number) => Math.round(Math.min(99, 72 + ((v - lo) / Math.max(1, hi - lo)) * 25));
+  for (const [i, c] of coaches.entries()) {
+    const score = scale(raw[i]);
     const impactHistory = [...(c.impactHistory ?? []), { at, score }].slice(-HISTORY_CAP);
     await db.update(schema.coaches).set({ coachImpactScore: score, impactHistory }).where(eq(schema.coaches.id, c.id));
   }

@@ -11,7 +11,7 @@ import type { PublicPlayer } from '@/lib/server/games';
 import './game.css';
 
 type Draft = DraftState & { token: string; daily: boolean; date: string | null };
-const STATE_KEY = 'gl-17-0-draft';
+const STATE_KEY = 'gl-17-0-draft-v3';
 const SLOT_HINT: Record<Slot, string> = { QB: 'Quarterback', RB: 'Running back', WR: 'Wide receiver', TE: 'Tight end', DEF: 'Any defender', HC: 'Head coach' };
 
 async function post(body: object) {
@@ -37,7 +37,7 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
   useEffect(() => {
     try {
       const saved = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Draft | null;
-      if (saved?.sessionId) { setDraft(saved); setLanded(true); }
+      if (saved?.sessionId && (saved.picks ?? []).every((p) => (SLOTS as readonly string[]).includes(p.slot ?? ''))) { setDraft(saved); setLanded(true); }
     } catch { /* ignore */ }
   }, []);
   useEffect(() => { try { if (draft) sessionStorage.setItem(STATE_KEY, JSON.stringify(draft)); } catch {} }, [draft]);
