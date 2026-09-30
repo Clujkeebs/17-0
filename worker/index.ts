@@ -45,27 +45,18 @@ console.log('worker started:', Object.keys(handlers).join(', '));
 // Boot tasks: probe the ratings feed shape (logged for parser debugging), kick a sync, backfill headshots.
 void (async () => {
   if (process.env.PROBE_EA === '1') {
-    const cands = ['https://drop-api.ea.com/rating/madden-nfl-27', 'https://drop-api.ea.com/rating/madden-nfl?iteration=launch', 'https://drop-api.ea.com/rating/madden-nfl-26'];
-    for (const c of cands) {
+    for (const pageUrl of ['https://www.ea.com/games/madden-nfl/player-ratings', 'https://www.ea.com/games/madden-nfl/player-ratings?page=2']) {
       try {
-        const u = new URL(c); u.searchParams.set('locale', 'en'); u.searchParams.set('limit', '2');
-        const r = await fetch(u, { headers: { accept: 'application/json' } });
-        const t = await r.text();
-        console.log(`[probe2] ${u} -> ${r.status} ${t.slice(0, 600).replace(/"playerAbilities":\[.*?\]\s*,/g, '')}`);
-      } catch (e) { console.log(`[probe2] ${c} error ${(e as Error).message}`); }
+        const r = await fetch(pageUrl, { headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36', accept: 'text/html' } });
+        const html = await r.text();
+        const apis = [...new Set(html.match(/https?:\/\/[a-z0-9.-]*(?:drop-api|api|ratings)[a-z0-9.-]*\.[a-z]+[^"'\s<>\\)]{0,160}/gi) ?? [])].slice(0, 30);
+        const nd = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]{0,2500})/)?.[1] ?? '';
+        const idx = html.search(/overallRating|"ovr"|firstName/);
+        console.log(`[probe4] ${pageUrl} status=${r.status} len=${html.length} apis=${JSON.stringify(apis)}`);
+        console.log(`[probe4] nextdata=${nd.slice(0, 2500)}`);
+        console.log(`[probe4] around=${idx >= 0 ? html.slice(Math.max(0, idx - 800), idx + 1500) : 'none'}`);
+      } catch (e) { console.log('[probe4] failed', (e as Error).message); }
     }
-    try {
-      const { chromium } = await import('playwright-core');
-      const b = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
-      const pg = await b.newPage();
-      const seen: string[] = [];
-      pg.on('request', (req) => { const u = req.url(); if (/drop-api|rating/i.test(u) && !/\.(png|jpg|svg|webp|css|js)(\?|$)/.test(u)) seen.push(u); });
-      await pg.goto('https://www.ea.com/games/madden-nfl/ratings', { waitUntil: 'networkidle', timeout: 60_000 }).catch((e) => console.log('[probe3] goto', e.message));
-      console.log(`[probe3] title=${await pg.title()} requests=${JSON.stringify([...new Set(seen)].slice(0, 25))}`);
-      const links = await pg.$$eval('a', (as) => as.map((a) => (a as HTMLAnchorElement).href).filter((h) => /rating/.test(h)).slice(0, 30)).catch(() => []);
-      console.log(`[probe3] links=${JSON.stringify(links)}`);
-      await b.close();
-    } catch (e) { console.log('[probe3] browser failed', (e as Error).message); }
   }
   if (process.env.SYNC_ON_BOOT === '1') {
     try {
