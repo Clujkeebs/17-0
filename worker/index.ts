@@ -44,25 +44,12 @@ console.log('worker started:', Object.keys(handlers).join(', '));
 
 // Boot tasks: probe the ratings feed shape (logged for parser debugging), kick a sync, backfill headshots.
 void (async () => {
-  if (process.env.PROBE_EA === '1') {
-    for (const pageUrl of ['https://www.ea.com/games/madden-nfl/player-ratings', 'https://www.ea.com/games/madden-nfl/player-ratings?page=2']) {
-      try {
-        const r = await fetch(pageUrl, { headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36', accept: 'text/html' } });
-        const html = await r.text();
-        const apis = [...new Set(html.match(/https?:\/\/[a-z0-9.-]*(?:drop-api|api|ratings)[a-z0-9.-]*\.[a-z]+[^"'\s<>\\)]{0,160}/gi) ?? [])].slice(0, 30);
-        const nd = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]{0,2500})/)?.[1] ?? '';
-        const idx = html.search(/overallRating|"ovr"|firstName/);
-        console.log(`[probe4] ${pageUrl} status=${r.status} len=${html.length} apis=${JSON.stringify(apis)}`);
-        console.log(`[probe4] nextdata=${nd.slice(0, 2500)}`);
-        console.log(`[probe4] around=${idx >= 0 ? html.slice(Math.max(0, idx - 800), idx + 1500) : 'none'}`);
-      } catch (e) { console.log('[probe4] failed', (e as Error).message); }
-    }
-  }
   if (process.env.SYNC_ON_BOOT === '1') {
     try {
-      const probe = await fetchJsonPages(undefined, async (u, init) => { const r = await fetch(u, init); return r; });
+      const probe = await fetchJsonPages();
       const page = probe.pages[0] as { items?: Record<string, unknown>[] } & Record<string, unknown>;
       const it = page.items?.[0] ?? {};
+      console.log(`[probe] source=${probe.sourceUrl}`);
       console.log(`[probe] items=${probe.itemCount} pageKeys=${Object.keys(page).join(',')} itemKeys=${Object.keys(it).join(',')}`);
       console.log(`[probe] iterations=${JSON.stringify((it.availableIterations as { id: string; label: string }[] | undefined)?.map((x) => `${x.id}=${x.label}`))}`);
       console.log(`[probe] iteration=${JSON.stringify(it.iteration)} team=${JSON.stringify(it.team)} position=${JSON.stringify(it.position)}`);

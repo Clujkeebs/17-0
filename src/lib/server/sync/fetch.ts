@@ -32,14 +32,29 @@ function pageUrl(): string {
   return env && !isJsonEndpoint(env) ? env : DEFAULT_PAGE_URL;
 }
 
-export async function fetchJsonPages(base = jsonBase(), fetchImpl: typeof fetch = fetch): Promise<RawRatings> {
+/**
+ * EA serves several editions on one endpoint; the default is not always the current game.
+ * The player-ratings page lists the current iterations (newest first), e.g. "madden-ratings-week-2".
+ */
+export async function discoverIteration(fetchImpl: typeof fetch = fetch): Promise<string | null> {
+  if (process.env.MADDEN_ITERATION) return process.env.MADDEN_ITERATION;
+  try {
+    const res = await fetchImpl('https://www.ea.com/games/madden-nfl/player-ratings', { headers: { 'user-agent': UA, accept: 'text/html' }, signal: AbortSignal.timeout(20_000) });
+    const html = await res.text();
+    return html.match(/"iterations":\[\{"id":"([^"]+)"/)?.[1] ?? null;
+  } catch { return null; }
+}
+
+export async function fetchJsonPages(base = jsonBase(), fetchImpl: typeof fetch = fetch, iteration?: string | null): Promise<RawRatings> {
   const pages: unknown[] = [];
   let itemCount = 0;
+  if (iteration === undefined) iteration = await discoverIteration(fetchImpl);
   for (let i = 0; i < MAX_PAGES; i++) {
     const url = new URL(base);
     url.searchParams.set('locale', url.searchParams.get('locale') ?? 'en');
     url.searchParams.set('limit', String(PAGE_LIMIT));
     url.searchParams.set('offset', String(i * PAGE_LIMIT));
+    if (iteration) url.searchParams.set('iteration', iteration);
     const res = await fetchImpl(url, { headers: { accept: 'application/json', 'user-agent': UA }, signal: AbortSignal.timeout(20_000) });
     if (!res.ok) throw new Error(`Ratings endpoint ${url.host} returned ${res.status}`);
     const body = (await res.json()) as unknown;
@@ -50,7 +65,7 @@ export async function fetchJsonPages(base = jsonBase(), fetchImpl: typeof fetch 
     if (items.length < PAGE_LIMIT || (total != null && itemCount >= total)) break;
   }
   if (itemCount === 0) throw new Error('Ratings endpoint returned no items');
-  return { sourceUrl: base, method: 'json', pages, itemCount };
+  return { sourceUrl: iteration ? `${base}?iteration=${iteration}` : base, method: 'json', pages, itemCount };
 }
 
 export async function fetchWithBrowser(url = pageUrl()): Promise<RawRatings> {
