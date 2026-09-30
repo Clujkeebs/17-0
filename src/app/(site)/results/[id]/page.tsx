@@ -100,7 +100,7 @@ export default async function ResultPage({ params }: Props) {
                   <thead><tr><th scope="col">Slot</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col" className="num">Grade</th><th scope="col" className="num">Letter</th></tr></thead>
                   <tbody>
                     {(d.slots as SlotResult[]).map((s) => (
-                      <tr key={s.slot}><td className="mono">{SLOT_LABELS[s.slot]}</td><td>{s.name}</td><td className="mono">{teamName(s.teamId)}</td><td className="num">{s.grade.toFixed(1)}</td><td className="num" style={{ fontWeight: 800 }}>{s.letter}</td></tr>
+                      <tr key={s.slot}><td className="mono">{SLOT_LABELS[s.slot] ?? s.slot}</td><td>{s.name}</td><td className="mono">{teamName(s.teamId)}</td><td className="num">{s.grade.toFixed(1)}</td><td className="num" style={{ fontWeight: 800 }}>{s.letter}</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -113,17 +113,33 @@ export default async function ResultPage({ params }: Props) {
                 {(d.stats as StatLine[]).map((s) => <div key={s.key} className="stat"><span className="v">{s.key === 'ypc' ? (s.value / 10).toFixed(1) : s.value.toLocaleString('en-US')}</span><span className="l">{s.key === 'ypc' ? 'Yds / Carry' : s.label}</span></div>)}
               </div>
               <h2>The build</h2>
-              <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
-                <table>
-                  <thead><tr><th scope="col">Attribute</th><th scope="col" className="num">Value</th><th scope="col">Taken from</th></tr></thead>
-                  <tbody>
-                    {Object.entries(d.attributes as Record<string, number>).map(([k, v]) => {
-                      const src = (d.sources as { name: string }[])[(d.choices as Record<string, number>)[k]];
-                      return <tr key={k}><td>{ATTRIBUTE_LABELS[k as AttributeKey] ?? k}</td><td className="num">{v}</td><td>{src?.name}</td></tr>;
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              {Array.isArray(d.traits) ? (
+                <>
+                  <p className="muted">Score <strong className="num">{Number(d.rating).toFixed(1)}</strong>{typeof d.best === 'number' ? <> out of a best possible <strong className="num">{Number(d.best).toFixed(1)}</strong> from these five teams.</> : null}</p>
+                  <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
+                    <table>
+                      <thead><tr><th scope="col">Trait</th><th scope="col" className="num">Weight</th><th scope="col" className="num">Rating</th><th scope="col">Taken from</th><th scope="col">Team</th></tr></thead>
+                      <tbody>
+                        {(d.traits as { key: string; label: string; value: number; weight: number; donor: string; teamId: number }[]).map((t) => (
+                          <tr key={t.key}><td>{t.label}</td><td className="num">{Math.round(t.weight * 100)}%</td><td className="num">{t.value}</td><td>{t.donor}</td><td className="mono">{teamName(t.teamId)}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
+                  <table>
+                    <thead><tr><th scope="col">Attribute</th><th scope="col" className="num">Value</th><th scope="col">Taken from</th></tr></thead>
+                    <tbody>
+                      {Object.entries((d.attributes ?? {}) as Record<string, number>).map(([k, v]) => {
+                        const src = ((d.sources ?? []) as { name: string }[])[((d.choices ?? {}) as Record<string, number>)[k]];
+                        return <tr key={k}><td>{ATTRIBUTE_LABELS[k as AttributeKey] ?? k}</td><td className="num">{v}</td><td>{src?.name}</td></tr>;
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </>
           )}
 

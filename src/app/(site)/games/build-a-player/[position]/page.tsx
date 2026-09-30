@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ATTRIBUTE_LABELS, POSITION_NAMES, type AttributeKey, type Attributes } from '@/lib/game/attributes';
-import { BUILD_CATEGORIES, BUILD_POSITIONS, BUILD_TEAMS, buildRating, type BuildPosition } from '@/lib/game/build';
+import { POSITION_NAMES } from '@/lib/game/attributes';
+import { BUILD_POSITIONS, BUILD_TEAMS, TRAITS, traitValue, type BuildPosition } from '@/lib/game/build';
 import { pageMeta } from '@/lib/seo/meta';
 import { faqLd } from '@/lib/seo/jsonld';
 import { GROUP_PLURAL } from '@/lib/seo/positions';
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!pos) return pageMeta({ title: 'Position not found', description: 'No such Build a Player position.', path: '/games/build-a-player', noindex: true });
   return pageMeta({
     title: `Build a Player: the perfect ${POSITION_NAMES[pos].toLowerCase()}`,
-    description: `Build a ${pos} one attribute at a time from ${BUILD_TEAMS} random teams. The ${BUILD_CATEGORIES[pos].length} categories, the top 5 real ${GROUP_PLURAL[pos]}, and how the build is graded.`,
+    description: `Build a ${pos} one trait at a time from ${BUILD_TEAMS} spins. The ${TRAITS[pos].length} weighted traits, the top 5 real ${GROUP_PLURAL[pos]}, and how the build is graded.`,
     path: `/games/build-a-player/${pos.toLowerCase()}`,
   });
 }
@@ -37,26 +37,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BuildPositionPage({ params }: Props) {
   const pos = parse((await params).position);
   if (!pos) notFound();
-  const cats = BUILD_CATEGORIES[pos];
+  const traits = TRAITS[pos];
   const [pool, teams] = await Promise.all([loadGroup(pos, 200), loadTeamMap()]);
-  const scored = pool.map((p) => {
-    const a: Attributes = {};
-    for (const c of cats) a[c] = p.attributes?.[c] ?? 50;
-    return { p, rating: buildRating(pos, a) };
-  }).sort((x, y) => y.rating - x.rating).slice(0, 5);
-  // Category leaders: the single best source for each category among the top 200.
-  const leaders = cats.map((c) => {
+  const scoreOf = (a: Parameters<typeof traitValue>[0]) => Math.round(traits.reduce((sum, t) => sum + traitValue(a, t) * t.weight, 0) * 10) / 10;
+  const scored = pool.map((p) => ({ p, rating: scoreOf(p.attributes ?? {}) })).sort((x, y) => y.rating - x.rating).slice(0, 5);
+  // Trait leaders: the single best source for each trait among the top 200.
+  const leaders = traits.map((t) => {
     let best: { name: string; slug: string; v: number } | null = null;
-    for (const p of pool) { const v = p.attributes?.[c]; if (typeof v === 'number' && (!best || v > best.v)) best = { name: p.fullName, slug: p.slug, v }; }
-    return { c, best };
+    for (const p of pool) { const v = traitValue(p.attributes ?? {}, t); if (!best || v > best.v) best = { name: p.fullName, slug: p.slug, v }; }
+    return { t, best };
   });
   const path = `/games/build-a-player/${pos.toLowerCase()}`;
-  const label = (k: AttributeKey) => ATTRIBUTE_LABELS[k];
+  const pct = (w: number) => `${Math.round(w * 100)} percent`;
+  const heaviest = [...traits].sort((a, b) => b.weight - a.weight)[0];
   const faq = [
-    { q: `How does Build a Player work for a ${pos}?`, a: `You get ${BUILD_TEAMS} random teams and ${cats.length} categories: ${cats.map((c) => label(c).toLowerCase()).join(', ')}. For each category you choose which team's ${POSITION_NAMES[pos].toLowerCase()} supplies that attribute. The finished build is graded on the site's ${pos} formula and simulated over a season.` },
-    { q: `Who is the best real ${POSITION_NAMES[pos].toLowerCase()} for a build?`, a: scored[0] ? `${scored[0].p.fullName} grades highest across the ${pos} categories at ${scored[0].rating.toFixed(1)}. You will rarely get him whole, since the game gives you one attribute per pick.` : 'Ratings are not loaded yet. Check back after the next sync.' },
-    { q: 'Which category matters most?', a: `The ones the ${pos} formula weights. Every formula input is a category, so the grade is decided by those picks. The other categories do not move the grade, though some of them feed the simulated season stat line.` },
-    { q: 'Do I have to take the best player on each team?', a: `No. You draft one ${POSITION_NAMES[pos].toLowerCase()} from each of the ${BUILD_TEAMS} teams, then choose whose number to use for each category, and one player can supply as many categories as you like. A player who is elite at one weighted attribute is often a better source than the team's highest overall.` },
+    { q: `How does Build a Player work for a ${pos}?`, a: `The reel spins ${BUILD_TEAMS} times, one team per spin, and no team repeats. Each ${POSITION_NAMES[pos].toLowerCase()} on that team shows his rating for every trait you still need. You tap one trait to take from one player, then the reel spins again. The fifth placement completes the build. The ${pos} traits are ${traits.map((t) => `${t.label.toLowerCase()} (${pct(t.weight)})`).join(', ')}.` },
+    { q: `Who is the best real ${POSITION_NAMES[pos].toLowerCase()} for a build?`, a: scored[0] ? `${scored[0].p.fullName} scores highest across the ${pos} traits at ${scored[0].rating.toFixed(1)}. You will never get him whole, since each spin gives you one trait from one player.` : 'Ratings are not loaded yet. Check back after the next sync.' },
+    { q: 'Which trait matters most?', a: `For a ${pos}, ${heaviest.label.toLowerCase()} carries the most weight at ${pct(heaviest.weight)}. Your score is the weighted sum of the five traits you placed, and the result also shows the best score those same five teams could have produced.` },
+    { q: 'Do I have to take the best player on each team?', a: `No. You take one trait from one player per spin. A backup who is elite at a heavily weighted trait is often a better use of that spin than the team's highest overall, and a trait you fill early is a trait you cannot upgrade later.` },
   ];
 
   return (
@@ -65,7 +63,7 @@ export default async function BuildPositionPage({ params }: Props) {
       <JsonLd data={faqLd(faq)} />
       <span className="eyebrow">Build a Player / {pos}</span>
       <h1>Build the perfect {POSITION_NAMES[pos].toLowerCase()}</h1>
-      <p style={{ maxWidth: '66ch', fontSize: '1.1rem' }}>{cats.length} categories, {BUILD_TEAMS} teams, one attribute per pick. The trick is knowing which team to spend on which category.</p>
+      <p style={{ maxWidth: '66ch', fontSize: '1.1rem' }}>{traits.length} traits, {BUILD_TEAMS} spins, one trait per spin. The trick is knowing which spin to spend on which trait.</p>
       <div className="row" style={{ margin: '20px 0 36px' }}>
         <Link className="btn btn-primary" href={`/games/build-a-player?position=${pos}`}>Build a {pos}</Link>
         <Link className="btn" href={`/positions/${pos.toLowerCase()}`}>Top 50 {GROUP_PLURAL[pos]}</Link>
@@ -73,15 +71,15 @@ export default async function BuildPositionPage({ params }: Props) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32 }}>
         <section aria-labelledby="cats-h">
-          <h2 id="cats-h" style={{ fontSize: '1.2rem' }}>The categories, and who owns each</h2>
+          <h2 id="cats-h" style={{ fontSize: '1.2rem' }}>The traits, and who owns each</h2>
           {pool.length === 0 ? <p className="muted">Ratings are not loaded yet.</p> : (
             <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
               <table>
-                <caption className="sr-only">Best available value in each {pos} category</caption>
-                <thead><tr><th scope="col">Category</th><th scope="col">Best source</th><th scope="col" className="num">Value</th></tr></thead>
+                <caption className="sr-only">Weight and best available rating for each {pos} trait</caption>
+                <thead><tr><th scope="col">Trait</th><th scope="col" className="num">Weight</th><th scope="col">Best source</th><th scope="col" className="num">Value</th></tr></thead>
                 <tbody>
-                  {leaders.map(({ c, best }) => (
-                    <tr key={c}><td>{label(c)}</td><td>{best ? <Link href={`/players/${best.slug}`}>{best.name}</Link> : '--'}</td><td className="num">{best?.v ?? '--'}</td></tr>
+                  {leaders.map(({ t, best }) => (
+                    <tr key={t.key}><td>{t.label}</td><td className="num">{Math.round(t.weight * 100)}%</td><td>{best ? <Link href={`/players/${best.slug}`}>{best.name}</Link> : '--'}</td><td className="num">{best?.v ?? '--'}</td></tr>
                   ))}
                 </tbody>
               </table>
@@ -105,14 +103,14 @@ export default async function BuildPositionPage({ params }: Props) {
               })}
             </ol>
           )}
-          <p className="hint">Build grade on the {pos} categories, not overall.</p>
+          <p className="hint">Weighted score on the {pos} traits, not overall.</p>
         </section>
       </div>
 
       <section aria-labelledby="faq-h" style={{ marginTop: 40, maxWidth: 760 }}>
         <h2 id="faq-h">Questions</h2>
         {faq.map((f) => (<div key={f.q} style={{ marginBottom: 20 }}><h3>{f.q}</h3><p className="muted">{f.a}</p></div>))}
-        <p><Link href="/blog/build-a-player-the-case-for-stealing-one-attribute">Build a Player: the case for stealing one attribute</Link></p>
+        <p><Link href="/blog/build-a-player-the-case-for-stealing-one-attribute">Build a Player: the case for stealing one trait</Link></p>
       </section>
 
       <nav aria-label="Other positions" style={{ marginTop: 24 }}>
@@ -120,7 +118,7 @@ export default async function BuildPositionPage({ params }: Props) {
           {BUILD_POSITIONS.filter((x) => x !== pos).map((x) => (<li key={x}><Link className="btn btn-sm" href={`/games/build-a-player/${x.toLowerCase()}`}>{x}</Link></li>))}
         </ul>
       </nav>
-      <PlayCta href={`/games/build-a-player?position=${pos}`} label={`Build a ${pos}`} title={`Your ${pos}, one steal at a time`} body={`${BUILD_TEAMS} teams, ${cats.length} categories. Take the best arm here, the best legs there, and see what the formula makes of it.`} />
+      <PlayCta href={`/games/build-a-player?position=${pos}`} label={`Build a ${pos}`} title={`Your ${pos}, one steal at a time`} body={`${BUILD_TEAMS} spins, ${traits.length} traits. Take the best ${traits[0].label.toLowerCase()} here, the best ${traits[1].label.toLowerCase()} there, and see what the weights make of it.`} />
     </div>
   );
 }

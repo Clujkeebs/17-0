@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     const d = r.resultData as { wins: number; losses: number; slots: SlotResult[] };
     res = await renderCard({
       eyebrow: r.isDaily ? `Daily 17-0 · ${r.dailyDate}` : '17-0 projected record', headline: `${d.wins}-${d.losses}`, perfect: d.wins === 17,
-      lines: d.slots.map((s) => ({ k: SLOT_LABELS[s.slot], v: `${last(s.name)}  ${s.letter}` })), footer: 'Can you beat it?',
+      lines: d.slots.map((s) => ({ k: SLOT_LABELS[s.slot] ?? s.slot, v: `${last(s.name)}  ${s.letter}` })), footer: 'Can you beat it?',
     });
   } else {
     const d = r.resultData as { position: string; rating: number; letter: string; stats: StatLine[]; attributes: Record<string, number> };

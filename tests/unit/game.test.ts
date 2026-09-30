@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createRng, hashSeed, clamp } from '@/lib/game/prng';
 import { applyWeights, coachImpact, DEFAULT_FORMULAS, formulaFor, letterGrade, ratePlayer } from '@/lib/game/formulas';
-import { gradeRoster, slotAccepts, spinTeams, SLOTS, type Pick } from '@/lib/game/seventeen';
-import { assemble, buildRating, gradeBuild, simulateSeason, BUILD_CATEGORIES, BUILD_POSITIONS, type BuildSource } from '@/lib/game/build';
+import { gradeRoster, slotAccepts, spinTeams, SLOTS, WIN_FLOOR, WIN_SPAN, type Pick } from '@/lib/game/seventeen';
+import { assemble, buildRating, simulateSeason, BUILD_CATEGORIES, BUILD_POSITIONS, type BuildSource } from '@/lib/game/build';
 import { computeStreak, dailyDateET, dailySeed } from '@/lib/game/daily';
 import { buildNarrative } from '@/lib/game/narrative';
 import { positionGroup, ATTRIBUTE_KEYS, type Attributes } from '@/lib/game/attributes';
@@ -54,16 +54,16 @@ describe('formulas', () => {
 const roster = (v: number, coach = v): Pick[] => [
   { slot: 'QB', teamId: 1, name: 'Q B', group: 'QB', attributes: flat(v) },
   { slot: 'RB', teamId: 2, name: 'R B', group: 'RB', attributes: flat(v) },
-  { slot: 'WRTE', teamId: 3, name: 'W R', group: 'WR', attributes: flat(v) },
+  { slot: 'WR', teamId: 3, name: 'W R', group: 'WR', attributes: flat(v) },
+  { slot: 'TE', teamId: 5, name: 'T E', group: 'TE', attributes: flat(v) },
   { slot: 'DEF', teamId: 4, name: 'D F', group: 'CB', attributes: flat(v) },
-  { slot: 'K', teamId: 5, name: 'K K', group: 'K', attributes: flat(v) },
   { slot: 'HC', teamId: 6, name: 'H C', group: 'HC', coachImpact: coach },
 ];
 
 describe('17-0', () => {
   it('slot eligibility', () => {
-    expect(slotAccepts('WRTE', 'TE')).toBe(true); expect(slotAccepts('DEF', 'EDGE')).toBe(true); expect(slotAccepts('DEF', 'QB')).toBe(false);
-    expect(slotAccepts('HC', 'HC')).toBe(true); expect(slotAccepts('K', 'K')).toBe(true); expect(slotAccepts('RB', 'WR')).toBe(false); expect(slotAccepts('QB', 'QB')).toBe(true);
+    expect(slotAccepts('TE', 'TE')).toBe(true); expect(slotAccepts('WR', 'TE')).toBe(false); expect(slotAccepts('DEF', 'EDGE')).toBe(true); expect(slotAccepts('DEF', 'QB')).toBe(false);
+    expect(slotAccepts('HC', 'HC')).toBe(true); expect(slotAccepts('WR', 'WR')).toBe(true); expect(slotAccepts('RB', 'WR')).toBe(false); expect(slotAccepts('QB', 'QB')).toBe(true);
   });
   it('spin gives 6 distinct teams + 2 reserves deterministically', () => {
     const ids = Array.from({ length: 32 }, (_, i) => i + 1);
@@ -75,8 +75,8 @@ describe('17-0', () => {
   it('projected wins follow the formula and stay in 0..17', () => {
     for (let i = 0; i < 200; i++) {
       const r = gradeRoster(`s${i}`, roster(80));
-      const base = (80 / 99) * 14;
-      expect(r.wins).toBeGreaterThanOrEqual(Math.round(base - 2)); expect(r.wins).toBeLessThanOrEqual(Math.round(base + 3));
+      const base = ((80 - WIN_FLOOR) / WIN_SPAN) * 17;
+      expect(r.wins).toBeGreaterThanOrEqual(Math.max(0, Math.round(base - 2))); expect(r.wins).toBeLessThanOrEqual(Math.min(17, Math.round(base + 1)));
       expect(r.wins + r.losses).toBe(17);
       expect(r.narrative).toHaveLength(3);
       expect(r.narrative.join(' ')).not.toMatch(/—/);
@@ -119,9 +119,19 @@ describe('build a player', () => {
     expect(qb.passYds).toBeLessThanOrEqual(5500); expect(qb.passTd).toBeLessThanOrEqual(55); expect(qb.int).toBeGreaterThanOrEqual(3); expect(qb.rushYds).toBeLessThanOrEqual(900);
     expect(qb.passYds).toBeGreaterThan(4800);
   });
-  it('gradeBuild is deterministic', () => {
-    const choices = Object.fromEntries(BUILD_CATEGORIES.S.map((c, i) => [c, i % 5]));
-    expect(gradeBuild('S', sources, choices, 'x')).toEqual(gradeBuild('S', sources, choices, 'x'));
+  it('trait model: values, score, best possible, full build', async () => {
+    const { TRAITS, traitValue, traitScore, bestPossible, gradeTraitBuild } = await import('@/lib/game/build');
+    for (const pos of BUILD_POSITIONS) expect(TRAITS[pos].reduce((a, t) => a + t.weight, 0)).toBeCloseTo(1, 5);
+    const qb = TRAITS.QB;
+    expect(traitValue(flat(90), qb[0])).toBe(90);
+    const picks = qb.map((t, i) => ({ trait: t.key, value: 80 + i, name: `P${i}`, teamId: i, attributes: flat(80 + i) }));
+    expect(traitScore('QB', picks)).toBeGreaterThan(80);
+    const best = bestPossible('QB', [[flat(70)], [flat(99)], [flat(80)], [flat(60)], [flat(90)]]);
+    expect(best).toBeCloseTo(82.8, 1);
+    const r = gradeTraitBuild('QB', picks, best, 'seed');
+    expect(r.traits).toHaveLength(5);
+    expect(gradeTraitBuild('QB', picks, best, 'seed')).toEqual(r);
+    expect(() => gradeTraitBuild('QB', picks.slice(1), best, 'seed')).toThrow();
   });
 });
 

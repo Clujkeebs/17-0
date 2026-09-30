@@ -9,8 +9,8 @@ export const revalidate = 60;
 export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 const STEPS = [
-  { h: 'Spin six teams', p: 'Everyone gets the same six NFL teams today. Two re-spins if a reel lands badly.' },
-  { h: 'Draft one from each', p: 'A quarterback, a back, a pass catcher, a defender, a kicker and a head coach.' },
+  { h: 'Spin the reel', p: 'One reel, one team at a time. Everyone gets the same six NFL teams today, in the same order.' },
+  { h: 'Draft one from each', p: 'Put one player into an open slot: QB, RB, WR, TE, any defender, or head coach. Then the reel spins again.' },
   { h: 'Let the ratings decide', p: 'Madden ratings feed a weighted formula that projects your seventeen game record.' },
 ];
 
@@ -70,11 +70,11 @@ export default async function Home() {
           <Link href="/games/17-0" className="tile tile-wide">
             <span className="eyebrow">Daily</span>
             <h3 className="tile-h">17-0</h3>
-            <p className="muted" style={{ maxWidth: '40ch' }}>Six spins, six picks, one projected record. QB and defense carry half the weight. Your kicker carries five percent and still loses you a game.</p>
+            <p className="muted" style={{ maxWidth: '40ch' }}>Six spins, six picks, one projected record. QB and defense carry 45 percent of the weight. The tight end carries ten and still costs you a game.</p>
             <div className="mini-reel" aria-hidden="true">{['KC', 'PHI', 'BAL', 'DET', 'SF', 'BUF'].map((a, i) => <span key={a} className={i === 2 ? 'on' : ''}>{a}</span>)}</div>
             <div className="tile-foot">
               <span className="stat"><span className="v">6</span><span className="l">Picks</span></span>
-              <span className="stat"><span className="v">2</span><span className="l">Re-spins</span></span>
+              <span className="stat"><span className="v">1</span><span className="l">Reel</span></span>
               <span className="stat"><span className="v">17</span><span className="l">Games</span></span>
               <span className="tile-cta">Play <ArrowIcon size={16} /></span>
             </div>
@@ -82,7 +82,7 @@ export default async function Home() {
           <Link href="/games/build-a-player" className="tile tile-tall">
             <span className="eyebrow">Anytime</span>
             <h3 className="tile-h">Build a Player</h3>
-            <p className="muted" style={{ maxWidth: '40ch' }}>Five teams. One attribute at a time. One guy&apos;s arm, another guy&apos;s pocket presence.</p>
+            <p className="muted" style={{ maxWidth: '40ch' }}>Five spins. One trait from each. One guy&apos;s arm, another guy&apos;s poise.</p>
             <div className="bars" aria-hidden="true">
               {[['THP', 97], ['DAC', 91], ['AWR', 95], ['SPD', 78], ['TUP', 88]].map(([k, v]) => (
                 <div key={k} className="bar"><span className="num">{k}</span><span className="track"><span style={{ width: `${v}%` }} /></span><span className="num">{v}</span></div>

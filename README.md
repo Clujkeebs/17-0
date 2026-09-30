@@ -4,8 +4,8 @@
 
 Unbeaten has two NFL roster games built on EA Sports Madden NFL ratings:
 
-- **17-0**: spin six teams and draft a QB, RB, WR/TE, defender, kicker and head coach, one from each team. The server grades the roster and projects a 17-game record. A daily puzzle resets at midnight ET and has its own leaderboard.
-- **Build a Player**: pick a position and spin five teams. Take one player from each team, then assemble a custom player one attribute at a time. The build gets graded and simulated over a 17-game season.
+- **17-0**: one reel spins a single team at a time, and you draft one player from it into an open slot: QB, RB, WR, TE, DEF (any defender) or HC. Six spins fill the roster. The server grades the roster and projects a 17-game record. A daily puzzle resets at midnight ET and has its own leaderboard.
+- **Build a Player**: pick a position (a position of the day is preselected) and spin five teams, one at a time, with no repeats. Each position has five weighted traits. On each spin you take one trait from one player. The result is a weighted score, a letter grade, the best possible score from those five teams, and a simulated season.
 
 The site also has about 8,000 programmatic SEO pages (players, teams, coaches, positions, comparisons, team and position game landers), accounts with streaks, a double opt-in newsletter, an admin panel and the full legal set.
 

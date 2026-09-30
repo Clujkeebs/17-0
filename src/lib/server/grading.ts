@@ -5,7 +5,7 @@ import { invalidatePrefix } from './redis';
 import { loadSession, type SpinPayload } from './games';
 import { positionGroup, type Attributes } from '@/lib/game/attributes';
 import { SLOTS, gradeRoster, slotAccepts, type Pick, type Slot } from '@/lib/game/seventeen';
-import { BUILD_CATEGORIES, BUILD_ELIGIBLE, gradeBuild, type BuildChoices } from '@/lib/game/build';
+import { BUILD_ELIGIBLE, TRAITS, bestPossible, gradeTraitBuild, traitValue } from '@/lib/game/build';
 
 export class GradeError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
 
@@ -90,32 +90,27 @@ export async function gradeSeventeen(ctx: Ctx) {
   return { id, result: resultData, daily: s.isDaily };
 }
 
-export async function gradeBuildAPlayer(ctx: Ctx, choices: BuildChoices) {
+export async function gradeBuildAPlayer(ctx: Ctx) {
   const s = await openSession(ctx, 'build-a-player');
   const payload = s.spinPayload as SpinPayload;
-  const playerIds = (payload.picks ?? []).map((x) => x.id);
   const position = payload.position!;
-  if (playerIds.length !== payload.teams.length || playerIds.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) throw new GradeError('Pick one player from each team.');
-  const rows = await db.select().from(schema.players).where(inArray(schema.players.id, playerIds));
-  const sources = playerIds.map((id) => {
-    const p = rows.find((r) => r.id === id);
-    if (!p || p.teamId === null) throw new GradeError('Unknown player.');
-    if (!payload.teams.includes(p.teamId)) throw new GradeError(`${p.fullName} is not on one of your spun teams.`);
-    if (!BUILD_ELIGIBLE[position].includes(positionGroup(p.position))) throw new GradeError(`${p.fullName} does not play ${position}.`);
-    return { name: p.fullName, teamId: p.teamId, attributes: p.attributes as Attributes };
+  const picks = payload.picks ?? [];
+  if (picks.length !== payload.teams.length || picks.some((x) => !x.trait)) throw new GradeError('Fill all five traits first.');
+  const rows = await db.select().from(schema.players).where(inArray(schema.players.id, picks.map((x) => x.id)));
+  const traitPicks = picks.map((x) => {
+    const p = rows.find((r) => r.id === x.id);
+    if (!p) throw new GradeError('Unknown player.');
+    const t = TRAITS[position].find((y) => y.key === x.trait)!;
+    const attrs = p.attributes as Attributes;
+    return { trait: t.key, value: traitValue(attrs, t), name: p.fullName, teamId: x.teamId, attributes: attrs };
   });
-  if (new Set(sources.map((x) => x.teamId)).size !== sources.length) throw new GradeError('One player per team.');
-  for (const cat of BUILD_CATEGORIES[position]) {
-    const idx = choices[cat];
-    if (idx === undefined || !Number.isInteger(idx) || idx < 0 || idx >= sources.length) throw new GradeError('Choose a source for every attribute.');
-  }
-  const seed = s.isDaily ? `${s.seed}:${JSON.stringify(choices)}:${playerIds.join(',')}` : s.id;
-  const result = gradeBuild(position, sources, choices, seed);
-  const resultData = {
-    position, ...result,
-    sources: sources.map((x) => ({ name: x.name, teamId: x.teamId })),
-    choices,
-  };
-  const id = await saveResult(s, ctx, 'build-a-player', resultData, result.score, result.rating >= 97);
+  const teamRosters = await db.select({ teamId: schema.players.teamId, position: schema.players.position, attributes: schema.players.attributes })
+    .from(schema.players).where(and(inArray(schema.players.teamId, picks.map((x) => x.teamId)), eq(schema.players.isActive, true)));
+  const eligible = BUILD_ELIGIBLE[position];
+  const best = bestPossible(position, picks.map((x) => teamRosters.filter((r) => r.teamId === x.teamId && eligible.includes(positionGroup(r.position))).map((r) => r.attributes as Attributes)));
+  const seed = s.isDaily ? `${s.seed}:${picks.map((x) => `${x.id}:${x.trait}`).join(',')}` : s.id;
+  const result = gradeTraitBuild(position, traitPicks, best, seed);
+  const resultData = { position, ...result, sources: traitPicks.map((x) => ({ name: x.name, teamId: x.teamId, trait: x.trait })) };
+  const id = await saveResult(s, ctx, 'build-a-player', resultData, result.score, result.rating >= 95);
   return { id, result: resultData, daily: s.isDaily };
 }

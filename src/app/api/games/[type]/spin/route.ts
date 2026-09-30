@@ -13,7 +13,7 @@ const Auth = { sessionId: z.string().uuid(), token: z.string().min(10).max(100) 
 const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('start'), daily: z.boolean().optional(), position: z.enum(BUILD_POSITIONS).optional() }),
   z.object({ action: z.literal('respin'), ...Auth }),
-  z.object({ action: z.literal('pick'), ...Auth, playerId: z.string().max(60), slot: z.enum(SLOTS).optional() }),
+  z.object({ action: z.literal('pick'), ...Auth, playerId: z.string().max(60), slot: z.enum(SLOTS).optional(), trait: z.string().max(20).optional() }),
 ]);
 
 /**
@@ -29,7 +29,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ type: s
   const body = parsed.data;
   try {
     if (body.action === 'respin') return json(await respinCurrent(body.sessionId, body.token, type));
-    if (body.action === 'pick') return json(await pickPlayer(body.sessionId, body.token, type, body.playerId, body.slot));
+    if (body.action === 'pick') return json(await pickPlayer(body.sessionId, body.token, type, body.playerId, body.slot, body.trait));
     const limited = await limitByIp(req, 'spin');
     if (limited) return limited;
     if (type === 'build-a-player' && !body.position) return errorJson(400, 'Pick a position first.');

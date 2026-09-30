@@ -14,41 +14,41 @@ const POSTS: BlogPost[] = [
     slug: 'how-17-0-works',
     title: 'How 17-0 works',
     date: '2026-08-18',
-    excerpt: 'Six teams, six slots, one pick per team. What the reel does, what the grade measures, and why a perfect season is rarer than it looks.',
+    excerpt: 'One reel, six spins, six slots, one pick per team. What the reel does, what the grade measures, and why a perfect season is rarer than it looks.',
     sections: [
       {
         h2: 'The short version',
         paragraphs: [
-          '17-0 hands you six NFL teams at random. You take exactly one player or coach from each team and slot them into a six-man roster: quarterback, running back, a pass catcher (wide receiver or tight end), a defender, a kicker, and a head coach. When all six slots are filled, the game grades the roster and projects a 17-game record.',
-          'That is the whole loop. It takes about two minutes. The part that takes longer is the argument afterward about whether you should have taken the edge rusher instead of the corner.',
+          '17-0 has one reel. It spins, lands on a single NFL team, and you draft one player or coach from that team into an open slot. Then it spins again. Six spins fill a six-man roster: quarterback, running back, wide receiver, tight end, one defender from any defensive position, and a head coach. When the last slot is filled, the game grades the roster and projects a 17-game record.',
+          'That is the whole loop. It takes about two minutes. The part that takes longer is the argument afterward about whether you should have taken the edge rusher instead of the tight end.',
         ],
       },
       {
-        h2: 'The reel and the respins',
+        h2: 'The reel',
         paragraphs: [
-          'The six teams come from a seeded shuffle of all 32 franchises. The seed is fixed when your session starts, so refreshing the page does not reroll the board. The same seed also sits behind two reserve teams, which is where your respins come from. You get two. Spend one on a team whose roster offers nothing for any open slot, and you get the next team in the shuffled order, not a fresh random draw.',
+          'The six teams come from a seeded shuffle of all 32 franchises. The seed is fixed when your session starts, so refreshing the page does not reroll the board. There are no re-spins. Whatever team the reel lands on, you draft from it.',
           'The daily puzzle uses the same machinery with a seed built from the date in Eastern Time. Everyone who plays on a given day sees the same six teams in the same order. That is what makes the daily leaderboard a fair fight: same board, different decisions.',
         ],
       },
       {
-        h2: 'One pick per team is the real constraint',
+        h2: 'You only see one team at a time',
         paragraphs: [
-          'Most bad rosters are not caused by bad players. They are caused by using a team on the wrong slot. If the only elite quarterback on your board plays for a team that also has the best kicker, you cannot have both. Taking the kicker there means your quarterback comes from somewhere else, and quarterback is a quarter of the grade.',
-          'So the first read of any board is not "who is the best player?" It is "which team is the only good source for a slot?" Fill the scarce slots first. Defense is almost never scarce, because five position groups qualify for it. Kicker and quarterback often are.',
+          'This is the real constraint. You do not get to look at all six teams and plan. You see one team, you commit, and the slot is gone. If the reel opens on a team with an elite tight end and an average quarterback, taking the tight end is safe but spends a spin on the 10 percent slot. Taking the quarterback bets that no better one is coming.',
+          'So every pick is a guess about what the rest of the reel will bring. Defense is the easiest slot to fill late, because five position groups qualify for it and almost every team has a good defender. Quarterback is the hardest, because many teams do not have a good one. When the reel hands you a great quarterback, take him.',
         ],
       },
       {
         h2: 'What the grade measures',
         paragraphs: [
-          'Every pick gets a grade from 0 to 99. Players are graded on a position formula that weights only the attributes that decide the job, drawn from EA Sports Madden NFL ratings. A quarterback grade is mostly deep and mid accuracy, pressure, and awareness. A corner grade is mostly man and zone coverage plus speed. Overall rating is shown for reference, but the formula grade is what counts. Coaches are graded on the coach impact score.',
-          'The six grades are combined into team strength with fixed weights: QB 25 percent, defense 25, running back 15, pass catcher 15, head coach 15, kicker 5. Team strength is then converted to wins with a small, seeded dose of luck. The details are in a separate post on the projected record.',
+          'Every pick gets a grade from 0 to 99. Players are graded on a position formula that weights only the attributes that decide the job, drawn from EA Sports Madden NFL 27 ratings. A quarterback grade is mostly accuracy, pressure, and awareness. A corner grade is mostly man and zone coverage plus speed. Overall rating is shown for reference, but the formula grade is what counts. Coaches are graded on the coach impact score.',
+          'The six grades are combined into team strength with fixed weights: QB 25 percent, defense 20, running back 15, wide receiver 15, head coach 15, tight end 10. Team strength is then converted to wins with a small, seeded dose of luck. The details are in a separate post on the projected record.',
         ],
       },
       {
         h2: 'Why 17-0 is hard on purpose',
         paragraphs: [
-          'A perfect season requires two things at once: team strength of roughly 95.5 or better, and the best possible luck roll. Neither is common. Most competent rosters land between 10 and 13 wins, which is also roughly where good real teams land. The name of the game is the goal, not the expected result.',
-          'When you do not get there, the season recap names the slot that got exposed. Usually it is the one you filled last, from the only team left.',
+          'A perfect season requires team strength of roughly 84.7 or better and a good luck roll, or about 89.4 and any roll at all. A well-drafted roster goes 17-0 roughly one time in eleven. Most competent rosters land between 10 and 14 wins, which is also roughly where good real teams land. The name of the game is the goal, not the expected result.',
+          'When you do not get there, the season recap names the slot that got exposed. Usually it is the one you filled last, from whatever team the reel had left.',
         ],
       },
     ],
@@ -62,14 +62,14 @@ const POSTS: BlogPost[] = [
       {
         h2: 'Two layers of numbers',
         paragraphs: [
-          'Every player in the EA Sports Madden NFL ratings has an overall rating and a long list of attribute ratings on a 0 to 99 scale. Overall is the headline number that gets argued about on social media every August. The attributes are the actual inputs: speed, acceleration, catching, man coverage, throw power, deep accuracy, block shedding, and dozens more.',
+          'Every player in the EA Sports Madden NFL 27 ratings has an overall rating and a long list of attribute ratings on a 0 to 99 scale. Overall is the headline number that gets argued about on social media every August. The attributes are the actual inputs: speed, acceleration, catching, man coverage, throw power, deep accuracy, block shedding, and dozens more.',
           'Overall is computed from the attributes with position-specific weights. That makes it useful, but it also means two players with the same overall can be built very differently. A 90 overall corner who wins with press and man coverage is not the same player as a 90 overall corner who wins with zone instincts and range.',
         ],
       },
       {
         h2: 'Why Unbeaten grades on attributes',
         paragraphs: [
-          'The games on this site do not use overall directly. Each position group has its own short formula of five to seven attributes with published weights, and every player page shows the result as the 17-0 grade. The formulas are deliberately simple so you can check the math yourself. The position pages list every weight.',
+          'The games on this site do not use overall directly. In 17-0, each position group has its own short formula of five to seven attributes with published weights, and every player page shows the result as the 17-0 grade. In Build a Player, each position has five traits, each built from one or two attributes. The formulas are deliberately simple so you can check the math yourself. The position pages list every weight.',
           'The reason is transparency, not contrarianism. When a player grades well above or below his overall, you can see exactly which attribute is doing it. If a receiver with a 92 overall grades 86 here, it is almost always because his catching or route running trails his speed, and the formula puts a quarter of the weight on hands.',
         ],
       },
@@ -77,7 +77,7 @@ const POSTS: BlogPost[] = [
         h2: 'What the ratings are good at',
         paragraphs: [
           'They are consistent. The same scale covers every player in the league, it is updated during the season, and it separates physical traits from skills in a way box score stats cannot. A running back on a bad offensive line will have ugly yards per carry. His vision, burst, and ball security ratings do not care about his line.',
-          'They are also detailed at the edges. A kicker with 97 power and 78 accuracy is a very specific player, and that shows up in the grade in a way a field goal percentage over 30 attempts would not.',
+          'They are also detailed at the edges. A tight end with 88 run blocking and 70 catching is a very specific player, and that shows up in the grade in a way a season of receiving yards would not.',
         ],
       },
       {
@@ -90,7 +90,7 @@ const POSTS: BlogPost[] = [
       {
         h2: 'How we source and refresh them',
         paragraphs: [
-          'Ratings are pulled on a schedule and stored with the edition they came from. Every player page shows that edition. When a sync goes stale, a banner at the top of the site says so, with the date of the last successful update. We reference the ratings as factual data. Unbeaten is an independent fan project and is not affiliated with EA Sports or the NFL.',
+          'Ratings are updated weekly and stored with the edition they came from. Rosters and head coaches are kept current from ESPN team rosters, so a traded player moves teams on the reel once the roster updates. Every player page shows the ratings edition. When a sync goes stale, a banner at the top of the site says so, with the date of the last successful update. We reference the ratings as factual data. Unbeaten is an independent fan project and is not affiliated with EA Sports, ESPN, or the NFL.',
           'If you think a rating is wrong, you are probably right about some of them. The games still use them as published, because a shared, fixed scale is what makes the leaderboard fair.',
         ],
       },
@@ -100,34 +100,34 @@ const POSTS: BlogPost[] = [
     slug: 'the-math-behind-the-projected-record',
     title: 'The math behind the projected record',
     date: '2026-09-01',
-    excerpt: 'Team strength is a weighted average. Wins are strength over 99, times 14, plus a seeded roll from minus 2 to plus 3. Here is what that implies.',
+    excerpt: 'Team strength is a weighted average. Wins are strength minus 60, over 27, times 17, plus a seeded roll from minus 2 to plus 1. Here is what that implies.',
     sections: [
       {
         h2: 'Step one: team strength',
         paragraphs: [
-          'Each of your six picks gets a grade from 0 to 99. Team strength is the weighted average of those grades: quarterback 25 percent, defense 25 percent, running back 15, pass catcher 15, head coach 15, kicker 5. The weights add to 100, so strength stays on the same 0 to 99 scale as the grades, and it is rounded to one decimal.',
-          'Quarterback and defense together are half the result. A roster with a 95 quarterback and a 94 defender is at 47.3 points of strength before anyone else is picked. A roster with a 78 quarterback and an 80 defender is at 39.5. The remaining four slots can close that gap, but they have to be very good to do it.',
+          'Each of your six picks gets a grade from 0 to 99. Team strength is the weighted average of those grades: quarterback 25 percent, defense 20, running back 15, wide receiver 15, head coach 15, tight end 10. The weights add to 100, so strength stays on the same 0 to 99 scale as the grades, and it is rounded to one decimal.',
+          'Quarterback and defense together are 45 percent of the result. A roster with a 95 quarterback and a 94 defender is at 42.6 points of strength before anyone else is picked. A roster with a 78 quarterback and an 80 defender is at 35.5. The remaining four slots can close that gap, but they have to be very good to do it.',
         ],
       },
       {
         h2: 'Step two: strength to wins',
         paragraphs: [
-          'Projected wins are round(strength / 99 x 14 + jitter), clamped between 0 and 17. Losses are 17 minus wins. The jitter is a whole number from minus 2 to plus 3, drawn from a deterministic random number generator seeded by your session. The same session always produces the same roll, so you cannot refresh your way to a better record.',
-          'Without jitter, a perfect 99 roster projects to exactly 14 wins. That is intentional. Strength alone gets you to a very good season. The last three wins require luck, the same way they do for real teams that go 14-3 and 17-0 with similar rosters.',
+          'Projected wins are round((strength minus 60) / 27 x 17 + jitter), clamped between 0 and 17. Losses are 17 minus wins. The jitter is a whole number from minus 2 to plus 1, drawn from a deterministic random number generator seeded by your session. The same session always produces the same roll, so you cannot refresh your way to a better record.',
+          'The 60 is a floor. A roster at 60 strength projects to zero wins before luck, which is harsh on purpose: a lineup of replacement-level players should look like a replacement-level team. Everything above 60 is spread across 27 points of strength and 17 games.',
         ],
       },
       {
         h2: 'What the numbers imply',
         paragraphs: [
-          'Each point of team strength is worth 14/99 of a win, about 0.14. Put the other way, it takes roughly 7 points of strength to add one projected win. Upgrading your running back from a 75 grade to a 90 grade adds 2.25 points of strength, which is about a third of a win on average.',
-          'The jitter has six equally likely values, so its average is plus 0.5. A roster with strength 85 expects about 12.5 wins: 12.02 from strength plus half a win of luck on average. The realistic range for that roster is 10 to 15.',
+          'Each point of team strength is worth 17/27 of a win, about 0.63. Put the other way, it takes about 1.6 points of strength to add one projected win. Upgrading your running back from a 75 grade to a 90 grade adds 2.25 points of strength, which is about 1.4 wins. Small upgrades matter far more here than they would on a flatter curve.',
+          'The jitter has four equally likely values, so its average is minus 0.5. Luck tends to cost you a little rather than help. A roster with strength 80 expects about 12 wins: 12.6 from strength minus half a win of luck on average. The realistic range for that roster is 11 to 14.',
         ],
       },
       {
         h2: 'The threshold for 17-0',
         paragraphs: [
-          'To reach 17 wins after rounding, strength / 99 x 14 plus jitter has to be at least 16.5. The maximum jitter is 3, so strength / 99 x 14 must be at least 13.5, which means team strength of at least 95.5. With a jitter of plus 2, even a perfect 99 roster tops out at 16 wins.',
-          'So a perfect season needs two things: a roster at 95.5 or above, and the one-in-six top roll. For 16-1, the bar drops to 88.4 with a plus 3 roll, or 95.5 with a plus 2. That is why even very good rosters usually finish 14-3 or 15-2, and why a 17-0 on the daily board gets noticed.',
+          'To reach 17 wins after rounding, the formula has to produce at least 16.5. With the best roll of plus 1, team strength of 84.7 gets there. With a roll of 0, you need 86.3. With minus 1, 87.8. At 89.4 or above, even the worst roll of minus 2 still rounds to 17.',
+          'So a perfect season is within reach of any roster that grades in the mid 80s, with a one-in-four roll, and guaranteed only for rosters near 90. In practice a well-drafted roster goes 17-0 roughly one time in eleven. For 16-1 with the best roll, the bar drops to 83.1.',
         ],
       },
       {
@@ -140,87 +140,88 @@ const POSTS: BlogPost[] = [
     ],
   },
   {
-    slug: 'why-your-kicker-matters-more-than-you-think',
-    title: 'Why your kicker matters more than you think (5 percent)',
+    slug: 'the-tight-end-slot',
+    title: 'The tight end slot (10 percent)',
     date: '2026-09-08',
-    excerpt: 'Five percent sounds like nothing. At the edge of a perfect season, it is the difference between 16-1 and 17-0.',
+    excerpt: 'The smallest weight in 17-0 is also the one most likely to decide whether a good roster finishes 16-1 or 17-0.',
     sections: [
       {
         h2: 'The case against caring',
         paragraphs: [
-          'The kicker slot is 5 percent of team strength, the smallest weight in 17-0. Quarterback is five times bigger. The obvious play is to fill kicker with whatever is left once the important slots are done, and on most boards that is correct.',
-          'Here is the problem: most boards are not the ones you remember. The rosters that get close to a perfect season are the ones where every point of strength matters, and those are exactly the rosters where a lazy kicker pick costs you.',
+          'The tight end slot is 10 percent of team strength, the smallest weight in 17-0. Quarterback is two and a half times bigger. The obvious play is to leave tight end for last and take whatever the final spin gives you, and on plenty of boards that works out.',
+          'The problem is that the reel only shows you one team at a time. If you leave tight end for last, the last team decides it for you, and some teams do not have a tight end worth a roster spot. The rosters that get close to a perfect season are the ones where every point of strength matters, and those are exactly the rosters where a forced tight end pick costs you.',
         ],
       },
       {
-        h2: 'Kicker grades have the widest spread',
+        h2: 'Tight end grades have a wide spread',
         paragraphs: [
-          'Kickers and punters are graded on two attributes, kick power and kick accuracy, at 50 percent each. There is nothing to average away. A kicker with 95 power and 92 accuracy grades 93.5. A punter pressed into the slot with 90 power and 60 accuracy grades 75.',
-          'That 18.5-point gap, multiplied by the 5 percent weight, is about 0.9 points of team strength. For comparison, the gap between a good quarterback grade and a very good one is often 5 or 6 points, which at 25 percent is 1.25 to 1.5 points of strength. The kicker gap is smaller, but it is in the same neighborhood, and it is far cheaper to close.',
+          'Tight ends are graded on six attributes: catching and run blocking at 20 percent each, then catch in traffic, speed, route running, and awareness at 15 each. That formula rewards a complete player. A tight end who only catches or only blocks gives away a third of the grade.',
+          'The result is a wide range. A true two-way starter grades in the high 80s. A blocking specialist or a big receiver with no interest in the run game often lands around 70. That 18-point gap, at 10 percent, is 1.8 points of team strength. At 0.63 wins per point, it is worth more than a full projected win.',
         ],
       },
       {
         h2: 'The threshold math',
         paragraphs: [
-          'A perfect season requires team strength of at least 95.5 and a plus 3 luck roll. Strength is rounded to one decimal, so a roster at 95.4 with a perfect roll finishes 16-1, and a roster at 95.5 with the same roll finishes 17-0. That is a tenth of a point.',
-          'On a roster that is already elite everywhere else, the kicker is the slot most likely to be carrying that tenth. Elite quarterbacks, defenders, and coaches are scarce on any given board. Good kickers usually are not. Picking the 93 kicker instead of the 80 kicker is often the only upgrade still available once the big slots are locked.',
+          'A perfect season needs team strength of at least 84.7 with the best luck roll, or 89.4 to be safe with any roll. Strength is rounded to one decimal, so a roster at 84.6 with a plus 1 roll finishes 16-1, and a roster at 84.7 with the same roll finishes 17-0. That is a tenth of a point.',
+          'On a roster that is already strong at quarterback, defense, and head coach, the tight end is the slot most likely to be carrying that tenth. It is also the slot most people fill without thinking, which is why it so often shows up in the season recap as the unit that got exposed.',
         ],
       },
       {
-        h2: 'Opportunity cost is the real lever',
+        h2: 'When to take the tight end early',
         paragraphs: [
-          'The best argument for thinking about the kicker early is the one-pick-per-team rule. Every team you spend on the kicker is a team you cannot use for anything else. If a team offers a great kicker and nothing else you need, it is a free 5 percent: take the kicker there and move on.',
-          'The mistake is the reverse. If the only team with an elite kicker also has your best quarterback option, the quarterback wins, obviously. But then look at the other five teams for kicker before any other slot, because the kicker pool on a six-team board is often two or three names deep, and one of them is bad.',
+          'The reel spins one team at a time, so every pick has an opportunity cost you cannot see yet. The question is not whether the tight end is the best player on this team. It is whether this team is likely to be your best source for tight end among the teams still to come.',
+          'Elite tight ends are rare. On most days, only a handful of the 32 teams have one who grades in the high 80s. If the reel lands on one of those teams and it has no quarterback you want, take the tight end. Wide receivers, running backs, and defenders are spread much more evenly across the league, so passing on them is cheaper.',
         ],
       },
       {
-        h2: 'A simple rule',
+        h2: 'When to wait',
         paragraphs: [
-          'Before your first pick, find every kicker on the board and note the best one on a team that has nothing else you want. That is your kicker. If no such team exists, fill quarterback and defense first, then take the best kicker left before running back or pass catcher.',
-          'Five percent is small. It is also the only slot where good decisions are nearly free.',
+          'If the same team offers a quarterback who grades in the 90s, the quarterback wins. Twenty-five percent beats ten, and a great quarterback is even harder to find than a great tight end. The same goes for a top head coach on a team with a thin roster.',
+          'A simple rule: fill quarterback when you see a good one, fill tight end when you see an elite one, and let defense come last, since almost any team can fill it. Ten percent is small. It is also the slot where one early decision is most likely to be the difference between very good and perfect.',
         ],
       },
     ],
   },
   {
     slug: 'build-a-player-the-case-for-stealing-one-attribute',
-    title: 'Build a Player: the case for stealing one attribute',
+    title: 'Build a Player: the case for stealing one trait',
     date: '2026-09-15',
-    excerpt: 'You do not need the best player on each team. You need the best number in each category. Those are rarely the same thing.',
+    excerpt: 'You do not need the best player on each team. You need the best number for each trait, placed in the right order. Those are rarely the same thing.',
     sections: [
       {
         h2: 'How the game is built',
         paragraphs: [
-          'Build a Player spins five teams. You draft one player at your chosen position from each team, which gives you five sources. Then, category by category, you choose whose number to use. A quarterback build has ten categories, from throw power and three accuracy depths to throwing under pressure, play action, awareness, speed, and agility. One source can supply as many categories as you like.',
-          'The finished build is graded on the same position formula the rest of the site uses, and a simulated season turns the attributes into a stat line.',
+          'Build a Player starts with a position. A position of the day is preselected and rotates daily, but you can pick any of them. Each position has five traits with fixed weights. A quarterback has arm at 20 percent, accuracy at 25, mobility at 15, deep ball at 15, and poise at 25.',
+          'The reel spins five times, one team per spin, and no team repeats. Each player on that team shows his rating for every trait you still need to fill, for example "Fills your deep ball at 96". You tap one trait to take from one player, and the reel spins again. The fifth placement builds the player.',
+          'The result is a weighted score, a letter grade, the best possible score from those same five teams, and a simulated season.',
         ],
       },
       {
         h2: 'The obvious strategy is wrong',
         paragraphs: [
-          'The instinct is to draft the highest overall player from each team. That gives you five good players, and five good players will produce a good build. It will rarely produce a great one, because high overall players tend to be good at the same things. Five 85 overall quarterbacks usually share a band of 85 to 90 accuracy and nothing much above it.',
-          'What wins is range. You want at least one source who is absurd at something the formula weights heavily, even if he is ordinary everywhere else. His overall does not matter, because you are only going to use one or two of his numbers.',
+          'The instinct is to take the best player on each team and use him for his best trait. That produces a good build. It rarely produces a great one, because the best player on a team is often good at everything and elite at nothing, and a trait you place early is a trait you cannot upgrade later.',
+          'What wins is range. You want the one player on the reel who is absurd at a heavily weighted trait, even if he is ordinary everywhere else. His overall does not matter, because you are only taking one number from him.',
         ],
       },
       {
         h2: 'Where the weight is',
         paragraphs: [
-          'For a quarterback, deep accuracy is 20 percent of the grade on its own. Mid accuracy, throw under pressure, and awareness are 15 each. Speed and play action are 10 each. A backup with 94 deep accuracy and a 70 overall is a better source than a starter with 88 deep accuracy and an 85 overall, as long as you can get the other categories elsewhere.',
-          'Other positions work the same way. Receivers are 25 percent catching. Corners are 25 percent man coverage. Edge rushers are 25 percent block shedding. Find the one player on your five teams who owns the top-weighted category, and draft him for that alone.',
+          'For a quarterback, accuracy and poise are 25 percent each, half the score between them. Arm is 20. Mobility and deep ball are 15 each. A 96 in poise is worth more than a 96 in deep ball, so if a team offers both, poise is usually the right place for it.',
+          'Other positions work the same way. Receivers put 25 percent on route running. Corners put 30 percent on man coverage. Edge rushers split half the score between power rush and finesse rush. The position pages list every trait and weight.',
         ],
       },
       {
-        h2: 'Categories that do not move the grade',
+        h2: 'Placing a trait is a bet on the next spin',
         paragraphs: [
-          'Every formula input is a category, but not every category is a formula input. For a quarterback, short accuracy, throw on the run, and agility do not change the grade at all. Agility does feed the simulated rushing total, so it is not useless, but it will not move your letter.',
-          'This matters when you are choosing between two sources for your last draft slot. If one is elite in a category the formula ignores, he is a stat-line pick, not a grade pick. Take the other one.',
+          'You only see one team at a time, so every placement is a guess about what the remaining spins will bring. If this team offers a 94 in a 25 percent trait, that is almost always worth taking. If it offers an 88 in a 25 percent trait and a 95 in a 15 percent trait, the math is closer than it looks, and the answer depends on how many spins are left.',
+          'Late in the build, the calculation flips. On the fifth spin you have one open trait, and you take the best number on the team for it, whatever it is. That is why the heavy traits are worth locking early: the last spin is the one you do not control.',
         ],
       },
       {
-        h2: 'A practical draft order',
+        h2: 'The best possible score',
         paragraphs: [
-          'First, look at all five rosters before drafting anyone. For each formula category, note who holds the best number across all five teams. Second, count how many of those category leaders are on the same team. If one team has leaders in three categories, draft that player. Third, for the remaining teams, draft whoever leads the most heavily weighted category still open.',
-          'You will often end up drafting a player nobody would start. That is the point. The build does not play the snaps. It just borrows the one thing he does better than anyone else on the board.',
+          'After the build, the result shows the best score those five teams could have produced if every trait had been placed perfectly. The gap between your score and that number is the only fair measure of the build. A 78 on a weak set of teams can be a better build than an 86 on a strong one.',
+          'You will often end up taking a trait from a player nobody would start. That is the point. The build does not play the snaps. It borrows the one thing he does better than anyone else on the reel.',
         ],
       },
     ],
@@ -234,7 +235,7 @@ const POSTS: BlogPost[] = [
       {
         h2: 'Why coaches need a number',
         paragraphs: [
-          'The head coach slot is 15 percent of team strength in 17-0, the same as running back or pass catcher. Players have attribute ratings. Coaches do not, at least not in a form anyone agrees on. So we built one, kept it simple, and published the formula.',
+          'The head coach slot is 15 percent of team strength in 17-0, the same as running back or wide receiver. Players have attribute ratings. Coaches do not, at least not in a form anyone agrees on. So we built one, kept it simple, and published the formula.',
           'The coach impact score runs from 0 to 99, like a player grade, and it plugs straight into team strength. There is no separate coach formula inside the game. The score is the grade.',
         ],
       },

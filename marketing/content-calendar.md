@@ -4,13 +4,13 @@ Cadence: week 1 three posts; weeks 2 to 4 two per week; weeks 5 to 12 two to thr
 
 | Week | # | Title | Type | Primary channel |
 |---|---|---|---|---|
-| 1 | 1 | How 17-0 works: six spins, one draft, a seeded season | Explainer | Blog, Show HN link |
+| 1 | 1 | How 17-0 works: one reel, six spins, a seeded season | Explainer | Blog, Show HN link |
 | 1 | 2 | The position weights, published: why a left tackle can outscore a receiver | Methodology | Blog, r/Madden |
 | 1 | 3 | Launch week board recap: the rosters that came closest to perfect | Data recap | Newsletter, X |
 | 2 | 4 | Why six receivers go 7-10: what the engine punishes | Strategy | Blog |
 | 2 | 5 | Every team ranked by how often it helps you go undefeated | Data | Blog, r/nfl |
 | 3 | 6 | Build a Player explained: assembling a 99 from spare parts | Explainer | Blog |
-| 3 | 7 | The kicker question: when the worst pick on the board is the right one | Strategy | Blog, X |
+| 3 | 7 | The tight end slot: why 10 percent decides perfect seasons | Strategy | Blog, X |
 | 4 | 8 | Ratings update breakdown: who moved and what it does to the sim | Data (ratings update) | Blog, r/Madden |
 | 4 | 9 | One month of daily boards: the hardest day so far and why | Data recap | Newsletter |
 | 5 | 10 | Deterministic by design: how we replay every submitted season | Engineering | Blog, r/webdev |
@@ -20,7 +20,7 @@ Cadence: week 1 three posts; weeks 2 to 4 two per week; weeks 5 to 12 two to thr
 | 6 | 14 | Reader board: the best roster sent in this month, annotated | Community | Newsletter |
 | 7 | 15 | Division by division: which draws make 17-0 realistic | Data | Blog, r/nfl |
 | 7 | 16 | Pass rush vs pass protection: the matchup the sim cares most about | Strategy | Blog |
-| 8 | 17 | Build a Player: the attribute combinations that break the scale | Strategy | Blog, X |
+| 8 | 17 | Build a Player: the trait placements that break the scale | Strategy | Blog, X |
 | 8 | 18 | All-time greats mode notes: how legends are rated against today | Explainer | Blog |
 | 8 | 19 | Two months of boards: record distribution, and how rare 17-0 actually is | Data recap | Newsletter, X |
 | 9 | 20 | Rookies in the sim: the first-year players worth a pick | Data | Blog, r/fantasyfootball |

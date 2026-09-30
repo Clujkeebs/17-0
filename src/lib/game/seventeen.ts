@@ -3,20 +3,23 @@ import { DEFAULT_FORMULAS, letterGrade, ratePlayer, type FormulaKey, type Weight
 import { clamp, createRng } from './prng';
 import { buildNarrative } from './narrative';
 
-export const SLOTS = ['QB', 'RB', 'WRTE', 'DEF', 'K', 'HC'] as const;
+// Roster matches the StickToTheModel 17-0 format: QB, RB, WR, TE, one defender, head coach.
+export const SLOTS = ['QB', 'RB', 'WR', 'TE', 'DEF', 'HC'] as const;
 export type Slot = (typeof SLOTS)[number];
-export const SLOT_LABELS: Record<Slot, string> = { QB: 'QB', RB: 'RB', WRTE: 'WR/TE', DEF: 'DEF', K: 'K', HC: 'HC' };
-export const SLOT_WEIGHTS: Record<Slot, number> = { QB: 0.25, DEF: 0.25, RB: 0.15, WRTE: 0.15, K: 0.05, HC: 0.15 };
+export const SLOT_LABELS: Record<Slot, string> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', DEF: 'DEF', HC: 'HC' };
+export const SLOT_WEIGHTS: Record<Slot, number> = { QB: 0.25, DEF: 0.2, RB: 0.15, WR: 0.15, TE: 0.1, HC: 0.15 };
 export const TEAMS_PER_GAME = 6;
 export const MAX_RESPINS = 2;
+export const WIN_FLOOR = 60;
+export const WIN_SPAN = 27;
 
 export function slotAccepts(slot: Slot, group: PositionGroup | 'HC'): boolean {
   switch (slot) {
     case 'QB': return group === 'QB';
     case 'RB': return group === 'RB';
-    case 'WRTE': return group === 'WR' || group === 'TE';
+    case 'WR': return group === 'WR';
+    case 'TE': return group === 'TE';
     case 'DEF': return ['DL', 'EDGE', 'LB', 'CB', 'S'].includes(group);
-    case 'K': return group === 'K';
     case 'HC': return group === 'HC';
   }
 }
@@ -90,8 +93,9 @@ export function gradeRoster(
   const wsum = SLOTS.reduce((s, k) => s + slotWeights[k], 0);
   const teamStrength = Math.round((slots.reduce((s, r) => s + r.grade * slotWeights[r.slot], 0) / wsum) * 10) / 10;
   const rng = createRng(`grade:${seed}`);
-  const jitter = rng.int(-2, 3);
-  const wins = clamp(Math.round((teamStrength / 99) * 14 + jitter), 0, 17);
+  // Calibrated so a well-built roster (every pick a star) goes 17-0 roughly one time in eleven.
+  const jitter = rng.int(-2, 1);
+  const wins = clamp(Math.round(((teamStrength - WIN_FLOOR) / WIN_SPAN) * 17 + jitter), 0, 17);
   const losses = 17 - wins;
   const schedule = buildSchedule(seed, wins, teamStrength, opponents);
   const pointDiff = schedule.reduce((d, g) => d + g.us - g.them, 0);

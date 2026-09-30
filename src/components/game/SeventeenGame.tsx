@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reel, type ReelTeam } from './Reel';
 import { SoundToggle } from './SoundToggle';
@@ -12,7 +12,7 @@ import './game.css';
 
 type Draft = DraftState & { token: string; daily: boolean; date: string | null };
 const STATE_KEY = 'gl-17-0-draft';
-const SLOT_HINT: Record<Slot, string> = { QB: 'Quarterback', RB: 'Running back', WRTE: 'Receiver or tight end', DEF: 'Any defender', K: 'Kicker', HC: 'Head coach' };
+const SLOT_HINT: Record<Slot, string> = { QB: 'Quarterback', RB: 'Running back', WR: 'Wide receiver', TE: 'Tight end', DEF: 'Any defender', HC: 'Head coach' };
 
 async function post(body: object) {
   const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -29,6 +29,8 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [announce, setAnnounce] = useState('');
+  const stageRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (spinKey > 0) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [spinKey]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // Resume an in-progress draft after a refresh.
@@ -121,23 +123,20 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
         {error && <div role="alert" className="card card-error">{error}</div>}
 
         {team && reelTarget ? (
-          <section className="g-stage" aria-labelledby="clock-h">
+          <section ref={stageRef} className="g-stage" aria-labelledby="clock-h">
             <div className="g-team">
               <Reel pool={reelPool} target={reelTarget} spinKey={`${draft.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.city} ${team.name} on the clock`); }} />
-              <div className={`g-team-name ${landed ? 'in' : ''}`}>
-                <p className="g-kicker">On the clock</p>
-                <h2 id="clock-h">{landed ? <>{team.city} <strong>{team.name}</strong></> : 'Spinning'}</h2>
+              <div className="g-spin-status" aria-live="polite">
+                <p className="g-kicker" style={{ margin: 0 }} id="clock-h">{landed ? `Pick one ${team.name} player for an open slot` : 'Spinning'}</p>
+                <span className="g-kicker num" style={{ margin: 0 }}>{openSlots.length} open</span>
               </div>
-              <button className="btn btn-sm g-respin" onClick={() => act({ action: 'respin' }, 'respin')} disabled={!landed || !!busy || draft.respinsLeft <= 0}>
-                Re-spin <span className="num">{draft.respinsLeft} left</span>
-              </button>
             </div>
 
-            <div className={`g-roster ${landed ? 'in' : ''}`}>
+            {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : <div className="g-roster in">
               {openSlots.map((slot) => {
                 const all = team.players.filter((p) => p.slots?.includes(slot)).sort((a, b) => b.ovr - a.ovr);
                 if (!all.length) return null;
-                const cap = slot === 'DEF' ? 6 : slot === 'WRTE' ? 4 : 2;
+                const cap = slot === 'DEF' ? 6 : slot === 'WR' ? 4 : 2;
                 const key = `${team.id}-${slot}`;
                 const options = expanded.has(key) ? all : all.slice(0, cap);
                 return (
@@ -163,7 +162,7 @@ export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: Re
                   </div>
                 );
               })}
-            </div>
+            </div>}
           </section>
         ) : (
           <section className="g-done">

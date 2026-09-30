@@ -19,7 +19,7 @@ export async function generateStaticParams() { return []; }
 
 type Props = { params: Promise<{ team: string }> };
 
-const SLOT_OF: Partial<Record<PositionGroup, Slot>> = { QB: 'QB', RB: 'RB', WR: 'WRTE', TE: 'WRTE', DL: 'DEF', EDGE: 'DEF', LB: 'DEF', CB: 'DEF', S: 'DEF', K: 'K' };
+const SLOT_OF: Partial<Record<PositionGroup, Slot>> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', DL: 'DEF', EDGE: 'DEF', LB: 'DEF', CB: 'DEF', S: 'DEF' };
 
 function draftable(roster: PlayerRow[]) {
   return roster
@@ -51,9 +51,9 @@ export default async function TeamSeventeenPage({ params }: Props) {
   const qb = picks.find((x) => x.slot === 'QB');
 
   const faq = [
-    { q: `Can a roster built around the ${name} go 17-0?`, a: `Only with help. 17-0 takes one player from each of six random teams, so no single franchise fills your roster. ${best ? `The ${t.name} give you ${best.p.fullName} (${best.p.overallRating} overall) as their strongest option, ` : ''}and the rest depends on the other five spins, your two respins, and a win total that includes jitter of minus 2 to plus 3.` },
+    { q: `Can a roster built around the ${name} go 17-0?`, a: `Only with help. 17-0 takes one player from each of six random teams, so no single franchise fills your roster. ${best ? `The ${t.name} give you ${best.p.fullName} (${best.p.overallRating} overall) as their strongest option, ` : ''}and the rest depends on the other five spins and a win total that includes a seeded jitter of minus 2 to plus 1.` },
     { q: `Who is the best ${t.name} player to draft in 17-0?`, a: best ? `${best.p.fullName}, ${best.p.position}, with a ${best.p.overallRating} overall and a ${best.grade.toFixed(1)} grade on the site's ${best.g} formula. The ${SLOT_LABELS[best.slot]} slot is worth ${Math.round(SLOT_WEIGHTS[best.slot] * 100)} percent of team strength.` : `Ratings for the ${name} are not loaded yet. Check back after the next sync.` },
-    { q: 'How much does each slot count?', a: 'Quarterback and defense are 25 percent each, running back, pass catcher, and head coach are 15 percent each, and kicker is 5 percent. Projected wins are team strength divided by 99, times 14, plus a seeded jitter from minus 2 to plus 3.' },
+    { q: 'How much does each slot count?', a: 'Quarterback is 25 percent, defense 20, running back, wide receiver, and head coach 15 each, and tight end 10. Projected wins are team strength minus 60, divided by 27, times 17, plus a seeded jitter from minus 2 to plus 1, clamped between 0 and 17.' },
     { q: `Should I take the ${t.name} head coach?`, a: coach ? `${coach.fullName} has a coach impact score of ${coach.coachImpactScore}. The HC slot is 15 percent of team strength, the same as your running back, so a strong coach on a weak roster is often the right pick.` : 'The head coach slot is 15 percent of team strength. Coach data for this team is not loaded yet.' },
   ];
 

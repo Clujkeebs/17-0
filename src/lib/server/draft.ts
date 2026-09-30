@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { loadSession, publicTeams, type GameType, type PublicTeam, type SpinPayload } from './games';
 import { MAX_RESPINS, SLOTS, type Slot } from '@/lib/game/seventeen';
+import { TRAITS, traitValue } from '@/lib/game/build';
 
 export class DraftError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
 
@@ -11,7 +12,7 @@ export interface DraftState {
   total: number;            // teams in this game
   team: PublicTeam | null;  // current team, null when the draft is complete
   respinsLeft: number;
-  picks: { teamId: number; id: string; slot?: Slot; name: string; position: string; ovr: number; team: string; teamColor: string; logoUrl: string | null }[];
+  picks: { teamId: number; id: string; slot?: Slot; trait?: string; value?: number; name: string; position: string; ovr: number; team: string; teamColor: string; logoUrl: string | null }[];
   done: boolean;
 }
 
@@ -30,7 +31,8 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
     picks: picks.map((x, i) => {
       const t = pastTeams[i];
       const pl = t?.players.find((y) => y.id === x.id);
-      return { ...x, name: pl?.name ?? 'Unknown', position: pl?.position ?? '', ovr: pl?.ovr ?? 0, team: t ? `${t.city} ${t.name}` : '', teamColor: t?.color ?? '#999', logoUrl: t?.logoUrl ?? null };
+      const tr = p.position && x.trait ? TRAITS[p.position].find((t) => t.key === x.trait) : undefined;
+      return { ...x, value: tr && pl?.attrs ? traitValue(pl.attrs as never, tr) : undefined, name: pl?.name ?? 'Unknown', position: pl?.position ?? '', ovr: pl?.ovr ?? 0, team: t ? `${t.city} ${t.name}` : '', teamColor: t?.color ?? '#999', logoUrl: t?.logoUrl ?? null };
     }),
   };
 }
@@ -55,7 +57,7 @@ export async function respinCurrent(sessionId: string, token: string, gameType: 
   return draftState(s.id, gameType, next);
 }
 
-export async function pickPlayer(sessionId: string, token: string, gameType: GameType, playerId: string, slot?: Slot) {
+export async function pickPlayer(sessionId: string, token: string, gameType: GameType, playerId: string, slot?: Slot, trait?: string) {
   const s = await open(sessionId, token, gameType);
   const p = s.spinPayload as SpinPayload;
   const picks = p.picks ?? [];
@@ -71,7 +73,14 @@ export async function pickPlayer(sessionId: string, token: string, gameType: Gam
     chosenSlot = slot && fits.includes(slot) ? slot : fits[0];
     if (!chosenSlot) throw new DraftError(`Your ${player.slots?.[0] ?? 'slot'} spot is already filled.`);
   }
-  const next: SpinPayload = { ...p, picks: [...picks, { teamId: team.id, id: player.id, slot: chosenSlot }] };
+  let chosenTrait: string | undefined;
+  if (gameType === 'build-a-player') {
+    const open = TRAITS[p.position!].filter((t) => !picks.some((y) => y.trait === t.key));
+    const t = open.find((x) => x.key === trait);
+    if (!t) throw new DraftError('Pick an open trait for this player.');
+    chosenTrait = t.key;
+  }
+  const next: SpinPayload = { ...p, picks: [...picks, { teamId: team.id, id: player.id, slot: chosenSlot, trait: chosenTrait }] };
   await db.update(schema.gameSessions).set({ spinPayload: next }).where(eq(schema.gameSessions.id, s.id));
   return draftState(s.id, gameType, next);
 }

@@ -63,7 +63,7 @@ export const POSITION_EXPLAINERS: Record<PositionGroup, string> = {
   LB: 'Linebacker is the most spread-out defensive formula. Tackle, pursuit, and play recognition each take 20 percent, hit power 15, and coverage (zone 15, man 10) the remaining quarter. A thumper who cannot drop into a zone loses real points, and so does a coverage backer who misses tackles.',
   CB: 'Corners are graded mostly on coverage. Man coverage is 25 percent and zone 20, so 45 percent of the grade is pure coverage skill. Speed is another 20 and agility 15, with press and play recognition at 10 each. Ball skills are not in the formula, so interception totals do not move this number.',
   S: 'Safety is a hybrid formula. Zone coverage and play recognition lead at 20 percent each, then man coverage, tackling, hit power, and speed at 15 each. The formula wants a player who reads the play first and arrives with bad intentions, whether that is at the catch point or in the alley.',
-  K: 'Kickers are the simplest grade on the site: kick power and kick accuracy, 50 percent each. In 17-0 the kicker slot is 5 percent of team strength, which sounds small until you notice that it is also the slot where the gap between the best and worst available player is widest.',
+  K: 'Kickers are the simplest grade on the site: kick power and kick accuracy, 50 percent each. Kickers and punters are not draftable in 17-0, which has no kicker slot. The grade is here for reference and for comparing legs across the league.',
 };
 
 export { POSITION_GROUPS, POSITION_NAMES };

@@ -6,18 +6,52 @@ export const BUILD_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'EDGE', 'LB', 'CB', 'S']
 export type BuildPosition = (typeof BUILD_POSITIONS)[number];
 export const BUILD_TEAMS = 5;
 
-export const BUILD_CATEGORIES: Record<BuildPosition, AttributeKey[]> = {
-  QB: ['throwPower', 'throwAccuracyShort', 'throwAccuracyMid', 'throwAccuracyDeep', 'throwUnderPressure', 'throwOnTheRun', 'playAction', 'awareness', 'speed', 'agility'],
-  RB: ['speed', 'acceleration', 'agility', 'carrying', 'breakTackle', 'jukeMove', 'trucking', 'bcVision', 'catching'],
-  WR: ['speed', 'acceleration', 'catching', 'catchInTraffic', 'spectacularCatch', 'routeRunning', 'release', 'awareness', 'jumping'],
-  TE: ['speed', 'catching', 'catchInTraffic', 'routeRunning', 'runBlock', 'passBlock', 'strength', 'awareness'],
-  EDGE: ['speed', 'acceleration', 'strength', 'blockShedding', 'powerMoves', 'finesseMoves', 'pursuit', 'tackle', 'playRecognition'],
-  LB: ['speed', 'tackle', 'hitPower', 'pursuit', 'playRecognition', 'zoneCoverage', 'manCoverage', 'blockShedding', 'awareness'],
-  CB: ['speed', 'acceleration', 'agility', 'manCoverage', 'zoneCoverage', 'press', 'playRecognition', 'catching', 'jumping'],
-  S: ['speed', 'zoneCoverage', 'manCoverage', 'playRecognition', 'tackle', 'hitPower', 'pursuit', 'catching', 'awareness'],
+/** Five traits per position, each built from Madden attributes, with a weight in the final score. */
+export interface Trait { key: string; label: string; attrs: AttributeKey[]; weight: number; phrase: string }
+const T = (key: string, label: string, attrs: AttributeKey[], weight: number, phrase = label.toLowerCase()): Trait => ({ key, label, attrs, weight, phrase });
+
+export const TRAITS: Record<BuildPosition, Trait[]> = {
+  QB: [T('arm', 'Arm', ['throwPower'], 0.2, 'arm'), T('accuracy', 'Accuracy', ['throwAccuracyShort', 'throwAccuracyMid'], 0.25), T('mobility', 'Mobility', ['speed', 'agility'], 0.15), T('deep', 'Deep ball', ['throwAccuracyDeep'], 0.15), T('poise', 'Poise', ['throwUnderPressure', 'awareness'], 0.25)],
+  RB: [T('speed', 'Speed', ['speed', 'acceleration'], 0.2), T('size', 'Power', ['trucking', 'strength'], 0.15, 'power'), T('vision', 'Vision', ['bcVision'], 0.25), T('elusive', 'Elusiveness', ['breakTackle', 'jukeMove'], 0.2), T('hands', 'Receiving', ['catching'], 0.2, 'receiving')],
+  WR: [T('speed', 'Speed', ['speed', 'acceleration'], 0.2), T('hands', 'Hands', ['catching'], 0.2), T('routes', 'Route running', ['routeRunning'], 0.25), T('contested', 'Contested catch', ['catchInTraffic', 'spectacularCatch'], 0.15), T('release', 'Release', ['release'], 0.2)],
+  TE: [T('speed', 'Speed', ['speed'], 0.15), T('hands', 'Hands', ['catching'], 0.2), T('routes', 'Route running', ['routeRunning'], 0.25), T('block', 'Blocking', ['runBlock', 'passBlock'], 0.2), T('contested', 'Contested catch', ['catchInTraffic'], 0.2)],
+  EDGE: [T('burst', 'Burst', ['acceleration', 'speed'], 0.15), T('power', 'Power rush', ['powerMoves', 'strength'], 0.25), T('finesse', 'Finesse rush', ['finesseMoves'], 0.25), T('shed', 'Block shedding', ['blockShedding'], 0.2), T('pursuit', 'Pursuit', ['pursuit', 'tackle'], 0.15)],
+  LB: [T('speed', 'Speed', ['speed'], 0.2), T('tackling', 'Tackling', ['tackle', 'hitPower'], 0.2), T('range', 'Range', ['pursuit'], 0.2), T('coverage', 'Coverage', ['zoneCoverage', 'manCoverage'], 0.2), T('instincts', 'Instincts', ['playRecognition'], 0.2)],
+  CB: [T('speed', 'Speed', ['speed', 'agility'], 0.2), T('man', 'Man coverage', ['manCoverage'], 0.3), T('zone', 'Zone coverage', ['zoneCoverage'], 0.2), T('press', 'Press', ['press'], 0.15), T('ball', 'Ball skills', ['catching', 'playRecognition'], 0.15)],
+  S: [T('speed', 'Speed', ['speed'], 0.2), T('range', 'Range', ['zoneCoverage'], 0.25), T('man', 'Man coverage', ['manCoverage'], 0.15), T('hit', 'Hitting', ['hitPower', 'tackle'], 0.15), T('instincts', 'Instincts', ['playRecognition', 'awareness'], 0.25)],
 };
 
-/** Which site position groups are eligible in the Build a Player pool for each build position. */
+/** Legacy category list (attribute keys touched by this position's traits). */
+export const BUILD_CATEGORIES: Record<BuildPosition, AttributeKey[]> = Object.fromEntries(
+  Object.entries(TRAITS).map(([k, ts]) => [k, [...new Set(ts.flatMap((t) => t.attrs))]]),
+) as Record<BuildPosition, AttributeKey[]>;
+
+export function traitValue(attrs: Attributes, t: Trait): number {
+  return Math.round(t.attrs.reduce((sum, a) => sum + (attrs[a] ?? 50), 0) / t.attrs.length);
+}
+
+export interface TraitPick { trait: string; value: number; name: string; teamId: number; attributes: Attributes }
+
+export function traitScore(position: BuildPosition, picks: Pick<TraitPick, 'trait' | 'value'>[]): number {
+  let sum = 0;
+  for (const t of TRAITS[position]) sum += (picks.find((p) => p.trait === t.key)?.value ?? 0) * t.weight;
+  return Math.round(sum * 10) / 10;
+}
+
+/** Best possible score from the spun teams: each team gives one trait, best player per team per trait. */
+export function bestPossible(position: BuildPosition, teams: Attributes[][]): number {
+  const traits = TRAITS[position];
+  const m = teams.map((players) => traits.map((t) => Math.max(0, ...players.map((a) => traitValue(a, t)))));
+  let best = 0;
+  const used = new Array(traits.length).fill(false);
+  const go = (i: number, acc: number) => {
+    if (i === m.length) { best = Math.max(best, acc); return; }
+    for (let j = 0; j < traits.length; j++) if (!used[j]) { used[j] = true; go(i + 1, acc + m[i][j] * traits[j].weight); used[j] = false; }
+  };
+  go(0, 0);
+  return Math.round(best * 10) / 10;
+}
+
 export const BUILD_ELIGIBLE: Record<BuildPosition, string[]> = {
   QB: ['QB'], RB: ['RB'], WR: ['WR'], TE: ['TE'], EDGE: ['EDGE'], LB: ['LB'], CB: ['CB'], S: ['S'],
 };
@@ -131,14 +165,22 @@ export function simulateSeason(position: BuildPosition, attrs: Attributes, seed:
 
 export interface BuildResult {
   attributes: Attributes;
+  traits: { key: string; label: string; value: number; weight: number; donor: string; teamId: number }[];
   rating: number;
+  best: number;
   letter: string;
   stats: StatLine[];
   score: number;
 }
 
-export function gradeBuild(position: BuildPosition, sources: BuildSource[], choices: BuildChoices, seed: string): BuildResult {
-  const attributes = assemble(position, sources, choices);
-  const rating = buildRating(position, attributes);
-  return { attributes, rating, letter: letterGrade(rating), stats: simulateSeason(position, attributes, seed), score: Math.round(rating * 10) };
+export function gradeTraitBuild(position: BuildPosition, picks: TraitPick[], best: number, seed: string): BuildResult {
+  const attributes: Attributes = {};
+  const traits = TRAITS[position].map((t) => {
+    const p = picks.find((x) => x.trait === t.key);
+    if (!p) throw new Error(`Missing trait ${t.key}`);
+    for (const a of t.attrs) attributes[a] = p.attributes[a] ?? 50;
+    return { key: t.key, label: t.label, value: p.value, weight: t.weight, donor: p.name, teamId: p.teamId };
+  });
+  const rating = traitScore(position, picks);
+  return { attributes, traits, rating, best, letter: letterGrade(rating), stats: simulateSeason(position, attributes, seed), score: Math.round(rating * 10) };
 }

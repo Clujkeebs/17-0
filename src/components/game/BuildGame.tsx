@@ -1,24 +1,16 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reel, type ReelTeam } from './Reel';
 import { SoundToggle } from './SoundToggle';
 import { PlayerFace } from './PlayerFace';
 import { track } from '@/lib/analytics';
-import { ATTRIBUTE_LABELS, POSITION_NAMES, type AttributeKey } from '@/lib/game/attributes';
-import { BUILD_CATEGORIES, BUILD_POSITIONS, type BuildPosition } from '@/lib/game/build';
+import { POSITION_NAMES, type Attributes } from '@/lib/game/attributes';
+import { BUILD_POSITIONS, TRAITS, traitValue, type BuildPosition } from '@/lib/game/build';
 import type { DraftState } from '@/lib/server/draft';
-import type { PublicPlayer } from '@/lib/server/games';
 import './game.css';
 
 type Draft = DraftState & { token: string };
-type Source = PublicPlayer & { teamColor: string; teamName: string };
-
-const BLURB: Record<BuildPosition, string> = {
-  QB: 'Arm, touch, and the nerve to stand in.', RB: 'Vision first. Speed is a bonus.', WR: 'Separation plus hands.',
-  TE: 'Block like a tackle, catch like a receiver.', EDGE: 'Get home in 2.5 seconds.', LB: 'Diagnose, fill, finish.',
-  CB: 'Mirror, press, turn.', S: 'Last line. Do not miss.',
-};
 
 async function post(body: object) {
   const res = await fetch('/api/games/build-a-player/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -27,31 +19,26 @@ async function post(body: object) {
   return data;
 }
 
-export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[]; initialPosition: BuildPosition | null }) {
+export function BuildGame({ reelPool, initialPosition, positionOfDay }: { reelPool: ReelTeam[]; initialPosition: BuildPosition | null; positionOfDay: BuildPosition }) {
   const router = useRouter();
-  const [position, setPosition] = useState<BuildPosition | null>(initialPosition);
+  const [position, setPosition] = useState<BuildPosition>(initialPosition ?? positionOfDay);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [sources, setSources] = useState<Source[]>([]);
   const [spinKey, setSpinKey] = useState(0);
   const [landed, setLanded] = useState(false);
-  const [choices, setChoices] = useState<Partial<Record<AttributeKey, number>>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [announce, setAnnounce] = useState('');
+  const stageRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (spinKey > 0) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [spinKey]);
   const [showAll, setShowAll] = useState(false);
 
-  const cats = position ? BUILD_CATEGORIES[position] : [];
-  const complete = !!draft?.done && cats.every((c) => choices[c] !== undefined);
+  const traits = TRAITS[position];
+  const filled = new Map((draft?.picks ?? []).map((p) => [p.trait!, p]));
+  const openTraits = traits.filter((t) => !filled.has(t.key));
   const team = draft?.team ?? null;
 
-  const preview = useMemo(() => {
-    const vals = cats.filter((c) => choices[c] !== undefined).map((c) => sources[choices[c]!]?.attrs?.[c] ?? 50);
-    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
-  }, [cats, choices, sources]);
-
   async function start() {
-    if (!position) return;
-    setBusy('start'); setError(''); setSources([]); setChoices({});
+    setBusy('start'); setError('');
     try {
       const d = await post({ action: 'start', position });
       setDraft(d); setLanded(false); setSpinKey((k) => k + 1);
@@ -59,37 +46,25 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
-  async function act(body: object, label: string, picked?: Source) {
+  async function place(playerId: string, trait: string, label: string) {
     if (!draft) return;
-    setBusy(label); setError('');
+    setBusy('pick'); setError('');
     try {
-      const d = await post({ ...body, sessionId: draft.sessionId, token: draft.token });
+      const d = await post({ action: 'pick', sessionId: draft.sessionId, token: draft.token, playerId, trait });
       setDraft({ ...draft, ...d });
-      if (picked) setSources((s) => [...s, picked]);
-      if (!d.done) { setLanded(false); setShowAll(false); setSpinKey((k) => k + 1); }
+      setAnnounce(label);
+      if (d.done) await grade({ ...draft, ...d });
+      else { setLanded(false); setShowAll(false); setSpinKey((k) => k + 1); }
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
-  function bestOfEach() {
-    const next: Partial<Record<AttributeKey, number>> = {};
-    for (const c of cats) {
-      let best = 0;
-      sources.forEach((s, i) => { if ((s.attrs?.[c] ?? 0) > (sources[best].attrs?.[c] ?? 0)) best = i; });
-      next[c] = best;
-    }
-    setChoices(next);
-  }
-
-  async function grade() {
-    if (!draft || !complete) return;
-    setBusy('grade'); setError('');
-    try {
-      const res = await fetch('/api/games/build-a-player/grade', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId: draft.sessionId, token: draft.token, choices }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Grading failed.');
-      track('game_completed', { game: 'build-a-player', rating: data.result.rating });
-      router.push(`/results/${data.id}`);
-    } catch (e) { setError((e as Error).message); setBusy(null); }
+  async function grade(d: Draft) {
+    setBusy('grade');
+    const res = await fetch('/api/games/build-a-player/grade', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId: d.sessionId, token: d.token }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? 'Grading failed.');
+    track('game_completed', { game: 'build-a-player', rating: data.result.rating });
+    router.push(`/results/${data.id}`);
   }
 
   if (!draft) {
@@ -97,21 +72,26 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
       <div className="g-wrap">
         <section className="g-intro" style={{ maxWidth: 'none' }}>
           <p className="g-kicker">Build a Player</p>
-          <h1 className="g-title">Five teams.<br />One perfect player.</h1>
-          <p className="g-lede">Pick a position. Spin five teams and take one player from each. Then build your player one attribute at a time, taking the best number from whoever has it.</p>
+          <h1 className="g-title">Five spins.<br />One player.</h1>
+          <p className="g-lede">Spin five teams. Take one trait from a player on each. See how good the player you built really is.</p>
           <div className="b-pos" role="group" aria-label="Position">
             {BUILD_POSITIONS.map((p) => (
               <button key={p} type="button" aria-pressed={position === p} onClick={() => setPosition(p)}>
-                <strong>{p}</strong><span>{BLURB[p]}</span>
+                <strong>{p}{p === positionOfDay && <span className="b-today">Today</span>}</strong>
+                <span>{TRAITS[p].map((t) => t.label.toLowerCase()).join(', ')}</span>
               </button>
             ))}
           </div>
-          <button className="btn btn-primary btn-lg" disabled={!position || !!busy} onClick={start}>{busy ? 'Starting' : position ? `Build a ${position}` : 'Pick a position'}</button>
+          <button className="btn btn-primary btn-lg" disabled={!!busy} onClick={start}>{busy ? 'Starting' : 'Spin your first team'}</button>
+          <p className="g-fine">Takes about a minute. Today&apos;s position is {POSITION_NAMES[positionOfDay].toLowerCase()}.</p>
           {error && <p role="alert" className="field-error">{error}</p>}
         </section>
       </div>
     );
   }
+
+  const players = team ? [...team.players].sort((a, b) => b.ovr - a.ovr) : [];
+  const shown = showAll ? players : players.slice(0, 6);
 
   return (
     <div className="g-wrap g-board">
@@ -119,8 +99,8 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
       <div className="g-main">
         <header className="g-head">
           <div>
-            <h1 className="g-kicker" style={{ margin: 0 }}>Build a {position ? POSITION_NAMES[position] : 'Player'} · {draft.done ? 'Assemble' : `Spin ${draft.index + 1} of ${draft.total}`}</h1>
-            <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={draft.total} aria-valuenow={draft.picks.length} aria-label="Players drafted">
+            <h1 className="g-kicker" style={{ margin: 0 }}>Build a {POSITION_NAMES[position]} · Spin {Math.min(draft.index + 1, draft.total)} of {draft.total}</h1>
+            <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={draft.total} aria-valuenow={draft.picks.length} aria-label="Traits filled">
               {Array.from({ length: draft.total }, (_, i) => <span key={i} className={i < draft.picks.length ? 'on' : i === draft.index ? 'now' : ''} />)}
             </div>
           </div>
@@ -130,103 +110,68 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
         {error && <div role="alert" className="card card-error">{error}</div>}
 
         {team ? (
-          <section className="g-stage" aria-labelledby="clock-h">
+          <section ref={stageRef} className="g-stage" aria-labelledby="clock-h">
             <div className="g-team">
               <Reel pool={reelPool} target={{ id: team.id, abbreviation: team.abbreviation, city: team.city, name: team.name, color: team.color, logoUrl: team.logoUrl }}
                 spinKey={`${draft.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.city} ${team.name}`); }} />
-              <div className={`g-team-name ${landed ? 'in' : ''}`}>
-                <p className="g-kicker">On the clock</p>
-                <h2 id="clock-h">{landed ? <>{team.city} <strong>{team.name}</strong></> : 'Spinning'}</h2>
-              </div>
-              <button className="btn btn-sm g-respin" onClick={() => act({ action: 'respin' }, 'respin')} disabled={!landed || !!busy || draft.respinsLeft <= 0}>
-                Re-spin <span className="num">{draft.respinsLeft} left</span>
-              </button>
-            </div>
-            <div className={`g-roster ${landed ? 'in' : ''}`}>
-              <div className="g-group">
-                <h3 className="g-group-h"><span>{position}s</span><span className="muted">Take one. You can mix his numbers with the others later.</span></h3>
-                <ul className="g-list">
-                  {[...team.players].sort((a, b) => b.ovr - a.ovr).slice(0, showAll ? undefined : 6).map((p) => {
-                    const top = cats.map((c) => [c, p.attrs?.[c] ?? 0] as const).sort((a, b) => b[1] - a[1]).slice(0, 2);
-                    return (
-                      <li key={p.id}>
-                        <button type="button" className="g-player" disabled={!landed || !!busy}
-                          onClick={() => { setAnnounce(`${p.name} added`); act({ action: 'pick', playerId: p.id }, 'pick', { ...p, teamColor: team.color, teamName: team.name }); }}
-                          aria-label={`Take ${p.name}, overall ${p.ovr}`}>
-                          <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
-                          <span className="g-player-name">{p.name}<span className="g-player-pos">{top.map(([k, v]) => `${ATTRIBUTE_LABELS[k]} ${v}`).join(' · ')}</span></span>
-                          <span className="g-ovr num">{p.ovr}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                  {!team.players.length && <li className="muted">No eligible players on this team. Re-spin.</li>}
-                </ul>
-                {team.players.length > 6 && <button type="button" className="btn-link g-more" onClick={() => setShowAll((v) => !v)}>{showAll ? 'Show fewer' : `Show all ${team.players.length}`}</button>}
+              <div className="g-spin-status">
+                <p className="g-kicker" style={{ margin: 0 }} id="clock-h">{landed ? 'Tap the trait you want him to give you' : 'Spinning'}</p>
+                <span className="g-kicker num" style={{ margin: 0 }}>{openTraits.length} open</span>
               </div>
             </div>
+            {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : <div className="g-roster in">
+              <ul className="b-rows">
+                {shown.map((p) => {
+                  const vals = openTraits.map((t) => ({ t, v: traitValue(p.attrs as Attributes, t) })).sort((a, b) => b.v - a.v);
+                  const best = vals[0];
+                  return (
+                    <li key={p.id} className="b-row">
+                      <div className="b-row-head">
+                        <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
+                        <span className="g-player-name">{p.name}<span className="g-player-pos">{best ? `Fills your ${best.t.phrase} at ${best.v}` : p.position}</span></span>
+                        <span className="g-ovr num">{p.ovr}</span>
+                      </div>
+                      <div className="b-traits" role="group" aria-label={`Traits ${p.name} can give you`}>
+                        {vals.map(({ t, v }) => (
+                          <button key={t.key} type="button" className="b-trait" disabled={!landed || !!busy}
+                            onClick={() => place(p.id, t.key, `${p.name} fills ${t.label} at ${v}`)} aria-label={`Take ${t.label} ${v} from ${p.name}`}>
+                            <span>{t.label}</span><strong className="num">{v}</strong>
+                          </button>
+                        ))}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              {players.length > 6 && <button type="button" className="btn-link g-more" onClick={() => setShowAll((v) => !v)}>{showAll ? 'Show fewer' : `Show all ${players.length}`}</button>}
+            </div>}
           </section>
         ) : (
-          <section className="g-stage" style={{ padding: 24 }} aria-labelledby="asm-h">
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
-              <div>
-                <p className="g-kicker">Assemble</p>
-                <h2 id="asm-h" style={{ margin: 0, letterSpacing: '-0.03em' }}>Pick whose number you want for each attribute.</h2>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p className="g-kicker" style={{ margin: 0 }}>Average so far</p>
-                <p className="b-rating num" style={{ margin: 0 }}>{preview ?? '–'}</p>
-              </div>
-            </div>
-            <button className="btn btn-sm" onClick={bestOfEach} style={{ margin: '8px 0 16px' }}>Take the best of each</button>
-            <div className="table-wrap" tabIndex={0} role="region" aria-label="Attribute sources">
-              <table className="b-grid">
-                <thead>
-                  <tr><th scope="col" style={{ textAlign: 'left' }}>Attribute</th>
-                    {sources.map((s) => <th key={s.id} scope="col" style={{ textAlign: 'center', fontWeight: 600 }}><PlayerFace name={s.name} src={s.img} color={s.teamColor} size={32} /><div style={{ fontSize: '.75rem', marginTop: 4 }}>{s.name.split(' ').slice(-1)[0]}</div></th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {cats.map((c) => (
-                    <tr key={c}>
-                      <th scope="row" style={{ textAlign: 'left', fontWeight: 500, textTransform: 'none', letterSpacing: 0, fontSize: '.92rem', color: 'var(--bone)', whiteSpace: 'nowrap' }}>{ATTRIBUTE_LABELS[c]}</th>
-                      {sources.map((s, i) => (
-                        <td key={s.id}>
-                          <button type="button" className="b-cell" aria-pressed={choices[c] === i} aria-label={`${ATTRIBUTE_LABELS[c]} from ${s.name}: ${s.attrs?.[c] ?? 50}`}
-                            onClick={() => setChoices((prev) => ({ ...prev, [c]: i }))}>{s.attrs?.[c] ?? 50}</button>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <section className="g-done"><p className="g-kicker">Building</p><h2 className="g-title g-title-sm">Grading your player.</h2></section>
         )}
       </div>
 
-      <aside className="g-side" aria-label="Your player pool">
+      <aside className="g-side" aria-label="Your player">
         <div className="g-side-inner">
-          <p className="g-kicker">Your pool</p>
+          <p className="g-kicker">Your {position}</p>
           <ol className="g-slots">
-            {Array.from({ length: draft.total }, (_, i) => {
-              const s = sources[i];
+            {traits.map((t) => {
+              const p = filled.get(t.key);
               return (
-                <li key={i} className={s ? 'filled' : ''}>
-                  <span className="g-slot-k">#{i + 1}</span>
-                  {s ? <span className="g-slot-v"><PlayerFace name={s.name} src={s.img} color={s.teamColor} size={24} /><span className="g-slot-name">{s.name}</span><span className="num g-slot-ovr">{s.ovr}</span></span>
-                    : <span className="g-slot-empty">Open</span>}
+                <li key={t.key} className={p ? 'filled' : ''}>
+                  <span className="g-slot-k">{t.label}</span>
+                  {p ? (
+                    <span className="g-slot-v">
+                      {p.logoUrl ? <img src={p.logoUrl} alt="" width={22} height={22} /> : <span className="g-dot" style={{ background: p.teamColor }} />}
+                      <span className="g-slot-name">{p.name}</span>
+                      <span className="num g-slot-ovr">{p.value}</span>
+                    </span>
+                  ) : <span className="g-slot-empty">{Math.round(t.weight * 100)}%</span>}
                 </li>
               );
             })}
           </ol>
-          {draft.done && (
-            <>
-              <p className="g-fine">{Object.keys(choices).length} of {cats.length} attributes chosen</p>
-              <button className="btn btn-primary g-side-cta" onClick={grade} disabled={!complete || !!busy}>{busy === 'grade' ? 'Simulating' : 'Grade and simulate'}</button>
-            </>
-          )}
-          <button className="btn-link g-reset" onClick={() => { setDraft(null); setSources([]); setChoices({}); }}>Start over</button>
+          <button className="btn-link g-reset" onClick={() => { setDraft(null); setError(''); }}>Start over</button>
         </div>
       </aside>
     </div>

@@ -19,7 +19,7 @@ export interface SpinPayload {
   respinsUsed: number;
   position?: BuildPosition;
   /** Server-side draft log. One entry per revealed team, in order. The next team is revealed only after a pick. */
-  picks?: { teamId: number; id: string; slot?: Slot }[];
+  picks?: { teamId: number; id: string; slot?: Slot; trait?: string }[];
 }
 
 export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: Slot[]; attrs?: Partial<Record<string, number>>; img?: string | null }

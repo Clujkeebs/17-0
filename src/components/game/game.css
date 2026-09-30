@@ -19,15 +19,25 @@
 .g-progress span.now { background: var(--orange); }
 
 .g-stage { border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); overflow: hidden; }
-.g-team { display: grid; grid-template-columns: 112px 1fr auto; gap: 24px; align-items: center; padding: 24px; border-bottom: 1px solid var(--steel); }
-@media (max-width: 600px) { .g-team { grid-template-columns: 112px 1fr; gap: 16px; padding: 16px; } .g-respin { grid-column: 1 / -1; justify-self: start; } }
+.g-team { padding: 20px; border-bottom: 1px solid var(--steel); }
+.g-spin-status { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+@media (max-width: 600px) { .g-team { padding: 12px; } }
 .g-team-name h2 { font-size: clamp(1.5rem, 3.2vw, 2.25rem); letter-spacing: -0.03em; font-weight: 500; margin: 0; }
 .g-team-name h2 strong { font-weight: 700; }
 .g-team-name { opacity: .35; transition: opacity .3s; }
 .g-team-name.in { opacity: 1; }
 
-.reel2 { width: 112px; height: 112px; overflow: hidden; border-radius: 16px; background: var(--green); position: relative; }
-.reel2-cell { height: 112px; display: flex; align-items: center; justify-content: center; }
+.reel2 { width: 100%; height: 148px; overflow: hidden; border-radius: 20px; background: var(--green); position: relative; }
+.reel2::before, .reel2::after { content: ''; position: absolute; left: 0; right: 0; height: 36px; z-index: 1; pointer-events: none; }
+.reel2::before { top: 0; background: linear-gradient(var(--green), transparent); }
+.reel2::after { bottom: 0; background: linear-gradient(transparent, var(--green)); }
+.reel2.is-landed::before, .reel2.is-landed::after { display: none; }
+.reel2-cell { height: 148px; display: flex; align-items: center; gap: 24px; padding: 0 28px; }
+.reel2-name { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
+.reel2-city { font-size: 1rem; color: var(--bone-dim); }
+.reel2-name strong { font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: -0.035em; }
+.reel2.is-landed { box-shadow: inset 0 -4px 0 var(--tc, var(--bone)); }
+@media (max-width: 600px) { .reel2-cell { gap: 14px; padding: 0 16px; } .reel2-cell img, .reel2-cell .team-mono { width: 64px !important; height: 64px !important; } }
 .reel2.is-landed { animation: land .35s ease-out; }
 @keyframes land { 0% { transform: scale(.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
 .team-mono { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 700; font-family: var(--font-num); }
@@ -94,3 +104,15 @@
   .g-slot-name, .g-slot-empty { font-size: .78rem; }
 }
 .g-more { margin-top: 10px; font-size: .88rem; }
+.b-today { margin-left: 8px; font-size: .65rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--orange); vertical-align: middle; }
+.b-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.b-row { border: 1px solid var(--steel); border-radius: 14px; padding: 12px; background: var(--navy); }
+.b-row-head { display: flex; align-items: center; gap: 14px; }
+.b-traits { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-left: 58px; }
+@media (max-width: 600px) { .b-traits { padding-left: 0; } }
+.b-trait { display: inline-flex; align-items: baseline; gap: 8px; min-height: 40px; padding: 8px 14px; border: 1px solid var(--steel-hi); border-radius: 999px; background: var(--surface); color: var(--bone); font: 500 .88rem var(--font-ui); cursor: pointer; transition: background .15s, color .15s; }
+.b-trait strong { font-size: 1rem; }
+@media (hover: hover) and (pointer: fine) { .b-trait:hover:not(:disabled) { background: var(--bone); color: var(--navy); border-color: var(--bone); } }
+.b-trait:disabled { opacity: .5; cursor: default; }
+.g-board .g-slots li { grid-template-columns: minmax(56px, auto) 1fr; column-gap: 12px; }
+.g-roster-wait { padding: 20px 24px 24px; display: grid; gap: 8px; } .g-stage { scroll-margin-top: 150px; } @media (min-width: 901px) { .g-stage { scroll-margin-top: 80px; } }

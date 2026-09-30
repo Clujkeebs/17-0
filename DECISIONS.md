@@ -10,9 +10,9 @@ Non-obvious calls made while building Unbeaten, one paragraph each. Newest at th
 
 **Client never sees raw attributes in 17-0.** The spin API returns names, positions and OVR only. Grading happens on the server from database attributes, so a tampered client cannot inflate a score. Build a Player has to show attribute values to be playable, so that game sends only the 8 to 10 category values for eligible players. Those values are public on player pages anyway.
 
-**Re-spins are pre-determined.** Each spin draws the six teams plus two reserve teams from a PRNG seeded by the session. A re-spin swaps an undrafted team for the next reserve. Drafted teams are locked because the UI only offers re-spin on undrafted cards, and grading rejects picks from teams that are no longer in the session. This keeps re-spins deterministic and auditable, and it is the same for every daily player.
+**The reel is pre-determined.** The six teams are drawn in order from a PRNG seeded by the session, and the reel reveals them one at a time. The UI no longer offers re-spins. Grading rejects picks from teams that are not in the session, so the board is deterministic, auditable, and the same for every daily player.
 
-**Each position maps to exactly one slot.** QB goes to QB, RB to RB, WR and TE to WR/TE, every defensive group to DEF, K and P to K, and coaches to HC. Clicking a player drafts them straight into their slot. That removes a tap on mobile, and the slot bar still filters the list. Picking a second player from the same team replaces the first, because the rule is one pick per team.
+**Each position maps to exactly one slot.** QB goes to QB, RB to RB, WR to WR, TE to TE, every defensive group to DEF, and coaches to HC. Kickers and punters are not draftable. Clicking a player drafts them straight into their slot. That removes a tap on mobile, and the slot bar still filters the list. Picking a second player from the same team replaces the first, because the rule is one pick per team.
 
 **Daily results depend on the roster, not the session.** For daily games, the grading seed is the date seed plus the sorted pick IDs. Two people who draft the same six players get the same record, which keeps the daily leaderboard fair. Practice games are seeded by session ID, as the spec says.
 
@@ -20,9 +20,9 @@ Non-obvious calls made while building Unbeaten, one paragraph each. Newest at th
 
 **Anti-cheat flagging threshold.** A result is flagged when a user with 10 or more results would be above 90 percent perfect: 17-0 records, or 97+ builds. Flagged results are hidden from leaderboards until an admin clears them in `/admin/results`.
 
-**Projected record formula kept exactly as specified.** With `wins = round(strength / 99 * 14 + jitter(-2..3))`, going 17-0 needs a team strength around 92 or better plus a lucky jitter. That makes a perfect season rare, which is the point of the game's name.
+**Projected record formula.** `wins = round((strength - 60) / 27 * 17 + jitter(-2..1))`, clamped 0 to 17 (`WIN_FLOOR`, `WIN_SPAN`). A roster at 84.7 goes 17-0 with the best roll, and 89.4 or above goes 17-0 with any roll. Calibrated so a well-drafted roster runs the table roughly one time in eleven: rare, but not a lottery ticket.
 
-**Build a Player rating fills gaps.** Some formula inputs (Release for WR, for example) are not among the categories the player chooses. Those inputs are filled with the average of the chosen values, so the formula does not punish a build for an attribute it could never pick.
+**Build a Player uses weighted traits.** Each position has five traits (`TRAITS` in `src/lib/game/build.ts`), each built from one or two attributes with a fixed weight. One spin fills one trait from one player. The score is the weighted sum, and the result also shows the best possible score from the same five teams, so a build is judged against its board.
 
 **Seed data until the first sync.** The sandbox this was built in cannot reach EA's ratings endpoint, so the database ships with a hand-built seed of real players and approximate ratings (`data/seed`, version `seed-2027`). Attributes are generated deterministically so each formula rating lands near the listed overall. The first successful sync matches rows by slug and replaces them with live data. The stale-ratings banner appears automatically if a sync has not succeeded in 7 days.
 
@@ -61,3 +61,5 @@ Non-obvious calls made while building Unbeaten, one paragraph each. Newest at th
 **Only the current season page is indexable.** We store one ratings edition. Earlier `/seasons/[year]` pages exist for navigation but are `noindex`, to avoid thin content.
 
 **Offensive linemen are graded with the TE formula as a proxy.** Linemen are not draftable in either game. Position pages say so.
+
+**Format switched to the StickToTheModel style (2026-09).** 17-0 now matches sticktothemodel.com: one reel that spins one team at a time, six slots (QB, RB, WR, TE, DEF, HC), no kicker, no WR/TE flex, no re-spins. Weights are QB 25, DEF 20, RB 15, WR 15, HC 15, TE 10. Reasons: seeing one team at a time turns every pick into a real decision about what is still to come; the kicker slot was a 5 percent afterthought that added a tap without adding a choice; splitting WR and TE removes a flex slot that always went to the receiver; and re-spins let players dodge the hard part of the board. Build a Player moved to the same one-team-at-a-time reel with five weighted traits per position, so both games teach the same skill. Ratings are EA Sports Madden NFL 27, updated weekly, and rosters and head coaches follow ESPN team rosters.

@@ -4,16 +4,13 @@ import { isGameType } from '@/lib/server/games';
 import { GradeError, gradeBuildAPlayer, gradeSeventeen } from '@/lib/server/grading';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp, rateLimit } from '@/lib/server/rate-limit';
-import { ATTRIBUTE_KEYS } from '@/lib/game/attributes';
 import { enqueueOgImage } from '@/lib/server/queue';
 
 export const runtime = 'nodejs';
 
 const Base = z.object({ sessionId: z.string().uuid(), token: z.string().min(10).max(100) });
 const Seventeen = Base;
-const Build = Base.extend({
-  choices: z.partialRecord(z.enum(ATTRIBUTE_KEYS as [string, ...string[]]), z.number().int().min(0).max(7)),
-});
+const Build = Base;
 
 export async function POST(req: Request, { params }: { params: Promise<{ type: string }> }) {
   const { type } = await params;
@@ -37,7 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ type: s
     } else {
       const b = Build.safeParse(raw);
       if (!b.success) return errorJson(400, 'Choose a source for every attribute.');
-      out = await gradeBuildAPlayer(ctx(b.data), b.data.choices);
+      out = await gradeBuildAPlayer(ctx(b.data));
     }
     void enqueueOgImage(out.id).catch(() => {});
     return json({ ...out, savedToLeaderboard: !!userId && out.daily });

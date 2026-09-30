@@ -6,7 +6,7 @@ import { getTeams } from '@/lib/server/data';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: '17-0: Spin six teams, draft a perfect season',
-  description: 'Spin six NFL teams, draft a QB, RB, WR/TE, defender, kicker and head coach, and see if the roster can go 17-0. Daily puzzle resets at midnight ET.',
+  description: 'Spin the reel six times, draft a QB, RB, WR, TE, defender and head coach, one from each team, and see if the roster can go 17-0. Daily puzzle resets at midnight ET.',
   alternates: { canonical: '/games/17-0' },
 };
 

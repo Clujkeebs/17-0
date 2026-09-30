@@ -19,7 +19,7 @@ All copy follows `DESIGN.md` section 6. No em-dashes, no emoji, no banned words,
 **Tagline (60 chars max):** Six picks. Seventeen games. One perfect season.
 
 **Description (260 chars max):**
-A daily NFL puzzle. Six teams are spun, you draft one player from each, and a seeded simulation plays a 17-game season. Same six teams for everyone, so the leaderboard is fair. Built on EA Sports Madden NFL ratings. Free, no gambling.
+A daily NFL puzzle. Six teams are spun, you draft one player from each, and a seeded simulation plays a 17-game season. Same six teams for everyone, so the leaderboard is fair. Built on EA Sports Madden NFL 27 ratings, updated weekly. Free, no gambling.
 
 **First comment (maker):**
 
@@ -32,7 +32,7 @@ How it works:
 - The engine scores each pick with position weights built on EA Sports Madden NFL ratings, then simulates 17 games from a seeded random number generator.
 - Same seed, same picks, same record. You can reproduce any result, which is also how we catch forged scores.
 
-There is also Build a Player, where you assemble one player attribute by attribute from the day's spins.
+There is also Build a Player, where you build one player trait by trait, taking one trait from one player on each of five spins.
 
 What it is not: a betting product. No money, no prizes, no odds. It is a daily puzzle with a leaderboard and a share card.
 
@@ -96,7 +96,7 @@ Six teams get spun. You take one player from each. The engine weights each playe
 
 Ratings update when EA updates them, and each player page shows the rating history so you can see who moved after each update.
 
-There is a second mode, Build a Player, where you assemble one player attribute by attribute from the day's teams.
+There is a second mode, Build a Player, where you build one player trait by trait, taking one trait from one player on each of five spins.
 
 Not affiliated with EA, just a fan project. Free, no account needed: https://unbeaten.example
 
@@ -108,7 +108,7 @@ Open to feedback on the position weights. If you think I have throw accuracy und
 
 **Body:**
 
-It is a draft, but you only get one pick per team and you have to fill a real roster. Some days the six teams give you a clean path. Some days you are choosing between a kicker and a backup tight end and it hurts.
+It is a draft, but you only get one pick per team and you have to fill a real roster. Some days the six teams give you a clean path. Some days the reel hands you an elite tight end and a quarterback you do not trust from the same team, and you have to pick one.
 
 After you draft, it sims a 17-game season. Same teams for everyone each day, so you can compare against your league-mates.
 
@@ -158,7 +158,7 @@ Same seed, same picks, same record. Always. That is what makes the daily leaderb
 It also means scores cannot be forged. The site never trusts a submitted result. It replays your season on the server and checks.
 
 5/
-Second mode: Build a Player. Assemble one player attribute by attribute from the day's spins, then see what he would rate.
+Second mode: Build a Player. Five spins, one trait from each, then see how he grades against the best build those teams allowed.
 
 6/
 Free. No account needed to play. No gambling, no prizes, no odds. Not affiliated with EA or the NFL.
