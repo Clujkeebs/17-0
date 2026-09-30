@@ -59,18 +59,41 @@ void (async () => {
         console.log(`[stm] ${tag} buttons=${JSON.stringify(btns)}`);
       };
       await pg.goto('https://sticktothemodel.com', { waitUntil: 'networkidle', timeout: 60_000 });
-      await log('home');
-      const styles = await pg.evaluate(() => { const cs = getComputedStyle(document.body); return { bg: cs.backgroundColor, color: cs.color, font: cs.fontFamily }; });
-      console.log(`[stm] styles=${JSON.stringify(styles)}`);
-      const links = await pg.$$eval('a', (as) => as.map((a) => (a as HTMLAnchorElement).href).slice(0, 40));
-      console.log(`[stm] links=${JSON.stringify(links)}`);
-      for (const label of [/17-0|nfl|football/i, /play|start|spin/i, /spin|roll/i]) {
-        const el = pg.getByRole('button', { name: label }).or(pg.getByRole('link', { name: label })).first();
-        if (await el.count()) { await el.click().catch(() => {}); await pg.waitForTimeout(3500); await log(`after ${label}`); }
+      await pg.getByText('Games', { exact: true }).first().hover().catch(() => {});
+      await pg.getByText('Games', { exact: true }).first().click().catch(() => {});
+      await pg.waitForTimeout(1500);
+      const all = await pg.$$eval('a', (as) => [...new Set(as.map((a) => (a as HTMLAnchorElement).href))]);
+      const games = all.filter((h) => /game|17-0|spin|daily|grid|puzzle|trivia|play/i.test(h) && !/historical-games|all-games/.test(h));
+      console.log(`[stm2] gameLinks=${JSON.stringify(games)}`);
+      for (const g of games.slice(0, 8)) {
+        await pg.goto(g, { waitUntil: 'networkidle', timeout: 45_000 }).catch(() => {});
+        const txt = (await pg.evaluate(() => document.querySelector('main')?.innerText ?? document.body.innerText)).replace(/\s+/g, ' ');
+        const i = txt.search(/17-0|spin|perfect season/i);
+        console.log(`[stm2] ${g} :: ${i >= 0 ? txt.slice(Math.max(0, i - 300), i + 1500) : txt.slice(0, 400)}`);
       }
-      for (let i = 0; i < 3; i++) {
-        const any = pg.locator('button:visible').nth(1);
-        if (await any.count()) { await any.click().catch(() => {}); await pg.waitForTimeout(3500); await log(`click${i}`); }
+      const target = games.find((h) => /17/.test(h)) ?? games[0];
+      if (target) {
+        await pg.goto(target, { waitUntil: 'networkidle', timeout: 45_000 });
+        const html = await pg.evaluate(() => (document.querySelector('main') ?? document.body).outerHTML);
+        console.log(`[stm3] html=${html.replace(/\s+/g, ' ').replace(/<svg[\s\S]*?<\/svg>/g, '<svg/>').slice(0, 6000)}`);
+        for (let step = 0; step < 8; step++) {
+          const btn = pg.locator('main button:visible').filter({ hasText: /spin|start|play|roll|draft|next|pick|sim/i }).first();
+          const fallback = pg.locator('main button:visible').first();
+          const use = (await btn.count()) ? btn : fallback;
+          const label = (await use.textContent().catch(() => ''))?.trim();
+          await use.click().catch(() => {});
+          const frames: string[] = [];
+          for (let f = 0; f < 6; f++) { await pg.waitForTimeout(350); frames.push((await pg.evaluate(() => (document.querySelector('main') ?? document.body).innerText)).replace(/\s+/g, ' ').slice(0, 220)); }
+          console.log(`[stm3] step${step} clicked="${label}" frames=${JSON.stringify(frames)}`);
+          await pg.waitForTimeout(1500);
+          const txt = (await pg.evaluate(() => (document.querySelector('main') ?? document.body).innerText)).replace(/\s+/g, ' ').slice(0, 1800);
+          const btns = await pg.$$eval('main button', (els) => els.map((e) => (e.textContent || '').trim()).filter(Boolean).slice(0, 40));
+          console.log(`[stm3] step${step} after=${txt}`);
+          console.log(`[stm3] step${step} buttons=${JSON.stringify(btns)}`);
+          // If players are listed, pick the first player-like button.
+          const player = pg.locator('main button:visible').filter({ hasText: /\b\d{2}\b/ }).first();
+          if (await player.count()) { await player.click().catch(() => {}); await pg.waitForTimeout(800); }
+        }
       }
       await b.close();
     } catch (e) { console.log('[stm] failed', (e as Error).message); }
