@@ -138,3 +138,16 @@ describe('daily + streaks', () => {
     expect(computeStreak([], '2026-09-29')).toBe(0);
   });
 });
+
+describe('schedule', () => {
+  it('matches the record and is deterministic', async () => {
+    const { buildSchedule } = await import('@/lib/game/seventeen');
+    for (const w of [0, 5, 12, 17]) {
+      const s = buildSchedule(`x${w}`, w, 85, ['KC', 'BUF', 'DAL']);
+      expect(s).toHaveLength(17);
+      expect(s.filter((g) => g.win).length).toBe(w);
+      for (const g of s) { expect(g.win ? g.us > g.them : g.us < g.them).toBe(true); expect(g.them).toBeGreaterThanOrEqual(0); }
+      expect(buildSchedule(`x${w}`, w, 85, ['KC'])).toEqual(buildSchedule(`x${w}`, w, 85, ['KC']));
+    }
+  });
+});

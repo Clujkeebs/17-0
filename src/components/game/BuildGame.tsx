@@ -3,84 +3,87 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reel, type ReelTeam } from './Reel';
 import { SoundToggle } from './SoundToggle';
-import { CheckIcon } from '../Icons';
+import { PlayerFace } from './PlayerFace';
 import { track } from '@/lib/analytics';
 import { ATTRIBUTE_LABELS, POSITION_NAMES, type AttributeKey } from '@/lib/game/attributes';
 import { BUILD_CATEGORIES, BUILD_POSITIONS, type BuildPosition } from '@/lib/game/build';
-import type { PublicPlayer, PublicTeam } from '@/lib/server/games';
+import type { DraftState } from '@/lib/server/draft';
+import type { PublicPlayer } from '@/lib/server/games';
+import './game.css';
 
-interface Spin { sessionId: string; token: string; teams: PublicTeam[]; respinsLeft: number }
+type Draft = DraftState & { token: string };
+type Source = PublicPlayer & { teamColor: string; teamName: string };
 
-const POSITION_BLURB: Record<BuildPosition, string> = {
+const BLURB: Record<BuildPosition, string> = {
   QB: 'Arm, touch, and the nerve to stand in.', RB: 'Vision first. Speed is a bonus.', WR: 'Separation plus hands.',
   TE: 'Block like a tackle, catch like a receiver.', EDGE: 'Get home in 2.5 seconds.', LB: 'Diagnose, fill, finish.',
   CB: 'Mirror, press, turn.', S: 'Last line. Do not miss.',
 };
 
+async function post(body: object) {
+  const res = await fetch('/api/games/build-a-player/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? 'Something went wrong. Try again.');
+  return data;
+}
+
 export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[]; initialPosition: BuildPosition | null }) {
   const router = useRouter();
   const [position, setPosition] = useState<BuildPosition | null>(initialPosition);
-  const [spin, setSpin] = useState<Spin | null>(null);
-  const [revealed, setRevealed] = useState(0);
-  const [chosen, setChosen] = useState<Record<number, PublicPlayer>>({}); // team index -> player
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [sources, setSources] = useState<Source[]>([]);
+  const [spinKey, setSpinKey] = useState(0);
+  const [landed, setLanded] = useState(false);
   const [choices, setChoices] = useState<Partial<Record<AttributeKey, number>>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [announce, setAnnounce] = useState('');
 
   const cats = position ? BUILD_CATEGORIES[position] : [];
-  const sources = spin ? spin.teams.map((_, i) => chosen[i]).filter(Boolean) : [];
-  const poolReady = !!spin && sources.length === spin.teams.length;
-  const complete = poolReady && cats.every((c) => choices[c] !== undefined);
-  const stage = !spin ? 1 : !poolReady ? 2 : 3;
+  const complete = !!draft?.done && cats.every((c) => choices[c] !== undefined);
+  const team = draft?.team ?? null;
 
   const preview = useMemo(() => {
-    if (!poolReady) return null;
-    const vals = cats.map((c) => (choices[c] !== undefined ? sources[choices[c]!]!.attrs?.[c] ?? 50 : null)).filter((v): v is number => v !== null);
+    const vals = cats.filter((c) => choices[c] !== undefined).map((c) => sources[choices[c]!]?.attrs?.[c] ?? 50);
     return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
-  }, [poolReady, cats, choices, sources]);
+  }, [cats, choices, sources]);
 
-  async function doSpin(pos: BuildPosition) {
-    setBusy('spin'); setError(''); setChosen({}); setChoices({}); setRevealed(0);
+  async function start() {
+    if (!position) return;
+    setBusy('start'); setError(''); setSources([]); setChoices({});
     try {
-      const res = await fetch('/api/games/build-a-player/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ position: pos }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Spin failed.');
-      setSpin(data);
-      track('game_started', { game: 'build-a-player', position: pos });
-    } catch (e) { setError((e as Error).message); }
-    finally { setBusy(null); }
+      const d = await post({ action: 'start', position });
+      setDraft(d); setLanded(false); setSpinKey((k) => k + 1);
+      track('game_started', { game: 'build-a-player', position });
+    } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
-  async function respin(i: number) {
-    if (!spin) return;
-    setBusy('respin'); setError('');
+  async function act(body: object, label: string, picked?: Source) {
+    if (!draft) return;
+    setBusy(label); setError('');
     try {
-      const res = await fetch('/api/games/build-a-player/spin', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ respin: { sessionId: spin.sessionId, token: spin.token, index: i } }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Re-spin failed.');
-      setSpin({ ...spin, teams: data.teams, respinsLeft: data.respinsLeft });
-    } catch (e) { setError((e as Error).message); }
-    finally { setBusy(null); }
+      const d = await post({ ...body, sessionId: draft.sessionId, token: draft.token });
+      setDraft({ ...draft, ...d });
+      if (picked) setSources((s) => [...s, picked]);
+      if (!d.done) { setLanded(false); setSpinKey((k) => k + 1); }
+    } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
-  function bestFill() {
+  function bestOfEach() {
     const next: Partial<Record<AttributeKey, number>> = {};
     for (const c of cats) {
       let best = 0;
-      sources.forEach((s, i) => { if ((s!.attrs?.[c] ?? 0) > (sources[best]!.attrs?.[c] ?? 0)) best = i; });
+      sources.forEach((s, i) => { if ((s.attrs?.[c] ?? 0) > (sources[best].attrs?.[c] ?? 0)) best = i; });
       next[c] = best;
     }
     setChoices(next);
   }
 
   async function grade() {
-    if (!spin || !complete) return;
+    if (!draft || !complete) return;
     setBusy('grade'); setError('');
     try {
-      const res = await fetch('/api/games/build-a-player/grade', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ sessionId: spin.sessionId, token: spin.token, players: spin.teams.map((_, i) => chosen[i].id), choices }) });
+      const res = await fetch('/api/games/build-a-player/grade', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId: draft.sessionId, token: draft.token, choices }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Grading failed.');
       track('game_completed', { game: 'build-a-player', rating: data.result.rating });
@@ -88,111 +91,142 @@ export function BuildGame({ reelPool, initialPosition }: { reelPool: ReelTeam[];
     } catch (e) { setError((e as Error).message); setBusy(null); }
   }
 
-  return (
-    <div className="container section">
-      <div aria-live="polite" className="sr-only">{announce}</div>
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <span className="eyebrow">Build a Player{position ? ` · ${POSITION_NAMES[position]}` : ''}</span>
-          <h1 style={{ marginBottom: 0 }}>Five teams. One player.</h1>
-        </div>
-        <div className="row">
-          <div className="dots" role="img" aria-label={`Step ${stage} of 3`}>{[1, 2, 3].map((n) => <span key={n} className={`dot ${stage >= n ? 'on' : ''}`} />)}</div>
-          <SoundToggle />
-        </div>
-      </div>
-
-      {error && <div role="alert" className="card card-error" style={{ marginBottom: 16 }}>{error}</div>}
-
-      {!spin && (
-        <section aria-labelledby="pos-h">
-          <h2 id="pos-h" style={{ fontSize: '1.2rem' }}>Pick a position</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
+  if (!draft) {
+    return (
+      <div className="g-wrap">
+        <section className="g-intro" style={{ maxWidth: 'none' }}>
+          <p className="g-kicker">Build a Player</p>
+          <h1 className="g-title">Five teams.<br />One perfect player.</h1>
+          <p className="g-lede">Pick a position. Spin five teams and take one player from each. Then build your player one attribute at a time, taking the best number from whoever has it.</p>
+          <div className="b-pos" role="group" aria-label="Position">
             {BUILD_POSITIONS.map((p) => (
-              <button key={p} type="button" className="pbtn" aria-pressed={position === p} onClick={() => setPosition(p)} style={{ flexDirection: 'column', alignItems: 'flex-start', minHeight: 84 }}>
-                <span className="num" style={{ fontSize: '1.4rem', fontWeight: 800 }}>{p}</span>
-                <span className="pos" style={{ letterSpacing: 0 }}>{POSITION_BLURB[p]}</span>
+              <button key={p} type="button" aria-pressed={position === p} onClick={() => setPosition(p)}>
+                <strong>{p}</strong><span>{BLURB[p]}</span>
               </button>
             ))}
           </div>
-          <button className="btn btn-primary" style={{ marginTop: 20 }} disabled={!position || !!busy} onClick={() => position && doSpin(position)}>
-            {busy === 'spin' ? 'Spinning' : 'Spin five teams'}
-          </button>
+          <button className="btn btn-primary btn-lg" disabled={!position || !!busy} onClick={start}>{busy ? 'Starting' : position ? `Build a ${position}` : 'Pick a position'}</button>
+          {error && <p role="alert" className="field-error">{error}</p>}
         </section>
-      )}
+      </div>
+    );
+  }
 
-      {spin && (
-        <div className="stack">
-          {spin.teams.map((t, i) => (
-            <section key={`${t.id}-${i}`} className={`team-card ${chosen[i] ? 'drafted' : ''}`} aria-label={`${t.city} ${t.name}`} style={{ opacity: i <= revealed ? 1 : 0.35 }}>
-              <div>
-                <span className="eyebrow">Team {i + 1}</span>
-                {i <= revealed && <Reel pool={reelPool} target={{ abbreviation: t.abbreviation, city: t.city, name: t.name, color: t.color }} delay={i === revealed ? 400 : 0}
-                  onLand={() => { setRevealed((r) => Math.max(r, i + 1)); setAnnounce(`Team ${i + 1}: ${t.city} ${t.name}`); }} />}
-                {i < revealed && <p style={{ margin: '4px 0 8px', fontWeight: 700 }}>{t.city} {t.name}</p>}
-                {i < revealed && !chosen[i] && spin.respinsLeft > 0 && revealed >= spin.teams.length && (
-                  <button className="btn btn-sm" onClick={() => respin(i)} disabled={!!busy}>Re-spin ({spin.respinsLeft} left)</button>
-                )}
-              </div>
-              {i < revealed ? (
-                <div className="plist">
-                  {t.players.map((p) => (
-                    <button key={p.id} type="button" className="pbtn" aria-pressed={chosen[i]?.id === p.id} disabled={revealed < spin.teams.length}
-                      onClick={() => { setChosen((c) => ({ ...c, [i]: p })); setChoices({}); setAnnounce(`${p.name} added to the pool`); }}>
-                      <span><span style={{ display: 'block', fontWeight: 600, fontSize: '.9rem' }}>{p.name}</span><span className="pos">{p.position}</span></span>
-                      <span className="ovr">{p.ovr}</span>
-                    </button>
-                  ))}
-                  {!t.players.length && <p className="muted">No eligible players. Re-spin this team.</p>}
-                </div>
-              ) : <div className="skeleton" style={{ minHeight: 96 }} />}
-            </section>
-          ))}
-
-          {poolReady && (
-            <section className="card" aria-labelledby="asm-h">
-              <div className="row" style={{ justifyContent: 'space-between' }}>
-                <h2 id="asm-h" style={{ fontSize: '1.2rem', margin: 0 }}>Assemble your {position}</h2>
-                <div className="row">
-                  {preview !== null && <span className="muted">Avg of picks <span className="num accent" style={{ fontWeight: 700 }}>{preview}</span></span>}
-                  <button className="btn btn-sm" onClick={bestFill}>Take the best of each</button>
-                </div>
-              </div>
-              <p className="hint">For each attribute, choose whose number you want. One player can supply as many attributes as you like.</p>
-              <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
-                <table className="build-grid">
-                  <thead><tr><th scope="col">Attribute</th>{sources.map((s) => <th key={s!.id} scope="col" className="num">{s!.name.split(' ').slice(-1)[0]}</th>)}</tr></thead>
-                  <tbody>
-                    {cats.map((c) => (
-                      <tr key={c}>
-                        <th scope="row" style={{ textTransform: 'none', letterSpacing: 0, fontSize: '.9rem', color: 'var(--bone)' }}>{ATTRIBUTE_LABELS[c]}</th>
-                        {sources.map((s, i) => {
-                          const on = choices[c] === i;
-                          return (
-                            <td key={s!.id} className="num">
-                              <button type="button" className="pbtn" aria-pressed={on} style={{ justifyContent: 'center', minHeight: 40 }}
-                                aria-label={`${ATTRIBUTE_LABELS[c]} from ${s!.name}: ${s!.attrs?.[c] ?? 50}`}
-                                onClick={() => setChoices((prev) => ({ ...prev, [c]: i }))}>
-                                <span className="ovr">{s!.attrs?.[c] ?? 50}</span>{on && <CheckIcon size={14} />}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
-          <div className="row" style={{ position: 'sticky', bottom: 0, background: 'var(--navy)', padding: '12px 0', borderTop: '1px solid var(--steel)' }}>
-            <button className="btn btn-primary" onClick={grade} disabled={!complete || !!busy}>{busy === 'grade' ? 'Simulating' : 'Grade and simulate'}</button>
-            <span className="muted num">{Object.keys(choices).length}/{cats.length}</span>
-            <button className="btn-link" onClick={() => { setSpin(null); setChosen({}); setChoices({}); }}>Start over</button>
+  return (
+    <div className="g-wrap g-board">
+      <div aria-live="polite" className="sr-only">{announce}</div>
+      <div className="g-main">
+        <header className="g-head">
+          <div>
+            <h1 className="g-kicker" style={{ margin: 0 }}>Build a {position ? POSITION_NAMES[position] : 'Player'} · {draft.done ? 'Assemble' : `Spin ${draft.index + 1} of ${draft.total}`}</h1>
+            <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={draft.total} aria-valuenow={draft.picks.length} aria-label="Players drafted">
+              {Array.from({ length: draft.total }, (_, i) => <span key={i} className={i < draft.picks.length ? 'on' : i === draft.index ? 'now' : ''} />)}
+            </div>
           </div>
+          <SoundToggle />
+        </header>
+
+        {error && <div role="alert" className="card card-error">{error}</div>}
+
+        {team ? (
+          <section className="g-stage" aria-labelledby="clock-h">
+            <div className="g-team">
+              <Reel pool={reelPool} target={{ id: team.id, abbreviation: team.abbreviation, city: team.city, name: team.name, color: team.color, logoUrl: team.logoUrl }}
+                spinKey={`${draft.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.city} ${team.name}`); }} />
+              <div className={`g-team-name ${landed ? 'in' : ''}`}>
+                <p className="g-kicker">On the clock</p>
+                <h2 id="clock-h">{landed ? <>{team.city} <strong>{team.name}</strong></> : 'Spinning'}</h2>
+              </div>
+              <button className="btn btn-sm g-respin" onClick={() => act({ action: 'respin' }, 'respin')} disabled={!landed || !!busy || draft.respinsLeft <= 0}>
+                Re-spin <span className="num">{draft.respinsLeft} left</span>
+              </button>
+            </div>
+            <div className={`g-roster ${landed ? 'in' : ''}`}>
+              <div className="g-group">
+                <h3 className="g-group-h"><span>{position}s</span><span className="muted">Take one. You can mix his numbers with the others later.</span></h3>
+                <ul className="g-list">
+                  {team.players.map((p) => {
+                    const top = cats.map((c) => [c, p.attrs?.[c] ?? 0] as const).sort((a, b) => b[1] - a[1]).slice(0, 2);
+                    return (
+                      <li key={p.id}>
+                        <button type="button" className="g-player" disabled={!landed || !!busy}
+                          onClick={() => { setAnnounce(`${p.name} added`); act({ action: 'pick', playerId: p.id }, 'pick', { ...p, teamColor: team.color, teamName: team.name }); }}
+                          aria-label={`Take ${p.name}, overall ${p.ovr}`}>
+                          <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
+                          <span className="g-player-name">{p.name}<span className="g-player-pos">{top.map(([k, v]) => `${ATTRIBUTE_LABELS[k]} ${v}`).join(' · ')}</span></span>
+                          <span className="g-ovr num">{p.ovr}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {!team.players.length && <li className="muted">No eligible players on this team. Re-spin.</li>}
+                </ul>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="g-stage" style={{ padding: 24 }} aria-labelledby="asm-h">
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
+              <div>
+                <p className="g-kicker">Assemble</p>
+                <h2 id="asm-h" style={{ margin: 0, letterSpacing: '-0.03em' }}>Pick whose number you want for each attribute.</h2>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p className="g-kicker" style={{ margin: 0 }}>Average so far</p>
+                <p className="b-rating num" style={{ margin: 0 }}>{preview ?? '–'}</p>
+              </div>
+            </div>
+            <button className="btn btn-sm" onClick={bestOfEach} style={{ margin: '8px 0 16px' }}>Take the best of each</button>
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Attribute sources">
+              <table className="b-grid">
+                <thead>
+                  <tr><th scope="col" style={{ textAlign: 'left' }}>Attribute</th>
+                    {sources.map((s) => <th key={s.id} scope="col" style={{ textAlign: 'center', fontWeight: 600 }}><PlayerFace name={s.name} src={s.img} color={s.teamColor} size={32} /><div style={{ fontSize: '.75rem', marginTop: 4 }}>{s.name.split(' ').slice(-1)[0]}</div></th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {cats.map((c) => (
+                    <tr key={c}>
+                      <th scope="row" style={{ textAlign: 'left', fontWeight: 500, textTransform: 'none', letterSpacing: 0, fontSize: '.92rem', color: 'var(--bone)', whiteSpace: 'nowrap' }}>{ATTRIBUTE_LABELS[c]}</th>
+                      {sources.map((s, i) => (
+                        <td key={s.id}>
+                          <button type="button" className="b-cell" aria-pressed={choices[c] === i} aria-label={`${ATTRIBUTE_LABELS[c]} from ${s.name}: ${s.attrs?.[c] ?? 50}`}
+                            onClick={() => setChoices((prev) => ({ ...prev, [c]: i }))}>{s.attrs?.[c] ?? 50}</button>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+      </div>
+
+      <aside className="g-side" aria-label="Your player pool">
+        <div className="g-side-inner">
+          <p className="g-kicker">Your pool</p>
+          <ol className="g-slots">
+            {Array.from({ length: draft.total }, (_, i) => {
+              const s = sources[i];
+              return (
+                <li key={i} className={s ? 'filled' : ''}>
+                  <span className="g-slot-k">#{i + 1}</span>
+                  {s ? <span className="g-slot-v"><PlayerFace name={s.name} src={s.img} color={s.teamColor} size={24} /><span className="g-slot-name">{s.name}</span><span className="num g-slot-ovr">{s.ovr}</span></span>
+                    : <span className="g-slot-empty">Open</span>}
+                </li>
+              );
+            })}
+          </ol>
+          {draft.done && (
+            <>
+              <p className="g-fine">{Object.keys(choices).length} of {cats.length} attributes chosen</p>
+              <button className="btn btn-primary g-side-cta" onClick={grade} disabled={!complete || !!busy}>{busy === 'grade' ? 'Simulating' : 'Grade and simulate'}</button>
+            </>
+          )}
+          <button className="btn-link g-reset" onClick={() => { setDraft(null); setSources([]); setChoices({}); }}>Start over</button>
         </div>
-      )}
+      </aside>
     </div>
   );
 }

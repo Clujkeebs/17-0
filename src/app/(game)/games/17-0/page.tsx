@@ -1,3 +1,4 @@
+import type { ReelTeam } from '@/components/game/Reel';
 import type { Metadata } from 'next';
 import { SeventeenGame } from '@/components/game/SeventeenGame';
 import { getTeams } from '@/lib/server/data';
@@ -11,8 +12,8 @@ export const metadata: Metadata = {
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ daily?: string }> }) {
   const sp = await searchParams;
-  let pool: { abbreviation: string; city: string; name: string; color: string }[] = [];
-  try { pool = (await getTeams()).map((t) => ({ abbreviation: t.abbreviation, city: t.city, name: t.name, color: t.primaryColor })); } catch { /* reel falls back */ }
-  if (!pool.length) pool = [{ abbreviation: 'NFL', city: '', name: '', color: '#4A5568' }];
+  let pool: ReelTeam[] = [];
+  try { pool = (await getTeams()).map((t) => ({ id: t.id, abbreviation: t.abbreviation, city: t.city, name: t.name, color: t.primaryColor, logoUrl: t.logoUrl })); } catch { /* reel falls back */ }
+  
   return <SeventeenGame reelPool={pool} initialDaily={sp.daily === '1'} />;
 }

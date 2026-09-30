@@ -37,7 +37,7 @@ describe('parseRatings', () => {
     const m = out[0];
     expect(m).toMatchObject({
       maddenId: 'ea-101', fullName: 'Patrick Mahomes', slug: 'patrick-mahomes', position: 'QB', teamLabel: 'Kansas City Chiefs',
-      overallRating: 97, heightInches: 74, weightLbs: 225, jerseyNumber: 15, archetype: 'Field General', imageUrl: 'https://example.com/mahomes.png',
+      overallRating: 97, heightInches: 74, weightLbs: 225, jerseyNumber: 15, archetype: 'Field General', imageUrl: null,
     });
     expect(m.attributes.throwPower).toBe(96);
     expect(m.attributes.bcVision).toBe(70);

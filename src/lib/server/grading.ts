@@ -48,9 +48,10 @@ async function saveResultTx(s: { id: string; isDaily: boolean; dailyDate: string
   });
 }
 
-export async function gradeSeventeen(ctx: Ctx, picks: { slot: Slot; id: string }[]) {
+export async function gradeSeventeen(ctx: Ctx) {
   const s = await openSession(ctx, '17-0');
   const payload = s.spinPayload as SpinPayload;
+  const picks = (payload.picks ?? []).map((x) => ({ slot: x.slot as Slot, id: x.id }));
   if (picks.length !== 6 || new Set(picks.map((p) => p.slot)).size !== 6 || !SLOTS.every((sl) => picks.some((p) => p.slot === sl))) {
     throw new GradeError('Fill all six slots.');
   }
@@ -81,15 +82,18 @@ export async function gradeSeventeen(ctx: Ctx, picks: { slot: Slot; id: string }
   }
   // Daily results must be identical for identical rosters, so seed from the date plus the roster.
   const seed = s.isDaily ? `${s.seed}:${[...playerIds, ...coachIds].sort().join(',')}` : s.id;
-  const result = gradeRoster(seed, full, formulas, weights);
+  const teamRows = await db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation }).from(schema.teams);
+  const opponents = teamRows.filter((t) => !usedTeams.has(t.id)).map((t) => t.abbr);
+  const result = gradeRoster(seed, full, formulas, weights, opponents);
   const resultData = { ...result, picks: full.map(({ slot, name, teamId, group, overall }) => ({ slot, name, teamId, group, overall })) };
   const id = await saveResult(s, ctx, '17-0', resultData, result.score, result.wins === 17);
   return { id, result: resultData, daily: s.isDaily };
 }
 
-export async function gradeBuildAPlayer(ctx: Ctx, playerIds: string[], choices: BuildChoices) {
+export async function gradeBuildAPlayer(ctx: Ctx, choices: BuildChoices) {
   const s = await openSession(ctx, 'build-a-player');
   const payload = s.spinPayload as SpinPayload;
+  const playerIds = (payload.picks ?? []).map((x) => x.id);
   const position = payload.position!;
   if (playerIds.length !== payload.teams.length || playerIds.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) throw new GradeError('Pick one player from each team.');
   const rows = await db.select().from(schema.players).where(inArray(schema.players.id, playerIds));

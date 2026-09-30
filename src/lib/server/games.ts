@@ -18,9 +18,11 @@ export interface SpinPayload {
   reserves: number[];
   respinsUsed: number;
   position?: BuildPosition;
+  /** Server-side draft log. One entry per revealed team, in order. The next team is revealed only after a pick. */
+  picks?: { teamId: number; id: string; slot?: Slot }[];
 }
 
-export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: Slot[]; attrs?: Partial<Record<string, number>> }
+export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: Slot[]; attrs?: Partial<Record<string, number>>; img?: string | null }
 export interface PublicTeam { id: number; name: string; city: string; abbreviation: string; slug: string; color: string; logoUrl: string | null; players: PublicPlayer[] }
 
 const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
@@ -63,18 +65,6 @@ export async function loadSession(id: string, tok: string) {
   return row;
 }
 
-export async function respin(sessionId: string, tok: string, index: number) {
-  const s = await loadSession(sessionId, tok);
-  if (!s || s.completed || s.expiresAt < new Date()) return { error: 'Session expired. Spin again.' as const };
-  const p = s.spinPayload as SpinPayload;
-  if (p.respinsUsed >= MAX_RESPINS) return { error: 'No re-spins left.' as const };
-  if (!Number.isInteger(index) || index < 0 || index >= p.teams.length) return { error: 'Invalid team.' as const };
-  const next: SpinPayload = { ...p, teams: [...p.teams], respinsUsed: p.respinsUsed + 1 };
-  next.teams[index] = p.reserves[p.respinsUsed];
-  await db.update(schema.gameSessions).set({ spinPayload: next }).where(eq(schema.gameSessions.id, s.id));
-  return { payload: next };
-}
-
 export function slotsFor(group: PositionGroup | 'HC'): Slot[] {
   return SLOTS.filter((s) => slotAccepts(s, group));
 }
@@ -88,10 +78,10 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
     const list: PublicPlayer[] = players.filter((p) => p.teamId === id).map((p) => {
       const group = positionGroup(p.position);
       const attrs = position ? Object.fromEntries(BUILD_CATEGORIES[position].map((k) => [k, (p.attributes as Record<string, number>)[k] ?? 50])) : undefined;
-      return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs };
+      return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl };
     }).filter((p) => (allowed ? allowed.has(p.group) : p.slots!.length > 0));
     for (const c of coaches.filter((c) => c.teamId === id)) {
-      list.push({ id: `coach:${c.id}`, name: c.fullName, slug: c.slug, position: 'HC', group: 'HC', ovr: c.coachImpactScore, slots: ['HC'] });
+      list.push({ id: `coach:${c.id}`, name: c.fullName, slug: c.slug, position: 'HC', group: 'HC', ovr: c.coachImpactScore, slots: ['HC'], img: c.imageUrl });
     }
     return { id, name: t.name, city: t.city, abbreviation: t.abbreviation, slug: t.slug, color: t.primaryColor, logoUrl: t.logoUrl, players: list };
   });

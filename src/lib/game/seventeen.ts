@@ -46,6 +46,27 @@ export interface SeventeenResult {
   pointDiff: number;
   narrative: string[];
   score: number;
+  schedule: GameLine[];
+}
+
+export interface GameLine { week: number; opp: string; home: boolean; us: number; them: number; win: boolean }
+
+const SCORES = [3, 6, 7, 10, 13, 14, 16, 17, 20, 21, 23, 24, 27, 28, 30, 31, 34, 35, 38, 41, 42, 45];
+
+/** A plausible 17-game schedule consistent with the projected record. Deterministic per seed. */
+export function buildSchedule(seed: string, wins: number, strength: number, opponents: readonly string[]): GameLine[] {
+  const rng = createRng(`sched:${seed}`);
+  const results = rng.shuffle([...Array(wins).fill(true), ...Array(17 - wins).fill(false)] as boolean[]);
+  const opps = rng.shuffle(opponents.length ? opponents : ['OPP']);
+  const edge = clamp((strength - 70) / 25, 0, 1); // better teams win bigger
+  return results.map((win, i) => {
+    const margin = win ? 1 + Math.floor(rng.next() * (6 + edge * 18)) : 1 + Math.floor(rng.next() * (16 - edge * 9));
+    let winner = SCORES[rng.int(7, SCORES.length - 1)];
+    let loser = Math.max(0, winner - margin);
+    if (!SCORES.includes(loser)) loser = SCORES.reduce((b, v) => (Math.abs(v - loser) < Math.abs(b - loser) && v < winner ? v : b), 0);
+    if (loser >= winner) { winner = loser + 3; }
+    return { week: i + 1, opp: opps[i % opps.length], home: rng.next() < 0.5, us: win ? winner : loser, them: win ? loser : winner, win };
+  });
 }
 
 export function gradePick(p: Pick, formulas: Record<FormulaKey, Weights> = DEFAULT_FORMULAS): number {
@@ -58,6 +79,7 @@ export function gradeRoster(
   picks: Pick[],
   formulas: Record<FormulaKey, Weights> = DEFAULT_FORMULAS,
   slotWeights: Record<Slot, number> = SLOT_WEIGHTS,
+  opponents: readonly string[] = [],
 ): SeventeenResult {
   const slots = SLOTS.map((slot) => {
     const p = picks.find((x) => x.slot === slot);
@@ -71,9 +93,10 @@ export function gradeRoster(
   const jitter = rng.int(-2, 3);
   const wins = clamp(Math.round((teamStrength / 99) * 14 + jitter), 0, 17);
   const losses = 17 - wins;
-  const pointDiff = Math.round((wins - 8.5) * 19 + rng.int(-25, 25));
+  const schedule = buildSchedule(seed, wins, teamStrength, opponents);
+  const pointDiff = schedule.reduce((d, g) => d + g.us - g.them, 0);
   const narrative = buildNarrative(seed, slots, wins, losses, pointDiff);
   // Leaderboard score: wins dominate, strength breaks ties.
   const score = wins * 1000 + Math.round(teamStrength * 10);
-  return { slots, teamStrength, wins, losses, pointDiff, narrative, score };
+  return { slots, teamStrength, wins, losses, pointDiff, narrative, score, schedule };
 }

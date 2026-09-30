@@ -1,41 +1,43 @@
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { createGameSession, isGameType, publicTeams, respin, type SpinPayload } from '@/lib/server/games';
+import { createGameSession, isGameType } from '@/lib/server/games';
+import { DraftError, draftState, pickPlayer, respinCurrent } from '@/lib/server/draft';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp } from '@/lib/server/rate-limit';
 import { BUILD_POSITIONS } from '@/lib/game/build';
+import { SLOTS } from '@/lib/game/seventeen';
 
 export const runtime = 'nodejs';
 
-const Body = z.object({
-  daily: z.boolean().optional(),
-  position: z.enum(BUILD_POSITIONS).optional(),
-  respin: z.object({ sessionId: z.string().uuid(), token: z.string().min(10), index: z.number().int().min(0).max(5) }).optional(),
-});
+const Auth = { sessionId: z.string().uuid(), token: z.string().min(10).max(100) };
+const Body = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('start'), daily: z.boolean().optional(), position: z.enum(BUILD_POSITIONS).optional() }),
+  z.object({ action: z.literal('respin'), ...Auth }),
+  z.object({ action: z.literal('pick'), ...Auth, playerId: z.string().max(60), slot: z.enum(SLOTS).optional() }),
+]);
 
+/**
+ * Draft endpoint. `start` opens a session and reveals the first team. `pick` drafts a player from the team
+ * on the clock and reveals the next one. `respin` swaps the team on the clock (two per game).
+ */
 export async function POST(req: Request, { params }: { params: Promise<{ type: string }> }) {
   const { type } = await params;
   if (!isGameType(type)) return errorJson(404, 'Unknown game.');
-  const limited = await limitByIp(req, 'spin');
-  if (limited) return limited;
-  const parsed = Body.safeParse(await req.json().catch(() => ({})));
+  const raw = await req.json().catch(() => ({}));
+  const parsed = Body.safeParse({ action: 'start', ...raw });
   if (!parsed.success) return errorJson(400, 'Bad request.');
   const body = parsed.data;
   try {
-    if (body.respin) {
-      const r = await respin(body.respin.sessionId, body.respin.token, body.respin.index);
-      if ('error' in r) return errorJson(409, r.error!);
-      const p = r.payload as SpinPayload;
-      return json({ teams: await publicTeams(p.teams, type, p.position), respinsLeft: 2 - p.respinsUsed });
-    }
+    if (body.action === 'respin') return json(await respinCurrent(body.sessionId, body.token, type));
+    if (body.action === 'pick') return json(await pickPlayer(body.sessionId, body.token, type, body.playerId, body.slot));
+    const limited = await limitByIp(req, 'spin');
+    if (limited) return limited;
     if (type === 'build-a-player' && !body.position) return errorJson(400, 'Pick a position first.');
     const session = await auth().catch(() => null);
     const { session: s, token, payload } = await createGameSession({ gameType: type, userId: session?.user?.id, daily: body.daily, position: body.position });
-    return json({
-      sessionId: s.id, token, daily: s.isDaily, date: s.dailyDate, position: payload.position ?? null,
-      teams: await publicTeams(payload.teams, type, payload.position), respinsLeft: 2,
-    });
+    return json({ ...(await draftState(s.id, type, payload)), token, daily: s.isDaily, date: s.dailyDate, position: payload.position ?? null });
   } catch (e) {
+    if (e instanceof DraftError) return errorJson(e.status, e.message);
     console.error('[spin]', (e as Error).message);
     return errorJson(503, 'The reel jammed. Try again in a moment.');
   }

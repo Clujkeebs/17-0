@@ -47,8 +47,14 @@ void (async () => {
   if (process.env.SYNC_ON_BOOT === '1') {
     try {
       const probe = await fetchJsonPages(undefined, async (u, init) => { const r = await fetch(u, init); return r; });
-      const first = JSON.stringify(probe.pages[0]).slice(0, 4000);
-      console.log(`[probe] items=${probe.itemCount} first page: ${first}`);
+      const page = probe.pages[0] as { items?: Record<string, unknown>[] } & Record<string, unknown>;
+      const it = page.items?.[0] ?? {};
+      console.log(`[probe] items=${probe.itemCount} pageKeys=${Object.keys(page).join(',')} itemKeys=${Object.keys(it).join(',')}`);
+      console.log(`[probe] iterations=${JSON.stringify((it.availableIterations as { id: string; label: string }[] | undefined)?.map((x) => `${x.id}=${x.label}`))}`);
+      console.log(`[probe] iteration=${JSON.stringify(it.iteration)} team=${JSON.stringify(it.team)} position=${JSON.stringify(it.position)}`);
+      console.log(`[probe] stats=${JSON.stringify(it.stats).slice(0, 1500)}`);
+      const meta = Object.fromEntries(Object.entries(page).filter(([k]) => k !== 'items'));
+      console.log(`[probe] meta=${JSON.stringify(meta).slice(0, 1500)}`);
     } catch (e) { console.warn('[probe] ratings feed failed:', (e as Error).message); }
     await getQueue(QUEUE_NAMES.sync).add('sync', { by: 'boot' }, { attempts: 1 }).catch(() => {});
   }

@@ -1,213 +1,194 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reel, type ReelTeam } from './Reel';
 import { SoundToggle } from './SoundToggle';
-import { CloseIcon, ReelIcon } from '../Icons';
+import { PlayerFace } from './PlayerFace';
 import { track } from '@/lib/analytics';
 import { SLOTS, SLOT_LABELS, type Slot } from '@/lib/game/seventeen';
-import type { PublicTeam, PublicPlayer } from '@/lib/server/games';
+import type { DraftState } from '@/lib/server/draft';
+import type { PublicPlayer } from '@/lib/server/games';
+import './game.css';
 
-interface Spin { sessionId: string; token: string; teams: PublicTeam[]; respinsLeft: number; daily: boolean; date: string | null }
-type Picks = Partial<Record<Slot, { player: PublicPlayer; teamId: number }>>;
-const RULES_KEY = 'gl-17-0-rules';
-const STATE_KEY = 'gl-17-0-state';
+type Draft = DraftState & { token: string; daily: boolean; date: string | null };
+const STATE_KEY = 'gl-17-0-draft';
+const SLOT_HINT: Record<Slot, string> = { QB: 'Quarterback', RB: 'Running back', WRTE: 'Receiver or tight end', DEF: 'Any defender', K: 'Kicker', HC: 'Head coach' };
+
+async function post(body: object) {
+  const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? 'Something went wrong. Try again.');
+  return data;
+}
 
 export function SeventeenGame({ reelPool, initialDaily = false }: { reelPool: ReelTeam[]; initialDaily?: boolean }) {
   const router = useRouter();
-  const [rulesOpen, setRulesOpen] = useState(true);
-  const [spin, setSpin] = useState<Spin | null>(null);
-  const [revealed, setRevealed] = useState(0);
-  const [picks, setPicks] = useState<Picks>({});
-  const [focusSlot, setFocusSlot] = useState<Slot | null>(null);
-  const [busy, setBusy] = useState<'spin' | 'grade' | 'respin' | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [spinKey, setSpinKey] = useState(0);
+  const [landed, setLanded] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [announce, setAnnounce] = useState('');
-  const [reelKey, setReelKey] = useState(0);
 
+  // Resume an in-progress draft after a refresh.
   useEffect(() => {
     try {
-      const saved = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null');
-      if (saved?.spin) { setSpin(saved.spin); setPicks(saved.picks ?? {}); setRevealed(saved.spin.teams.length); }
+      const saved = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Draft | null;
+      if (saved?.sessionId) { setDraft(saved); setLanded(true); }
     } catch { /* ignore */ }
   }, []);
-  useEffect(() => {
-    try { if (spin) sessionStorage.setItem(STATE_KEY, JSON.stringify({ spin, picks })); } catch { /* ignore */ }
-  }, [spin, picks]);
+  useEffect(() => { try { if (draft) sessionStorage.setItem(STATE_KEY, JSON.stringify(draft)); } catch {} }, [draft]);
 
-  const dismissRules = () => { setRulesOpen(false); try { localStorage.setItem(RULES_KEY, '1'); document.documentElement.dataset.rules = 'hidden'; } catch {} };
+  const filled = useMemo(() => new Map((draft?.picks ?? []).map((p) => [p.slot as Slot, p])), [draft]);
+  const openSlots = SLOTS.filter((s) => !filled.has(s));
+  const team = draft?.team ?? null;
+  const reelTarget: ReelTeam | null = team ? { id: team.id, abbreviation: team.abbreviation, city: team.city, name: team.name, color: team.color, logoUrl: team.logoUrl } : null;
 
-  async function doSpin(daily: boolean) {
-    setBusy('spin'); setError(''); setPicks({}); setRevealed(0);
+  async function start(daily: boolean) {
+    setBusy('start'); setError('');
     try {
-      const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ daily }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Spin failed.');
-      setSpin(data); setReelKey((k) => k + 1);
+      const d = await post({ action: 'start', daily });
+      setDraft(d); setLanded(false); setSpinKey((k) => k + 1);
       track('game_started', { game: '17-0', daily });
-    } catch (e) { setError((e as Error).message); }
-    finally { setBusy(null); }
+    } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
-  const draftedTeams = useMemo(() => new Set(Object.values(picks).map((p) => p!.teamId)), [picks]);
-  const filled = SLOTS.filter((s) => picks[s]).length;
-  const allRevealed = spin ? revealed >= spin.teams.length : false;
-
-  const onLand = useCallback((i: number, t: PublicTeam) => {
-    setRevealed((r) => Math.max(r, i + 1));
-    setAnnounce(`Team ${i + 1}: ${t.city} ${t.name}`);
-  }, []);
-
-  async function doRespin(index: number) {
-    if (!spin) return;
-    setBusy('respin'); setError('');
+  async function act(body: object, label: string) {
+    if (!draft) return;
+    setBusy(label); setError('');
     try {
-      const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ respin: { sessionId: spin.sessionId, token: spin.token, index } }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Re-spin failed.');
-      setSpin({ ...spin, teams: data.teams, respinsLeft: data.respinsLeft });
-      setAnnounce(`Re-spun. New team: ${data.teams[index].city} ${data.teams[index].name}`);
-    } catch (e) { setError((e as Error).message); }
-    finally { setBusy(null); }
+      const d = await post({ ...body, sessionId: draft.sessionId, token: draft.token });
+      setDraft({ ...draft, ...d });
+      if (!d.done) { setLanded(false); setSpinKey((k) => k + 1); }
+      return d as DraftState;
+    } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
-  function choose(team: PublicTeam, player: PublicPlayer) {
-    const slot = (focusSlot && player.slots?.includes(focusSlot)) ? focusSlot : player.slots?.[0];
-    if (!slot) return;
-    setPicks((prev) => {
-      const next: Picks = { ...prev };
-      for (const s of SLOTS) if (next[s]?.teamId === team.id) delete next[s]; // one pick per team
-      if (prev[slot]?.player.id === player.id) return next; // toggle off
-      next[slot] = { player, teamId: team.id };
-      return next;
-    });
-    setFocusSlot(null);
-    setAnnounce(`${player.name} drafted at ${SLOT_LABELS[slot]}`);
+  async function pick(p: PublicPlayer) {
+    const d = await act({ action: 'pick', playerId: p.id }, 'pick');
+    if (d) setAnnounce(`${p.name} drafted. ${d.done ? 'Roster complete.' : 'Next team spinning.'}`);
   }
 
   async function grade() {
-    if (!spin || filled < 6) return;
+    if (!draft) return;
     setBusy('grade'); setError('');
     try {
-      const res = await fetch('/api/games/17-0/grade', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ sessionId: spin.sessionId, token: spin.token, picks: SLOTS.map((s) => ({ slot: s, id: picks[s]!.player.id })) }) });
+      const res = await fetch('/api/games/17-0/grade', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId: draft.sessionId, token: draft.token }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Grading failed.');
-      track('game_completed', { game: '17-0', wins: data.result.wins, daily: spin.daily });
+      track('game_completed', { game: '17-0', wins: data.result.wins, daily: draft.daily });
       try { sessionStorage.removeItem(STATE_KEY); } catch {}
       router.push(`/results/${data.id}`);
     } catch (e) { setError((e as Error).message); setBusy(null); }
   }
 
-  const slotOpen = (s: Slot) => !picks[s];
+  function reset() { try { sessionStorage.removeItem(STATE_KEY); } catch {} setDraft(null); setError(''); }
+
+  if (!draft) {
+    return (
+      <div className="g-wrap">
+        <section className="g-intro">
+          <p className="g-kicker">{initialDaily ? 'Daily puzzle' : '17-0'}</p>
+          <h1 className="g-title">Six spins. Six picks.<br />One shot at 17-0.</h1>
+          <p className="g-lede">Each spin lands on an NFL team. Draft one player or coach from it into your roster, then spin again. QB and defense carry half the grade.</p>
+          <div className="g-slots-preview" aria-hidden="true">{SLOTS.map((s) => <span key={s}>{SLOT_LABELS[s]}</span>)}</div>
+          <div className="g-actions">
+            <button className="btn btn-primary btn-lg" onClick={() => start(initialDaily)} disabled={!!busy}>{busy ? 'Starting' : initialDaily ? "Start today's daily" : 'Start spinning'}</button>
+            <button className="btn btn-lg" onClick={() => start(!initialDaily)} disabled={!!busy}>{initialDaily ? 'Practice game' : "Play today's daily"}</button>
+          </div>
+          <p className="g-fine">Two re-spins per game. Daily results count on the leaderboard when you are signed in.</p>
+          {error && <p role="alert" className="field-error">{error}</p>}
+        </section>
+      </div>
+    );
+  }
 
   return (
-    <div className="container section">
+    <div className="g-wrap g-board">
       <div aria-live="polite" className="sr-only">{announce}</div>
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <span className="eyebrow">{spin?.daily ? `Daily 17-0 · ${spin.date}` : '17-0'}</span>
-          <h1 style={{ marginBottom: 0 }}>Six picks. Seventeen games.</h1>
-        </div>
-        <div className="row">
-          <div className="dots" role="img" aria-label={`${filled} of 6 slots filled`}>
-            {SLOTS.map((s) => <span key={s} className={`dot ${picks[s] ? 'on' : ''}`} />)}
+      <div className="g-main">
+        <header className="g-head">
+          <div>
+            <h1 className="g-kicker" style={{ margin: 0 }}>{draft.daily ? `Daily 17-0 · ${draft.date}` : '17-0 practice'} · {draft.done ? 'Draft complete' : `Spin ${draft.index + 1} of ${draft.total}`}</h1>
+            <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={draft.total} aria-valuenow={draft.picks.length} aria-label="Picks made">
+              {Array.from({ length: draft.total }, (_, i) => <span key={i} className={i < draft.picks.length ? 'on' : i === draft.index ? 'now' : ''} />)}
+            </div>
           </div>
           <SoundToggle />
-        </div>
+        </header>
+
+        {error && <div role="alert" className="card card-error">{error}</div>}
+
+        {team && reelTarget ? (
+          <section className="g-stage" aria-labelledby="clock-h">
+            <div className="g-team">
+              <Reel pool={reelPool} target={reelTarget} spinKey={`${draft.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.city} ${team.name} on the clock`); }} />
+              <div className={`g-team-name ${landed ? 'in' : ''}`}>
+                <p className="g-kicker">On the clock</p>
+                <h2 id="clock-h">{landed ? <>{team.city} <strong>{team.name}</strong></> : 'Spinning'}</h2>
+              </div>
+              <button className="btn btn-sm g-respin" onClick={() => act({ action: 'respin' }, 'respin')} disabled={!landed || !!busy || draft.respinsLeft <= 0}>
+                Re-spin <span className="num">{draft.respinsLeft} left</span>
+              </button>
+            </div>
+
+            <div className={`g-roster ${landed ? 'in' : ''}`}>
+              {openSlots.map((slot) => {
+                const options = team.players.filter((p) => p.slots?.includes(slot));
+                if (!options.length) return null;
+                return (
+                  <div key={slot} className="g-group">
+                    <h3 className="g-group-h"><span>{SLOT_LABELS[slot]}</span><span className="muted">{SLOT_HINT[slot]}</span></h3>
+                    <ul className="g-list">
+                      {options.map((p) => (
+                        <li key={p.id}>
+                          <button type="button" className="g-player" onClick={() => pick(p)} disabled={!landed || !!busy}
+                            aria-label={`Draft ${p.name}, ${p.position}, ${p.group === 'HC' ? 'coach impact' : 'overall'} ${p.ovr}, as your ${SLOT_LABELS[slot]}`}>
+                            <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
+                            <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position}</span></span>
+                            <span className="g-ovr num">{p.ovr}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : (
+          <section className="g-done">
+            <p className="g-kicker">Roster complete</p>
+            <h2 className="g-title g-title-sm">Six picks in. Time to play the season.</h2>
+            <button className="btn btn-primary btn-lg" onClick={grade} disabled={!!busy}>{busy === 'grade' ? 'Simulating 17 games' : 'Simulate the season'}</button>
+          </section>
+        )}
       </div>
 
-      {rulesOpen && (
-        <section className="card card-green rules-card" aria-labelledby="rules-h" style={{ marginBottom: 24, position: 'relative' }}>
-          <h2 id="rules-h" style={{ fontSize: '1.1rem' }}>How it works</h2>
-          <ol style={{ margin: 0, paddingLeft: 20 }}>
-            <li>Spin. Six teams land, one at a time.</li>
-            <li>Draft exactly one player or coach from each team: QB, RB, WR/TE, DEF, K, HC.</li>
-            <li>Two re-spins per game. They only replace teams you have not drafted from.</li>
-            <li>Grade the roster. QB and DEF count 25 percent each, RB, WR/TE and HC 15, K 5.</li>
-          </ol>
-          <button className="btn btn-sm" style={{ position: 'absolute', top: 12, right: 12 }} onClick={dismissRules} aria-label="Dismiss rules"><CloseIcon size={16} /></button>
-        </section>
-      )}
-
-      {!spin && (
-        <div className="pregame field">
-          <div className="scoreboard pregame-board" aria-hidden="true">
-            <div className="sb-top"><span>Projected record</span><span>{initialDaily ? 'Daily' : 'Practice'}</span></div>
-            <div className="sb-num num">?<span className="sb-dash">-</span>?</div>
-            <div className="sb-slots">{SLOTS.map((s) => <span key={s}>{SLOT_LABELS[s]}</span>)}</div>
-          </div>
-          <div className="pregame-copy">
-            <p className="hero-sub" style={{ marginBottom: 20 }}>Nobody goes 17-0 by accident. Mahomes helps. So does a kicker who can hit from 55.</p>
-            <div className="stack" style={{ maxWidth: 360 }}>
-              <button className="btn btn-primary btn-lg" onClick={() => doSpin(initialDaily)} disabled={!!busy}><ReelIcon size={18} /> {busy === 'spin' ? 'Spinning' : initialDaily ? 'Spin the daily' : 'Spin'}</button>
-              <button className="btn btn-lg" onClick={() => doSpin(!initialDaily)} disabled={!!busy}>{initialDaily ? 'Practice spin instead' : "Play today's daily"}</button>
-            </div>
-            <p className="hint" style={{ marginTop: 12 }}>Daily results count toward the leaderboard when you are signed in.</p>
-          </div>
-        </div>
-      )}
-
-      {error && <div role="alert" className="card card-error" style={{ margin: '16px 0' }}>{error}</div>}
-
-      {spin && (
-        <>
-          <div className="slot-bar" role="group" aria-label="Roster slots" style={{ marginBottom: 20 }}>
-            {SLOTS.map((s) => (
-              <button key={s} type="button" className={`slot ${picks[s] ? 'filled' : ''}`} aria-pressed={focusSlot === s} onClick={() => setFocusSlot(focusSlot === s ? null : s)}>
-                <span className="k">{SLOT_LABELS[s]}</span>
-                <span className="n">{picks[s]?.player.name ?? 'Empty'}</span>
-                {picks[s] && <span className="num muted" style={{ fontSize: '.8rem' }}>{picks[s]!.player.ovr}</span>}
-              </button>
-            ))}
-          </div>
-          {focusSlot && <p className="hint" style={{ marginBottom: 12 }}>Showing players who fit {SLOT_LABELS[focusSlot]}. Click the slot again to clear.</p>}
-
-          <div className="stack" key={reelKey}>
-            {spin.teams.map((t, i) => {
-              const drafted = draftedTeams.has(t.id);
-              const visible = i < revealed || i === revealed;
+      <aside className="g-side" aria-label="Your roster">
+        <div className="g-side-inner">
+          <p className="g-kicker">Your roster</p>
+          <ol className="g-slots">
+            {SLOTS.map((s) => {
+              const p = filled.get(s);
               return (
-                <section key={`${t.id}-${i}`} className={`team-card ${drafted ? 'drafted' : ''}`} aria-label={`${t.city} ${t.name}`} style={{ opacity: visible ? 1 : 0.35 }}>
-                  <div>
-                    <span className="eyebrow">Team {i + 1}</span>
-                    {i <= revealed && <Reel pool={reelPool} target={{ abbreviation: t.abbreviation, city: t.city, name: t.name, color: t.color }} delay={i === revealed ? 400 : 0} onLand={() => onLand(i, t)} />}
-                    {i < revealed && <p style={{ margin: '4px 0 8px', fontWeight: 700 }}>{t.city} {t.name}</p>}
-                    {i < revealed && !drafted && spin.respinsLeft > 0 && allRevealed && (
-                      <button className="btn btn-sm" onClick={() => doRespin(i)} disabled={!!busy}>Re-spin ({spin.respinsLeft} left)</button>
-                    )}
-                  </div>
-                  {i < revealed ? (
-                    <div className="plist">
-                      {t.players.map((p) => {
-                        const pickedHere = Object.values(picks).some((x) => x!.player.id === p.id);
-                        const fitsFocus = !focusSlot || p.slots?.includes(focusSlot);
-                        const slot = p.slots?.[0];
-                        const blocked = !pickedHere && !!slot && !slotOpen(slot) && picks[slot]?.teamId !== t.id;
-                        return (
-                          <button key={p.id} type="button" className={`pbtn ${fitsFocus ? '' : 'dim'}`} aria-pressed={pickedHere}
-                            onClick={() => choose(t, p)} disabled={!allRevealed}
-                            aria-label={`${p.name}, ${p.position}, rated ${p.ovr}${blocked ? `. Replaces your current ${SLOT_LABELS[slot!]}` : ''}`}>
-                            <span><span style={{ display: 'block', fontWeight: 600, fontSize: '.9rem' }}>{p.name}</span><span className="pos">{p.position}{p.group === 'HC' ? ' · impact' : ''}</span></span>
-                            <span className="ovr">{p.ovr}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : <div className="skeleton" style={{ minHeight: 96 }} />}
-                </section>
+                <li key={s} className={p ? 'filled' : ''}>
+                  <span className="g-slot-k">{SLOT_LABELS[s]}</span>
+                  {p ? (
+                    <span className="g-slot-v">
+                      {p.logoUrl ? <img src={p.logoUrl} alt="" width={22} height={22} /> : <span className="g-dot" style={{ background: p.teamColor }} />}
+                      <span className="g-slot-name">{p.name}</span>
+                      <span className="num g-slot-ovr">{p.ovr}</span>
+                    </span>
+                  ) : <span className="g-slot-empty">Open</span>}
+                </li>
               );
             })}
-          </div>
-
-          <div className="row" style={{ marginTop: 24, position: 'sticky', bottom: 0, background: 'var(--navy)', padding: '12px 0', borderTop: '1px solid var(--steel)' }}>
-            <button className="btn btn-primary" onClick={grade} disabled={filled < 6 || !!busy}>{busy === 'grade' ? 'Grading' : 'Grade My Roster'}</button>
-            <span className="muted num">{filled}/6</span>
-            <button className="btn-link" onClick={() => { try { sessionStorage.removeItem(STATE_KEY); } catch {} setSpin(null); setPicks({}); }}>Start over</button>
-          </div>
-        </>
-      )}
+          </ol>
+          {draft.done && <button className="btn btn-primary g-side-cta" onClick={grade} disabled={!!busy}>{busy === 'grade' ? 'Simulating' : 'Simulate the season'}</button>}
+          <button className="btn-link g-reset" onClick={reset}>Start over</button>
+        </div>
+      </aside>
     </div>
   );
 }
