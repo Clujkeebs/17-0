@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { createGameSession, isGameType } from '@/lib/server/games';
+import { createGameSession, isGameType, todaysResult } from '@/lib/server/games';
 import { DraftError, draftState, pickPlayer, respinCurrent } from '@/lib/server/draft';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp } from '@/lib/server/rate-limit';
@@ -34,6 +34,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ type: s
     if (limited) return limited;
     if (type === 'build-a-player' && !body.position) return errorJson(400, 'Pick a position first.');
     const session = await auth().catch(() => null);
+    if (body.daily) {
+      // Today is ranked: account required, one attempt per game per day.
+      if (!session?.user?.id) return errorJson(401, 'Sign in to play Today. It is ranked.', { requireAccount: true });
+      const done = await todaysResult(session.user.id, type);
+      if (done) return errorJson(409, 'You already played Today. Casual is unlimited.', { resultId: done });
+    }
     const { session: s, token, payload } = await createGameSession({ gameType: type, userId: session?.user?.id, daily: body.daily, position: body.position });
     return json({ ...(await draftState(s.id, type, payload)), token, daily: s.isDaily, date: s.dailyDate, position: payload.position ?? null });
   } catch (e) {

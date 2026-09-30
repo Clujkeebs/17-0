@@ -116,3 +116,6 @@
 .b-trait:disabled { opacity: .5; cursor: default; }
 .g-board .g-slots li { grid-template-columns: minmax(56px, auto) 1fr; column-gap: 12px; }
 .g-roster-wait { padding: 20px 24px 24px; display: grid; gap: 8px; } .g-stage { scroll-margin-top: 150px; } @media (min-width: 901px) { .g-stage { scroll-margin-top: 80px; } }
+.g-modes { display: inline-flex; padding: 4px; border: 1px solid var(--steel); border-radius: 999px; background: var(--green); }
+.g-modes button { border: 0; background: transparent; padding: 8px 18px; border-radius: 999px; font: 600 .9rem var(--font-ui); color: var(--bone-dim); cursor: pointer; min-height: 40px; }
+.g-modes button.on { background: var(--bone); color: var(--navy); }

@@ -25,8 +25,7 @@ test('account lifecycle', async ({ page, request }, info) => {
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 
-  await page.goto('/games/17-0?daily=1');
-  await page.getByRole('button', { name: /Start today's daily/ }).click();
+  await page.goto('/games/17-0?mode=today');
   for (let i = 0; i < 6; i++) {
     const btn = page.locator('.g-player:not([disabled])').first();
     await expect(btn).toBeVisible({ timeout: 20_000 });

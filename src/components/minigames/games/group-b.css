@@ -1,0 +1,50 @@
+/* Group B mini games: Blind Resume, Rating Match, Guess the Overall */
+.gb-sheet { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 0 0 16px; }
+.gb-stat { border: 1px solid var(--steel); border-radius: 12px; padding: 10px 12px; background: var(--green); }
+.gb-stat dt { font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--bone-dim); margin: 0 0 4px; }
+.gb-stat dd { margin: 0; font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
+.gb-stat.hi { background: var(--bone); border-color: var(--bone); }
+.gb-stat.hi dt { color: #D4D2CC; }
+.gb-stat.hi dd { color: #fff; }
+.gb-bio { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.gb-feedback { margin: 12px 0 0; min-height: 1.5em; font-weight: 600; }
+.gb-reveal { animation: gb-in .35s ease both; }
+@keyframes gb-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.gb-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--steel-hi); border-radius: 999px; background: var(--navy); font: 600 .9rem var(--font-ui); color: var(--bone); cursor: pointer; min-height: 44px; }
+.gb-toggle[aria-pressed=true] { background: var(--orange); border-color: var(--orange); color: #fff; }
+.gb-toggle:disabled { opacity: .5; cursor: not-allowed; }
+.gb-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-top: 16px; }
+
+/* Rating Match */
+.gb-match { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; }
+@media (max-width: 700px) { .gb-match { grid-template-columns: 1fr; } }
+.gb-col h3 { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--bone-dim); margin: 0 0 8px; }
+.gb-tag { display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 8px; background: var(--green); border: 1px solid var(--steel); font-weight: 700; font-size: .85rem; flex: none; }
+.gb-tag.on { background: var(--bone); color: #fff; border-color: var(--bone); }
+.gb-line { display: grid; grid-template-columns: auto repeat(5, minmax(0, 1fr)); gap: 6px; align-items: center; }
+.gb-line .v { text-align: center; font-weight: 700; }
+.gb-line .v small { display: block; font-size: .62rem; font-weight: 600; color: var(--bone-dim); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gb-line .v.ovr { color: var(--orange); }
+.gb-dots { display: flex; gap: 6px; }
+.gb-dots span { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--steel-hi); }
+.gb-dots span.used { background: var(--bone); border-color: var(--bone); }
+
+/* Guess the Overall */
+.gb-anchors { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 20px; }
+@media (max-width: 480px) { .gb-anchors { grid-template-columns: 1fr; } }
+.gb-anchor { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px dashed var(--steel-hi); border-radius: 12px; min-width: 0; }
+.gb-anchor .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gb-anchor .o { font-weight: 700; font-size: 1.25rem; }
+.gb-target { display: flex; align-items: center; gap: 14px; margin: 0 0 16px; }
+.gb-dial { display: flex; align-items: center; gap: 12px; }
+.gb-dial output { font-size: clamp(3rem, 10vw, 4.5rem); font-weight: 700; letter-spacing: -0.05em; min-width: 2.2ch; text-align: center; line-height: 1; }
+.gb-step { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--steel-hi); background: var(--navy); font: 700 1.4rem var(--font-ui); color: var(--bone); cursor: pointer; flex: none; }
+.gb-step:disabled { opacity: .4; cursor: not-allowed; }
+.gb-range { width: 100%; accent-color: var(--orange); height: 32px; margin: 12px 0 4px; }
+.gb-scale { display: flex; justify-content: space-between; font-size: .75rem; color: var(--bone-dim); }
+.gb-bar { display: block; position: relative; height: 8px; border-radius: 4px; background: var(--green); border: 1px solid var(--steel); margin-top: 6px; }
+.gb-bar i { position: absolute; top: -4px; width: 3px; height: 14px; border-radius: 2px; transform: translateX(-50%); }
+.gb-bar i.a { background: var(--bone); }
+.gb-bar i.g { background: var(--orange); }
+.gb-bar b { position: absolute; top: 0; bottom: 0; background: rgba(200,16,46,.18); }
+@media (prefers-reduced-motion: reduce) { .gb-reveal { animation: none; } }

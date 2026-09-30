@@ -1,0 +1,52 @@
+/* Styles for group A mini games: The Grid, Mystery Player, Where'd He Go? */
+.ga-ta { position: relative; }
+.ga-ta input { width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid var(--steel-hi); border-radius: 12px; background: var(--surface); color: var(--bone); font: inherit; font-size: 16px; }
+.ga-ta input:focus-visible { outline: 2px solid var(--bone); outline-offset: 1px; }
+.ga-ta ul { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--steel-hi); border-radius: 12px; box-shadow: var(--shadow-lift); max-height: 320px; overflow-y: auto; }
+.ga-ta li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.ga-ta li[aria-selected=true] { background: var(--green); }
+.ga-ta li.used { opacity: .45; cursor: not-allowed; }
+.ga-lbl { display: block; font-size: .8rem; font-weight: 600; color: var(--bone-dim); margin: 0 0 6px; }
+.ga-live { min-height: 1.4em; margin: 10px 0 0; font-weight: 600; }
+@keyframes ga-pop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+.ga-in { animation: ga-pop .28s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .ga-in { animation: none; } }
+
+/* Grid */
+.ga-board { display: grid; grid-template-columns: minmax(64px, .8fr) repeat(3, 1fr); gap: 6px; }
+.ga-hd { display: flex; align-items: center; justify-content: center; text-align: center; font-size: .78rem; font-weight: 700; letter-spacing: -.01em; padding: 6px 4px; line-height: 1.2; }
+.ga-team { flex-direction: column; gap: 4px; }
+.ga-team b { font-size: 1rem; }
+.ga-dot { width: 10px; height: 10px; border-radius: 50%; }
+.ga-cell { aspect-ratio: 1; min-height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 6px; border: 1px solid var(--steel); border-radius: 12px; background: var(--green); color: var(--bone); font: inherit; font-size: .78rem; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+.ga-cell:hover:not(:disabled) { border-color: var(--bone); }
+.ga-cell[aria-pressed=true] { border-color: var(--bone); box-shadow: inset 0 0 0 2px var(--bone); background: var(--surface); }
+.ga-cell.filled { background: #F0FDF4; border-color: #15803D; cursor: default; }
+.ga-cell .nm { font-weight: 700; font-size: .8rem; line-height: 1.15; }
+.ga-cell .sm { color: var(--bone-dim); font-size: .7rem; }
+.ga-stats { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 16px 0 12px; font-weight: 600; }
+@media (min-width: 700px) { .ga-hd { font-size: .9rem; } .ga-cell { font-size: .9rem; } .ga-cell .nm { font-size: .92rem; } .ga-board { gap: 8px; } }
+.ga-rev { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.ga-rev li { border: 1px solid var(--steel); border-radius: 12px; padding: 10px 14px; }
+.ga-rev li.right { border-color: #15803D; background: #F0FDF4; }
+.ga-rev li.wrong { border-color: var(--orange); background: #FEF2F2; }
+.ga-rev .top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ga-rev .oth { color: var(--bone-dim); font-size: .85rem; margin-top: 4px; }
+
+/* Mystery clue table */
+.ga-clues { width: 100%; overflow-x: auto; }
+.ga-clues table { border-collapse: separate; border-spacing: 4px; width: 100%; min-width: 620px; font-size: .82rem; }
+.ga-clues th { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--bone-dim); font-weight: 600; text-align: center; padding: 2px; }
+.ga-clues th:first-child { text-align: left; }
+.ga-clues td { border: 1px solid var(--steel); border-radius: 8px; padding: 6px; text-align: center; background: var(--surface); vertical-align: middle; }
+.ga-clues td:first-child { text-align: left; font-weight: 700; }
+.ga-clues td.exact { background: #DCFCE7; border-color: #15803D; }
+.ga-clues td.partial, .ga-clues td.close { background: #FEF9C3; border-color: #A16207; }
+.ga-clues .tag { display: block; font-size: .66rem; font-weight: 600; color: var(--bone-dim); text-transform: uppercase; letter-spacing: .04em; }
+.ga-hint { border: 1px dashed var(--steel-hi); border-radius: 12px; padding: 10px 14px; margin: 12px 0; background: var(--green); }
+.ga-hint .sil { font-family: ui-monospace, Menlo, monospace; font-size: 1.15rem; letter-spacing: .12em; font-weight: 700; }
+
+/* Where'd He Go */
+.ga-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.ga-fact { margin: 12px 0 0; color: var(--bone-dim); }
+.ga-board { max-width: 640px; margin: 0 auto; }

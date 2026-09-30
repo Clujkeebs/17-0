@@ -1,3 +1,4 @@
+import { games } from '@/lib/minigames/games';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { allTimeLeaderboard, dailyLeaderboard } from '@/lib/server/leaderboard';
@@ -16,7 +17,8 @@ type SP = Promise<{ tab?: string; game?: string; page?: string }>;
 export default async function Leaderboard({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const tab = sp.tab === 'all-time' ? 'all-time' : 'daily';
-  const game = sp.game === 'build-a-player' ? 'build-a-player' : '17-0';
+  const ALL = [{ slug: '17-0', name: '17-0' }, { slug: 'build-a-player', name: 'Build a Player' }, ...games.map((g) => ({ slug: g.slug, name: g.name }))];
+  const game = ALL.some((g) => g.slug === sp.game) ? sp.game! : '17-0';
   const page = Math.max(1, Number(sp.page) || 1);
   let error = false;
   const daily = tab === 'daily' ? await dailyLeaderboard(game).catch(() => { error = true; return []; }) : [];
@@ -29,8 +31,9 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
       <span className="eyebrow">{tab === 'daily' ? `Daily · ${dailyDateET()} · resets midnight ET` : 'All-time'}</span>
       <h1>Leaderboard</h1>
       <nav aria-label="Leaderboard views" className="row" style={{ marginBottom: 24 }}>
-        <Link className={`btn btn-sm ${tab === 'daily' && game === '17-0' ? 'btn-primary' : ''}`} href={tabLink('daily', '17-0')} aria-current={tab === 'daily' && game === '17-0' ? 'page' : undefined}>Daily 17-0</Link>
-        <Link className={`btn btn-sm ${tab === 'daily' && game === 'build-a-player' ? 'btn-primary' : ''}`} href={tabLink('daily', 'build-a-player')} aria-current={tab === 'daily' && game === 'build-a-player' ? 'page' : undefined}>Daily Build</Link>
+        {ALL.map((g) => (
+          <Link key={g.slug} className={`btn btn-sm ${tab === 'daily' && game === g.slug ? 'btn-primary' : ''}`} href={tabLink('daily', g.slug)} aria-current={tab === 'daily' && game === g.slug ? 'page' : undefined}>{g.name}</Link>
+        ))}
         <Link className={`btn btn-sm ${tab === 'all-time' ? 'btn-primary' : ''}`} href={tabLink('all-time')} aria-current={tab === 'all-time' ? 'page' : undefined}>All-time</Link>
       </nav>
       {error && <div role="alert" className="card card-error">The leaderboard is not responding. Scores are safe, try again in a minute.</div>}
@@ -42,7 +45,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
           </table></div>
         ) : !error && (
           <div className="card"><p>No daily results yet. Be first. Sign in, play the daily, and your name goes here.</p>
-            <Link className="btn btn-primary" href={game === '17-0' ? '/games/17-0?daily=1' : '/games/build-a-player'}>Play the daily</Link></div>
+            <Link className="btn btn-primary" href={`/games/${game}?mode=today`}>Play Today</Link></div>
         )
       ) : (
         <>

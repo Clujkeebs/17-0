@@ -35,4 +35,11 @@ export interface MiniGame<Puzzle = unknown, Answer = unknown> {
    * Must not reveal the full answer. Not saved; the final score is recomputed from the submitted answer.
    */
   check?(p: Puzzle, guess: unknown, data: GameData): unknown;
+  /**
+   * Ranked (Today) integrity: rewrite the submitted answer using the checks this user actually made,
+   * e.g. lock each round to the first pick checked, or count attempts. Called only for Today.
+   */
+  applyChecks?(answer: Answer, checks: unknown[]): Answer;
+  /** Max checks allowed in ranked play (e.g. attempts minus one). */
+  maxChecks?: number;
 }

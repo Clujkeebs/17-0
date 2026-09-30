@@ -324,3 +324,22 @@ html[data-rules=hidden] .rules-card { display: none; }
 .weeks .sc { font-size: .95rem; font-weight: 600; }
 .weeks .op { font-size: .8rem; color: var(--bone-dim); }
 @media (max-width: 480px) { .weeks { grid-template-columns: repeat(4, 1fr); gap: 6px; } .weeks li { padding: 10px 8px; } .weeks .res { font-size: 1.3rem; } }
+/* Brand lockup */
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--bone); }
+.brand .wordmark { font-weight: 800; font-size: 1.2rem; letter-spacing: -0.045em; }
+.brand-rule { width: 1px; height: 18px; background: var(--steel-hi); }
+.brand-record { font-weight: 700; font-size: .95rem; letter-spacing: -0.02em; color: var(--orange); }
+.brand .brand-badge { display: none; }
+/* Games hub */
+.hub-featured { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-top: 32px; }
+@media (max-width: 800px) { .hub-featured { grid-template-columns: 1fr; } }
+.hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-top: 16px; }
+.hub-card { display: flex; flex-direction: column; gap: 6px; padding: 22px; border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); color: var(--bone); text-decoration: none; transition: border-color .15s, transform .15s; min-height: 170px; }
+.hub-card h2, .hub-card h3 { margin: 0; letter-spacing: -0.03em; }
+.hub-card p { margin: 0; color: var(--bone-dim); }
+.hub-feature { min-height: 240px; padding: 28px; background: var(--green); }
+.hub-feature h2 { font-size: clamp(2rem, 4vw, 3rem); }
+.hub-dark { background: var(--bone); color: var(--navy); border-color: var(--bone); }
+.hub-dark p, .hub-dark .eyebrow { color: #B9B7B1; }
+.hub-cta { margin-top: auto; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; }
+@media (hover: hover) and (pointer: fine) { .hub-card:hover { border-color: var(--bone); transform: translateY(-2px); color: inherit; } .hub-dark:hover { color: var(--navy); } }

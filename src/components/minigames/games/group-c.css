@@ -1,0 +1,31 @@
+.gc-board { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.gc-slot { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 14px; border: 1px dashed var(--steel); border-radius: 12px; background: var(--green); }
+.gc-slot.hit { border-style: solid; border-color: #15803D; background: #F0FDF4; animation: gc-pop .35s ease-out; }
+.gc-slot.miss { border-style: solid; border-color: var(--orange); background: #FEF2F2; }
+.gc-rank { width: 2ch; font-weight: 700; color: var(--bone-dim); text-align: right; }
+.gc-name { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gc-tag { font-size: .8rem; font-weight: 600; color: var(--bone-dim); }
+.gc-strikes { display: flex; gap: 6px; align-items: center; }
+.gc-strike { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--steel); display: grid; place-items: center; font-weight: 700; font-size: .8rem; color: var(--bone-dim); }
+.gc-strike.on { background: var(--orange); border-color: var(--orange); color: #fff; animation: gc-shake .3s; }
+.gc-search { position: relative; }
+.gc-search input, .gc-search select { width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid var(--steel); border-radius: 12px; font: inherit; background: var(--navy); color: var(--bone); box-sizing: border-box; }
+.gc-label { display: block; font-weight: 600; margin-bottom: 6px; }
+.gc-list { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); list-style: none; margin: 0; padding: 4px; border: 1px solid var(--steel); border-radius: 12px; background: var(--surface); box-shadow: 0 12px 32px rgba(0,0,0,.12); max-height: 320px; overflow: auto; }
+.gc-list li { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.gc-list li[aria-selected=true] { background: var(--green); }
+.gc-order { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.gc-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--steel); border-radius: 14px; background: var(--navy); transition: transform .15s; }
+.gc-item.drag { opacity: .5; }
+.gc-item.over { border-color: var(--bone); }
+.gc-arrows { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; }
+.gc-arrows button { width: 44px; height: 44px; border: 1px solid var(--steel); border-radius: 10px; background: var(--surface); color: var(--bone); font: 700 1rem var(--font-ui); cursor: pointer; }
+.gc-arrows button:disabled { opacity: .35; cursor: default; }
+.gc-clues { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 8px; }
+.gc-clue { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--steel); background: var(--green); animation: gc-in .35s ease-out; }
+.gc-clue b { display: block; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--bone-dim); margin-bottom: 2px; }
+.gc-feedback { min-height: 1.5em; font-weight: 600; margin: 10px 0 0; }
+@keyframes gc-pop { from { transform: scale(.97); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes gc-in { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes gc-shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { .gc-slot.hit, .gc-strike.on, .gc-clue, .gc-item { animation: none; transition: none; } }

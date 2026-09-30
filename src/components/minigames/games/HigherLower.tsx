@@ -36,7 +36,7 @@ function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Pro
   if (!r) return <p className="muted">{busy ? 'Scoring' : 'Submitting'}</p>;
   return (
     <div>
-      <div className="m-progress" aria-label={`Round ${i + 1} of ${puzzle.rounds.length}`}>{puzzle.rounds.map((_, k) => <span key={k} className={k < i ? 'on' : ''} />)}</div>
+      <div className="m-progress" role="img" aria-label={`Round ${i + 1} of ${puzzle.rounds.length}`}>{puzzle.rounds.map((_, k) => <span key={k} className={k < i ? 'on' : ''} />)}</div>
       <p className="m-kicker">Round {i + 1} of {puzzle.rounds.length}</p>
       <p className="m-big" style={{ margin: '0 0 16px' }}>Who has the higher {r.label.toLowerCase()}?</p>
       <div className="m-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>

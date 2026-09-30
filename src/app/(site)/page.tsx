@@ -1,3 +1,4 @@
+import { games } from '@/lib/minigames/games';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { dailyLeaderboard } from '@/lib/server/leaderboard';
@@ -65,7 +66,7 @@ export default async function Home() {
       </section>
 
       <section className="container" aria-labelledby="games-h">
-        <div className="sec-head"><div><span className="eyebrow">The games</span><h2 id="games-h">Two ways to play.</h2></div></div>
+        <div className="sec-head"><div><span className="eyebrow">The games</span><h2 id="games-h">The headliners.</h2></div><Link href="/games">All games</Link></div>
         <div className="home-tiles">
           <Link href="/games/17-0" className="tile tile-wide">
             <span className="eyebrow">Daily</span>
@@ -90,6 +91,19 @@ export default async function Home() {
             </div>
             <div className="tile-foot"><span className="tile-cta">Build <ArrowIcon size={16} /></span></div>
           </Link>
+        </div>
+      </section>
+
+      <section className="container section" aria-labelledby="daily-h">
+        <div className="sec-head"><div><span className="eyebrow">Daily puzzles</span><h2 id="daily-h">Five minutes. Every morning.</h2></div><Link href="/games">See all</Link></div>
+        <div className="hub-grid">
+          {games.map((g) => (
+            <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+              <h3>{g.name}</h3>
+              <p>{g.tagline}</p>
+              <span className="hub-cta">Play</span>
+            </Link>
+          ))}
         </div>
       </section>
 

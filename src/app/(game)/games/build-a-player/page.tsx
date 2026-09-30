@@ -4,6 +4,8 @@ import { BuildGame } from '@/components/game/BuildGame';
 import { getTeams } from '@/lib/server/data';
 import { BUILD_POSITIONS, type BuildPosition } from '@/lib/game/build';
 import { dailyDateET } from '@/lib/game/daily';
+import { auth } from '@/auth';
+import { todaysResult } from '@/lib/server/games';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -12,13 +14,17 @@ export const metadata: Metadata = {
   alternates: { canonical: '/games/build-a-player' },
 };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ position?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ position?: string; mode?: string }> }) {
   const sp = await searchParams;
+  const session = await auth().catch(() => null);
+  const userId = session?.user?.id ?? null;
+  const playedTodayId = userId ? await todaysResult(userId, 'build-a-player').catch(() => null) : null;
+  const initialMode = sp.mode === 'casual' || sp.position ? 'casual' : sp.mode === 'today' ? 'today' : userId && !playedTodayId ? 'today' : 'casual';
   const pos = (sp.position ?? '').toUpperCase();
   let pool: ReelTeam[] = [];
   try { pool = (await getTeams()).map((t) => ({ id: t.id, abbreviation: t.abbreviation, city: t.city, name: t.name, color: t.primaryColor, logoUrl: t.logoUrl })); } catch { /* reel falls back */ }
   
   const day = Math.floor(Date.parse(`${dailyDateET()}T12:00:00Z`) / 86400000);
   const positionOfDay = BUILD_POSITIONS[day % BUILD_POSITIONS.length];
-  return <BuildGame reelPool={pool} positionOfDay={positionOfDay} initialPosition={(BUILD_POSITIONS as readonly string[]).includes(pos) ? (pos as BuildPosition) : null} />;
+  return <BuildGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} positionOfDay={positionOfDay} initialPosition={(BUILD_POSITIONS as readonly string[]).includes(pos) ? (pos as BuildPosition) : null} />;
 }

@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" role="img" aria-label="Unbeaten">
-  <rect width="24" height="24" rx="6" fill="#0A0A0A"/>
-  <path d="M7 6.5 V13 a5 5 0 0 0 10 0 V6.5" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
-  <circle cx="19.2" cy="4.8" r="1.6" fill="#C8102E"/>
+  <rect width="24" height="24" rx="6.5" fill="#0A0A0A"/>
+  <path d="M7.4 4.6 V10.6 Q7.4 14.2 11 14.2 H13 Q16.6 14.2 16.6 10.6 V4.6" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 14.2 V19.6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <g transform="rotate(-32 12 8.4)"><ellipse cx="12" cy="8.4" rx="2.5" ry="1.55" fill="#E11D2E"/><path d="M10.9 8.4 H13.1" stroke="#FFFFFF" stroke-width=".6" stroke-linecap="round"/></g>
 </svg>

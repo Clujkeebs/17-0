@@ -2,6 +2,8 @@ import type { ReelTeam } from '@/components/game/Reel';
 import type { Metadata } from 'next';
 import { SeventeenGame } from '@/components/game/SeventeenGame';
 import { getTeams } from '@/lib/server/data';
+import { auth } from '@/auth';
+import { todaysResult } from '@/lib/server/games';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -10,10 +12,16 @@ export const metadata: Metadata = {
   alternates: { canonical: '/games/17-0' },
 };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ daily?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ daily?: string; mode?: string }> }) {
   const sp = await searchParams;
+  const session = await auth().catch(() => null);
+  const userId = session?.user?.id ?? null;
+  const playedTodayId = userId ? await todaysResult(userId, '17-0').catch(() => null) : null;
+  const asked = sp.mode === 'casual' ? 'casual' : sp.mode === 'today' || sp.daily === '1' ? 'today' : null;
+  // Default: Today when you can still play it ranked, otherwise Casual so the reel spins right away.
+  const initialMode = asked ?? (userId && !playedTodayId ? 'today' : 'casual');
   let pool: ReelTeam[] = [];
   try { pool = (await getTeams()).map((t) => ({ id: t.id, abbreviation: t.abbreviation, city: t.city, name: t.name, color: t.primaryColor, logoUrl: t.logoUrl })); } catch { /* reel falls back */ }
   
-  return <SeventeenGame reelPool={pool} initialDaily={sp.daily === '1'} />;
+  return <SeventeenGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} />;
 }

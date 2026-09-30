@@ -40,6 +40,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ type: s
     return json({ ...out, savedToLeaderboard: !!userId && out.daily });
   } catch (e) {
     if (e instanceof GradeError) return errorJson(e.status, e.message);
+    if ((e as { code?: string }).code === '23505' || (e as { cause?: { code?: string } }).cause?.code === '23505') return errorJson(409, 'You already played Today. Casual is unlimited.');
     console.error('[grade]', e);
     return errorJson(500, 'Grading failed. Your picks are still on this page, try again.');
   }

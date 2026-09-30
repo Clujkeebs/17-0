@@ -9,6 +9,7 @@ import { dailyDateET } from '@/lib/game/daily';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp } from '@/lib/server/rate-limit';
 import { invalidatePrefix } from '@/lib/server/redis';
+import { readChecks } from '@/lib/minigames/checks';
 
 export const runtime = 'nodejs';
 
@@ -69,7 +70,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     if (await existingToday(userId, slug, date)) return errorJson(409, 'You already played Today. Casual is unlimited.');
   } else if (!seed.startsWith(`casual:${slug}:`)) return errorJson(400, 'Bad seed.');
   let result;
-  try { result = game.score(game.generate(seed, await loadGameData()), answer); }
+  let finalAnswer = answer;
+  if (mode === 'today' && userId && game.applyChecks) finalAnswer = game.applyChecks(answer, await readChecks(slug, date, userId));
+  try { result = game.score(game.generate(seed, await loadGameData()), finalAnswer); }
   catch (e) { return errorJson(400, (e as Error).message || 'Invalid answer.'); }
   const resultData = { summary: result.summary, detail: result.detail, perfect: !!result.perfect };
   try {
