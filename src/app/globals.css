@@ -348,3 +348,14 @@ html[data-rules=hidden] .rules-card { display: none; }
 .share .btn { min-height: 40px; padding: 8px 16px; font-size: .9rem; }
 .share-toast { position: absolute; left: 0; top: calc(100% + 8px); background: var(--bone); color: var(--navy); padding: 6px 12px; border-radius: 999px; font-size: .85rem; font-weight: 600; animation: toast .2s ease-out; }
 @keyframes toast { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+/* Result celebration */
+.celebrate { border-radius: 16px; padding: 16px 20px; margin: 0 0 20px; border: 1px solid var(--steel); background: var(--green); font-size: 1.05rem; }
+.celebrate strong { font-size: 1.35rem; letter-spacing: -0.03em; margin-right: 6px; }
+.celebrate-perfect { background: var(--bone); color: var(--navy); border-color: var(--bone); }
+.celebrate-perfect strong { color: #FF4D5E; }
+.celebrate-close { border-color: var(--orange); }
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+.confetti i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation-name: fall; animation-timing-function: cubic-bezier(.25,.6,.4,1); animation-fill-mode: forwards; }
+@keyframes fall { to { top: 105vh; transform: translateX(40px) rotate(720deg); opacity: .9; } }
+@media (max-width: 480px) { .brand-rule, .brand-record { display: none; } .brand .wordmark { font-size: 1.1rem; } }
+.site-header a, .site-header .btn { white-space: nowrap; }

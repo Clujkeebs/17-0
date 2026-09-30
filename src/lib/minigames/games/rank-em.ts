@@ -65,7 +65,7 @@ export const rankEm: MiniGame<Puzzle, Answer> = {
     const detail = {
       label: label(p.stat),
       pairs, total, exact,
-      truth: truth.map((x, i) => ({ id: x.p.id, name: x.p.name, team: x.p.team, v: x.v, yourSlot: answer.indexOf(x.p.id) + 1, ok: v.get(answer[i]) === x.v })),
+      truth: truth.map((x, i) => ({ id: x.p.id, name: x.p.name, team: x.p.team, teamColor: x.p.teamColor, logoUrl: x.p.logoUrl, img: x.p.img, v: x.v, yourSlot: answer.indexOf(x.p.id) + 1, ok: v.get(answer[i]) === x.v })),
     };
     return { score: pairs * 10 + exact * 4, summary: `${pairs}/${total} pairs`, detail, perfect: pairs === total };
   },

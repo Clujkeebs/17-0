@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { TeamLogo } from '@/components/TeamLogo';
 import { notFound } from 'next/navigation';
 import { db, schema } from '@/db';
 import { letterGrade } from '@/lib/game/formulas';
@@ -64,7 +65,7 @@ export default async function CoachPage({ params }: Props) {
       <header className="profile-hero">
         <div className="portrait"><Avatar name={c.fullName} src={c.imageUrl} color={team?.primaryColor ?? '#0A0A0A'} size={200} /></div>
         <div>
-          <span className="eyebrow">Head coach{team ? <> &middot; <Link href={`/teams/${team.slug}`}>{teamName(team)}</Link></> : null}</span>
+          <span className="eyebrow">Head coach{team ? <> &middot; <TeamLogo abbr={team.abbreviation} src={team.logoUrl} color={team.primaryColor} size={18} /> <Link href={`/teams/${team.slug}`}>{teamName(team)}</Link></> : null}</span>
           <h1>{c.fullName}</h1>
           {rank > 0 && <p className="lead"><span className="num">{ordinal(rank)}</span> of <span className="num">{all.length}</span> head coaches by impact score.</p>}
         </div>

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Avatar } from '@/components/Avatar';
+import { resolvePlayerImage } from '@/lib/server/images';
 import { POSITION_NAMES } from '@/lib/game/attributes';
 import { pageMeta } from '@/lib/seo/meta';
 import { comparePath, topMatchups } from '@/lib/seo/queries';
@@ -31,7 +33,8 @@ export default async function CompareIndex() {
               <h2 id={`c-${group}`} style={{ fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>{POSITION_NAMES[group]}</h2>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {pairs.map(([a, b]) => (
-                  <li key={`${a.slug}-${b.slug}`} style={{ padding: '6px 0' }}>
+                  <li key={`${a.slug}-${b.slug}`} style={{ padding: '6px 0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ display: 'inline-flex' }}><Avatar name={a.fullName} src={resolvePlayerImage(a)} size={28} decorative /><span style={{ marginLeft: -6, display: 'inline-flex' }}><Avatar name={b.fullName} src={resolvePlayerImage(b)} size={28} decorative /></span></span>
                     <Link href={comparePath(a.slug, b.slug)}>{a.fullName} vs {b.fullName}</Link>{' '}
                     <span className="num muted">{a.overallRating}/{b.overallRating}</span>
                   </li>

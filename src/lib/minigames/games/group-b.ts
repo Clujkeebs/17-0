@@ -91,7 +91,7 @@ export const blindResume: MiniGame<BRPuzzle, BRAnswer> = {
     const detail = p.rounds.map((r, i) => {
       const pick = r.options.find((o) => o.id === answer.picks[i]);
       const ok = answer.picks[i] === r.target.id;
-      return { answer: r.target.name, team: r.target.team, position: r.target.position, pick: pick?.name ?? 'No pick', ok, confident: conf === i };
+      return { answer: r.target.name, team: r.target.team, teamColor: r.target.teamColor, logoUrl: r.target.logoUrl, img: r.target.img, position: r.target.position, pick: pick?.name ?? 'No pick', ok, confident: conf === i };
     });
     const right = detail.filter((d) => d.ok).length;
     let score = right;
@@ -160,7 +160,7 @@ export const ratingMatch: MiniGame<RMPuzzle, RMAnswer> = {
     const score = Math.max(0, right * 10 - 5 * (answer.attempts - 1));
     const detail = p.players.map((pl, pi) => {
       const line = p.lines.indexOf(pi);
-      return { name: pl.name, team: pl.team, position: pl.position, line, pick: answer.pairs[pi], ok: answer.pairs[pi] === line };
+      return { name: pl.name, team: pl.team, teamColor: pl.teamColor, logoUrl: pl.logoUrl, img: pl.img, position: pl.position, line, pick: answer.pairs[pi], ok: answer.pairs[pi] === line };
     });
     return { score, summary: `${right}/${RM_N} in ${answer.attempts}`, detail: { players: detail, score, attempts: answer.attempts }, perfect: right === RM_N && answer.attempts === 1 };
   },
@@ -213,7 +213,7 @@ export const guessTheOvr: MiniGame<GOPuzzle, GOAnswer> = {
   }),
   score(p, answer) {
     if (!Array.isArray(answer) || answer.length !== GO_N || !answer.every((x) => isInt(x, 40, 99))) throw new Error('Guess every overall between 40 and 99.');
-    const detail = p.rounds.map((r, i) => ({ name: r.target.name, team: r.target.team, position: r.target.position, actual: r.target.ovr, guess: answer[i], points: goPoints(answer[i], r.target.ovr) }));
+    const detail = p.rounds.map((r, i) => ({ name: r.target.name, team: r.target.team, teamColor: r.target.teamColor, logoUrl: r.target.logoUrl, img: r.target.img, position: r.target.position, actual: r.target.ovr, guess: answer[i], points: goPoints(answer[i], r.target.ovr) }));
     const score = detail.reduce((s, d) => s + d.points, 0);
     return { score, summary: `${score} pts`, detail, perfect: score === GO_N * 100 };
   },

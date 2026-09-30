@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ShareButton } from '@/components/game/ShareButton';
+import { Celebration } from '@/components/game/Celebration';
 import { track } from '@/lib/analytics';
 import './mini.css';
 
@@ -97,6 +98,7 @@ export function MiniGameShell<P>({ slug, name, tagline, howTo, signedIn, render,
       {result && (
         <section className="m-card m-result" aria-live="polite">
           <p className="m-kicker">{data?.played ? 'You already played Today' : result.perfect ? 'Perfect' : 'Final'}</p>
+          {result.perfect && <Celebration tier={{ key: 'perfect', title: 'Perfect.', line: 'Flawless. Share it before anyone says you looked it up.', confetti: true }} />}
           <p className="m-score num">{result.summary}</p>
           {renderResult(result, (data?.puzzle as P) ?? null)}
           <div style={{ marginTop: 20 }}>

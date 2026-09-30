@@ -1,13 +1,14 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { MiniGameShell } from '../MiniGameShell';
+import { TeamTag } from '../TeamTag';
 import { PlayerFace } from '@/components/game/PlayerFace';
 import './group-b.css';
 
-interface Card { id: string; name: string; position: string; team: string; teamColor: string; img: string | null }
+interface Card { id: string; name: string; position: string; team: string; teamColor: string; logoUrl?: string | null; img: string | null }
 interface Profile { position: string; archetype: string | null; age: number | null; yearsPro: number | null; heightInches: number | null; weightLbs: number | null; ovr: number; ratings: { label: string; value: number }[] }
 interface P { seed: string; rounds: { profile: Profile; options: Card[] }[] }
-interface D { rounds: { answer: string; team: string; position: string; pick: string; ok: boolean; confident: boolean }[]; score: number; max: number }
+interface D { rounds: { answer: string; team: string; teamColor?: string; logoUrl?: string | null; img?: string | null; position: string; pick: string; ok: boolean; confident: boolean }[]; score: number; max: number }
 interface FB { ok: boolean; answerId: string; name: string; team: string }
 type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 
@@ -25,7 +26,8 @@ export function BlindResume({ signedIn, meta }: { signedIn: boolean; meta: Meta 
             <ol className="m-grid" style={{ listStyle: 'none', padding: 0 }}>
               {d.rounds.map((x, i) => (
                 <li key={i} className={`m-opt gb-reveal ${x.ok ? 'right' : 'wrong'}`} style={{ cursor: 'default', animationDelay: `${i * 60}ms` }}>
-                  <span style={{ flex: 1 }}><strong>{x.answer}</strong> <span className="muted">{x.position} · {x.team}</span>{!x.ok && <><br /><span className="muted">You picked {x.pick}</span></>}</span>
+                  <PlayerFace name={x.answer} src={x.img} color={x.teamColor ?? 'var(--green)'} size={40} />
+                  <span style={{ flex: 1 }}><strong>{x.answer}</strong> <span className="muted">{x.position} · <TeamTag abbr={x.team} logoUrl={x.logoUrl} color={x.teamColor} /></span>{!x.ok && <><br /><span className="muted">You picked {x.pick}</span></>}</span>
                   {x.confident && <span className="m-pill">Confident</span>}
                   <span>{x.ok ? 'Right' : 'Wrong'}</span>
                 </li>
@@ -101,7 +103,7 @@ function Play({ puzzle, submit, busy, slug }: { puzzle: P; submit: (a: unknown) 
           return (
             <button key={c.id} type="button" className={`m-opt ${state}`} onClick={() => choose(c.id)} disabled={busy || checking || !!fb} aria-pressed={fb ? c.id === picks[i] : undefined}>
               <PlayerFace name={c.name} src={c.img} color={c.teamColor} size={44} />
-              <span style={{ flex: 1 }}><strong style={{ display: 'block' }}>{c.name}</strong><span className="muted">{c.position} · {c.team}</span></span>
+              <span style={{ flex: 1 }}><strong style={{ display: 'block' }}>{c.name}</strong><span className="muted">{c.position} · <TeamTag abbr={c.team} logoUrl={c.logoUrl} color={c.teamColor} /></span></span>
               {state && <span>{state === 'right' ? 'Answer' : 'Your pick'}</span>}
             </button>
           );

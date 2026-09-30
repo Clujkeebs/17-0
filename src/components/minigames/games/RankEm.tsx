@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { MiniGameShell } from '../MiniGameShell';
+import { TeamTag } from '../TeamTag';
 import { PlayerFace } from '@/components/game/PlayerFace';
 import './group-c.css';
 
-interface Card { id: string; name: string; position: string; team: string; teamColor: string; img: string | null }
+interface Card { id: string; name: string; position: string; team: string; teamColor: string; logoUrl?: string | null; img: string | null }
 interface P { label: string; groupName: string; players: Card[] }
-interface D { label: string; pairs: number; total: number; exact: number; truth: { id: string; name: string; team: string; v: number; yourSlot: number; ok: boolean }[] }
+interface D { label: string; pairs: number; total: number; exact: number; truth: { id: string; name: string; team: string; teamColor?: string; logoUrl?: string | null; img?: string | null; v: number; yourSlot: number; ok: boolean }[] }
 type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 
 export function RankEm({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
@@ -22,7 +23,8 @@ export function RankEm({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
               {d.truth.map((x, i) => (
                 <li key={x.id} className={`gc-slot ${x.ok ? 'hit' : 'miss'}`}>
                   <span className="gc-rank num">{i + 1}</span>
-                  <span className="gc-name">{x.name} <span className="muted" style={{ fontWeight: 400 }}>{x.team}</span></span>
+                  <PlayerFace name={x.name} src={x.img} color={x.teamColor ?? 'var(--green)'} size={32} />
+                  <span className="gc-name">{x.name} <span className="muted" style={{ fontWeight: 400 }}><TeamTag abbr={x.team} logoUrl={x.logoUrl} color={x.teamColor} /></span></span>
                   <span className="num" style={{ fontWeight: 700 }}>{x.v}</span>
                   <span className="gc-tag">{x.ok ? 'Exact' : `You: ${x.yourSlot}`}</span>
                 </li>
@@ -60,7 +62,7 @@ function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Pro
             onDrop={(e) => { e.preventDefault(); if (drag !== null) move(drag, i); setDrag(null); setOver(null); }}>
             <span className="gc-rank num" style={{ fontSize: '1.1rem' }}>{i + 1}</span>
             <PlayerFace name={c.name} src={c.img} color={c.teamColor} size={44} />
-            <span style={{ minWidth: 0, flex: 1 }}><strong style={{ display: 'block', lineHeight: 1.25 }}>{c.name}</strong><span className="muted">{c.position} · {c.team}</span></span>
+            <span style={{ minWidth: 0, flex: 1 }}><strong style={{ display: 'block', lineHeight: 1.25 }}>{c.name}</strong><span className="muted">{c.position} · <TeamTag abbr={c.team} logoUrl={c.logoUrl} color={c.teamColor} /></span></span>
             <span className="gc-arrows">
               <button type="button" aria-label={`Move ${c.name} up`} disabled={i === 0 || busy} onClick={() => move(i, i - 1)}>&uarr;</button>
               <button type="button" aria-label={`Move ${c.name} down`} disabled={i === order.length - 1 || busy} onClick={() => move(i, i + 1)}>&darr;</button>

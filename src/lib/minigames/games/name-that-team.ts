@@ -10,7 +10,7 @@ type Answer = number[];
 
 function teamList(data: GameData) {
   return [...data.teams].sort((a, b) => a.city.localeCompare(b.city) || a.name.localeCompare(b.name))
-    .map((t) => ({ id: t.id, abbr: t.abbr, name: `${t.city} ${t.name}`, color: t.color }));
+    .map((t) => ({ id: t.id, abbr: t.abbr, name: `${t.city} ${t.name}`, color: t.color, logoUrl: t.logoUrl }));
 }
 
 export const nameThatTeam: MiniGame<Puzzle, Answer> = {
@@ -65,7 +65,7 @@ export const nameThatTeam: MiniGame<Puzzle, Answer> = {
     return {
       score,
       summary: hit >= 0 ? `${used} clue${used === 1 ? '' : 's'}` : 'Missed',
-      detail: { team: { id: p.team.id, abbr: p.team.abbr, name: `${p.team.city} ${p.team.name}`, color: p.team.color }, clues: p.clues, used, solved: hit >= 0, guesses: answer.slice(0, used) },
+      detail: { team: { id: p.team.id, abbr: p.team.abbr, name: `${p.team.city} ${p.team.name}`, color: p.team.color, logoUrl: p.team.logoUrl }, clues: p.clues, used, solved: hit >= 0, guesses: answer.slice(0, used) },
       perfect: hit === 0,
     };
   },

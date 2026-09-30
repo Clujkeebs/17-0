@@ -52,7 +52,7 @@ export async function getPlayersByPositions(raw: string[], limit = 100) {
 }
 
 export async function searchPlayers(q: string, limit = 10) {
-  return db.select({ slug: schema.players.slug, fullName: schema.players.fullName, position: schema.players.position, overallRating: schema.players.overallRating, teamId: schema.players.teamId })
+  return db.select({ slug: schema.players.slug, fullName: schema.players.fullName, position: schema.players.position, overallRating: schema.players.overallRating, teamId: schema.players.teamId, imageBlobUrl: schema.players.imageBlobUrl, imageUrl: schema.players.imageUrl, espnId: schema.players.espnId })
     .from(schema.players).where(ilike(schema.players.fullName, `%${q.replace(/[%_]/g, '')}%`)).orderBy(desc(schema.players.overallRating)).limit(limit);
 }
 

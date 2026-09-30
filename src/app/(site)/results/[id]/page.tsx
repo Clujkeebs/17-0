@@ -1,6 +1,9 @@
+import { Celebration } from '@/components/game/Celebration';
+import { buildTier, seasonTier } from '@/lib/game/tiers';
 import { getMiniGame } from '@/lib/minigames/registry';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { TeamLogo } from '@/components/TeamLogo';
 import { notFound } from 'next/navigation';
 import { getResult } from '@/lib/server/leaderboard';
 import { getTeams } from '@/lib/server/data';
@@ -36,20 +39,21 @@ export default async function ResultPage({ params }: Props) {
   const r = await getResult(id).catch(() => null);
   if (!r) notFound();
   const teams = await getTeams().catch(() => []);
-  const teamName = (tid: number) => { const t = teams.find((x) => x.id === tid); return t ? `${t.abbreviation}` : ''; };
+  const teamCell = (tid: number) => { const t = teams.find((x) => x.id === tid); return t ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TeamLogo abbr={t.abbreviation} src={t.logoUrl} color={t.primaryColor} size={20} />{t.abbreviation}</span> : ''; };
   const d = r.resultData as Record<string, unknown>;
   const mini = r.gameType !== '17-0' && r.gameType !== 'build-a-player' ? getMiniGame(r.gameType) : null;
   if (mini) return <MiniResultPage r={r} name={mini.name} slug={mini.slug} tagline={mini.tagline} />;
   const is17 = r.gameType === '17-0';
   const headline = is17 ? `${d.wins}-${d.losses}` : Number(d.rating).toFixed(1);
   const schedule = is17 && Array.isArray(d.schedule) ? (d.schedule as GameLine[]).filter((g) => g && typeof g.week === 'number') : [];
-  const shareText = is17 ? `My roster went ${d.wins}-${d.losses} in 17-0.` : `I built a ${Number(d.rating).toFixed(1)} ${d.position} in Build a Player.`;
+  const shareText = is17 ? (Number(d.wins) === 17 ? `I went 17-0. Perfect season on Unbeaten. Your turn.` : Number(d.wins) === 16 ? `16-1. One loss from a perfect season in 17-0.` : `My roster went ${d.wins}-${d.losses} in 17-0.`) : `I built a ${Number(d.rating).toFixed(1)} ${d.position} in Build a Player.`;
 
   return (
     <div className="container section">
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 32 }} className="result-grid">
         <div>
           <span className="eyebrow">{is17 ? '17-0' : 'Build a Player'}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
+          <Celebration tier={is17 ? seasonTier(Number(d.wins)) : buildTier(Number(d.rating))} />
           {/* Share card preview */}
           <figure style={{ margin: '0 0 24px' }}>
             <img src={`/api/og/game-result?id=${r.id}`} alt={`Share card: ${shareText}`} width={1200} height={630} style={{ width: '100%', height: 'auto', aspectRatio: '1200 / 630', border: '1px solid var(--steel)', borderRadius: 18, boxShadow: 'var(--shadow)' }} />
@@ -104,7 +108,7 @@ export default async function ResultPage({ params }: Props) {
                   <thead><tr><th scope="col">Slot</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col" className="num">Grade</th><th scope="col" className="num">Letter</th></tr></thead>
                   <tbody>
                     {(d.slots as SlotResult[]).map((s) => (
-                      <tr key={s.slot}><td className="mono">{SLOT_LABELS[s.slot] ?? s.slot}</td><td>{s.name}</td><td className="mono">{teamName(s.teamId)}</td><td className="num">{s.grade.toFixed(1)}</td><td className="num" style={{ fontWeight: 800 }}>{s.letter}</td></tr>
+                      <tr key={s.slot}><td className="mono">{SLOT_LABELS[s.slot] ?? s.slot}</td><td>{s.name}</td><td className="mono">{teamCell(s.teamId)}</td><td className="num">{s.grade.toFixed(1)}</td><td className="num" style={{ fontWeight: 800 }}>{s.letter}</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -125,7 +129,7 @@ export default async function ResultPage({ params }: Props) {
                       <thead><tr><th scope="col">Trait</th><th scope="col" className="num">Weight</th><th scope="col" className="num">Rating</th><th scope="col">Taken from</th><th scope="col">Team</th></tr></thead>
                       <tbody>
                         {(d.traits as { key: string; label: string; value: number; weight: number; donor: string; teamId: number }[]).map((t) => (
-                          <tr key={t.key}><td>{t.label}</td><td className="num">{Math.round(t.weight * 100)}%</td><td className="num">{t.value}</td><td>{t.donor}</td><td className="mono">{teamName(t.teamId)}</td></tr>
+                          <tr key={t.key}><td>{t.label}</td><td className="num">{Math.round(t.weight * 100)}%</td><td className="num">{t.value}</td><td>{t.donor}</td><td className="mono">{teamCell(t.teamId)}</td></tr>
                         ))}
                       </tbody>
                     </table>

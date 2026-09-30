@@ -1,13 +1,16 @@
 'use client';
+import { TeamMark } from '@/components/game/Reel';
+import { PlayerFace } from '@/components/game/PlayerFace';
 import { useState } from 'react';
 import { MiniGameShell } from '../MiniGameShell';
+import { TeamTag } from '../TeamTag';
 import { TypeaheadA, type SearchHit } from './TypeaheadA';
 import { checkGuess } from './checkA';
 import './groupA.css';
 
-interface Team { id: number; abbr: string; name: string; color: string }
+interface Team { id: number; abbr: string; name: string; color: string; logoUrl: string | null }
 interface P { seed: string; teams: Team[]; crits: string[] }
-interface D { team: string; crit: string; ok: boolean; pts: number; rarity: number; validCount: number; pick: string | null; others: string[] }
+interface D { team: string; teamColor?: string; logoUrl?: string | null; pickImg?: string | null; pickTeam?: string | null; pickColor?: string | null; pickLogo?: string | null; crit: string; ok: boolean; pts: number; rarity: number; validCount: number; pick: string | null; others: string[] }
 type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 
 export function Grid({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
@@ -19,10 +22,10 @@ export function Grid({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
           {(r.detail as D[]).map((d, i) => (
             <li key={i} className={`ga-in ${d.ok ? 'right' : 'wrong'}`} style={{ animationDelay: `${i * 40}ms` }}>
               <div className="top">
-                <span><strong>{d.team}</strong> × {d.crit}</span>
+                <span><strong><TeamTag abbr={d.team} logoUrl={d.logoUrl} color={d.teamColor} size={20} /></strong> × {d.crit}</span>
                 <span className="num">{d.ok ? `Right · +${d.pts}` : 'Empty'}</span>
               </div>
-              <div>{d.pick ? <strong>{d.pick}</strong> : <span className="muted">No pick</span>} <span className="muted">· {d.validCount} valid {d.validCount === 1 ? 'answer' : 'answers'} · rarity {d.rarity}%</span></div>
+              <div>{d.pick ? <span className="m-who"><PlayerFace name={d.pick} src={d.pickImg} color={d.pickColor ?? d.teamColor ?? 'var(--green)'} size={28} /><strong>{d.pick}</strong>{d.pickTeam && <span className="muted"><TeamTag abbr={d.pickTeam} logoUrl={d.pickLogo} color={d.pickColor} /></span>}</span> : <span className="muted">No pick</span>} <span className="muted">· {d.validCount} valid {d.validCount === 1 ? 'answer' : 'answers'} · rarity {d.rarity}%</span></div>
               {d.others.length > 0 && <div className="oth">{d.pick ? 'Also worked' : 'Could have used'}: {d.others.join(', ')}{d.validCount - (d.ok ? 1 : 0) > d.others.length ? ', and more' : ''}</div>}
             </li>
           ))}
@@ -64,14 +67,14 @@ function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Pro
         {puzzle.crits.map((c) => <div key={c} className="ga-hd">{c}</div>)}
         {puzzle.teams.map((t, ri) => (
           <div key={t.id} style={{ display: 'contents' }}>
-            <div className="ga-hd ga-team" title={t.name}><span className="ga-dot" style={{ background: t.color }} aria-hidden /><b>{t.abbr}</b></div>
+            <div className="ga-hd ga-team" title={t.name}><TeamMark team={{ abbreviation: t.abbr, logoUrl: t.logoUrl, color: t.color, city: '', name: t.name }} size={44} alt="" /><b>{t.abbr}</b></div>
             {puzzle.crits.map((c, ci) => {
               const i = ri * 3 + ci, f = cells[i];
               return (
                 <button key={i} type="button" className={`ga-cell ${f ? 'filled ga-in' : ''}`} aria-pressed={sel === i} disabled={!!f || busy || left === 0}
                   aria-label={f ? `${t.abbr}, ${c}: ${f.name}, correct` : `${t.abbr}, ${c}: empty. Select to guess.`}
                   onClick={() => { setSel(i); setMsg(`${t.abbr} × ${c}. Name a player.`); }}>
-                  {f ? <><span className="nm">{f.name}</span><span className="sm">{f.position} · Right</span></> : <span className="sm">{sel === i ? 'Selected' : 'Tap to guess'}</span>}
+                  {f ? <><PlayerFace name={f.name} src={f.img} color={f.teamColor} size={28} /><span className="nm">{f.name}</span><span className="sm">{f.position} · Right</span></> : <span className="sm">{sel === i ? 'Selected' : 'Tap to guess'}</span>}
                 </button>
               );
             })}

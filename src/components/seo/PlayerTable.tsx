@@ -1,9 +1,12 @@
 import Link from 'next/link';
+import { TeamLogo } from '@/components/TeamLogo';
+import { Avatar } from '@/components/Avatar';
+import { resolvePlayerImage } from '@/lib/server/images';
 import type { PlayerRow, TeamRow } from '@/lib/server/data';
 import { positionGroup } from '@/lib/game/attributes';
 import { teamName } from '@/lib/seo/queries';
 
-/** Ranked player table. Server-rendered, no client JS. */
+/** Ranked player table. Server-rendered; headshots and logos are tiny client islands for the image fallback. */
 export function PlayerTable({ players, teams, caption, showRank = true, extra }: {
   players: PlayerRow[];
   teams: Map<number, TeamRow>;
@@ -31,9 +34,9 @@ export function PlayerTable({ players, teams, caption, showRank = true, extra }:
             return (
               <tr key={p.id}>
                 {showRank && <td className="num muted">{i + 1}</td>}
-                <td><Link href={`/players/${p.slug}`}>{p.fullName}</Link></td>
+                <td><span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Avatar name={p.fullName} src={resolvePlayerImage(p)} color={t?.primaryColor ?? '#0A0A0A'} size={32} decorative /><Link href={`/players/${p.slug}`}>{p.fullName}</Link></span></td>
                 <td><Link href={`/positions/${positionGroup(p.position).toLowerCase()}`} className="muted">{p.position}</Link></td>
-                <td>{t ? <Link href={`/teams/${t.slug}`} className="muted" title={teamName(t)}>{t.abbreviation}</Link> : <span className="muted">FA</span>}</td>
+                <td>{t ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TeamLogo abbr={t.abbreviation} src={t.logoUrl} color={t.primaryColor} size={20} /><Link href={`/teams/${t.slug}`} className="muted" title={teamName(t)}>{t.abbreviation}</Link></span> : <span className="muted">FA</span>}</td>
                 {extra && <td className="num">{extra.value(p)}</td>}
                 <td className="num" style={{ fontWeight: 700 }}>{p.overallRating}</td>
               </tr>

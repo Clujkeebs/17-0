@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { MiniGameShell } from '../MiniGameShell';
+import { TeamTag } from '../TeamTag';
 import { PlayerFace } from '@/components/game/PlayerFace';
 import { TypeaheadA, type SearchHit } from './TypeaheadA';
 import { checkGuess } from './checkA';
@@ -9,11 +10,11 @@ import './groupA.css';
 interface P { seed: string; maxGuesses: number; hintAfter: number }
 interface Num { dir: 'up' | 'down' | 'exact' | 'none'; close: boolean; value: number | null }
 interface Row {
-  player: { id: string; name: string; position: string; team: string; teamColor: string; img: string | null; division: string; conference: string };
+  player: { id: string; name: string; position: string; team: string; teamColor: string; logoUrl?: string | null; img: string | null; division: string; conference: string };
   correct: boolean; team: string; division: string; position: string; age: Num; jersey: Num; ovr: Num; height: Num;
 }
 interface FB { row: Row; hint: string | null; answer: { name: string } | null }
-interface D { target: { name: string; position: string; team: string; teamColor: string; img: string | null; college: string | null; ovr: number }; solved: boolean; used: number; rows: Row[] }
+interface D { target: { name: string; position: string; team: string; teamColor: string; logoUrl?: string | null; img: string | null; college: string | null; ovr: number }; solved: boolean; used: number; rows: Row[] }
 type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 
 const ht = (n: number | null) => (n == null ? '?' : `${Math.floor(n / 12)}'${n % 12}"`);
@@ -34,7 +35,7 @@ export function ClueTable({ rows }: { rows: Row[] }) {
           {rows.map((r, i) => (
             <tr key={i} className="ga-in">
               <td className={r.correct ? 'exact' : ''}><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><PlayerFace name={r.player.name} src={r.player.img} color={r.player.teamColor} size={28} />{r.player.name}</span></td>
-              <td className={r.team}>{r.player.team}<span className="tag">{exactTag(r.team)}</span></td>
+              <td className={r.team}><TeamTag abbr={r.player.team} logoUrl={r.player.logoUrl} color={r.player.teamColor} size={20} /><span className="tag">{exactTag(r.team)}</span></td>
               <td className={r.division}>{r.player.division}<span className="tag">{r.division === 'exact' ? 'Match' : r.division === 'partial' ? 'Same conf' : 'No'}</span></td>
               <td className={r.position}>{r.player.position}<span className="tag">{r.position === 'exact' ? 'Match' : r.position === 'partial' ? 'Same group' : 'No'}</span></td>
               <NumCell n={r.age} />
@@ -62,7 +63,7 @@ export function MysteryPlayer({ signedIn, meta }: { signedIn: boolean; meta: Met
               <div>
                 <p className="m-kicker" style={{ margin: 0 }}>{d.solved ? `Solved in ${d.used}` : 'The answer'}</p>
                 <p className="m-big" style={{ margin: 0 }}>{d.target.name}</p>
-                <p className="muted" style={{ margin: 0 }}>{d.target.position} · {d.target.team} · {d.target.ovr} OVR{d.target.college ? ` · ${d.target.college}` : ''}</p>
+                <p className="muted" style={{ margin: 0 }}>{d.target.position} · <TeamTag abbr={d.target.team} logoUrl={d.target.logoUrl} color={d.target.teamColor} /> · {d.target.ovr} OVR{d.target.college ? ` · ${d.target.college}` : ''}</p>
               </div>
             </div>
             {d.rows.length > 0 && <ClueTable rows={d.rows} />}

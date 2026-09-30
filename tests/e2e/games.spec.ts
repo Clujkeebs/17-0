@@ -56,3 +56,11 @@ test('Higher or Lower casual round trip', async ({ page }) => {
   }
   await expect(page.locator('.m-score')).toHaveText(/\d+\/10/);
 });
+
+test('17-0 re-roll swaps the team on the clock', async ({ page }) => {
+  await page.goto('/games/17-0?mode=casual');
+  const reroll = page.getByRole('button', { name: /Re-roll 2/ });
+  await expect(reroll).toBeEnabled({ timeout: 20_000 });
+  await reroll.click();
+  await expect(page.getByRole('button', { name: /Re-roll 1/ })).toBeVisible({ timeout: 20_000 });
+});

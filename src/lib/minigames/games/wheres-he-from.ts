@@ -63,7 +63,7 @@ export const wheresHeFrom: MiniGame<Puzzle, Answer> = {
   },
   score(p, answer) {
     if (!Array.isArray(answer) || answer.length !== p.rounds.length || answer.some((a) => typeof a !== 'string')) throw new Error('Answer all five rounds.');
-    const detail = p.rounds.map((r, i) => ({ name: r.p.name, team: r.p.team, pick: answer[i], correct: r.p.college, ok: answer[i] === r.p.college, fact: funFact(r.p) }));
+    const detail = p.rounds.map((r, i) => ({ name: r.p.name, team: r.p.team, teamColor: r.p.teamColor, logoUrl: r.p.logoUrl, img: r.p.img, pick: answer[i], correct: r.p.college, ok: answer[i] === r.p.college, fact: funFact(r.p) }));
     const right = detail.filter((d) => d.ok).length;
     const pts = streakPoints(detail.map((d) => d.ok));
     return { score: pts, summary: `${right}/${ROUNDS} · ${pts} pts`, detail, perfect: right === ROUNDS };

@@ -1,14 +1,15 @@
 'use client';
 import { useRef, useEffect, useState } from 'react';
 import { MiniGameShell } from '../MiniGameShell';
+import { TeamTag } from '../TeamTag';
 import { PlayerFace } from '@/components/game/PlayerFace';
 import { checkGuess } from './checkA';
 import './groupA.css';
 
-interface Card { id: string; name: string; position: string; team: string; teamName: string; teamColor: string; img: string | null }
+interface Card { id: string; name: string; position: string; team: string; teamName: string; teamColor: string; logoUrl?: string | null; img: string | null }
 interface P { seed: string; rounds: { player: Card; choices: string[] }[] }
 interface FB { ok: boolean; correct: string; fact: string }
-interface D { name: string; team: string; pick: string; correct: string; ok: boolean; fact: string }
+interface D { name: string; team: string; teamColor?: string; logoUrl?: string | null; img?: string | null; pick: string; correct: string; ok: boolean; fact: string }
 type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 
 export function WheresHeFrom({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
@@ -19,7 +20,7 @@ export function WheresHeFrom({ signedIn, meta }: { signedIn: boolean; meta: Meta
         <ol className="ga-rev">
           {(r.detail as D[]).map((d, i) => (
             <li key={i} className={`ga-in ${d.ok ? 'right' : 'wrong'}`} style={{ animationDelay: `${i * 50}ms` }}>
-              <div className="top"><strong>{d.name} <span className="muted">· {d.team}</span></strong><span>{d.ok ? 'Right' : 'Wrong'}</span></div>
+              <div className="top"><span className="m-who"><PlayerFace name={d.name} src={d.img} color={d.teamColor ?? 'var(--green)'} size={32} /><strong>{d.name} <span className="muted">· <TeamTag abbr={d.team} logoUrl={d.logoUrl} color={d.teamColor} /></span></strong></span><span>{d.ok ? 'Right' : 'Wrong'}</span></div>
               <div>{d.correct}{!d.ok && <span className="muted"> · you said {d.pick}</span>}</div>
               <div className="oth">{d.fact}</div>
             </li>
@@ -66,7 +67,7 @@ function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Pro
         <PlayerFace name={r.player.name} src={r.player.img} color={r.player.teamColor} size={72} />
         <div>
           <p className="m-big" style={{ margin: 0 }}>{r.player.name}</p>
-          <p className="muted" style={{ margin: 0 }}>{r.player.position} · {r.player.teamName}</p>
+          <p className="muted" style={{ margin: 0 }}>{r.player.position} · <TeamTag abbr={r.player.team} logoUrl={r.player.logoUrl} color={r.player.teamColor} label={r.player.teamName} /></p>
         </div>
       </div>
       <p style={{ fontWeight: 600, margin: '0 0 10px' }}>Where did he play college ball?</p>

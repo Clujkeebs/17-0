@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Avatar } from '@/components/Avatar';
+import { resolvePlayerImage } from '@/lib/server/images';
 import { notFound } from 'next/navigation';
 import { asc } from 'drizzle-orm';
 import { db, schema } from '@/db';
@@ -95,7 +97,7 @@ export default async function TeamPage({ params }: Props) {
                     <tbody>
                       {ps.map((p) => (
                         <tr key={p.id}>
-                          <td><Link href={`/players/${p.slug}`}>{p.fullName}</Link></td>
+                          <td><span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Avatar name={p.fullName} src={resolvePlayerImage(p)} color={t.primaryColor} size={32} decorative /><Link href={`/players/${p.slug}`}>{p.fullName}</Link></span></td>
                           <td className="muted">{p.position}</td>
                           <td className="num muted">{p.jerseyNumber ?? ''}</td>
                           <td className="num muted">{p.age ?? ''}</td>

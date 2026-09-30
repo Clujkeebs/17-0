@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { TeamLogo } from '@/components/TeamLogo';
+import { resolvePlayerImage } from '@/lib/server/images';
 import { notFound } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
@@ -96,9 +98,9 @@ export default async function PlayerPage({ params }: Props) {
       })} />
 
       <header className="profile-hero">
-        <div className="portrait"><Avatar name={p.fullName} src={p.imageBlobUrl ?? p.imageUrl} color={color} size={200} /></div>
+        <div className="portrait"><Avatar name={p.fullName} src={resolvePlayerImage(p)} color={color} size={200} /></div>
         <div>
-          <span className="eyebrow">{p.position}{team ? <> &middot; <Link href={`/teams/${team.slug}`}>{teamName(team)}</Link></> : null}</span>
+          <span className="eyebrow">{p.position}{team ? <> &middot; <TeamLogo abbr={team.abbreviation} src={team.logoUrl} color={team.primaryColor} size={18} /> <Link href={`/teams/${team.slug}`}>{teamName(team)}</Link></> : null}</span>
           <h1>{p.fullName}</h1>
           <p className="lead">
             <span className="num">{ordinal(ovrRank)}</span> of <span className="num">{poolSize}</span> {GROUP_PLURAL[group]} by overall.
@@ -145,8 +147,9 @@ export default async function PlayerPage({ params }: Props) {
                 return (
                   <li key={r.id}>
                     <span className="num" style={{ fontWeight: 700, width: 32, fontSize: '1.15rem' }}>{r.overallRating}</span>
+                    <Avatar name={r.fullName} src={resolvePlayerImage(r)} color={rt?.primaryColor ?? '#0A0A0A'} size={32} decorative />
                     <Link href={`/players/${r.slug}`}>{r.fullName}</Link>
-                    <span className="muted" style={{ marginLeft: 'auto', fontSize: '.88rem' }}>{rt?.abbreviation ?? 'FA'}</span>
+                    <span className="muted" style={{ marginLeft: 'auto', fontSize: '.88rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>{rt && <TeamLogo abbr={rt.abbreviation} src={rt.logoUrl} color={rt.primaryColor} size={18} />}{rt?.abbreviation ?? 'FA'}</span>
                   </li>
                 );
               })}

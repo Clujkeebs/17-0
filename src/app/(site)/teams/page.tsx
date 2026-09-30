@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { TeamLogo } from '@/components/TeamLogo';
 import { pageMeta } from '@/lib/seo/meta';
 import { divisionLabel, loadTeams, teamName } from '@/lib/seo/queries';
 import type { TeamRow } from '@/lib/server/data';
@@ -38,7 +39,7 @@ export default async function TeamsPage() {
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {divisions.get(div)!.map((t) => (
                   <li key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
-                    <span aria-hidden="true" style={{ width: 10, height: 10, background: t.primaryColor, border: '1px solid var(--steel)', flex: 'none' }} />
+                    <TeamLogo abbr={t.abbreviation} src={t.logoUrl} color={t.primaryColor} size={28} />
                     <Link href={`/teams/${t.slug}`}>{teamName(t)}</Link>
                     <span className="num muted" style={{ marginLeft: 'auto' }}>{t.abbreviation}</span>
                   </li>

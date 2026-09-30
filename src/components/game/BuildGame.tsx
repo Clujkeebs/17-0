@@ -168,7 +168,19 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
                 spinKey={`${draft.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.city} ${team.name}`); }} />
               <div className="g-spin-status">
                 <p className="g-kicker" style={{ margin: 0 }} id="clock-h">{landed ? 'Tap the trait you want him to give you' : 'Spinning'}</p>
-                <span className="g-kicker num" style={{ margin: 0 }}>{openTraits.length} open</span>
+                <div className="row" style={{ gap: 10 }}>
+                  <span className="g-kicker num" style={{ margin: 0 }}>{openTraits.length} open</span>
+                  <button type="button" className="btn btn-sm g-respin" disabled={!landed || !!busy || draft.respinsLeft <= 0}
+                    onClick={async () => {
+                      setBusy('respin'); setError('');
+                      try {
+                        const d = await post({ action: 'respin', sessionId: draft.sessionId, token: draft.token });
+                        setDraft({ ...draft, ...d }); setLanded(false); setSpinKey((k) => k + 1);
+                      } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
+                    }}>
+                    Re-roll <span className="num">{draft.respinsLeft}</span>
+                  </button>
+                </div>
               </div>
             </div>
             {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : <div className="g-roster in">

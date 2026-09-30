@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { TeamLogo } from '@/components/TeamLogo';
+import { Avatar } from '@/components/Avatar';
+import { resolvePlayerImage } from '@/lib/server/images';
 import { POSITION_GROUPS, POSITION_NAMES } from '@/lib/game/attributes';
 import { searchPlayers } from '@/lib/server/data';
 import { pageMeta } from '@/lib/seo/meta';
@@ -59,10 +62,11 @@ export default async function PlayersPage({ searchParams }: Props) {
               {results.map((r) => {
                 const t = r.teamId != null ? teams.get(r.teamId) : undefined;
                 return (
-                  <li key={r.slug} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--steel)', alignItems: 'baseline' }}>
+                  <li key={r.slug} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--steel)', alignItems: 'center' }}>
                     <span className="num" style={{ width: 32, fontWeight: 700 }}>{r.overallRating}</span>
+                    <Avatar name={r.fullName} src={resolvePlayerImage(r)} color={t?.primaryColor ?? '#0A0A0A'} size={32} decorative />
                     <Link href={`/players/${r.slug}`}>{r.fullName}</Link>
-                    <span className="muted">{r.position}{t ? `, ${teamName(t)}` : ''}</span>
+                    <span className="muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{r.position}{t ? <>, <TeamLogo abbr={t.abbreviation} src={t.logoUrl} color={t.primaryColor} size={18} />{teamName(t)}</> : ''}</span>
                   </li>
                 );
               })}

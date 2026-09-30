@@ -119,8 +119,8 @@ export const grid: MiniGame<Puzzle, Answer> = {
       const pts = pl ? cellPoints(valid.length, pl.ovr) : 0;
       const rarity = Math.round(100 / valid.length);
       return {
-        team: p.teams[Math.floor(i / 3)].abbr, crit: p.crits[i % 3].label, ok, pts, rarity, validCount: valid.length,
-        pick: pl ? pl.name : null,
+        team: p.teams[Math.floor(i / 3)].abbr, teamColor: p.teams[Math.floor(i / 3)].color, logoUrl: p.teams[Math.floor(i / 3)].logoUrl, crit: p.crits[i % 3].label, ok, pts, rarity, validCount: valid.length,
+        pick: pl ? pl.name : null, pickImg: pl ? pl.img : null, pickTeam: pl ? pl.team : null, pickColor: pl ? pl.teamColor : null, pickLogo: pl ? pl.logoUrl : null,
         others: valid.filter((id) => id !== pick).map((id) => p.byId[id]).sort((a, b) => b.ovr - a.ovr).slice(0, 12).map((x) => x.name),
       };
     });

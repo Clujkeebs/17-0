@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { positionGroup } from '@/lib/game/attributes';
 import type { GameData } from './types';
+import { resolvePlayerImage } from '@/lib/server/images';
 
 let cache: { at: number; data: GameData } | null = null;
 
@@ -22,7 +23,7 @@ export async function loadGameData(): Promise<GameData> {
         teamId: t.id, team: t.abbreviation, teamName: `${t.city} ${t.name}`, teamColor: t.primaryColor, logoUrl: t.logoUrl,
         conference: t.conference, division: t.division,
         college: p.college, age: p.age, yearsPro: p.yearsPro, heightInches: p.heightInches, weightLbs: p.weightLbs,
-        jersey: p.jerseyNumber, archetype: p.archetype, img: p.imageBlobUrl ?? p.imageUrl, attrs: (p.attributes ?? {}) as GameData['players'][number]['attrs'],
+        jersey: p.jerseyNumber, archetype: p.archetype, img: resolvePlayerImage(p), attrs: (p.attributes ?? {}) as GameData['players'][number]['attrs'],
       };
     }),
   };

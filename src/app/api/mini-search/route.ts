@@ -15,6 +15,6 @@ export async function GET(req: Request) {
   const results = players
     .filter((p) => (!pos || p.group === pos) && norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q))
     .sort((a, b) => b.ovr - a.ovr).slice(0, 8)
-    .map((p) => ({ id: p.id, name: p.name, position: p.position, team: p.team, teamColor: p.teamColor, img: p.img }));
+    .map((p) => ({ id: p.id, name: p.name, position: p.position, team: p.team, teamColor: p.teamColor, logoUrl: p.logoUrl, img: p.img }));
   return json({ results }, { cacheSeconds: 300 });
 }

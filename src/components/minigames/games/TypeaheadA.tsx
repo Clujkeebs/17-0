@@ -1,8 +1,9 @@
 'use client';
+import { TeamTag } from '../TeamTag';
 import { useEffect, useId, useRef, useState } from 'react';
 import { PlayerFace } from '@/components/game/PlayerFace';
 
-export interface SearchHit { id: string; name: string; position: string; team: string; teamColor: string; img: string | null }
+export interface SearchHit { id: string; name: string; position: string; team: string; teamColor: string; logoUrl?: string | null; img: string | null }
 
 /** Accessible player combobox backed by /api/mini-search. */
 export function TypeaheadA({ label, onPick, disabled, usedIds = [], autoFocus, placeholder = 'Start typing a name' }: {
@@ -54,7 +55,7 @@ export function TypeaheadA({ label, onPick, disabled, usedIds = [], autoFocus, p
               <li key={h.id} id={`${id}-${i}`} role="option" aria-selected={i === active} aria-disabled={used} className={used ? 'used' : ''}
                 onMouseDown={(e) => { e.preventDefault(); choose(h); }} onMouseEnter={() => setActive(i)}>
                 <PlayerFace name={h.name} src={h.img} color={h.teamColor} size={32} />
-                <span style={{ flex: 1 }}><strong>{h.name}</strong> <span className="muted">{h.position} · {h.team}{used ? ' · used' : ''}</span></span>
+                <span style={{ flex: 1 }}><strong>{h.name}</strong> <span className="muted">{h.position} · <TeamTag abbr={h.team} logoUrl={h.logoUrl} color={h.teamColor} />{used ? ' · used' : ''}</span></span>
               </li>
             );
           })}

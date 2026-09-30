@@ -1,17 +1,18 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { click, thud } from './sound';
+import { readableOn } from '@/lib/color';
 
 export interface ReelTeam { id: number; abbreviation: string; city: string; name: string; color: string; logoUrl: string | null }
 
 const CELL = 148;
 
-export function TeamMark({ team, size = 64 }: { team: Pick<ReelTeam, 'abbreviation' | 'logoUrl' | 'color' | 'city' | 'name'>; size?: number }) {
+export function TeamMark({ team, size = 64, alt }: { team: Pick<ReelTeam, 'abbreviation' | 'logoUrl' | 'color' | 'city' | 'name'>; size?: number; /** Pass "" when the logo sits next to the team name. */ alt?: string }) {
   const [failed, setFailed] = useState(false);
   if (team.logoUrl && !failed) {
-    return <img src={team.logoUrl} alt={`${team.city} ${team.name} logo`} width={size} height={size} onError={() => setFailed(true)} style={{ width: size, height: size, objectFit: 'contain' }} />;
+    return <img src={team.logoUrl} alt={alt ?? `${[team.city, team.name].filter(Boolean).join(' ')} logo`} width={size} height={size} onError={() => setFailed(true)} style={{ width: size, height: size, objectFit: 'contain' }} />;
   }
-  return <span className="team-mono" style={{ width: size, height: size, background: team.color, fontSize: size * 0.3 }}>{team.abbreviation}</span>;
+  return <span className="team-mono" aria-hidden={alt === '' ? true : undefined} style={{ width: size, height: size, background: team.color, color: readableOn(team.color), fontSize: size * 0.3 }}>{team.abbreviation}</span>;
 }
 
 /**

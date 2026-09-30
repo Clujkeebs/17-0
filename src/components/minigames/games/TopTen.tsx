@@ -1,13 +1,14 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { MiniGameShell } from '../MiniGameShell';
+import { TeamTag } from '../TeamTag';
 import { PlayerFace } from '@/components/game/PlayerFace';
 import './group-c.css';
 
 interface P { seed: string; group: string; groupName: string; size: number }
-interface Hit { id: string; name: string; team: string; ovr: number; rank: number }
-interface Opt { id: string; name: string; position: string; team: string; teamColor: string; img: string | null }
-interface D { strikes: number; groupName: string; rows: { rank: number; name: string; team: string; ovr: number; found: boolean }[] }
+interface Hit { id: string; name: string; team: string; ovr: number; rank: number; teamColor?: string; logoUrl?: string | null; img?: string | null }
+interface Opt { id: string; name: string; position: string; team: string; teamColor: string; logoUrl?: string | null; img: string | null }
+interface D { strikes: number; groupName: string; rows: { rank: number; name: string; team: string; ovr: number; found: boolean; teamColor?: string; logoUrl?: string | null; img?: string | null }[] }
 type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 
 export function TopTen({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
@@ -23,7 +24,8 @@ export function TopTen({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
               {d.rows.map((x) => (
                 <li key={x.rank} className={`gc-slot ${x.found ? 'hit' : 'miss'}`}>
                   <span className="gc-rank num">{x.rank}</span>
-                  <span className="gc-name">{x.name} <span className="muted" style={{ fontWeight: 400 }}>{x.team}</span></span>
+                  <PlayerFace name={x.name} src={x.img} color={x.teamColor ?? 'var(--green)'} size={32} />
+                  <span className="gc-name">{x.name} <span className="muted" style={{ fontWeight: 400 }}><TeamTag abbr={x.team} logoUrl={x.logoUrl} color={x.teamColor} /></span></span>
                   <span className="num" style={{ fontWeight: 700 }}>{x.ovr}</span>
                   <span className="gc-tag">{x.found ? 'Found' : 'Missed'}</span>
                 </li>
@@ -50,11 +52,11 @@ function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Pro
       const res = await fetch(`/api/mini/top-ten/check`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ seed: puzzle.seed, guess: { id: o.id } }) });
       const body = await res.json();
       if (!res.ok) { setMsg(body.error ?? 'Could not check that one.'); return; }
-      const f = body.feedback as { hit: boolean; rank?: number; name: string; team?: string; ovr?: number };
+      const f = body.feedback as { hit: boolean; rank?: number; name: string; team?: string; ovr?: number; teamColor?: string; logoUrl?: string | null; img?: string | null };
       const g = [...guesses, o.id];
       setGuesses(g);
       if (f.hit) {
-        const h = [...hits, { id: o.id, name: f.name, team: f.team!, ovr: f.ovr!, rank: f.rank! }];
+        const h = [...hits, { id: o.id, name: f.name, team: f.team!, ovr: f.ovr!, rank: f.rank!, teamColor: f.teamColor ?? o.teamColor, logoUrl: f.logoUrl ?? o.logoUrl, img: f.img ?? o.img }];
         setHits(h);
         setMsg(`Right. ${f.name} is number ${f.rank}.`);
         if (h.length === puzzle.size) void submit({ guesses: g });
@@ -84,7 +86,8 @@ function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Pro
           return (
             <li key={i} className={`gc-slot ${h ? 'hit' : ''}`}>
               <span className="gc-rank num">{i + 1}</span>
-              <span className="gc-name">{h ? <>{h.name} <span className="muted" style={{ fontWeight: 400 }}>{h.team}</span></> : <span className="muted" style={{ fontWeight: 400 }}>Open</span>}</span>
+              {h && <PlayerFace name={h.name} src={h.img} color={h.teamColor ?? 'var(--green)'} size={32} />}
+              <span className="gc-name">{h ? <>{h.name} <span className="muted" style={{ fontWeight: 400 }}><TeamTag abbr={h.team} logoUrl={h.logoUrl} color={h.teamColor} /></span></> : <span className="muted" style={{ fontWeight: 400 }}>Open</span>}</span>
               {h && <span className="num" style={{ fontWeight: 700 }}>{h.ovr}</span>}
             </li>
           );
@@ -130,7 +133,7 @@ export function Search({ pos, disabled, onPick, label }: { pos: string; disabled
           {opts.map((o, i) => (
             <li key={o.id} id={`gc-o-${i}`} role="option" aria-selected={i === act} onMouseDown={(e) => { e.preventDefault(); pick(o); }} onMouseEnter={() => setAct(i)}>
               <PlayerFace name={o.name} src={o.img} color={o.teamColor} size={32} />
-              <span><strong>{o.name}</strong> <span className="muted">{o.position} · {o.team}</span></span>
+              <span><strong>{o.name}</strong> <span className="muted">{o.position} · <TeamTag abbr={o.team} logoUrl={o.logoUrl} color={o.teamColor} /></span></span>
             </li>
           ))}
         </ul>

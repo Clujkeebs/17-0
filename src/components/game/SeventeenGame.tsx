@@ -171,7 +171,19 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
               <Reel pool={reelPool} target={reelTarget} spinKey={`${draft.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.city} ${team.name} on the clock`); }} />
               <div className="g-spin-status" aria-live="polite">
                 <p className="g-kicker" style={{ margin: 0 }} id="clock-h">{landed ? `Pick one ${team.name} player for an open slot` : 'Spinning'}</p>
-                <span className="g-kicker num" style={{ margin: 0 }}>{openSlots.length} open</span>
+                <div className="row" style={{ gap: 10 }}>
+                  <span className="g-kicker num" style={{ margin: 0 }}>{openSlots.length} open</span>
+                  <button type="button" className="btn btn-sm g-respin" disabled={!landed || !!busy || draft.respinsLeft <= 0}
+                    onClick={async () => {
+                      setBusy('respin'); setError('');
+                      try {
+                        const d = await post({ action: 'respin', sessionId: draft.sessionId, token: draft.token });
+                        setDraft({ ...draft, ...d }); setLanded(false); setSpinKey((k) => k + 1);
+                      } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
+                    }}>
+                    Re-roll <span className="num">{draft.respinsLeft}</span>
+                  </button>
+                </div>
               </div>
             </div>
 

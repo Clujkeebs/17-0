@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { TeamLogo } from '@/components/TeamLogo';
+import { Avatar } from '@/components/Avatar';
 import { pageMeta } from '@/lib/seo/meta';
 import { loadCoaches, loadTeamMap, teamName } from '@/lib/seo/queries';
 import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
@@ -36,8 +38,8 @@ export default async function CoachesPage() {
                 return (
                   <tr key={c.id}>
                     <td className="num muted">{i + 1}</td>
-                    <td><Link href={`/coaches/${c.slug}`}>{c.fullName}</Link></td>
-                    <td>{t ? <Link className="muted" href={`/teams/${t.slug}`}>{teamName(t)}</Link> : <span className="muted">None</span>}</td>
+                    <td><span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Avatar name={c.fullName} src={c.imageUrl} color={t?.primaryColor ?? '#0A0A0A'} size={32} decorative /><Link href={`/coaches/${c.slug}`}>{c.fullName}</Link></span></td>
+                    <td>{t ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TeamLogo abbr={t.abbreviation} src={t.logoUrl} color={t.primaryColor} size={20} /><Link className="muted" href={`/teams/${t.slug}`}>{teamName(t)}</Link></span> : <span className="muted">None</span>}</td>
                     <td className="num">{c.careerWins}-{c.careerLosses}</td>
                     <td className="num">{c.superBowlWins}</td>
                     <td className="num" style={{ fontWeight: 700 }}>{c.coachImpactScore}</td>

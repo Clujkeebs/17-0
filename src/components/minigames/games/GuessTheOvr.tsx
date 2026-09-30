@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { MiniGameShell } from '../MiniGameShell';
+import { TeamTag } from '../TeamTag';
 import { PlayerFace } from '@/components/game/PlayerFace';
 import './group-b.css';
 
-interface Card { id: string; name: string; position: string; team: string; teamColor: string; img: string | null }
+interface Card { id: string; name: string; position: string; team: string; teamColor: string; logoUrl?: string | null; img: string | null }
 interface P { rounds: { player: Card & { age: number | null; yearsPro: number | null; archetype: string | null }; anchors: (Card & { ovr: number })[] }[] }
-interface D { name: string; team: string; position: string; actual: number; guess: number; points: number }
+interface D { name: string; team: string; teamColor?: string; logoUrl?: string | null; img?: string | null; position: string; actual: number; guess: number; points: number }
 type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 
 const LO = 40, HI = 99;
@@ -23,7 +24,7 @@ export function GuessTheOvr({ signedIn, meta }: { signedIn: boolean; meta: Meta 
             return (
               <li key={i} className={`m-opt gb-reveal ${miss <= 2 ? 'right' : miss >= 10 ? 'wrong' : ''}`} style={{ cursor: 'default', display: 'block', animationDelay: `${i * 60}ms` }}>
                 <span className="m-row" style={{ justifyContent: 'space-between' }}>
-                  <span><strong>{d.name}</strong> <span className="muted">{d.position} · {d.team}</span></span>
+                  <span className="m-who"><PlayerFace name={d.name} src={d.img} color={d.teamColor ?? 'var(--green)'} size={36} /><span><strong>{d.name}</strong> <span className="muted">{d.position} · <TeamTag abbr={d.team} logoUrl={d.logoUrl} color={d.teamColor} /></span></span></span>
                   <span className="num"><strong>{d.points}</strong> pts</span>
                 </span>
                 <span className="muted" style={{ fontSize: '.9rem' }}>Actual <strong className="num" style={{ color: 'var(--bone)' }}>{d.actual}</strong> · You said <strong className="num" style={{ color: 'var(--orange)' }}>{d.guess}</strong> · {miss === 0 ? 'Exact' : `Off by ${miss}`}</span>
@@ -61,7 +62,7 @@ function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Pro
         <PlayerFace name={p.name} src={p.img} color={p.teamColor} size={64} />
         <div>
           <p className="m-big" style={{ margin: 0 }}>{p.name}</p>
-          <p className="muted" style={{ margin: 0 }}>{p.position} · {p.team}{p.age ? ` · Age ${p.age}` : ''}{p.archetype ? ` · ${p.archetype}` : ''}</p>
+          <p className="muted" style={{ margin: 0 }}>{p.position} · <TeamTag abbr={p.team} logoUrl={p.logoUrl} color={p.teamColor} />{p.age ? ` · Age ${p.age}` : ''}{p.archetype ? ` · ${p.archetype}` : ''}</p>
         </div>
       </div>
       <p className="m-kicker">For reference</p>
@@ -69,7 +70,7 @@ function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Pro
         {r.anchors.map((a) => (
           <div key={a.id} className="gb-anchor">
             <PlayerFace name={a.name} src={a.img} color={a.teamColor} size={32} />
-            <span className="n"><strong>{a.name}</strong><br /><span className="muted">{a.position} · {a.team}</span></span>
+            <span className="n"><strong>{a.name}</strong><br /><span className="muted">{a.position} · <TeamTag abbr={a.team} logoUrl={a.logoUrl} color={a.teamColor} /></span></span>
             <span className="o num" aria-label={`Overall ${a.ovr}`}>{a.ovr}</span>
           </div>
         ))}

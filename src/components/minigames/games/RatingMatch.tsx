@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { MiniGameShell } from '../MiniGameShell';
+import { TeamTag } from '../TeamTag';
 import { PlayerFace } from '@/components/game/PlayerFace';
 import './group-b.css';
 
-interface Card { id: string; name: string; position: string; team: string; teamColor: string; img: string | null }
+interface Card { id: string; name: string; position: string; team: string; teamColor: string; logoUrl?: string | null; img: string | null }
 interface P { seed: string; players: Card[]; labels: string[]; lines: number[][] }
-interface D { players: { name: string; team: string; position: string; line: number; pick: number; ok: boolean }[]; score: number; attempts: number }
+interface D { players: { name: string; team: string; teamColor?: string; logoUrl?: string | null; img?: string | null; position: string; line: number; pick: number; ok: boolean }[]; score: number; attempts: number }
 type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 
 const L = 'ABCDE';
@@ -30,7 +31,7 @@ export function RatingMatch({ signedIn, meta }: { signedIn: boolean; meta: Meta 
             <ol className="m-grid" style={{ listStyle: 'none', padding: 0 }}>
               {d.players.map((x, i) => (
                 <li key={i} className={`m-opt gb-reveal ${x.ok ? 'right' : 'wrong'}`} style={{ cursor: 'default', flexWrap: 'wrap', animationDelay: `${i * 60}ms` }}>
-                  <span style={{ flex: '1 1 160px' }}><strong>{x.name}</strong> <span className="muted">{x.position} · {x.team}</span>{!x.ok && <><br /><span className="muted">You gave him line {L[x.pick]}</span></>}</span>
+                  <span className="m-who" style={{ flex: '1 1 160px' }}><PlayerFace name={x.name} src={x.img} color={x.teamColor ?? 'var(--green)'} size={36} /><span><strong>{x.name}</strong> <span className="muted">{x.position} · <TeamTag abbr={x.team} logoUrl={x.logoUrl} color={x.teamColor} /></span>{!x.ok && <><br /><span className="muted">You gave him line {L[x.pick]}</span></>}</span></span>
                   {puzzle && <span className="gb-line" style={{ flex: '1 1 260px' }}><span className="gb-tag">{L[x.line]}</span><Line vals={puzzle.lines[x.line]} labels={puzzle.labels} /></span>}
                   <span>{x.ok ? 'Right' : 'Wrong'}</span>
                 </li>
@@ -95,7 +96,7 @@ function Play({ puzzle, submit, busy, slug }: { puzzle: P; submit: (a: unknown) 
               <button key={c.id} type="button" className="m-opt" aria-pressed={sel === pi} onClick={() => tapPlayer(pi)} disabled={busy || checking}
                 aria-label={`${c.name}, ${pairs[pi] === null ? 'unpaired' : `paired with line ${L[pairs[pi]!]}`}`}>
                 <PlayerFace name={c.name} src={c.img} color={c.teamColor} size={36} />
-                <span style={{ flex: 1, minWidth: 0 }}><strong style={{ display: 'block' }}>{c.name}</strong><span className="muted">{c.position} · {c.team}</span></span>
+                <span style={{ flex: 1, minWidth: 0 }}><strong style={{ display: 'block' }}>{c.name}</strong><span className="muted">{c.position} · <TeamTag abbr={c.team} logoUrl={c.logoUrl} color={c.teamColor} /></span></span>
                 <span className={`gb-tag ${pairs[pi] !== null ? 'on' : ''}`}>{pairs[pi] === null ? '?' : L[pairs[pi]!]}</span>
               </button>
             ))}

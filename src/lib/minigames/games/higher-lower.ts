@@ -39,7 +39,7 @@ export const higherLower: MiniGame<Puzzle, Answer> = {
     const detail = p.rounds.map((r, i) => {
       const av = val(r.a, r.stat), bv = val(r.b, r.stat);
       const ok = av === bv || (answer[i] === 'a' ? av > bv : bv > av);
-      return { a: r.a.name, b: r.b.name, label: r.label, av, bv, pick: answer[i], ok };
+      return { a: r.a.name, b: r.b.name, aImg: r.a.img, bImg: r.b.img, aTeam: r.a.team, bTeam: r.b.team, aColor: r.a.teamColor, bColor: r.b.teamColor, aLogo: r.a.logoUrl, bLogo: r.b.logoUrl, label: r.label, av, bv, pick: answer[i], ok };
     });
     const right = detail.filter((d) => d.ok).length;
     return { score: right, summary: `${right}/${ROUNDS}`, detail, perfect: right === ROUNDS };

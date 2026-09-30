@@ -6,7 +6,7 @@ const GROUPS: PositionGroup[] = ['QB', 'RB', 'WR', 'TE', 'EDGE', 'LB', 'CB', 'S'
 export const TOP_TEN_STRIKES = 3;
 const byRank = (a: GPlayer, b: GPlayer) => b.ovr - a.ovr || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
 
-interface Puzzle { seed: string; group: PositionGroup; top: { id: string; name: string; team: string; ovr: number }[] }
+interface Puzzle { seed: string; group: PositionGroup; top: { id: string; name: string; team: string; ovr: number; teamColor?: string; logoUrl?: string | null; img?: string | null }[] }
 interface Answer { guesses: string[] }
 
 export const topTen: MiniGame<Puzzle, Answer> = {
@@ -20,7 +20,7 @@ export const topTen: MiniGame<Puzzle, Answer> = {
     const full = counts.filter((c) => c.n >= 10).map((c) => c.g);
     const group = full.length ? rng.pick(full) : counts.reduce((a, b) => (b.n > a.n ? b : a)).g;
     const top = data.players.filter((p) => p.group === group).sort(byRank).slice(0, 10)
-      .map((p) => ({ id: p.id, name: p.name, team: p.team, ovr: p.ovr }));
+      .map((p) => ({ id: p.id, name: p.name, team: p.team, ovr: p.ovr, teamColor: p.teamColor, logoUrl: p.logoUrl, img: p.img }));
     return { seed, group, top };
   },
   publicView: (p) => ({ seed: p.seed, group: p.group, groupName: POSITION_NAMES[p.group], size: p.top.length }),
@@ -30,7 +30,7 @@ export const topTen: MiniGame<Puzzle, Answer> = {
     const rank = p.top.findIndex((t) => t.id === id);
     const pl = data.players.find((x) => x.id === id);
     if (!pl) throw new Error('Unknown player.');
-    return rank >= 0 ? { id, hit: true, rank: rank + 1, name: pl.name, team: pl.team, ovr: pl.ovr } : { id, hit: false, name: pl.name };
+    return rank >= 0 ? { id, hit: true, rank: rank + 1, name: pl.name, team: pl.team, ovr: pl.ovr, teamColor: pl.teamColor, logoUrl: pl.logoUrl, img: pl.img } : { id, hit: false, name: pl.name };
   },
   // Ranked: every checked name counts, including strikes.
   applyChecks(_answer, checks) {
