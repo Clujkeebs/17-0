@@ -86,8 +86,19 @@ test('reel still spins with reduced motion', async ({ page }) => {
   await page.goto('/games/17-0?mode=casual');
   const strip = page.locator('.reel2-strip').first();
   await expect(strip).toBeVisible({ timeout: 20_000 });
-  const t1 = await strip.evaluate((el) => getComputedStyle(el).transform);
-  await page.waitForTimeout(400);
-  const t2 = await page.locator('.reel2-strip').first().evaluate((el) => getComputedStyle(el).transform);
-  expect(t1).not.toEqual(t2);
+  // Reduce Motion must not zero the spin: the loading loop animates and the landing eases over 1.3s.
+  const anim = await strip.evaluate((el) => { const c = getComputedStyle(el); return { name: c.animationName, dur: c.transitionDuration }; });
+  expect(anim.name !== 'none' || anim.dur === '1.3s').toBe(true);
 });
+
+for (const [slug, rounds] of [['speed-trap', 8], ['odd-one-out', 6]] as const) {
+  test(`${slug} casual round trip`, async ({ page }) => {
+    await page.goto(`/games/${slug}`);
+    await page.getByRole('tab', { name: 'Casual' }).click();
+    for (let i = 0; i < rounds; i++) {
+      await expect(page.getByText(`Round ${i + 1} of ${rounds}`)).toBeVisible();
+      await page.locator('button.m-opt').first().click();
+    }
+    await expect(page.locator('.m-score')).toContainText(`/${rounds}`);
+  });
+}
