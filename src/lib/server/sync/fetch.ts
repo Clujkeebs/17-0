@@ -45,6 +45,33 @@ export async function discoverIteration(fetchImpl: typeof fetch = fetch): Promis
   } catch { return null; }
 }
 
+export const RATINGS_PAGE = 'https://www.ea.com/games/madden-nfl/ratings';
+
+/**
+ * Primary source for the current edition: EA's ratings page is server-rendered and embeds the
+ * current iteration's players (with team and position) in __NEXT_DATA__, 100 per `?page=N`.
+ */
+export async function fetchSsrPages(fetchImpl: typeof fetch = fetch, base = RATINGS_PAGE): Promise<RawRatings> {
+  const pages: unknown[] = [];
+  let itemCount = 0, total = Infinity;
+  for (let page = 1; page <= MAX_PAGES && itemCount < total; page++) {
+    const res = await fetchImpl(`${base}?page=${page}`, { headers: { 'user-agent': UA, accept: 'text/html' }, signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) throw new Error(`Ratings page ${page} returned ${res.status}`);
+    const html = await res.text();
+    const raw = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)?.[1];
+    if (!raw) throw new Error(`Ratings page ${page} had no embedded data`);
+    const details = (JSON.parse(raw) as { props?: { pageProps?: { ratingDetails?: { items?: unknown[]; totalItems?: number } } } }).props?.pageProps?.ratingDetails;
+    const items = details?.items ?? [];
+    if (typeof details?.totalItems === 'number') total = details.totalItems;
+    if (!items.length) break;
+    pages.push({ items, totalItems: details?.totalItems });
+    itemCount += items.length;
+    await new Promise((r) => setTimeout(r, 400)); // be polite
+  }
+  if (itemCount === 0) throw new Error('Ratings page returned no items');
+  return { sourceUrl: base, method: 'json', pages, itemCount };
+}
+
 export async function fetchJsonPages(base = jsonBase(), fetchImpl: typeof fetch = fetch, iteration?: string | null): Promise<RawRatings> {
   const pages: unknown[] = [];
   let itemCount = 0;
@@ -127,10 +154,15 @@ function findItemsDeep(node: unknown, depth = 0): unknown {
   return null;
 }
 
-/** JSON endpoint first; browser scrape if that fails. Throws with both reasons if neither works. */
+/** Server-rendered ratings page first (current edition), then the JSON endpoint, then a browser. */
 export async function fetchRatings(): Promise<RawRatings> {
   try {
-    return await fetchJsonPages();
+    return await fetchSsrPages();
+  } catch (ssrErr) {
+    console.warn('[sync] ratings page failed, trying JSON endpoint:', (ssrErr as Error).message);
+  }
+  try {
+    return await fetchJsonPages(undefined, fetch, null);
   } catch (jsonErr) {
     console.warn('[sync] JSON endpoint failed, trying browser:', (jsonErr as Error).message);
     try {
