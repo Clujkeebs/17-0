@@ -148,7 +148,7 @@ export function parseItem(item: Json): FeedPlayer | null {
     jerseyNumber: num(item.jerseyNum ?? item.jerseyNumber ?? item.jersey),
     age: num(item.age),
     yearsPro: num(item.yearsPro ?? item.experience),
-    imageUrl: str(item.avatarUrl ?? item.headshotUrl ?? item.imageUrl),
+    imageUrl: null, // never use EA portraits (legal); ESPN backfill fills headshots
   };
 }
 

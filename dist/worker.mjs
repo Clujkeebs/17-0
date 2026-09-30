@@ -196,10 +196,10 @@ function __generator(thisArg, body) {
   var _ = { label: 0, sent: function() {
     if (t2[0] & 1) throw t2[1];
     return t2[1];
-  }, trys: [], ops: [] }, f2, y3, t2, g3 = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
-  return g3.next = verb(0), g3["throw"] = verb(1), g3["return"] = verb(2), typeof Symbol === "function" && (g3[Symbol.iterator] = function() {
+  }, trys: [], ops: [] }, f2, y3, t2, g4 = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+  return g4.next = verb(0), g4["throw"] = verb(1), g4["return"] = verb(2), typeof Symbol === "function" && (g4[Symbol.iterator] = function() {
     return this;
-  }), g3;
+  }), g4;
   function verb(n2) {
     return function(v2) {
       return step([n2, v2]);
@@ -207,7 +207,7 @@ function __generator(thisArg, body) {
   }
   function step(op2) {
     if (f2) throw new TypeError("Generator is already executing.");
-    while (g3 && (g3 = 0, op2[0] && (_ = 0)), _) try {
+    while (g4 && (g4 = 0, op2[0] && (_ = 0)), _) try {
       if (f2 = 1, y3 && (t2 = op2[0] & 2 ? y3["return"] : op2[0] ? y3["throw"] || ((t2 = y3["return"]) && t2.call(y3), 0) : y3.next) && !(t2 = t2.call(y3, op2[1])).done) return t2;
       if (y3 = 0, t2) op2 = [op2[0] & 2, t2.value];
       switch (op2[0]) {
@@ -318,7 +318,7 @@ function __await(v2) {
 }
 function __asyncGenerator(thisArg, _arguments, generator) {
   if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-  var g3 = generator.apply(thisArg, _arguments || []), i2, q = [];
+  var g4 = generator.apply(thisArg, _arguments || []), i2, q = [];
   return i2 = Object.create((typeof AsyncIterator === "function" ? AsyncIterator : Object).prototype), verb("next"), verb("throw"), verb("return", awaitReturn), i2[Symbol.asyncIterator] = function() {
     return this;
   }, i2;
@@ -328,7 +328,7 @@ function __asyncGenerator(thisArg, _arguments, generator) {
     };
   }
   function verb(n2, f2) {
-    if (g3[n2]) {
+    if (g4[n2]) {
       i2[n2] = function(v2) {
         return new Promise(function(a2, b3) {
           q.push([n2, v2, a2, b3]) > 1 || resume2(n2, v2);
@@ -339,7 +339,7 @@ function __asyncGenerator(thisArg, _arguments, generator) {
   }
   function resume2(n2, v2) {
     try {
-      step(g3[n2](v2));
+      step(g4[n2](v2));
     } catch (e2) {
       settle(q[0][3], e2);
     }
@@ -5303,31 +5303,31 @@ var require_node = __commonJS({
           }
           if (length < 7)
             return fromCharCode(a2, b3, c2, d4, e2, f2);
-          let g3 = src[position$1++];
-          if ((g3 & 128) > 0) {
+          let g4 = src[position$1++];
+          if ((g4 & 128) > 0) {
             position$1 -= 7;
             return;
           }
-          return fromCharCode(a2, b3, c2, d4, e2, f2, g3);
+          return fromCharCode(a2, b3, c2, d4, e2, f2, g4);
         } else {
           let e2 = src[position$1++];
           let f2 = src[position$1++];
-          let g3 = src[position$1++];
+          let g4 = src[position$1++];
           let h3 = src[position$1++];
-          if ((e2 & 128) > 0 || (f2 & 128) > 0 || (g3 & 128) > 0 || (h3 & 128) > 0) {
+          if ((e2 & 128) > 0 || (f2 & 128) > 0 || (g4 & 128) > 0 || (h3 & 128) > 0) {
             position$1 -= 8;
             return;
           }
           if (length < 10) {
             if (length === 8)
-              return fromCharCode(a2, b3, c2, d4, e2, f2, g3, h3);
+              return fromCharCode(a2, b3, c2, d4, e2, f2, g4, h3);
             else {
               let i2 = src[position$1++];
               if ((i2 & 128) > 0) {
                 position$1 -= 9;
                 return;
               }
-              return fromCharCode(a2, b3, c2, d4, e2, f2, g3, h3, i2);
+              return fromCharCode(a2, b3, c2, d4, e2, f2, g4, h3, i2);
             }
           } else if (length < 12) {
             let i2 = src[position$1++];
@@ -5337,13 +5337,13 @@ var require_node = __commonJS({
               return;
             }
             if (length < 11)
-              return fromCharCode(a2, b3, c2, d4, e2, f2, g3, h3, i2, j);
+              return fromCharCode(a2, b3, c2, d4, e2, f2, g4, h3, i2, j);
             let k = src[position$1++];
             if ((k & 128) > 0) {
               position$1 -= 11;
               return;
             }
-            return fromCharCode(a2, b3, c2, d4, e2, f2, g3, h3, i2, j, k);
+            return fromCharCode(a2, b3, c2, d4, e2, f2, g4, h3, i2, j, k);
           } else {
             let i2 = src[position$1++];
             let j = src[position$1++];
@@ -5355,14 +5355,14 @@ var require_node = __commonJS({
             }
             if (length < 14) {
               if (length === 12)
-                return fromCharCode(a2, b3, c2, d4, e2, f2, g3, h3, i2, j, k, l3);
+                return fromCharCode(a2, b3, c2, d4, e2, f2, g4, h3, i2, j, k, l3);
               else {
                 let m4 = src[position$1++];
                 if ((m4 & 128) > 0) {
                   position$1 -= 13;
                   return;
                 }
-                return fromCharCode(a2, b3, c2, d4, e2, f2, g3, h3, i2, j, k, l3, m4);
+                return fromCharCode(a2, b3, c2, d4, e2, f2, g4, h3, i2, j, k, l3, m4);
               }
             } else {
               let m4 = src[position$1++];
@@ -5372,13 +5372,13 @@ var require_node = __commonJS({
                 return;
               }
               if (length < 15)
-                return fromCharCode(a2, b3, c2, d4, e2, f2, g3, h3, i2, j, k, l3, m4, n2);
+                return fromCharCode(a2, b3, c2, d4, e2, f2, g4, h3, i2, j, k, l3, m4, n2);
               let o2 = src[position$1++];
               if ((o2 & 128) > 0) {
                 position$1 -= 15;
                 return;
               }
-              return fromCharCode(a2, b3, c2, d4, e2, f2, g3, h3, i2, j, k, l3, m4, n2, o2);
+              return fromCharCode(a2, b3, c2, d4, e2, f2, g4, h3, i2, j, k, l3, m4, n2, o2);
             }
           }
         }
@@ -52147,7 +52147,7 @@ var require_sha256 = __commonJS({
         3329325298
       ]);
       function hashBlocks(w2, v2, p3, pos, len) {
-        var a2, b3, c2, d4, e2, f2, g3, h3, u2, i2, j, t1, t2;
+        var a2, b3, c2, d4, e2, f2, g4, h3, u2, i2, j, t1, t2;
         while (len >= 64) {
           a2 = v2[0];
           b3 = v2[1];
@@ -52155,7 +52155,7 @@ var require_sha256 = __commonJS({
           d4 = v2[3];
           e2 = v2[4];
           f2 = v2[5];
-          g3 = v2[6];
+          g4 = v2[6];
           h3 = v2[7];
           for (i2 = 0; i2 < 16; i2++) {
             j = pos + i2 * 4;
@@ -52169,10 +52169,10 @@ var require_sha256 = __commonJS({
             w2[i2] = (t1 + w2[i2 - 7] | 0) + (t2 + w2[i2 - 16] | 0);
           }
           for (i2 = 0; i2 < 64; i2++) {
-            t1 = (((e2 >>> 6 | e2 << 32 - 6) ^ (e2 >>> 11 | e2 << 32 - 11) ^ (e2 >>> 25 | e2 << 32 - 25)) + (e2 & f2 ^ ~e2 & g3) | 0) + (h3 + (K[i2] + w2[i2] | 0) | 0) | 0;
+            t1 = (((e2 >>> 6 | e2 << 32 - 6) ^ (e2 >>> 11 | e2 << 32 - 11) ^ (e2 >>> 25 | e2 << 32 - 25)) + (e2 & f2 ^ ~e2 & g4) | 0) + (h3 + (K[i2] + w2[i2] | 0) | 0) | 0;
             t2 = ((a2 >>> 2 | a2 << 32 - 2) ^ (a2 >>> 13 | a2 << 32 - 13) ^ (a2 >>> 22 | a2 << 32 - 22)) + (a2 & b3 ^ a2 & c2 ^ b3 & c2) | 0;
-            h3 = g3;
-            g3 = f2;
+            h3 = g4;
+            g4 = f2;
             f2 = e2;
             e2 = d4 + t1 | 0;
             d4 = c2;
@@ -52186,7 +52186,7 @@ var require_sha256 = __commonJS({
           v2[3] += d4;
           v2[4] += e2;
           v2[5] += f2;
-          v2[6] += g3;
+          v2[6] += g4;
           v2[7] += h3;
           pos += 64;
           len -= 64;
@@ -65487,12 +65487,12 @@ function extractLlmResponseAttributes(llmResult, recordOutputs) {
   if (!llmResult) return;
   const attrs = {};
   if (Array.isArray(llmResult.generations)) {
-    const finishReasons = llmResult.generations.flat().map((g3) => {
-      if (g3.generationInfo?.finish_reason) {
-        return g3.generationInfo.finish_reason;
+    const finishReasons = llmResult.generations.flat().map((g4) => {
+      if (g4.generationInfo?.finish_reason) {
+        return g4.generationInfo.finish_reason;
       }
-      if (g3.generation_info?.finish_reason) {
-        return g3.generation_info.finish_reason;
+      if (g4.generation_info?.finish_reason) {
+        return g4.generation_info.finish_reason;
       }
       return null;
     }).filter((r2) => typeof r2 === "string");
@@ -82909,6 +82909,15 @@ async function invalidatePrefix(prefix) {
 // src/lib/server/queue.ts
 var import_bullmq = __toESM(require_cjs(), 1);
 var QUEUE_NAMES = { sync: "madden-sync", newsletter: "newsletter", og: "og-image" };
+var g3 = globalThis;
+function getQueue(name) {
+  g3.queues ??= {};
+  g3.queues[name] ??= new import_bullmq.Queue(name, {
+    connection: getRedis(),
+    defaultJobOptions: { attempts: 5, backoff: { type: "exponential", delay: 5e3 }, removeOnComplete: 500, removeOnFail: 1e3 }
+  });
+  return g3.queues[name];
+}
 
 // src/lib/server/sync/run.ts
 import { mkdir, unlink, writeFile } from "node:fs/promises";
@@ -98194,6 +98203,41 @@ async function renderResultCard(resultId) {
   return { ok: true };
 }
 
+// src/lib/server/espn.ts
+var norm3 = (s3) => s3.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g, "").replace(/[^a-z]/g, "");
+async function backfillEspnHeadshots(fetchImpl = fetch) {
+  const teams2 = await db.select().from(schema_exports.teams);
+  let matched = 0, scanned = 0;
+  for (const t2 of teams2) {
+    const code = t2.logoUrl?.match(/\/nfl\/500\/([a-z]+)\.png/)?.[1] ?? t2.abbreviation.toLowerCase();
+    let athletes = [];
+    try {
+      const res = await fetchImpl(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${code}/roster`, { signal: AbortSignal.timeout(15e3) });
+      if (!res.ok) {
+        console.warn(`[espn] ${code} ${res.status}`);
+        continue;
+      }
+      const body = await res.json();
+      athletes = (body.athletes ?? []).flatMap((g4) => g4.items ?? []);
+    } catch (e2) {
+      console.warn(`[espn] ${code} failed`, e2.message);
+      continue;
+    }
+    const byName = new Map(athletes.map((a2) => [norm3(a2.fullName), a2]));
+    const players2 = await db.select({ id: schema_exports.players.id, fullName: schema_exports.players.fullName }).from(schema_exports.players).where(and(eq(schema_exports.players.teamId, t2.id), or(isNull(schema_exports.players.imageUrl), isNull(schema_exports.players.espnId))));
+    for (const p3 of players2) {
+      scanned++;
+      const a2 = byName.get(norm3(p3.fullName));
+      if (!a2) continue;
+      const img = a2.headshot?.href ?? `https://a.espncdn.com/i/headshots/nfl/players/full/${a2.id}.png`;
+      await db.update(schema_exports.players).set({ espnId: a2.id, imageUrl: img }).where(eq(schema_exports.players.id, p3.id));
+      matched++;
+    }
+  }
+  console.log(`[espn] headshots matched ${matched}/${scanned}`);
+  return { matched, scanned };
+}
+
 // worker/index.ts
 if (process.env.SENTRY_DSN) init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0 });
 var connection2 = getRedis();
@@ -98223,6 +98267,23 @@ var beat = setInterval(() => void connection2.set("worker:heartbeat", String(Dat
 }), 3e4);
 void connection2.set("worker:heartbeat", String(Date.now()), "EX", 600);
 console.log("worker started:", Object.keys(handlers2).join(", "));
+void (async () => {
+  if (process.env.SYNC_ON_BOOT === "1") {
+    try {
+      const probe = await fetchJsonPages(void 0, async (u2, init2) => {
+        const r2 = await fetch(u2, init2);
+        return r2;
+      });
+      const first = JSON.stringify(probe.pages[0]).slice(0, 4e3);
+      console.log(`[probe] items=${probe.itemCount} first page: ${first}`);
+    } catch (e2) {
+      console.warn("[probe] ratings feed failed:", e2.message);
+    }
+    await getQueue(QUEUE_NAMES.sync).add("sync", { by: "boot" }, { attempts: 1 }).catch(() => {
+    });
+  }
+  await backfillEspnHeadshots().catch((e2) => console.warn("[espn] backfill failed", e2.message));
+})();
 async function shutdown() {
   clearInterval(beat);
   await Promise.allSettled(workers.map((w2) => w2.close()));

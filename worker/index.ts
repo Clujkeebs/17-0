@@ -6,6 +6,9 @@ import { runSync } from '@/lib/server/sync';
 import { alertAdmins } from '@/lib/server/alert';
 import { dispatchEmailJob } from '@/lib/server/email-jobs';
 import { renderResultCard } from './og';
+import { backfillEspnHeadshots } from '@/lib/server/espn';
+import { fetchJsonPages } from '@/lib/server/sync/fetch';
+import { getQueue } from '@/lib/server/queue';
 
 if (process.env.SENTRY_DSN) Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0 });
 
@@ -38,6 +41,19 @@ const workers = Object.entries(handlers).map(([name, fn]) => {
 const beat = setInterval(() => void connection.set('worker:heartbeat', String(Date.now()), 'EX', 600).catch(() => {}), 30_000);
 void connection.set('worker:heartbeat', String(Date.now()), 'EX', 600);
 console.log('worker started:', Object.keys(handlers).join(', '));
+
+// Boot tasks: probe the ratings feed shape (logged for parser debugging), kick a sync, backfill headshots.
+void (async () => {
+  if (process.env.SYNC_ON_BOOT === '1') {
+    try {
+      const probe = await fetchJsonPages(undefined, async (u, init) => { const r = await fetch(u, init); return r; });
+      const first = JSON.stringify(probe.pages[0]).slice(0, 4000);
+      console.log(`[probe] items=${probe.itemCount} first page: ${first}`);
+    } catch (e) { console.warn('[probe] ratings feed failed:', (e as Error).message); }
+    await getQueue(QUEUE_NAMES.sync).add('sync', { by: 'boot' }, { attempts: 1 }).catch(() => {});
+  }
+  await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
+})();
 
 async function shutdown() {
   clearInterval(beat);
