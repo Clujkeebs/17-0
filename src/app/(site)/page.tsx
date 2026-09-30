@@ -47,7 +47,7 @@ export default async function Home() {
               <li key={t.id} style={{ ['--team' as string]: t.primaryColor }}>
                 <span className="today-i num">{i + 1}</span>
                 {t.logoUrl
-                  // eslint-disable-next-line @next/next/no-img-element
+                   
                   ? <img className="today-logo" src={t.logoUrl} alt={`${t.city} ${t.name} logo`} width={72} height={72} loading="lazy" />
                   : <span className="today-logo" aria-hidden="true" />}
                 <span className="today-abbr">{t.abbreviation}</span>

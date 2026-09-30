@@ -1,15 +1,11 @@
 import { and, asc, desc, eq, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { cached } from './redis';
+import { allTimePointsExpr } from './leaderboard-sql';
+import { scoreSummary } from './result-summary';
 import { dailyDateET } from '@/lib/game/daily';
 
 export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string }
-
-function summarize(gameType: string, data: Record<string, unknown>): string {
-  if (gameType === '17-0') return `${data.wins}-${data.losses}${data.hard ? ' · Hard' : ''}`;
-  if (gameType === 'build-a-player') return `${data.position} ${Number(data.rating).toFixed(1)}`;
-  return String(data.summary ?? '');
-}
 
 export async function dailyLeaderboard(gameType: string, date = dailyDateET(), limit = 100): Promise<DailyRow[]> {
   return cached(`lb:daily:${gameType}:${date}`, 60, async () => {
@@ -22,7 +18,7 @@ export async function dailyLeaderboard(gameType: string, date = dailyDateET(), l
     return [...rows]
       .sort((a, b) => b.score - a.score || +new Date(a.created_at) - +new Date(b.created_at))
       .slice(0, limit)
-      .map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: summarize(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id }));
+      .map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: scoreSummary(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id }));
   });
 }
 
@@ -31,7 +27,9 @@ export interface AllTimeRow { rank: number; username: string; points: number; ga
 /** All-time: points accumulate across every graded game. 17-0 = wins, Build a Player = rating / 10. */
 export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows: AllTimeRow[]; total: number }> {
   return cached(`lb:all:${page}`, 300, async () => {
-    const pointsExpr = dsql<number>`sum(case when ${schema.gameResults.gameType} = '17-0' then (${schema.gameResults.resultData}->>'wins')::int else round((${schema.gameResults.resultData}->>'rating')::numeric / 10) end)::int`;
+    // Points expression lives in ./leaderboard-sql (pure, unit tested). It coalesces missing
+    // wins/rating so mini-game-only players get 0 base points instead of a NULL that sorts first.
+    const pointsExpr = allTimePointsExpr;
     const where = and(isNotNull(schema.gameResults.userId), eq(schema.gameResults.flagged, false));
     const rows = await db.select({
       username: dsql<string>`max(${schema.gameResults.username})`,

@@ -23,7 +23,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!r) return { title: 'Result not found', robots: { index: false } };
   const d = r.resultData as Record<string, unknown>;
   const mg = r.gameType !== '17-0' && r.gameType !== 'build-a-player' ? getMiniGame(r.gameType) : null;
-  const title = mg ? `${mg.name}: ${String(d.summary ?? '')}` : r.gameType === '17-0' ? `Went ${d.wins}-${d.losses} in 17-0` : `Built a ${Number(d.rating).toFixed(1)} ${d.position}`;
+  // Mini results (and any legacy row) have no wins/rating; guard so share cards never crash on a missing field.
+  const title = mg
+    ? `${mg.name}: ${String(d.summary ?? '')}`
+    : r.gameType === '17-0'
+      ? `Went ${Number(d.wins ?? 0)}-${Number(d.losses ?? 0)} in 17-0`
+      : Number.isFinite(Number(d.rating))
+        ? `Built a ${Number(d.rating).toFixed(1)} ${String(d.position ?? '')}`
+        : 'Game result';
   return {
     title, description: 'Think you can beat it? Spin your own roster.',
     robots: { index: false, follow: true },

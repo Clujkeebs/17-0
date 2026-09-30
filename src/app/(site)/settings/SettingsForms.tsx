@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import { onSoundChange, setSound, soundOn } from '@/components/game/sound';
 
 async function patch(body: Record<string, unknown>) {
   const res = await fetch('/api/user/profile', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -67,8 +68,18 @@ export function Toggle({ field, label, hint, initial }: { field: 'newsletterOptI
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const id = `toggle-${field}`;
+  const isSound = field === 'soundEnabled';
+
+  // Game sounds live in localStorage; the account mirror is so the preference follows the
+  // user across devices. Apply the local change immediately instead of only on save.
+  useEffect(() => {
+    if (!isSound) return;
+    setOn(soundOn());
+    return onSoundChange(setOn);
+  }, [isSound]);
 
   async function onChange(next: boolean) {
+    if (isSound) setSound(next);
     setPending(true); setMsg(''); setError('');
     const r = await patch({ [field]: next }).catch(() => null);
     setPending(false);

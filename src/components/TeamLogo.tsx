@@ -6,7 +6,7 @@ import { useState } from 'react';
 export function TeamLogo({ abbr, src, color, size = 20, alt = '' }: { abbr: string; src?: string | null; color?: string | null; size?: number; alt?: string }) {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
-    // eslint-disable-next-line @next/next/no-img-element
+     
     return <img src={src} alt={alt} width={size} height={size} loading="lazy" decoding="async" onError={() => setFailed(true)} style={{ width: size, height: size, flex: 'none', objectFit: 'contain', verticalAlign: 'middle' }} />;
   }
   return (

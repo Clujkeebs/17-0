@@ -5,5 +5,5 @@ import { groupC } from './group-c';
 import { groupD } from './group-d';
 
 /** Registered mini games, in hub order. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export const games: MiniGame<any, any>[] = [...groupA, ...groupB, ...groupC, ...groupD];
