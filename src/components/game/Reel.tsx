@@ -21,6 +21,8 @@ export function TeamMark({ team, size = 64 }: { team: Pick<ReelTeam, 'abbreviati
 export function Reel({ pool, target, spinKey, onLand }: { pool: ReelTeam[]; target: ReelTeam; spinKey: string | number; onLand?: () => void }) {
   const strip = useMemo(() => {
     const out: ReelTeam[] = [];
+    // Decorative randomness for the reel strip only; the landing team comes from the server.
+    // eslint-disable-next-line react-hooks/purity
     for (let i = 0; i < 30; i++) out.push(pool[Math.floor(Math.random() * pool.length)]);
     out.push(target);
     return out;
