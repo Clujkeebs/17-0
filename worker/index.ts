@@ -44,6 +44,28 @@ console.log('worker started:', Object.keys(handlers).join(', '));
 
 // Boot tasks: probe the ratings feed shape (logged for parser debugging), kick a sync, backfill headshots.
 void (async () => {
+  if (process.env.PROBE_EA === '1') {
+    const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36';
+    const get = async (u: string) => { const r = await fetch(u, { headers: { 'user-agent': UA } }); return { status: r.status, text: await r.text() }; };
+    try {
+      const { text: html } = await get('https://www.ea.com/games/madden-nfl/player-ratings');
+      const nd = JSON.parse(html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)?.[1] ?? '{}');
+      const pp = nd.props?.pageProps ?? {};
+      console.log(`[probe5] buildId=${nd.buildId} page=${nd.page} query=${JSON.stringify(nd.query)} ppKeys=${Object.keys(pp).join(',')}`);
+      const rd = pp.ratingDetails ?? {};
+      console.log(`[probe5] ratingDetails keys=${Object.keys(rd).join(',')} total=${rd.totalItems} n=${rd.items?.length} first.team=${JSON.stringify(rd.items?.[0]?.team)} first.position=${JSON.stringify(rd.items?.[0]?.position)} iter=${JSON.stringify(rd.items?.[0]?.iteration)}`);
+      for (const m of html.matchAll(/.{0,200}drop-api\.ea\.com.{0,300}/g)) console.log(`[probe5] ctx=${m[0]}`);
+      const tries = [
+        `https://www.ea.com/_next/data/${nd.buildId}/games/madden-nfl/player-ratings.json?page=2`,
+        `https://www.ea.com/_next/data/${nd.buildId}/en/games/madden-nfl/player-ratings.json?page=2`,
+        'https://drop-api.ea.com/rating/madden-nfl?locale=en&limit=5&offset=0&iteration=madden-ratings-week-2&productId=madden-nfl-27',
+        'https://drop-api.ea.com/rating/madden-nfl-27?locale=en&limit=5&offset=0&iteration=madden-ratings-week-2',
+        'https://drop-api.ea.com/rating/madden?locale=en&limit=5&offset=0',
+        'https://drop-api.ea.com/rating/madden-nfl?locale=en-us&limit=5&offset=0',
+      ];
+      for (const t of tries) { const r = await get(t); console.log(`[probe5] ${t} -> ${r.status} ${r.text.slice(0, 300)}`); }
+    } catch (e) { console.log('[probe5] failed', (e as Error).message); }
+  }
   if (process.env.SYNC_ON_BOOT === '1') {
     try {
       const probe = await fetchJsonPages();
