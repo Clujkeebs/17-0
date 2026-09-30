@@ -5,7 +5,8 @@ const base = (size = 20, title?: string) => ({
   strokeLinecap: 'square' as const, 'aria-hidden': title ? undefined : true, role: title ? 'img' : undefined,
 });
 export const LogoMark = ({ size = 22, title }: P) => (
-  <svg {...base(size, title)} viewBox="0 0 24 24">{title && <title>{title}</title>}<path d="M3 20 L12 4 L21 20" /><path d="M7 14 H17" /><path d="M9.5 20 V17 H14.5 V20" /></svg>
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden={title ? undefined : true} role={title ? 'img' : undefined}>{title && <title>{title}</title>}
+    <rect width="24" height="24" rx="6" fill="currentColor" /><path d="M7 6.5 V13 a5 5 0 0 0 10 0 V6.5" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" /></svg>
 );
 export const ReelIcon = ({ size, title }: P) => (<svg {...base(size, title)}>{title && <title>{title}</title>}<rect x="3" y="4" width="18" height="16" /><path d="M9 4 V20 M15 4 V20" /><path d="M3 12 H21" strokeDasharray="2 2" /></svg>);
 export const ShareIcon = ({ size, title }: P) => (<svg {...base(size, title)}>{title && <title>{title}</title>}<path d="M12 15 V3 M7 8 L12 3 L17 8" /><path d="M4 13 V21 H20 V13" /></svg>);

@@ -7,11 +7,11 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
   const all = [{ name: 'Home', path: '/' }, ...items];
   return (
     <>
-      <nav aria-label="Breadcrumb" style={{ fontSize: '.85rem', marginBottom: 20 }}>
-        <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: 6 }} className="muted">
+      <nav aria-label="Breadcrumb" className="crumbs">
+        <ol>
           {all.map((c, i) => (
-            <li key={c.path} style={{ display: 'flex', gap: 6 }}>
-              {i < all.length - 1 ? <><Link href={c.path} className="muted">{c.name}</Link><span aria-hidden="true">/</span></> : <span aria-current="page">{c.name}</span>}
+            <li key={c.path}>
+              {i < all.length - 1 ? <><Link href={c.path}>{c.name}</Link><span aria-hidden="true">/</span></> : <span aria-current="page">{c.name}</span>}
             </li>
           ))}
         </ol>

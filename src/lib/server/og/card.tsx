@@ -25,7 +25,7 @@ export async function renderCard(c: CardInput) {
           <div style={{ fontSize: 24, letterSpacing: 2, textTransform: 'uppercase', color: '#5E5C57', fontWeight: 700 }}>{c.eyebrow}</div>
           <div style={{ fontSize: 210, fontWeight: 700, lineHeight: 1, marginTop: 28, color: c.perfect ? '#C8102E' : '#0A0A0A', letterSpacing: -12 }}>{c.headline}</div>
           <div style={{ marginTop: 'auto', fontSize: 30, fontWeight: 700, display: 'flex', alignItems: 'center', letterSpacing: -1 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: '#0A0A0A', marginRight: 14, display: 'flex' }} />
+            <svg width={40} height={40} viewBox="0 0 24 24" style={{ marginRight: 14 }}><rect width="24" height="24" rx="6" fill="#0A0A0A" /><path d="M7 6.5 V13 a5 5 0 0 0 10 0 V6.5" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" /></svg>
             Unbeaten<span style={{ color: '#5E5C57', fontWeight: 400, marginLeft: 16, fontSize: 24, letterSpacing: 0 }}>{c.footer}</span>
           </div>
         </div>

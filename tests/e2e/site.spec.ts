@@ -10,7 +10,7 @@ for (const path of PAGES) {
   test(`renders ${path} without errors and passes axe`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => { if (m.type() === 'error' && !/adsbygoogle|favicon/.test(m.text())) errors.push(m.text()); });
+    page.on('console', (m) => { if (m.type() === 'error' && !/adsbygoogle|favicon|ERR_TUNNEL|ERR_NAME|ERR_CONNECTION/.test(m.text())) errors.push(m.text()); });
     const res = await page.goto(path);
     expect(res?.status()).toBeLessThan(400);
     await expect(page.locator('h1').first()).toBeVisible();

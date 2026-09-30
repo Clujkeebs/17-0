@@ -7,7 +7,7 @@ import { NewsletterForm } from '@/components/NewsletterForm';
 import { AdSlot } from '@/components/AdSlot';
 import { ShareButton } from '@/components/game/ShareButton';
 import { ATTRIBUTE_LABELS, type AttributeKey } from '@/lib/game/attributes';
-import { SLOT_LABELS, type SlotResult } from '@/lib/game/seventeen';
+import { SLOT_LABELS, type SlotResult, type GameLine } from '@/lib/game/seventeen';
 import type { StatLine } from '@/lib/game/build';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +38,7 @@ export default async function ResultPage({ params }: Props) {
   const d = r.resultData as Record<string, unknown>;
   const is17 = r.gameType === '17-0';
   const headline = is17 ? `${d.wins}-${d.losses}` : Number(d.rating).toFixed(1);
+  const schedule = is17 && Array.isArray(d.schedule) ? (d.schedule as GameLine[]).filter((g) => g && typeof g.week === 'number') : [];
   const shareText = is17 ? `My roster went ${d.wins}-${d.losses} in 17-0.` : `I built a ${Number(d.rating).toFixed(1)} ${d.position} in Build a Player.`;
 
   return (
@@ -47,7 +48,7 @@ export default async function ResultPage({ params }: Props) {
           <span className="eyebrow">{is17 ? '17-0' : 'Build a Player'}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
           {/* Share card preview */}
           <figure style={{ margin: '0 0 24px' }}>
-            <img src={`/api/og/game-result?id=${r.id}`} alt={`Share card: ${shareText}`} width={1200} height={630} style={{ width: '100%', height: 'auto', aspectRatio: '1200 / 630', border: '1px solid var(--steel)' }} />
+            <img src={`/api/og/game-result?id=${r.id}`} alt={`Share card: ${shareText}`} width={1200} height={630} style={{ width: '100%', height: 'auto', aspectRatio: '1200 / 630', border: '1px solid var(--steel)', borderRadius: 18, boxShadow: 'var(--shadow)' }} />
           </figure>
           <div className="row" style={{ alignItems: 'flex-end', gap: 24 }}>
             <p className="big-num" style={{ margin: 0, color: is17 && d.wins === 17 ? 'var(--orange)' : undefined }}>{headline}</p>
@@ -73,6 +74,24 @@ export default async function ResultPage({ params }: Props) {
 
           {is17 ? (
             <>
+              {schedule.length > 0 && (
+                <section aria-labelledby="wbw-h" style={{ marginBottom: 56 }}>
+                  <div className="sec-head" style={{ marginBottom: 20 }}>
+                    <h2 id="wbw-h">Week by week</h2>
+                    <p className="num">{schedule.filter((g) => g.win).length} W &middot; {schedule.filter((g) => !g.win).length} L</p>
+                  </div>
+                  <ol className="weeks">
+                    {schedule.map((g) => (
+                      <li key={g.week} className={g.win ? 'w' : 'l'} aria-label={`Week ${g.week}, ${g.home ? 'versus' : 'at'} ${g.opp}: ${g.win ? 'win' : 'loss'}, ${g.us} to ${g.them}`}>
+                        <span className="wk num" aria-hidden="true">Wk {g.week}</span>
+                        <span className="res" aria-hidden="true">{g.win ? 'W' : 'L'}</span>
+                        <span className="sc num" aria-hidden="true">{g.us}-{g.them}</span>
+                        <span className="op" aria-hidden="true">{g.home ? 'vs' : '@'} {g.opp}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
               <h2>The season</h2>
               <div className="prose">{(d.narrative as string[]).map((s, i) => <p key={i}>{s}</p>)}</div>
               <h2 style={{ marginTop: 32 }}>Slot grades</h2>

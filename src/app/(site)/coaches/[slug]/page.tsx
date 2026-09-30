@@ -61,20 +61,20 @@ export default async function CoachPage({ params }: Props) {
       <Breadcrumbs items={[{ name: 'Coaches', path: '/coaches' }, { name: c.fullName, path }]} />
       <JsonLd data={personLd({ name: c.fullName, path, jobTitle: 'NFL head coach', image: c.imageUrl, team: team ? { name: teamName(team), path: `/teams/${team.slug}` } : null })} />
 
-      <header style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-end' }}>
-        <Avatar name={c.fullName} src={c.imageUrl} color={team?.primaryColor ?? '#1B4332'} size={120} />
-        <div style={{ flex: '1 1 260px' }}>
-          <span className="eyebrow">Head coach{team ? <> / <Link href={`/teams/${team.slug}`}>{teamName(team)}</Link></> : null}</span>
-          <h1 style={{ marginBottom: 8 }}>{c.fullName}</h1>
-          {rank > 0 && <p className="muted" style={{ margin: 0 }}><span className="num">{ordinal(rank)}</span> of <span className="num">{all.length}</span> head coaches by impact score.</p>}
-        </div>
+      <header className="profile-hero">
+        <div className="portrait"><Avatar name={c.fullName} src={c.imageUrl} color={team?.primaryColor ?? '#0A0A0A'} size={200} /></div>
         <div>
-          <span className="eyebrow">Impact score</span>
+          <span className="eyebrow">Head coach{team ? <> &middot; <Link href={`/teams/${team.slug}`}>{teamName(team)}</Link></> : null}</span>
+          <h1>{c.fullName}</h1>
+          {rank > 0 && <p className="lead"><span className="num">{ordinal(rank)}</span> of <span className="num">{all.length}</span> head coaches by impact score.</p>}
+        </div>
+        <div className="ovr-block">
+          <span className="l">Impact score</span>
           <div className="big-num" aria-label={`Coach impact score ${c.coachImpactScore}`}>{c.coachImpactScore}</div>
         </div>
       </header>
 
-      <div className="row" style={{ gap: 40, marginTop: 32 }}>
+      <div className="row" style={{ gap: 48, marginTop: 40 }}>
         <div className="stat"><span className="l">Career record</span><span className="v">{c.careerWins}-{c.careerLosses}</span></div>
         <div className="stat"><span className="l">Win pct</span><span className="v">{pct}</span></div>
         <div className="stat"><span className="l">Super Bowls</span><span className="v">{c.superBowlWins}</span></div>
@@ -82,7 +82,7 @@ export default async function CoachPage({ params }: Props) {
         <div className="stat"><span className="l">17-0 grade</span><span className="v accent">{letterGrade(c.coachImpactScore)}</span></div>
       </div>
 
-      <section aria-labelledby="calc-h" style={{ marginTop: 40, maxWidth: 720 }}>
+      <section aria-labelledby="calc-h" style={{ marginTop: 72, maxWidth: 720 }}>
         <h2 id="calc-h">Where the score comes from</h2>
         <p className="muted">The impact score is capped at 99. The stored score is refreshed by the nightly sync, so the sum below can drift a point or two from it between updates.</p>
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">

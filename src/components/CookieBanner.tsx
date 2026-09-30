@@ -8,7 +8,7 @@ export function CookieBanner() {
   useEffect(() => { try { setShow(!localStorage.getItem(KEY)); } catch { /* storage blocked */ } }, []);
   if (!show) return null;
   return (
-    <div role="region" aria-label="Cookie notice" style={{ position: 'fixed', bottom: 12, left: 12, right: 12, maxWidth: 440, zIndex: 50 }} className="card">
+    <div role="region" aria-label="Cookie notice" style={{ position: 'fixed', bottom: 16, left: 16, right: 16, maxWidth: 420, zIndex: 50, boxShadow: 'var(--shadow-lift)' }} className="card">
       <p style={{ margin: 0, fontSize: '.88rem' }}>
         We use a sign-in cookie, and Google uses ad cookies. No other trackers. <Link href="/legal/cookies">Details</Link>.
       </p>

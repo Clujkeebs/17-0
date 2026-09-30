@@ -8,8 +8,8 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import { JsonLd } from '@/components/JsonLd';
 
 // Self-hosted, Latin subset, variable. next/font preloads them and generates metric-matched fallbacks (no CLS).
+// Inter only: numbers use its tabular figures via --font-num.
 const inter = localFont({ src: '../fonts/inter-latin-var.woff2', variable: '--font-inter', weight: '100 900', display: 'swap' });
-const mono = localFont({ src: '../fonts/jbmono-latin-var.woff2', variable: '--font-jbmono', weight: '100 800', display: 'swap', adjustFontFallback: 'Arial' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -21,12 +21,12 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
-export const viewport: Viewport = { themeColor: '#0A1128', width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = { themeColor: '#FFFFFF', width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const adsense = process.env.GOOGLE_ADSENSE_CLIENT;
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${mono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
         {adsense ? <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsense}`} crossOrigin="anonymous" /> : null}
       </head>

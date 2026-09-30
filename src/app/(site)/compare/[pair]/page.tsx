@@ -75,7 +75,7 @@ export default async function ComparePage({ params }: Props) {
     const t = p.teamId != null ? teams.get(p.teamId) : undefined;
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <Avatar name={p.fullName} src={p.imageBlobUrl ?? p.imageUrl} color={t?.primaryColor ?? '#1B4332'} size={88} />
+        <Avatar name={p.fullName} src={p.imageBlobUrl ?? p.imageUrl} color={t?.primaryColor ?? '#0A0A0A'} size={88} />
         <span className="eyebrow" style={{ margin: 0 }}>{p.position}{t ? `, ${teamName(t)}` : ''}</span>
         <h2 style={{ fontSize: '1.3rem', margin: 0 }}><Link href={`/players/${p.slug}`}>{p.fullName}</Link></h2>
         <div className="big-num" aria-label={`Overall ${p.overallRating}`}>{p.overallRating}</div>

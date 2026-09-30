@@ -5,12 +5,12 @@ export function PlayCta({ title = 'Can your six picks go 17-0?', body = 'Spin si
   title?: string; body?: string; href?: string; label?: string;
 }) {
   return (
-    <aside className="card card-green" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', justifyContent: 'space-between', marginTop: 40 }}>
-      <div style={{ maxWidth: 560 }}>
-        <h2 style={{ fontSize: '1.3rem', marginBottom: 6 }}>{title}</h2>
-        <p style={{ margin: 0 }}>{body}</p>
+    <aside className="play-cta">
+      <div>
+        <h2>{title}</h2>
+        <p>{body}</p>
       </div>
-      <Link href={href} className="btn btn-primary">{label} <ArrowIcon size={18} /></Link>
+      <Link href={href} className="btn btn-primary btn-lg">{label} <ArrowIcon size={18} /></Link>
     </aside>
   );
 }

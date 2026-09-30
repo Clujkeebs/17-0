@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NewsletterForm } from './NewsletterForm';
+import { LogoMark } from './Icons';
 import { SITE } from '@/lib/site';
 
 export function SiteFooter() {
@@ -7,8 +8,8 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="container">
         <div className="footer-grid">
-          <div>
-            <h2 style={{ fontSize: '1.1rem', color: 'var(--bone)' }}>The daily puzzle, in your inbox.</h2>
+          <div style={{ maxWidth: 440 }}>
+            <h2 className="footer-title">The daily puzzle, in your inbox.</h2>
             <p>Six teams, every morning. One email. Unsubscribe in one click.</p>
             <NewsletterForm source="footer" />
           </div>
@@ -39,14 +40,19 @@ export function SiteFooter() {
           </div>
         </div>
         <hr className="divider" />
-        <p className="fine">
-          {SITE.name} is an independent fan project. Not affiliated with, endorsed by, or sponsored by Electronic Arts, EA Sports, the NFL, the NFL Players Association, or any team.
-          Player ratings are EA Sports Madden NFL ratings, referenced as factual data. Entertainment only. No real-money play, no prizes, no odds.
-        </p>
-        <p className="fine">
-          Player images sourced from public sports media under fair use for identification purposes. Rights belong to their respective owners. Takedown requests honored within 48 hours.
-        </p>
-        <p className="fine">&copy; {new Date().getFullYear()} {SITE.name}. {SITE.mailingAddress}.</p>
+        <div className="footer-brand">
+          <span className="brand" style={{ gap: 8 }}><LogoMark size={20} /><span className="wordmark" style={{ fontSize: '1.05rem' }}>Unbeaten</span></span>
+          <span className="fine">&copy; {new Date().getFullYear()} {SITE.name}. {SITE.mailingAddress}.</span>
+        </div>
+        <div className="footer-base">
+          <p className="fine">
+            {SITE.name} is an independent fan project. Not affiliated with, endorsed by, or sponsored by Electronic Arts, EA Sports, the NFL, the NFL Players Association, or any team.
+            Player ratings are EA Sports Madden NFL ratings, referenced as factual data. Entertainment only. No real-money play, no prizes, no odds.
+          </p>
+          <p className="fine">
+            Player images sourced from public sports media under fair use for identification purposes. Rights belong to their respective owners. Takedown requests honored within 48 hours.
+          </p>
+        </div>
       </div>
     </footer>
   );

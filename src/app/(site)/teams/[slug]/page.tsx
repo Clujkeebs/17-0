@@ -54,39 +54,42 @@ export default async function TeamPage({ params }: Props) {
       <Breadcrumbs items={[{ name: 'Teams', path: '/teams' }, { name, path }]} />
       <JsonLd data={sportsTeamLd({ name, path, logo: t.logoUrl, coach: coach?.fullName, members: roster.slice(0, 25).map((p) => p.fullName) })} />
 
-      <header style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-end' }}>
-        <Monogram name={name} color={t.primaryColor} size={96} />
-        <div style={{ flex: '1 1 260px' }}>
+      <header className="profile-hero">
+        {t.logoUrl
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img className="team-logo" src={t.logoUrl} alt={`${name} logo`} width={160} height={160} />
+          : <div className="portrait"><Monogram name={name} color={t.primaryColor} size={200} /></div>}
+        <div>
           <span className="eyebrow">{divisionLabel(t)}</span>
-          <h1 style={{ marginBottom: 8 }}>{name}</h1>
-          <p className="muted" style={{ margin: 0 }}>
+          <h1>{name}</h1>
+          <p className="lead">
             {roster.length} active players.
             {coach ? <> Head coach <Link href={`/coaches/${coach.slug}`}>{coach.fullName}</Link>, impact score <span className="num accent">{coach.coachImpactScore}</span>.</> : null}
           </p>
         </div>
-        <div className="row" style={{ gap: 32 }}>
+        <div className="row" style={{ gap: 40 }}>
           <div className="stat"><span className="l">Roster avg OVR</span><span className="v">{roster.length ? avgOvr.toFixed(1) : '--'}</span></div>
           <div className="stat"><span className="l">Top 22 avg</span><span className="v">{roster.length ? top22.toFixed(1) : '--'}</span></div>
         </div>
       </header>
 
-      <div className="row" style={{ marginTop: 24 }}>
+      <div className="row" style={{ marginTop: 32 }}>
         <Link className="btn btn-primary" href={`/games/17-0/${t.slug}`}>Can the {t.name} go 17-0?</Link>
         {coach && <Link className="btn" href={`/coaches/${coach.slug}`}>Coach profile</Link>}
       </div>
 
       {roster.length === 0 ? <div style={{ marginTop: 32 }}><EmptyState title="Roster not loaded yet" /></div> : (
-        <div style={{ marginTop: 40 }}>
+        <div style={{ marginTop: 72 }}>
           {POSITION_GROUPS.filter((g) => byGroup.has(g)).map((g) => {
             const ps = byGroup.get(g)!;
             return (
-              <section key={g} aria-labelledby={`g-${g}`} style={{ marginBottom: 32 }}>
-                <h2 id={`g-${g}`} style={{ fontSize: '1.2rem', display: 'flex', gap: 12, alignItems: 'baseline' }}>
-                  <Link href={`/positions/${g.toLowerCase()}`}>{POSITION_NAMES[g]}</Link>
+              <section key={g} aria-labelledby={`g-${g}`} style={{ marginBottom: 56 }}>
+                <h2 id={`g-${g}`} style={{ fontSize: '1.5rem', display: 'flex', gap: 14, alignItems: 'baseline' }}>
+                  <Link href={`/positions/${g.toLowerCase()}`} style={{ textDecoration: 'none' }}>{POSITION_NAMES[g]}</Link>
                   <span className="muted num" style={{ fontSize: '.9rem', fontWeight: 400 }}>avg {avg(ps.map((p) => p.overallRating)).toFixed(1)}</span>
                 </h2>
                 <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
-                  <table>
+                  <table className="roster-table">
                     <caption className="sr-only">{name} {POSITION_NAMES[g]} ratings</caption>
                     <thead><tr><th scope="col">Player</th><th scope="col">Pos</th><th scope="col" className="num">#</th><th scope="col" className="num">Age</th><th scope="col" className="num">OVR</th></tr></thead>
                     <tbody>

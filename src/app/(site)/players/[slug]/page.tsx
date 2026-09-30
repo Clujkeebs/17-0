@@ -70,7 +70,7 @@ export default async function PlayerPage({ params }: Props) {
   if (!d) notFound();
   const { p, group, team, teams, attrs, weights, topAttr, ovrRank, poolSize, grade, related, summary } = d;
   const path = `/players/${p.slug}`;
-  const color = team?.primaryColor ?? '#1B4332';
+  const color = team?.primaryColor ?? '#0A0A0A';
   const rival = related[0];
   const q = encodeURIComponent(p.fullName);
   const facts: [string, string | number | null | undefined][] = [
@@ -95,38 +95,38 @@ export default async function PlayerPage({ params }: Props) {
         heightInches: p.heightInches, weightLbs: p.weightLbs, college: p.college, description: summary,
       })} />
 
-      <header style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-end' }}>
-        <Avatar name={p.fullName} src={p.imageBlobUrl ?? p.imageUrl} color={color} size={120} />
-        <div style={{ flex: '1 1 260px' }}>
-          <span className="eyebrow">{p.position}{team ? <> / <Link href={`/teams/${team.slug}`}>{teamName(team)}</Link></> : null}</span>
-          <h1 style={{ marginBottom: 8 }}>{p.fullName}</h1>
-          <p className="muted" style={{ margin: 0 }}>
+      <header className="profile-hero">
+        <div className="portrait"><Avatar name={p.fullName} src={p.imageBlobUrl ?? p.imageUrl} color={color} size={200} /></div>
+        <div>
+          <span className="eyebrow">{p.position}{team ? <> &middot; <Link href={`/teams/${team.slug}`}>{teamName(team)}</Link></> : null}</span>
+          <h1>{p.fullName}</h1>
+          <p className="lead">
             <span className="num">{ordinal(ovrRank)}</span> of <span className="num">{poolSize}</span> {GROUP_PLURAL[group]} by overall.
             {' '}17-0 grade <span className="num accent">{grade.toFixed(1)}</span> ({letterGrade(grade)}).
           </p>
         </div>
-        <div>
-          <span className="eyebrow">Overall</span>
+        <div className="ovr-block">
+          <span className="l">Overall</span>
           <div className="big-num" aria-label={`Overall rating ${p.overallRating}`}>{p.overallRating}</div>
         </div>
       </header>
 
-      <p style={{ fontSize: '1.15rem', maxWidth: '68ch', marginTop: 32 }}>{summary}</p>
+      <p className="summary-lead">{summary}</p>
 
-      <section aria-labelledby="attrs-h" style={{ marginTop: 32 }}>
-        <h2 id="attrs-h">Key attributes for a {POSITION_NAMES[group].toLowerCase()}</h2>
-        <p className="muted" style={{ maxWidth: '62ch' }}>
+      <section aria-labelledby="attrs-h">
+        <h2 id="attrs-h" className="sub-h">Key attributes for a {POSITION_NAMES[group].toLowerCase()}</h2>
+        <p className="muted" style={{ maxWidth: '62ch', marginBottom: 24 }}>
           Percentages mark the inputs to the site&apos;s {group} formula and their weight. {topAttr ? <>Best weighted attribute: {' '}<strong>{topAttr.value}</strong>, {ordinal(topAttr.rank)} of {topAttr.total} at the position.</> : null}
         </p>
         <AttrGrid keys={keyAttributes(group, attrs)} attrs={attrs} weights={weights} />
       </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32, marginTop: 40 }}>
+      <div className="two-col">
         <section aria-labelledby="bio-h">
-          <h2 id="bio-h" style={{ fontSize: '1.3rem' }}>Bio</h2>
-          <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 20px', margin: 0 }}>
+          <h2 id="bio-h">Bio</h2>
+          <dl className="facts">
             {facts.filter(([, v]) => v != null && v !== '').map(([k, v]) => (
-              <div key={k} style={{ display: 'contents' }}><dt className="muted">{k}</dt><dd style={{ margin: 0 }}>{v}</dd></div>
+              <div key={k} style={{ display: 'contents' }}><dt>{k}</dt><dd>{v}</dd></div>
             ))}
           </dl>
           <p className="hint" style={{ marginTop: 16 }}>
@@ -137,22 +137,22 @@ export default async function PlayerPage({ params }: Props) {
         </section>
 
         <section aria-labelledby="rel-h">
-          <h2 id="rel-h" style={{ fontSize: '1.3rem' }}>Closest in the {group} ranks</h2>
+          <h2 id="rel-h">Closest in the {group} ranks</h2>
           {related.length ? (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <ul className="rel-list">
               {related.map((r) => {
                 const rt = r.teamId != null ? teams.get(r.teamId) : undefined;
                 return (
-                  <li key={r.id} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '8px 0', borderBottom: '1px solid var(--steel)' }}>
-                    <span className="num" style={{ fontWeight: 700, width: 28 }}>{r.overallRating}</span>
+                  <li key={r.id}>
+                    <span className="num" style={{ fontWeight: 700, width: 32, fontSize: '1.15rem' }}>{r.overallRating}</span>
                     <Link href={`/players/${r.slug}`}>{r.fullName}</Link>
-                    <span className="muted">{rt?.abbreviation ?? 'FA'}</span>
+                    <span className="muted" style={{ marginLeft: 'auto', fontSize: '.88rem' }}>{rt?.abbreviation ?? 'FA'}</span>
                   </li>
                 );
               })}
             </ul>
           ) : <p className="muted">No other {GROUP_PLURAL[group]} loaded yet.</p>}
-          <div className="row" style={{ marginTop: 16 }}>
+          <div className="row" style={{ marginTop: 24 }}>
             {rival && <Link className="btn btn-sm" href={comparePath(p.slug, rival.slug)}>Compare with {rival.fullName}</Link>}
             <Link className="btn btn-sm" href={`/positions/${positionSlug(group)}`}>All {GROUP_PLURAL[group]}</Link>
           </div>
