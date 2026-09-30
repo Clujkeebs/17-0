@@ -4,6 +4,7 @@ import { db, schema } from '@/db';
 import { computeStreak, dailyDateET } from '@/lib/game/daily';
 import { audit } from './audit';
 import { accountDeleted, sendEmail } from './email';
+import { scoreSummary } from './result-summary';
 
 export const deletedUsername = (userId: string) =>
   `deleted-user-${createHash('sha256').update(userId).digest('hex').slice(0, 8)}`;
@@ -19,6 +20,21 @@ export async function isUsernameAvailable(username: string, exceptUserId?: strin
   const [r] = await db.select({ id: schema.users.id }).from(schema.users)
     .where(exceptUserId ? and(cond, ne(schema.users.id, exceptUserId)) : cond).limit(1);
   return !r;
+}
+
+const GAME_NAMES: Record<string, string> = { '17-0': '17-0', 'build-a-player': 'Build a Player' };
+
+/**
+ * Display name for a game type. Mini-game names come from the registry via a lazy import:
+ * the registry pulls in the games' shared data module, which opens a database client, so a
+ * static import here would connect every account page to the database for one label.
+ */
+export async function gameName(type: string): Promise<string> {
+  if (GAME_NAMES[type]) return GAME_NAMES[type];
+  try {
+    const { getMiniGame } = await import('@/lib/minigames/registry');
+    return getMiniGame(type)?.name ?? type;
+  } catch { return type; }
 }
 
 /** Public-safe account view (never includes the password hash). */
@@ -45,7 +61,7 @@ export async function getStreak(userId: string) {
 }
 
 export async function getUserStats(userId: string) {
-  const [totals, byType, recent, streak] = await Promise.all([
+  const [totals, byTypeRows, recentRows, bestRows, streak] = await Promise.all([
     db.select({ n: dsql<number>`count(*)::int`, avg: dsql<number | null>`avg(${schema.gameResults.score})::float` })
       .from(schema.gameResults).where(eq(schema.gameResults.userId, userId)),
     db.select({
@@ -57,9 +73,27 @@ export async function getUserStats(userId: string) {
     db.select({
       id: schema.gameResults.id, gameType: schema.gameResults.gameType, score: schema.gameResults.score,
       isDaily: schema.gameResults.isDaily, dailyDate: schema.gameResults.dailyDate, createdAt: schema.gameResults.createdAt,
+      resultData: schema.gameResults.resultData,
     }).from(schema.gameResults).where(eq(schema.gameResults.userId, userId)).orderBy(desc(schema.gameResults.createdAt)).limit(10),
+    // Best result_data per game type, so the profile can show "17-0" instead of the raw score.
+    db.execute<{ game_type: string; result_data: Record<string, unknown> }>(dsql`
+      select distinct on (game_type) game_type, result_data
+      from game_results
+      where user_id = ${userId}
+      order by game_type, score desc`),
     getStreak(userId),
   ]);
+  const bestSummary = new Map(bestRows.map((r) => [r.game_type, scoreSummary(r.game_type, r.result_data)]));
+  const byType = await Promise.all(byTypeRows.map(async (t) => ({
+    ...t,
+    gameName: await gameName(t.gameType),
+    bestSummary: bestSummary.get(t.gameType) ?? String(t.best),
+  })));
+  const recent = await Promise.all(recentRows.map(async (r) => ({
+    ...r,
+    gameName: await gameName(r.gameType),
+    summary: scoreSummary(r.gameType, r.resultData),
+  })));
   return { played: totals[0]?.n ?? 0, average: totals[0]?.avg ?? null, byType, recent, ...streak };
 }
 

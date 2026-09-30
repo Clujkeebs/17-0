@@ -2,15 +2,10 @@ import { and, asc, desc, eq, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { cached } from './redis';
 import { allTimePointsExpr } from './leaderboard-sql';
+import { scoreSummary } from './result-summary';
 import { dailyDateET } from '@/lib/game/daily';
 
 export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string }
-
-function summarize(gameType: string, data: Record<string, unknown>): string {
-  if (gameType === '17-0') return `${data.wins}-${data.losses}${data.hard ? ' · Hard' : ''}`;
-  if (gameType === 'build-a-player') return `${data.position} ${Number(data.rating).toFixed(1)}`;
-  return String(data.summary ?? '');
-}
 
 export async function dailyLeaderboard(gameType: string, date = dailyDateET(), limit = 100): Promise<DailyRow[]> {
   return cached(`lb:daily:${gameType}:${date}`, 60, async () => {
@@ -23,7 +18,7 @@ export async function dailyLeaderboard(gameType: string, date = dailyDateET(), l
     return [...rows]
       .sort((a, b) => b.score - a.score || +new Date(a.created_at) - +new Date(b.created_at))
       .slice(0, limit)
-      .map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: summarize(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id }));
+      .map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: scoreSummary(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id }));
   });
 }
 
