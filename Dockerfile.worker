@@ -64,4 +64,4 @@ COPY --from=builder /app/dist/backup.mjs ./backup.mjs
 USER app
 CMD ["node", "cron.mjs"]
 
-FROM web
+FROM worker
