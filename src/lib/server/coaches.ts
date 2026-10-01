@@ -38,8 +38,13 @@ export async function recomputeCoachImpact(): Promise<number> {
     const extra = v > current[n - 1] ? 2 : 0;
     return Math.round(Math.min(99, 80 + Math.min(1, rank) * 17 + extra));
   };
+  const scores = coaches.map((_, i) => scale(raw[i]));
+  const currentScores = scores.filter((_, i) => coaches[i].teamId != null);
+  if (currentScores.length) {
+    console.log(`[coaches] recomputed ${coaches.length}: current head coaches ${Math.min(...currentScores)}-${Math.max(...currentScores)} (n=${currentScores.length})`);
+  }
   for (const [i, c] of coaches.entries()) {
-    const score = scale(raw[i]);
+    const score = scores[i];
     const impactHistory = [...(c.impactHistory ?? []), { at, score }].slice(-HISTORY_CAP);
     await db.update(schema.coaches).set({ coachImpactScore: score, impactHistory }).where(eq(schema.coaches.id, c.id));
   }

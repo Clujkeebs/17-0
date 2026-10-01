@@ -30,6 +30,9 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - The worker runs the ESPN sync and coach recompute on boot. Redeploy it when you change `src/lib/server/coaches.ts` or `src/lib/server/espn.ts`.
 
 ## Local dev
+- First run in a fresh container: `cp .env.example .env.local`, set the postgres password to `postgres`, `createdb gridiron`, then `npm run db:migrate && npm run db:seed` with `.env.local` exported.
+- The standalone server needs `.next/static` and `public` copied into `.next/standalone/` (the Dockerfile does this). Make sure no older `next-server` is still on port 3000 before re-testing a new build.
+- Cloud sessions cannot reach the live site or ESPN's CDN (egress is blocked), so team logos show blank locally and live checks go through Railway logs.
 - Start the services: `service postgresql start; redis-server --daemonize yes`
 - Database: `DATABASE_URL=postgres://postgres:postgres@localhost:5432/gridiron`, `REDIS_URL=redis://localhost:6379`
 - Checks: `npx tsc --noEmit -p . && npx eslint src --quiet && npx vitest run`
@@ -44,11 +47,13 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 ## To do
 - [ ] **Domain:** buy and connect **playunbeaten.com** (available as of 2026-09-30; other options: unbeaten.games, unbeatenfootball.com, unbeaten.football). The owner must approve the purchase. Then add it as a Railway custom domain, update `NEXT_PUBLIC_SITE_URL`/`AUTH_URL`, and set up the contact emails on it.
 - [ ] Contact emails (the owner creates them after buying the domain), then wire them into the contact and legal pages.
-- [ ] Confirm the live coach ratings after the worker deploy. They should be 80–97; check `/coaches`. Add a log line to `recomputeCoachImpact`.
+- [ ] Confirm the live coach ratings after the worker deploy. They should be 80–97; check `/coaches`.
+  - Done locally, not deployed: `recomputeCoachImpact` now logs `[coaches] recomputed N: current head coaches MIN-MAX (n=32)`, and the worker logs recompute failures instead of swallowing them. Locally it reads 80-97 (n=32). After the worker deploys, read that line in the worker's Railway deploy logs to confirm the live range.
 - [ ] Missing headshots: about 28 players still show initials after the ESPN search fallback. Try another source or name matching.
 - [ ] Hard mode for Build a Player and a Hard leaderboard filter for 17-0.
 - [ ] More games: ideas include a guess-the-jersey-number streak, a draft-class quiz, a trade-machine "who won" game, and a weekly bracket.
 - [ ] Polish the mobile results page (check the slot grades table at 375px).
+  - Done locally, not deployed: the 17-0 slot grades and Build a Player trait tables are now three columns (team stacked under the pick, number under the letter grade), so neither scrolls sideways at 375px. Needs a web deploy.
 - [ ] Streaks and stats on the profile page (daily streak, best 17-0 record, games played).
 - [ ] Push reminders or the daily email for Today puzzles (the newsletter worker already exists).
 - [ ] Watch Railway logs for errors after each deploy.

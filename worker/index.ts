@@ -19,7 +19,7 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
   [QUEUE_NAMES.sync]: async () => {
     const summary = await runSync({ dryRun: false });
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
-    await recomputeCoachImpact().catch(() => {});
+    await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
     console.log('[sync] done', JSON.stringify(summary).slice(0, 600));
     // Fresh ratings: purge the web service's ISR pages so player pages update now, not in a day.
     const base = process.env.INTERNAL_WEB_URL ?? 'http://localhost:3000';
@@ -51,7 +51,7 @@ void (async () => {
     await getQueue(QUEUE_NAMES.sync).add('sync', { by: 'boot' }, { attempts: 1 }).catch(() => {});
   }
   await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
-  await recomputeCoachImpact().catch(() => {});
+  await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
   if (process.env.CALIBRATE === '1') await (await import('@/lib/server/calibrate')).calibrate().catch((e) => console.warn('[calibrate]', e.message));
   await fetch(`${process.env.INTERNAL_WEB_URL ?? 'http://localhost:3000'}/api/internal/revalidate`, { method: 'POST', headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } }).catch(() => {});
 })();

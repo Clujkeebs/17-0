@@ -110,11 +110,15 @@ export default async function ResultPage({ params }: Props) {
               <div className="prose">{(d.narrative as string[]).map((s, i) => <p key={i}>{s}</p>)}</div>
               <h2 style={{ marginTop: 32 }}>Slot grades</h2>
               <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
-                <table>
-                  <thead><tr><th scope="col">Slot</th><th scope="col">Pick</th><th scope="col">Team</th><th scope="col" className="num">Grade</th><th scope="col" className="num">Letter</th></tr></thead>
+                <table className="grade-table">
+                  <thead><tr><th scope="col">Slot</th><th scope="col">Pick</th><th scope="col" className="num">Grade</th></tr></thead>
                   <tbody>
                     {(d.slots as SlotResult[]).map((s) => (
-                      <tr key={s.slot}><td className="mono">{SLOT_LABELS[s.slot] ?? s.slot}</td><td>{s.name}</td><td className="mono">{teamCell(s.teamId)}</td><td className="num">{s.grade.toFixed(1)}</td><td className="num" style={{ fontWeight: 800 }}>{s.letter}</td></tr>
+                      <tr key={s.slot}>
+                        <td className="mono">{SLOT_LABELS[s.slot] ?? s.slot}</td>
+                        <td><span className="pick">{s.name}</span><span className="pick-team mono">{teamCell(s.teamId)}</span></td>
+                        <td className="num"><span className="letter">{s.letter}</span><span className="grade-sub">{s.grade.toFixed(1)}</span></td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
@@ -131,11 +135,15 @@ export default async function ResultPage({ params }: Props) {
                 <>
                   <p className="muted">Score <strong className="num">{Number(d.rating).toFixed(1)}</strong>{typeof d.best === 'number' ? <> out of a best possible <strong className="num">{Number(d.best).toFixed(1)}</strong> from these five teams.</> : null}</p>
                   <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
-                    <table>
-                      <thead><tr><th scope="col">Trait</th><th scope="col" className="num">Weight</th><th scope="col" className="num">Rating</th><th scope="col">Taken from</th><th scope="col">Team</th></tr></thead>
+                    <table className="grade-table">
+                      <thead><tr><th scope="col">Trait</th><th scope="col">Taken from</th><th scope="col" className="num">Rating</th></tr></thead>
                       <tbody>
                         {(d.traits as { key: string; label: string; value: number; weight: number; donor: string; teamId: number }[]).map((t) => (
-                          <tr key={t.key}><td>{t.label}</td><td className="num">{Math.round(t.weight * 100)}%</td><td className="num">{t.value}</td><td>{t.donor}</td><td className="mono">{teamCell(t.teamId)}</td></tr>
+                          <tr key={t.key}>
+                            <td><span className="pick">{t.label}</span><span className="grade-sub num">{Math.round(t.weight * 100)}% weight</span></td>
+                            <td><span className="pick">{t.donor}</span><span className="pick-team mono">{teamCell(t.teamId)}</span></td>
+                            <td className="num"><span className="letter">{t.value}</span></td>
+                          </tr>
                         ))}
                       </tbody>
                     </table>

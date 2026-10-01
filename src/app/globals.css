@@ -105,6 +105,12 @@ tbody tr { transition: background-color .12s ease; }
 tbody tr:hover { background: #FAF9F6; }
 td.num, th.num { text-align: right; }
 .table-wrap { overflow-x: auto; }
+/* Result grade tables: three columns, secondary detail stacked under the main value so they fit a phone. */
+.grade-table td { vertical-align: top; }
+.grade-table .pick { display: block; font-weight: 600; }
+.grade-table .pick-team { display: block; margin-top: 4px; font-size: .82rem; color: var(--bone-dim); }
+.grade-table .letter { display: block; font-weight: 800; font-size: 1.05rem; }
+.grade-table .grade-sub { display: block; margin-top: 4px; font-size: .82rem; color: var(--bone-dim); font-weight: 400; }
 
 /* Header */
 .site-header { position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,.82); backdrop-filter: saturate(1.8) blur(18px); -webkit-backdrop-filter: saturate(1.8) blur(18px); border-bottom: 1px solid var(--steel); }
