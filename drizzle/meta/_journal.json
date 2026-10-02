@@ -43,6 +43,13 @@
       "when": 1790951533603,
       "tag": "0005_fantasy",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790957263651,
+      "tag": "0006_nba",
+      "breakpoints": true
     }
   ]
 }

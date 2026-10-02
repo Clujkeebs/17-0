@@ -225,6 +225,46 @@ export const contactMessages = pgTable('contact_messages', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('contact_messages_created_idx').on(t.createdAt)]);
 
+/* ------------------------------------------------------------------ 82-0 (NBA), from ESPN's core API */
+
+/** A franchise in one season. ESPN keeps one id per franchise through relocations (Sonics to Thunder). */
+export const nbaTeamSeasons = pgTable('nba_team_seasons', {
+  teamId: integer('team_id').notNull(),
+  season: integer('season').notNull(),
+  name: text('name').notNull(),
+  location: text('location').notNull(),
+  abbreviation: text('abbreviation').notNull(),
+  color: text('color'),
+  logoUrl: text('logo_url'),
+  syncedAt: timestamp('synced_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.teamId, t.season] })]);
+
+export const nbaPlayers = pgTable('nba_players', {
+  id: integer('id').primaryKey(),
+  fullName: text('full_name').notNull(),
+  position: text('position').notNull(),
+  headshot: text('headshot'),
+});
+
+/** One row per player, team and season, with per-game regular season stats and the 82-0 value. */
+export const nbaPlayerSeasons = pgTable('nba_player_seasons', {
+  playerId: integer('player_id').notNull(),
+  teamId: integer('team_id').notNull(),
+  season: integer('season').notNull(),
+  gp: integer('gp').notNull(),
+  mpg: real('mpg').notNull(),
+  ppg: real('ppg').notNull(),
+  rpg: real('rpg').notNull(),
+  apg: real('apg').notNull(),
+  spg: real('spg').notNull(),
+  bpg: real('bpg').notNull(),
+  tov: real('tov'),
+  fgPct: real('fg_pct'),
+  tpPct: real('tp_pct'),
+  ftPct: real('ft_pct'),
+  value: real('value').notNull(),
+}, (t) => [primaryKey({ columns: [t.playerId, t.teamId, t.season] }), index('nba_ps_team_season_idx').on(t.teamId, t.season)]);
+
 /** Footer questionnaire: a 1-5 rating and an optional note. Anonymous unless the sender is signed in. */
 export const feedback = pgTable('feedback', {
   id: uuid('id').primaryKey().defaultRandom(),
