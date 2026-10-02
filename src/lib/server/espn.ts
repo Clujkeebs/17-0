@@ -45,17 +45,19 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
   if (athletes < 1000) { console.warn(`[espn] only ${athletes} athletes indexed; skipping roster moves`); }
   const players = await db.select({ id: schema.players.id, fullName: schema.players.fullName, position: schema.players.position, teamId: schema.players.teamId, espnId: schema.players.espnId, imageUrl: schema.players.imageUrl })
     .from(schema.players).where(eq(schema.players.isActive, true));
+  const abbr = new Map(teams.map((t) => [t.id, t.abbreviation]));
+  const movedNames: string[] = [], clashNames: string[] = [], unlisted: string[] = [];
   let matched = 0, moved = 0, ambiguous = 0;
   for (const p of players) {
     const cands = espnIndex.get(norm(p.fullName));
-    if (!cands) continue;
+    if (!cands) { if (p.teamId != null) unlisted.push(`${p.fullName} (${p.position}, ${abbr.get(p.teamId)})`); continue; } // legends have no team
     const hit = pickEspnMatch({ position: p.position, espnId: p.espnId }, cands);
-    if (!hit) { ambiguous++; continue; }
+    if (!hit) { ambiguous++; clashNames.push(`${p.fullName} (${p.position}): ESPN has ${cands.map((c) => `${c.a.position?.abbreviation ?? '?'} ${abbr.get(c.teamId)}`).join(', ')}`); continue; }
     matched++;
     const set: Partial<typeof schema.players.$inferInsert> = { espnId: hit.a.id };
     // A changed ESPN id means the old one belonged to someone else (a namesake), so its headshot goes too.
     if (!p.imageUrl || (p.espnId && p.espnId !== hit.a.id)) set.imageUrl = hit.a.headshot?.href ?? `https://a.espncdn.com/i/headshots/nfl/players/full/${hit.a.id}.png`;
-    if (athletes >= 1000 && p.teamId !== hit.teamId) { set.teamId = hit.teamId; moved++; }
+    if (athletes >= 1000 && p.teamId !== hit.teamId) { set.teamId = hit.teamId; moved++; movedNames.push(`${p.fullName} (${p.position}) ${abbr.get(p.teamId ?? -1) ?? 'FA'} -> ${abbr.get(hit.teamId)}`); }
     await db.update(schema.players).set(set).where(eq(schema.players.id, p.id));
   }
   // Players ESPN rosters don't list by the same name (suffixes, nicknames): try ESPN search.
@@ -65,6 +67,10 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
   for (const p of missing.slice(0, 400)) {
     const hit = await searchEspnAthlete(p.fullName, fetchImpl);
     if (hit) { await db.update(schema.players).set({ espnId: hit, imageUrl: `https://a.espncdn.com/i/headshots/nfl/players/full/${hit}.png` }).where(eq(schema.players.id, p.id)); searched++; }
+  }
+  // Full roster audit, readable in the worker's deploy logs. Player names are public, so this logs no PII.
+  for (const [label, list] of [['moved', movedNames], ['name clash, left alone', clashNames], ['not on any ESPN roster, kept EA team', unlisted]] as const) {
+    for (let i = 0; i < list.length; i += 25) console.log(`[espn] ${label} (${list.length}): ${list.slice(i, i + 25).join('; ')}`);
   }
   console.log(`[espn] search filled ${searched}/${missing.length} missing headshots`);
   console.log(`[espn] matched ${matched}/${players.length}, moved ${moved} to current teams, skipped ${ambiguous} name clashes, head coaches seen ${coachesSeen}, changed ${coachesChanged}`);
