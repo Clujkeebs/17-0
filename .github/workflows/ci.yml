@@ -23,6 +23,8 @@ jobs:
       CRON_SECRET: ci
       SITE_URL: http://localhost:3000
       NEXTAUTH_URL: http://localhost:3000
+      # The account e2e test signs in as this address and checks the admin dashboard.
+      ADMIN_EMAILS: you@example.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
