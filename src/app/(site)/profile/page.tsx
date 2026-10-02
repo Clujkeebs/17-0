@@ -2,7 +2,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { getUserById, getUserStats } from '@/lib/server/account';
+import { getUserById, getUserStats, nameStyleOf } from '@/lib/server/account';
+import { StyledName } from '@/components/StyledName';
+import { Avatar } from '@/components/HeaderProfile';
+import { ShareButton } from '@/components/game/ShareButton';
+import { ProfileEditor } from './ProfileEditor';
+import { games } from '@/lib/minigames/games';
+
+const ALL_GAMES = [{ slug: '17-0', name: '17-0' }, { slug: 'build-a-player', name: 'Build a Player' }, ...games.map((g) => ({ slug: g.slug, name: g.name }))];
 
 export const metadata: Metadata = {
   title: 'Your profile',
@@ -20,12 +27,30 @@ export default async function ProfilePage() {
   if (!user) redirect('/login?next=/profile');
   const stats = await getUserStats(user.id);
   const name = user.name || user.username || 'Unnamed';
+  const style = nameStyleOf(user);
+  const favs = (user.favoriteGames ?? []).map((slug) => ALL_GAMES.find((g) => g.slug === slug)).filter((g): g is { slug: string; name: string } => !!g);
 
   return (
     <div className="container section">
       <span className="eyebrow">Profile</span>
-      <h1>{name}</h1>
-      {user.username && user.name && <p className="muted num">@{user.username}</p>}
+      <div className="profile-head">
+        <Avatar name={name} src={user.image} size={84} />
+        <div style={{ minWidth: 0 }}>
+          <h1 style={{ margin: 0 }}><StyledName name={name} style={style} /></h1>
+          {user.username && <p className="muted num" style={{ margin: '4px 0 0' }}>@{user.username}</p>}
+        </div>
+      </div>
+      <div className="row" style={{ gap: 8, margin: '16px 0 8px' }}>
+        <ProfileEditor displayName={user.name ?? ''} fallbackName={user.username ?? 'Player'} image={user.image} favoriteGames={user.favoriteGames ?? []}
+          nameFont={user.nameFont ?? 'classic'} nameColor={user.nameColor ?? 'ink'} longest={stats.longest} owner={style.owner} allGames={ALL_GAMES} />
+        {user.username && <ShareButton label="Share profile" text={`${name} on Unbeaten.`} url={`/u/${user.username}`} />}
+      </div>
+      {favs.length > 0 && (
+        <p className="row" style={{ gap: 8, margin: '8px 0 0' }}>
+          <span className="muted">Favorites:</span>
+          {favs.map((g) => <Link key={g.slug} className="btn btn-sm" href={`/games/${g.slug}`}>{g.name}</Link>)}
+        </p>
+      )}
 
       {!user.username && (
         <div className="card card-green" role="status" style={{ margin: '16px 0' }}>

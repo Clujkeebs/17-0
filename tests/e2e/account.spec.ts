@@ -44,6 +44,23 @@ test('account lifecycle', async ({ page, request }, info) => {
   await expect(page.locator('.stat', { hasText: 'Best 17-0 record' })).toContainText(/\d+-\d+/);
   await expect(page.locator('.grade-sub', { hasText: /^Today$/ }).first()).toBeVisible();
 
+  // Profile: edit the display name, locked styles stay locked, header shows the name, share and public page work.
+  await page.getByRole('button', { name: 'Edit profile' }).click();
+  await page.getByLabel('Display name').fill('E2E Tester');
+  await expect(page.getByRole('radiogroup', { name: 'Font' }).getByRole('radio').last()).toBeDisabled();
+  await page.locator('.pe-chip', { hasText: '17-0' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('h1')).toContainText('E2E Tester');
+  await expect(page.locator('.hp')).toContainText('E2E Tester');
+  await page.getByRole('button', { name: 'Share profile' }).first().click();
+  const sms = page.getByRole('dialog', { name: 'Share' }).getByRole('link', { name: /Text message/ });
+  expect(decodeURIComponent((await sms.getAttribute('href'))!)).toMatch(new RegExp(`^sms:\\?&body=https?://[^ ]+/u/${u}$`));
+  await page.getByRole('button', { name: 'Done' }).click();
+  await page.goto(`/u/${u}`);
+  await expect(page.locator('h1')).toContainText('E2E Tester');
+  await expect(page.locator('main').getByRole('link', { name: '17-0', exact: true })).toBeVisible();
+  await expect(page.locator('.owner-tag')).toHaveCount(0);
+
   await page.goto('/leaderboard?tab=daily&game=17-0');
   await expect(page.getByRole('cell', { name: u })).toBeVisible();
 
@@ -78,4 +95,30 @@ test('newsletter double opt-in: subscribe, confirm, unsubscribe', async ({ reque
   const un = await request.post(`/api/newsletter/unsubscribe?token=${row.unsubscribe_token}`, { form: { 'List-Unsubscribe': 'One-Click' } });
   expect(un.status()).toBe(200);
   expect((await sql`select unsubscribed_at from newsletter_subscribers where email = ${email}`)[0].unsubscribed_at).not.toBeNull();
+});
+
+test('owner account gets the owner style; nobody else can', async ({ page, request }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  const owner = 'clujkeebs@aol.com';
+  await sql`delete from user_accounts where email = ${owner}`;
+  await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
+  await page.goto('/register');
+  await page.locator('#reg-username').fill(`own_${Date.now().toString(36)}`);
+  await page.locator('#reg-email').fill(owner);
+  await page.locator('main input[type=password]').first().fill('correct-horse-battery');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.waitForURL(/\/login/);
+  await page.locator('#login-email').fill(owner);
+  await page.locator('#login-password').fill('correct-horse-battery');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+  await page.goto('/profile');
+  await expect(page.locator('h1 .owner-tag')).toHaveText('[OWNER]');
+  await expect(page.locator('h1 .nm-text')).toHaveClass(/nm-f-neon/);
+  await expect(page.locator('h1 .nm-text')).toHaveClass(/nm-c-rainbow/);
+  // Even the owner cannot "equip" the owner keys through the API, and nobody can name themselves [OWNER].
+  expect((await page.request.patch('/api/user/profile', { data: { nameFont: 'neon' } })).status()).toBe(403);
+  expect((await page.request.patch('/api/user/profile', { data: { displayName: '[OWNER]' } })).status()).toBe(400);
+  await sql`delete from user_accounts where email = ${owner}`;
+  void request;
 });

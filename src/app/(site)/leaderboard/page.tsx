@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { allTimeLeaderboard, dailyLeaderboard } from '@/lib/server/leaderboard';
 import { dailyDateET } from '@/lib/game/daily';
 import { LeaderboardViewed } from '@/components/LeaderboardViewed';
+import { StyledName } from '@/components/StyledName';
+const isHandle = (u: string) => /^[A-Za-z0-9_]{3,20}$/.test(u) && !u.startsWith('deleted-user-');
+const Player = ({ u, style }: { u: string; style?: import('@/lib/cosmetics').NameStyle }) => isHandle(u) ? <Link href={`/u/${u}`} className="lb-name"><StyledName name={u} style={style} /></Link> : <span>{u}</span>;
 
 export const revalidate = 60;
 export const metadata: Metadata = {
@@ -49,7 +52,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
         daily.length ? (
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table>
             <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Result</th></tr></thead>
-            <tbody>{daily.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td>{r.username}{r.hard && <span className="tag-hard">Hard</span>}</td><td className="num"><Link href={`/results/${r.resultId}`}>{r.summary}</Link></td></tr>)}</tbody>
+            <tbody>{daily.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td><Player u={r.username} style={r.style} />{r.hard && <span className="tag-hard">Hard</span>}</td><td className="num"><Link href={`/results/${r.resultId}`}>{r.summary}</Link></td></tr>)}</tbody>
           </table></div>
         ) : !error && (
           <div className="card"><p>{hardOnly ? 'Nobody has played today in Hard mode yet. Turn it on in the game and claim the top spot.' : 'No daily results yet. Be first. Sign in, play the daily, and your name goes here.'}</p>
@@ -61,7 +64,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
           {all.rows.length ? (
             <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table>
               <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Points</th><th scope="col" className="num">Games</th></tr></thead>
-              <tbody>{all.rows.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td>{r.username}</td><td className="num">{r.points}</td><td className="num">{r.games}</td></tr>)}</tbody>
+              <tbody>{all.rows.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td><Player u={r.username} style={r.style} /></td><td className="num">{r.points}</td><td className="num">{r.games}</td></tr>)}</tbody>
             </table></div>
           ) : !error && <div className="card"><p>The all-time table is empty. Every game you play while signed in counts.</p></div>}
           {pages > 1 && (

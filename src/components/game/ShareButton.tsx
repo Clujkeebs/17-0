@@ -1,32 +1,36 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ShareIcon } from '../Icons';
 import { track } from '@/lib/analytics';
 
 /**
- * Share sheet for any result: native share (with the score card attached when the device allows),
- * copy link, copy text, text message, X, Facebook, and save the image.
+ * One Share button. It opens a sheet with every way to share. Messages get the link only: the link unfurls into
+ * the score card on its own, so attaching the image as well sent a photo and a link.
  */
-export function ShareButton({ text, url, imageUrl, fileName = 'unbeaten-result.png' }: { text: string; url: string; imageUrl?: string; fileName?: string }) {
+export function ShareButton({ text, url, imageUrl, fileName = 'unbeaten-result.png', label = 'Share' }: { text: string; url: string; imageUrl?: string; fileName?: string; label?: string }) {
+  const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState('');
+  const [canNative, setCanNative] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+  useEffect(() => { setCanNative(typeof navigator !== 'undefined' && !!navigator.share); }, []);
+  useEffect(() => {
+    if (!open) return;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   const full = () => new URL(url, location.origin).toString();
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 2500); };
   const log = (via: string) => track('game_shared', { path: url, via });
-
-  async function imageFile(): Promise<File | null> {
-    if (!imageUrl) return null;
-    try { const b = await (await fetch(imageUrl)).blob(); return new File([b], fileName, { type: b.type || 'image/png' }); } catch { return null; }
-  }
+  const enc = (s: string) => encodeURIComponent(s);
+  function close() { setOpen(false); opener.current?.focus(); }
 
   async function native() {
     log('native');
-    const data: ShareData = { title: 'Unbeaten', text, url: full() };
-    try {
-      const file = await imageFile();
-      if (file && navigator.canShare?.({ files: [file] })) { await navigator.share({ ...data, files: [file] }); return; }
-      if (navigator.share) { await navigator.share(data); return; }
-      await navigator.clipboard.writeText(`${text} ${full()}`); flash('Copied. Paste it anywhere.');
-    } catch { /* cancelled */ }
+    try { await navigator.share({ url: full() }); close(); } catch { /* cancelled */ }
   }
   async function copy(what: 'link' | 'text') {
     log(`copy-${what}`);
@@ -35,26 +39,39 @@ export function ShareButton({ text, url, imageUrl, fileName = 'unbeaten-result.p
   }
   async function save() {
     log('save');
-    const file = await imageFile();
-    if (!file) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(file); a.download = fileName; a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    flash('Image saved');
+    if (!imageUrl) return;
+    try {
+      const b = await (await fetch(imageUrl)).blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b); a.download = fileName; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      flash('Image saved');
+    } catch { flash('Could not save the image.'); }
   }
-  const enc = (s: string) => encodeURIComponent(s);
 
   return (
-    <div className="share" role="group" aria-label="Share your result">
-      <button type="button" className="btn btn-primary" onClick={native}><ShareIcon size={16} /> Share</button>
-      <button type="button" className="btn" onClick={() => copy('link')}>Copy link</button>
-      <button type="button" className="btn" onClick={() => copy('text')}>Copy text</button>
-      <a className="btn" onClick={() => log('sms')} href={`sms:?&body=${enc(`${text} ${typeof location !== 'undefined' ? full() : url}`)}`}>Text</a>
-      <a className="btn" onClick={() => log('x')} target="_blank" rel="noopener noreferrer" href={`https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(typeof location !== 'undefined' ? full() : url)}`}>Post on X</a>
-      <a className="btn" onClick={() => log('facebook')} target="_blank" rel="noopener noreferrer" href={`https://www.facebook.com/sharer/sharer.php?u=${enc(typeof location !== 'undefined' ? full() : url)}`}>Facebook</a>
-      {imageUrl && <button type="button" className="btn" onClick={save}>Save image</button>}
+    <>
+      <button ref={opener} type="button" className="btn btn-primary" onClick={() => setOpen(true)} aria-haspopup="dialog"><ShareIcon size={16} /> {label}</button>
       <span className="sr-only" aria-live="polite">{msg}</span>
-      {msg && <span className="share-toast" aria-hidden="true">{msg}</span>}
-    </div>
+      {open && (
+        <div className="sheet-scrim" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
+          <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="share-h">
+            <div className="sheet-grip" aria-hidden="true" />
+            <h2 id="share-h" className="sheet-h">Share</h2>
+            <div className="share-list">
+              {canNative && <button type="button" className="share-opt" onClick={native}>Share link<span>Your phone&apos;s share menu</span></button>}
+              <button type="button" className="share-opt" onClick={() => copy('link')}>Copy link<span>Paste it anywhere</span></button>
+              <a className="share-opt" onClick={() => log('sms')} href={`sms:?&body=${enc(typeof location !== 'undefined' ? full() : url)}`}>Text message<span>Sends the link</span></a>
+              <a className="share-opt" onClick={() => log('x')} target="_blank" rel="noopener noreferrer" href={`https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(typeof location !== 'undefined' ? full() : url)}`}>Post on X<span>Opens a new tab</span></a>
+              <a className="share-opt" onClick={() => log('facebook')} target="_blank" rel="noopener noreferrer" href={`https://www.facebook.com/sharer/sharer.php?u=${enc(typeof location !== 'undefined' ? full() : url)}`}>Facebook<span>Opens a new tab</span></a>
+              {imageUrl && <button type="button" className="share-opt" onClick={save}>Save image<span>The score card as a picture</span></button>}
+              <button type="button" className="share-opt" onClick={() => copy('text')}>Copy text<span>The line plus the link</span></button>
+            </div>
+            {msg && <p className="share-toast-in" role="status">{msg}</p>}
+            <div className="sheet-actions"><button ref={closeRef} type="button" className="btn btn-lg" onClick={close}>Done</button></div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

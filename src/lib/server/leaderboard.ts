@@ -1,29 +1,40 @@
-import { and, asc, desc, eq, isNotNull, sql as dsql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { cached } from './redis';
 import { allTimePointsExpr } from './leaderboard-sql';
 import { scoreSummary } from './result-summary';
 import { dailyDateET } from '@/lib/game/daily';
+import { isOwnerEmail, resolveStyle, type NameStyle } from '@/lib/cosmetics';
 
-export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string; hard: boolean }
+/** Name styles for the players on a page, in one query. Emails stay here; only the resolved style leaves. */
+async function stylesFor(userIds: string[]): Promise<Map<string, NameStyle>> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (!ids.length) return new Map();
+  const rows = await db.select({ id: schema.users.id, email: schema.users.email, font: schema.users.nameFont, color: schema.users.nameColor })
+    .from(schema.users).where(inArray(schema.users.id, ids));
+  return new Map(rows.map((r) => [r.id, resolveStyle({ font: r.font, color: r.color }, isOwnerEmail(r.email))]));
+}
+
+export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string; hard: boolean; style?: NameStyle }
 
 export async function dailyLeaderboard(gameType: string, date = dailyDateET(), limit = 100, hardOnly = false): Promise<DailyRow[]> {
   return cached(`lb:daily:${gameType}:${date}${hardOnly ? ':hard' : ''}`, 60, async () => {
     // Best result per user for the day; ties broken by earliest submission.
-    const rows = await db.execute<{ id: string; username: string; score: number; result_data: Record<string, unknown>; created_at: string }>(dsql`
-      select distinct on (user_id) id, coalesce(username, 'anonymous') as username, score, result_data, created_at
+    const rows = await db.execute<{ id: string; user_id: string; username: string; score: number; result_data: Record<string, unknown>; created_at: string }>(dsql`
+      select distinct on (user_id) id, user_id, coalesce(username, 'anonymous') as username, score, result_data, created_at
       from game_results
       where game_type = ${gameType} and daily_date = ${date} and is_daily and user_id is not null and not flagged
         ${hardOnly ? dsql`and coalesce((result_data->>'hard')::boolean, false)` : dsql``}
       order by user_id, score desc, created_at asc`);
-    return [...rows]
+    const top = [...rows]
       .sort((a, b) => b.score - a.score || +new Date(a.created_at) - +new Date(b.created_at))
-      .slice(0, limit)
-      .map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: scoreSummary(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id, hard: r.result_data?.hard === true }));
+      .slice(0, limit);
+    const styles = await stylesFor(top.map((r) => r.user_id));
+    return top.map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: scoreSummary(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id, hard: r.result_data?.hard === true, style: styles.get(r.user_id) }));
   });
 }
 
-export interface AllTimeRow { rank: number; username: string; points: number; games: number; best: number }
+export interface AllTimeRow { rank: number; username: string; points: number; games: number; best: number; style?: NameStyle }
 
 /** All-time: points accumulate across every graded game. 17-0 = wins, Build a Player = rating / 10. */
 export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows: AllTimeRow[]; total: number }> {
@@ -33,6 +44,7 @@ export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows
     const pointsExpr = allTimePointsExpr;
     const where = and(isNotNull(schema.gameResults.userId), eq(schema.gameResults.flagged, false));
     const rows = await db.select({
+      userId: schema.gameResults.userId,
       username: dsql<string>`max(${schema.gameResults.username})`,
       points: pointsExpr,
       games: dsql<number>`count(*)::int`,
@@ -40,7 +52,8 @@ export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows
     }).from(schema.gameResults).where(where).groupBy(schema.gameResults.userId)
       .orderBy(desc(pointsExpr), asc(dsql`min(${schema.gameResults.createdAt})`)).limit(perPage).offset((page - 1) * perPage);
     const [t] = await db.select({ n: dsql<number>`count(distinct ${schema.gameResults.userId})::int` }).from(schema.gameResults).where(where);
-    return { rows: rows.map((r, i) => ({ rank: (page - 1) * perPage + i + 1, username: r.username ?? 'anonymous', points: r.points, games: r.games, best: r.best })), total: t?.n ?? 0 };
+    const styles = await stylesFor(rows.map((r) => r.userId ?? ''));
+    return { rows: rows.map((r, i) => ({ rank: (page - 1) * perPage + i + 1, username: r.username ?? 'anonymous', points: r.points, games: r.games, best: r.best, style: styles.get(r.userId ?? '') })), total: t?.n ?? 0 };
   });
 }
 

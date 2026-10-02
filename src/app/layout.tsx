@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { ADSENSE_CLIENT } from '@/lib/ads';
+import { nameFontVariables } from '@/lib/name-fonts';
 import localFont from 'next/font/local';
 import './globals.css';
 import { SITE } from '@/lib/site';
@@ -26,7 +27,7 @@ export const viewport: Viewport = { themeColor: '#FFFFFF', width: 'device-width'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${nameFontVariables}`}>
       <head>
         <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`} crossOrigin="anonymous" />
       </head>

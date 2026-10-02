@@ -28,7 +28,7 @@ export function normalizeLeet(s: string): string {
 }
 
 /** Reserved names: blocked anywhere in the (normalized) username. */
-const RESERVED = ['admin', 'moderator', 'unbeaten', 'official'];
+const RESERVED = ['admin', 'moderator', 'unbeaten', 'official', 'owner'];
 
 /**
  * Strong terms blocked as substrings (after normalization and dropping separators).
@@ -87,4 +87,19 @@ export function validateUsername(raw: unknown): UsernameResult {
   if (isReservedUsername(name)) return fail('reserved');
   if (isProfaneUsername(name)) return fail('profane');
   return { ok: true, username: name };
+}
+
+export const DISPLAY_NAME_MAX = 30;
+/**
+ * Display names are free text, so they get the same reserved-word and profanity rules as usernames, and no
+ * square brackets, so nobody can type a fake [OWNER] tag next to their name.
+ */
+export function validateDisplayName(raw: unknown): { ok: true; name: string | null } | { ok: false; error: string } {
+  const name = typeof raw === 'string' ? raw.replace(/[\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim() : '';
+  if (!name) return { ok: true, name: null };
+  if (name.length > DISPLAY_NAME_MAX) return { ok: false, error: `Keep it to ${DISPLAY_NAME_MAX} characters.` };
+  if (/[[\]]/.test(name)) return { ok: false, error: 'Square brackets are reserved for site tags.' };
+  if (isReservedUsername(name)) return { ok: false, error: USERNAME_MESSAGES.reserved };
+  if (isProfaneUsername(name)) return { ok: false, error: USERNAME_MESSAGES.profane };
+  return { ok: true, name };
 }

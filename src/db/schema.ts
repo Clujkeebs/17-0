@@ -92,6 +92,10 @@ export const users = pgTable('user_accounts', {
   newsletterConfirmedAt: timestamp('newsletter_confirmed_at', { withTimezone: true }),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   soundEnabled: boolean('sound_enabled').notNull().default(false),
+  /** Profile: up to three favorite game slugs, and the name style the player equipped (unlocked by streaks). */
+  favoriteGames: jsonb('favorite_games').$type<string[]>().notNull().default([]),
+  nameFont: text('name_font'),
+  nameColor: text('name_color'),
 });
 
 export const accounts = pgTable('auth_accounts', {

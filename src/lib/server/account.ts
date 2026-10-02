@@ -5,6 +5,7 @@ import { computeStreak, dailyDateET, longestStreak } from '@/lib/game/daily';
 import { audit } from './audit';
 import { accountDeleted, sendEmail } from './email';
 import { scoreSummary } from './result-summary';
+import { isOwnerEmail, resolveStyle, type NameStyle } from '@/lib/cosmetics';
 
 export const deletedUsername = (userId: string) =>
   `deleted-user-${createHash('sha256').update(userId).digest('hex').slice(0, 8)}`;
@@ -12,6 +13,16 @@ export const deletedUsername = (userId: string) =>
 export async function getUserById(id: string) {
   const [u] = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
   return u && !u.deletedAt ? u : null;
+}
+
+export async function getUserByUsername(username: string) {
+  const [u] = await db.select().from(schema.users).where(dsql`lower(${schema.users.username}) = ${username.toLowerCase()}`).limit(1);
+  return u && !u.deletedAt ? u : null;
+}
+
+/** How this user's name renders. Owner status comes from the account email on the server, nothing else. */
+export function nameStyleOf(u: { email: string; nameFont: string | null; nameColor: string | null }): NameStyle {
+  return resolveStyle({ font: u.nameFont, color: u.nameColor }, isOwnerEmail(u.email));
 }
 
 /** Case-insensitive availability check. */
@@ -43,7 +54,8 @@ export function publicAccount(u: typeof schema.users.$inferSelect) {
     id: u.id, email: u.email, username: u.username, displayName: u.name, image: u.image,
     emailVerified: u.emailVerified, createdAt: u.createdAt, newsletterOptIn: u.newsletterOptIn,
     newsletterConfirmedAt: u.newsletterConfirmedAt, soundEnabled: u.soundEnabled,
-    hasPassword: !!u.hashedPassword,
+    hasPassword: !!u.hashedPassword, favoriteGames: u.favoriteGames ?? [], nameFont: u.nameFont, nameColor: u.nameColor,
+    nameStyle: nameStyleOf(u),
   };
 }
 

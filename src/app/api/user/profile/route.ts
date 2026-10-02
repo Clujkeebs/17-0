@@ -5,8 +5,10 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { db, schema } from '@/db';
 import { errorJson, json, clientIp, hashIp } from '@/lib/server/request';
-import { getUserById, isUsernameAvailable, publicAccount } from '@/lib/server/account';
-import { validateUsername, USERNAME_MESSAGES } from '@/lib/server/username';
+import { getStreak, getUserById, isUsernameAvailable, publicAccount } from '@/lib/server/account';
+import { validateDisplayName, validateUsername, USERNAME_MESSAGES } from '@/lib/server/username';
+import { canEquip } from '@/lib/cosmetics';
+import { games } from '@/lib/minigames/games';
 import { subscribe, unsubscribeByEmail } from '@/lib/server/newsletter';
 import { audit } from '@/lib/server/audit';
 
@@ -23,7 +25,14 @@ const Patch = z.object({
   displayName: z.string().trim().max(50).nullable().optional(),
   newsletterOptIn: z.boolean().optional(),
   soundEnabled: z.boolean().optional(),
+  // Profile picture: a small square the browser already resized, as a data URL. null removes it.
+  image: z.string().max(120_000).regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/).nullable().optional(),
+  favoriteGames: z.array(z.string().max(40)).max(3).optional(),
+  nameFont: z.string().max(20).optional(),
+  nameColor: z.string().max(20).optional(),
 }).strict();
+
+const GAME_SLUGS = new Set(['17-0', 'build-a-player', ...games.map((g) => g.slug)]);
 
 export async function PATCH(req: Request) {
   const s = await auth();
@@ -43,8 +52,26 @@ export async function PATCH(req: Request) {
     set.username = v.username;
   }
   if (body.displayName !== undefined) {
-    const name = body.displayName?.replace(/[\u0000-\u001f]/g, '').trim() || null;
-    set.name = name;
+    const v = validateDisplayName(body.displayName);
+    if (!v.ok) return errorJson(400, v.error, { fields: { displayName: v.error } });
+    set.name = v.name;
+  }
+  if (body.image !== undefined) set.image = body.image;
+  if (body.favoriteGames !== undefined) {
+    if (!body.favoriteGames.every((g) => GAME_SLUGS.has(g))) return errorJson(400, 'Pick games from the list.');
+    set.favoriteGames = [...new Set(body.favoriteGames)];
+  }
+  if (body.nameFont !== undefined || body.nameColor !== undefined) {
+    // Unlocks are checked here against the player's own streak; the owner style is not equippable at all.
+    const { longest } = await getStreak(u.id);
+    if (body.nameFont !== undefined) {
+      if (!canEquip('font', body.nameFont, longest)) return errorJson(403, 'That font is still locked. Keep the streak going.');
+      set.nameFont = body.nameFont;
+    }
+    if (body.nameColor !== undefined) {
+      if (!canEquip('color', body.nameColor, longest)) return errorJson(403, 'That color is still locked. Keep the streak going.');
+      set.nameColor = body.nameColor;
+    }
   }
   if (body.soundEnabled !== undefined) set.soundEnabled = body.soundEnabled;
 
