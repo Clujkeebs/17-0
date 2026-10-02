@@ -2,12 +2,59 @@
 
 **Six picks. Seventeen games. One perfect season.**
 
-Unbeaten has two NFL roster games built on EA Sports Madden NFL ratings:
+Live: https://web-production-3f1b7.up.railway.app
+
+Unbeaten is an NFL ratings game site built on EA Sports Madden NFL ratings:
 
 - **17-0**: one reel spins a single team at a time, and you draft one player from it into an open slot: QB, RB, WR, TE, DEF (any defender) or HC. Six spins fill the roster. The server grades the roster and projects a 17-game record. A daily puzzle resets at midnight ET and has its own leaderboard.
 - **Build a Player**: pick a position (a position of the day is preselected) and spin five teams, one at a time, with no repeats. Each position has five weighted traits. On each spin you take one trait from one player. The result is a weighted score, a letter grade, the best possible score from those five teams, and a simulated season.
 
+- **12 daily mini games**: Higher or Lower, Grid, Mystery Player, Where's He From, Blind Resume, Rating Match, Guess the Overall, Top Ten, Rank 'Em, Name That Team, Speed Trap and Odd One Out.
+
+Every game has a Today mode (ranked, account required, one try) and a Casual mode (unlimited), and every result gets a share sheet and a score card.
+
 The site also has about 8,000 programmatic SEO pages (players, teams, coaches, positions, comparisons, team and position game landers), accounts with streaks, a double opt-in newsletter, an admin panel and the full legal set.
+
+## Read this first (people and AI agents)
+
+If you are changing this repo, read this section, then `HANDOFF.md` (current state and to-do list) and `AGENTS.md`. Ask the owner before anything that costs money, buys a domain, or changes what is live in a way users would notice.
+
+### The rules
+
+1. **This is Next.js 16, not the one you remember.** APIs and conventions changed. Read the guide in `node_modules/next/dist/docs/` before using a Next API and heed deprecation notices.
+2. **No em-dashes** anywhere in copy or docs. Avoid en-dashes in prose. No emoji (one exception: the profile streak flame). Check with `LC_ALL=C.UTF-8 grep -rnP '\x{2014}' src marketing *.md`.
+3. **Dry voice.** Short, plain sentences, a little wry. No hype. Banned words: unlock, elevate, seamless, game-changing, next level, dream roster, powerful, intuitive.
+4. **Clean, premium, light design.** Use the tokens in `src/app/globals.css` and the rules in `DESIGN.md`. One red accent per view, used for meaning. No new colors, gradients, glows or CSS frameworks.
+5. **Icons are custom SVG** from `src/components/Icons.tsx`. No icon libraries.
+6. **No placeholders.** No lorem ipsum, fake stats, fake testimonials, user counts or "coming soon" stubs. If something is not real yet, leave it out.
+7. **Game modes are "Today" (ranked, account required, one try) and "Casual" (unlimited).** Never call Casual "practice".
+8. **"Madden" is never branding.** "EA Sports Madden NFL ratings" is fine as a source citation.
+9. **Nothing that implies gambling:** no odds, lines, prizes for results or sportsbook links.
+10. **Do not disguise the site** (category, metadata) to get past school filters. Declined on purpose.
+11. **Never log PII or raw IPs.** Hash IPs with `hashIp`. Public mutations are rate limited.
+12. **Game logic stays pure.** Everything in `src/lib/game/` uses the seeded PRNG, never `Math.random()`.
+13. **Coach ratings never read as a liability.** Current head coaches are ranked onto 80 to 97 in `src/lib/server/coaches.ts`.
+
+### How to make a change
+
+1. Run the checks: `npx tsc --noEmit -p . && npx eslint src --quiet && npx vitest run`.
+2. Build, start the standalone server, and run Playwright (desktop 1440 and phone 375): see Local setup below.
+3. Look at the page at **375px wide**. Nothing should scroll sideways.
+4. Commit with a message that says what changed for players, not just which files moved.
+5. Deploy. **Pushing to GitHub does not deploy.** See "Deploying" below.
+6. Tick the item off in `HANDOFF.md` and add anything the next person needs to know.
+
+### Good to know
+
+- **Where things live.** Pages are in `src/app/(site)` and `src/app/(game)`. The 17-0 engine is `src/lib/game/seventeen.ts`, Build a Player is `src/lib/game/build.ts`, and the mini games are registered in `src/lib/minigames/registry.ts`. Server helpers (DB, cache, rate limits, email, ESPN) are in `src/lib/server/`.
+- **Adding a mini game.** Copy an existing one in `src/lib/minigames/games/`, register it, add a unit test in `tests/unit/` and make sure its result page and score card render. It gets Today and Casual modes, a leaderboard and the share sheet from the framework.
+- **Balance.** A perfect (greedy) 17-0 draft should go 17-0 about 10 to 12 percent of the time, a random draft about never. The knobs are `WIN_FLOOR` and `WIN_SPAN` in `src/lib/game/seventeen.ts`. Check with `calibrate()` in `src/lib/server/calibrate.ts` before and after touching them.
+- **Data sources.** Ratings come from EA's Madden 27 ratings pages. Current rosters, headshots and head coaches come from ESPN, synced by the worker on boot and on schedule. Players without a photo fall back to a monogram.
+- **Server components by default.** Add `'use client'` only where something is interactive. Route handlers declare `export const runtime = 'nodejs'`. Every page exports metadata with a canonical URL.
+- **Schema changes** go through `npm run db:generate`. Migrations are additive only, so a rollback never needs a down-migration.
+- **Sandboxed agents** may not be able to reach the live site or ESPN's CDN. Logos and headshots then show blank locally; that is the network, not a bug. Check live behavior through Railway logs.
+- **Restarting the local server:** make sure an older `next-server` is not still holding port 3000, or you will test a stale build.
+- **Rate limits** will trip repeated e2e runs. Clear them: `redis-cli keys 'rate:*' | xargs -r redis-cli del`.
 
 ## Stack
 
@@ -55,15 +102,24 @@ Game logic lives in `src/lib/game/` as pure functions with a deterministic PRNG 
 
 ## Local setup
 
-Requirements: Node 22+, Postgres 16, and Redis 7.
+Requirements: Node 22+, Postgres 16, and Redis 7. Start them with `service postgresql start; redis-server --daemonize yes`. Local URLs: `postgres://postgres:postgres@localhost:5432/gridiron` and `redis://localhost:6379`.
 
 ```bash
 cp .env.example .env.local        # fill in what you have; everything optional works without keys
 npm install
 npm run db:migrate                # applies drizzle/ migrations
-npm run db:seed                   # 32 teams, coaches, ~450 players (placeholder ratings until first sync)
+npm run db:seed                   # 32 teams, 49 coaches, 594 players
 npm run dev                       # http://localhost:3000
 npm run worker                    # in another terminal: BullMQ worker
+```
+
+Production-style run and end-to-end tests:
+
+```bash
+npm run build
+cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/
+PORT=3000 node .next/standalone/server.js &
+E2E_BASE_URL=http://localhost:3000 PW_CHROMIUM=/opt/pw-browsers/chromium npx playwright test
 ```
 
 To make yourself an admin, add your email to `ADMIN_EMAILS`, register, and open `/admin`.
@@ -104,17 +160,24 @@ To make yourself an admin, add your email to `ADMIN_EMAILS`, register, and open 
 
 ## Deploying to Railway
 
-1. Create a project and add the **Postgres** and **Redis** plugins. Enable point-in-time recovery on Postgres (paid plan).
-2. Create four services from this repo, each pointed at its config file under *Settings > Config-as-code*:
-   - `web`: `railway/web.json`. Give it a public domain and attach a volume at `/app/.next/cache` (500 MB).
-   - `worker`: `railway/worker.json`. No public domain. Attach a volume at `/app/snapshots` (2 GB).
-   - `cron`: `railway/cron.json` (schedule `*/15 * * * *`).
-   - `backup`: `railway/backup.json` (schedule `15 7 * * *`).
-3. Set the variables above on each service, using Railway references such as `${{Postgres.DATABASE_URL}}`.
-4. Deploy. The web service runs migrations on boot. Seed once with `railway run npm run db:seed`, then trigger a real sync from `/admin`.
-5. Add the custom domain to `web`, put Cloudflare in front (proxied, Full (strict) SSL), and point UptimeRobot at `/api/health`.
+Project "unbeaten" (`d6a0d144-b4a1-46ee-90ba-5adc85fa4e55`), environment `778c8a82-2002-455d-b720-d7386f22e6fa`.
 
-Merging to `main` deploys through Railway's GitHub integration. GitHub Actions runs typecheck, lint, unit tests, build and Playwright on every PR (`.github/workflows/ci.yml`).
+| Service | ID | Built from |
+|---|---|---|
+| web | `d2e53b77-afed-4af9-9d20-6a26d3c39e3d` | `Dockerfile` |
+| worker | `702261d7-b927-42b5-a7bd-7a3dcc2be29d` | `Dockerfile.worker` |
+| cron | `c0924f5d-bc9b-499c-b06c-229579b63b8e` | `Dockerfile.cron` |
+
+Postgres and Redis are Railway plugins.
+
+**Pushing to GitHub does not deploy.** After pushing to `main`, connect the source for each service you changed (Railway MCP `connect-service-source`, repo `clujkeebs/17-0`, branch `main`, or the Railway dashboard), then confirm with `list-deployments` that the new deploy reached SUCCESS and read its logs for errors.
+
+- Changed pages, components, API routes or CSS: deploy **web**.
+- Changed `worker/`, `src/lib/server/espn.ts`, `src/lib/server/coaches.ts` or the sync: deploy **worker** (it runs the ESPN sync and coach recompute on boot).
+- Changed `scripts/cron.mjs` or the cron schedule: deploy **cron**.
+- Shared code in `src/lib/server/` can need both web and worker.
+
+The web service runs migrations and an idempotent seed on boot (`scripts/start.sh`).
 
 ## Rollback
 
@@ -128,6 +191,7 @@ pg_restore --clean --no-owner -d "$DATABASE_URL" 2026-09-29.dump
 
 - `DESIGN.md`: the design system
 - `DECISIONS.md`: why things are the way they are
-- `TODO.md`: what is left, with owners and priority
+- `HANDOFF.md`: current state, deploy steps and the live to-do list (start here)
+- `TODO.md`: the original launch checklist, with owners and priority
 - `CONTRIBUTING.md`: how to work in this repo
 - `marketing/`: launch copy, calendar, share templates, KPIs, launch checklist
