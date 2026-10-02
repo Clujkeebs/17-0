@@ -119,7 +119,7 @@ test('reel still spins with reduced motion', async ({ page }) => {
   expect(anim.name !== 'none' || anim.dur === '1.3s').toBe(true);
 });
 
-for (const [slug, rounds] of [['speed-trap', 8], ['odd-one-out', 6]] as const) {
+for (const [slug, rounds] of [['speed-trap', 8], ['odd-one-out', 6], ['numbers-game', 8]] as const) {
   test(`${slug} casual round trip`, async ({ page }) => {
     await page.goto(`/games/${slug}`);
     await page.getByRole('tab', { name: 'Casual' }).click();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lastNameKey, pickEspnMatch, pickSameTeamNamesake, positionFamily } from '@/lib/server/espn-match';
+import { lastNameKey, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily } from '@/lib/server/espn-match';
 
 const PHI = 26, CAR = 5;
 const wr = { id: '4241478', teamId: PHI, family: positionFamily('WR') };
@@ -39,5 +39,13 @@ describe('ESPN roster matching', () => {
     expect(pickSameTeamNamesake({ position: 'DT' }, [dt])).toBe(dt);
     expect(pickSameTeamNamesake({ position: 'WR' }, [dt])).toBeNull();
     expect(pickSameTeamNamesake({ position: 'DT' }, [dt, { ...dt, id: 'other' }])).toBeNull();
+  });
+  it('finds a released player league-wide only by last name, position and first initial', () => {
+    const cam = { id: 'c', teamId: 25, family: positionFamily('DT'), a: { fullName: 'Cameron Heyward' } };
+    const other = { id: 'o', teamId: 3, family: positionFamily('DT'), a: { fullName: 'Connor Heyward' } };
+    expect(pickLeagueNamesake({ fullName: 'Cam Heyward', position: 'DT' }, [cam])).toBe(cam);
+    expect(pickLeagueNamesake({ fullName: 'Cam Heyward', position: 'DT' }, [cam, other])).toBeNull();
+    expect(pickLeagueNamesake({ fullName: 'Mike Heyward', position: 'DT' }, [cam])).toBeNull();
+    expect(pickLeagueNamesake({ fullName: 'Cam Heyward', position: 'WR' }, [cam])).toBeNull();
   });
 });

@@ -89,5 +89,38 @@ export const oddOneOut: MiniGame<PickPuzzle, PickAnswer> = {
   score: scorePicks,
 };
 
- 
-export const groupD: MiniGame<any, any>[] = [speedTrap, oddOneOut];
+ /* ------------------------------------------------------------------ Numbers Game */
+
+const NG_N = 8;
+export const numbersGame: MiniGame<PickPuzzle, PickAnswer> = {
+  slug: 'numbers-game',
+  name: 'Numbers Game',
+  tagline: 'One team, one jersey number, three players. Pick who wears it.',
+  howTo: [
+    'Each round names a team and a jersey number.',
+    'Three of that team\'s players are on the board. Tap the one who wears it.',
+    'Eight rounds, eight different teams, 100 per hit. Numbers show at the end.',
+  ],
+  generate(seed, data) {
+    const rng = createRng(seed);
+    const byTeam = new Map<number, GPlayer[]>();
+    for (const p of data.players) if (p.jersey != null && p.ovr >= 70) byTeam.set(p.teamId, [...(byTeam.get(p.teamId) ?? []), p]);
+    const teamIds = rng.shuffle([...byTeam.keys()].sort((a, b) => a - b));
+    const rounds: PickRound[] = [];
+    for (const id of teamIds) {
+      if (rounds.length >= NG_N) break;
+      // Three different numbers, so exactly one player wears the one asked for.
+      const seen = new Set<number>();
+      const three = rng.shuffle(byTeam.get(id)!).filter((p) => !seen.has(p.jersey!) && seen.add(p.jersey!)).slice(0, 3);
+      if (three.length < 3) continue;
+      const answer = rng.pick(three)!;
+      rounds.push({ prompt: `Who wears No. ${answer.jersey} for the ${answer.teamName}?`, options: three, correct: three.indexOf(answer), reveal: three.map((o) => `No. ${o.jersey}`) });
+    }
+    if (rounds.length < NG_N) throw new Error('Not enough players to build today\'s puzzle.');
+    return { rounds };
+  },
+  publicView: pickView,
+  score: scorePicks,
+};
+
+export const groupD: MiniGame<any, any>[] = [speedTrap, oddOneOut, numbersGame];

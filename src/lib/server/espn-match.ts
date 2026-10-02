@@ -55,3 +55,14 @@ export function pickSameTeamNamesake<C extends EspnCandidate>(player: { position
   const fits = sameTeamSameLast.filter((c) => c.family === null || fam === null || c.family === fam);
   return fits.length === 1 ? fits[0] : null;
 }
+
+/**
+ * Same idea for a player with no team (released by an earlier run): last name, position family and first initial
+ * must all agree, and only one athlete in the league may fit.
+ */
+export function pickLeagueNamesake<C extends EspnCandidate & { a: { fullName: string } }>(player: { fullName: string; position: string }, sameLast: C[]): C | null {
+  const fam = positionFamily(player.position);
+  const initial = player.fullName.trim().charAt(0).toLowerCase();
+  const fits = sameLast.filter((c) => (c.family === null || fam === null || c.family === fam) && c.a.fullName.trim().charAt(0).toLowerCase() === initial);
+  return fits.length === 1 ? fits[0] : null;
+}

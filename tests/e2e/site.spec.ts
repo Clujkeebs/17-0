@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-const PAGES = ['/', '/games', '/games/higher-lower', '/games/grid', '/games/mystery-player', '/games/wheres-he-from', '/games/blind-resume', '/games/rating-match', '/games/guess-the-ovr', '/games/top-ten', '/games/rank-em', '/games/name-that-team', '/games/speed-trap', '/games/odd-one-out', '/games/17-0', '/games/build-a-player', '/leaderboard', '/players', '/teams', '/coaches', '/positions', '/blog',
+const PAGES = ['/', '/games', '/games/higher-lower', '/games/grid', '/games/mystery-player', '/games/wheres-he-from', '/games/blind-resume', '/games/rating-match', '/games/guess-the-ovr', '/games/top-ten', '/games/rank-em', '/games/name-that-team', '/games/speed-trap', '/games/odd-one-out', '/games/numbers-game', '/games/17-0', '/games/build-a-player', '/leaderboard', '/players', '/teams', '/coaches', '/positions', '/blog',
   '/legal/terms', '/legal/privacy', '/legal/cookies', '/legal/disclaimer', '/legal/dmca', '/legal/accessibility', '/login', '/register'];
 
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); localStorage.setItem('gl-17-0-rules', '1'); }); });

@@ -1,13 +1,13 @@
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { slugify } from '@/lib/site';
-import { lastNameKey, pickEspnMatch, pickSameTeamNamesake, positionFamily, type EspnCandidate } from './espn-match';
+import { lastNameKey, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily, type EspnCandidate } from './espn-match';
 
 const MAX_RELEASES = 100;
 
 const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g, '').replace(/[^a-z]/g, '');
 
-interface EspnAthlete { id: string; fullName: string; headshot?: { href?: string }; position?: { abbreviation?: string } }
+interface EspnAthlete { id: string; fullName: string; headshot?: { href?: string }; position?: { abbreviation?: string }; jersey?: string }
 interface EspnCoach { id: string; firstName: string; lastName: string; experience?: number }
 
 /**
@@ -48,35 +48,54 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
   const players = await db.select({ id: schema.players.id, fullName: schema.players.fullName, position: schema.players.position, teamId: schema.players.teamId, espnId: schema.players.espnId, imageUrl: schema.players.imageUrl, legend: schema.players.isAllTimeGreat, version: schema.players.maddenVersion })
     .from(schema.players).where(eq(schema.players.isActive, true));
   const abbr = new Map(teams.map((t) => [t.id, t.abbreviation]));
-  // Second chance for spelling differences (Cam vs Cameron Heyward): same team and same last name.
+  // Second chance for spelling differences (Cam vs Cameron Heyward): last name, by team and league-wide.
   const byTeamLast = new Map<string, (EspnCandidate & { a: EspnAthlete })[]>();
+  const byLast = new Map<string, (EspnCandidate & { a: EspnAthlete })[]>();
   for (const list of espnIndex.values()) for (const c of list) {
-    const k = `${c.teamId}:${lastNameKey(c.a.fullName)}`;
+    const last = lastNameKey(c.a.fullName), k = `${c.teamId}:${last}`;
     byTeamLast.set(k, [...(byTeamLast.get(k) ?? []), c]);
+    byLast.set(last, [...(byLast.get(last) ?? []), c]);
   }
+  // Each ESPN athlete is one person, so the first row to claim him wins. Rows with real EA ratings go first;
+  // seed placeholders only get what is left, and one that finds its player taken is a duplicate.
+  const isPlaceholder = (p: (typeof players)[number]) => !!p.version?.startsWith('seed-');
   const claimed = new Set<string>();
-  for (const p of players) {
-    const hit = espnIndex.get(norm(p.fullName)) && pickEspnMatch(p, espnIndex.get(norm(p.fullName))!);
-    if (hit) claimed.add(hit.id);
+  const free = <C extends { id: string }>(list: C[]) => list.filter((c) => !claimed.has(c.id));
+  const hits = new Map<string, EspnCandidate & { a: EspnAthlete }>();
+  const fuzzyNames: string[] = [];
+  for (const placeholders of [false, true]) {
+    const group = players.filter((p) => isPlaceholder(p) === placeholders);
+    for (const p of group) {
+      const cands = espnIndex.get(norm(p.fullName));
+      const hit = cands ? pickEspnMatch(p, free(cands)) : null;
+      if (hit) { claimed.add(hit.id); hits.set(p.id, hit); }
+    }
+    for (const p of group) {
+      if (hits.has(p.id) || espnIndex.has(norm(p.fullName)) || p.legend) continue;
+      const last = lastNameKey(p.fullName);
+      const hit = p.teamId != null
+        ? pickSameTeamNamesake(p, free(byTeamLast.get(`${p.teamId}:${last}`) ?? []))
+        : pickLeagueNamesake(p, free(byLast.get(last) ?? []));
+      if (hit) { claimed.add(hit.id); hits.set(p.id, hit); fuzzyNames.push(`${p.fullName} = ${hit.a.fullName} (${abbr.get(hit.teamId)})`); }
+    }
   }
-  const movedNames: string[] = [], clashNames: string[] = [], fuzzyNames: string[] = [], released: { id: string; label: string; placeholder: boolean }[] = [];
+  const movedNames: string[] = [], clashNames: string[] = [], released: { id: string; label: string; placeholder: boolean }[] = [];
   let matched = 0, moved = 0, ambiguous = 0;
   for (const p of players) {
     const cands = espnIndex.get(norm(p.fullName));
-    let hit = cands ? pickEspnMatch(p, cands) : null;
-    if (!hit && !cands && p.teamId != null) {
-      hit = pickSameTeamNamesake(p, (byTeamLast.get(`${p.teamId}:${lastNameKey(p.fullName)}`) ?? []).filter((c) => !claimed.has(c.id)));
-      if (hit) fuzzyNames.push(`${p.fullName} = ${hit.a.fullName} (${abbr.get(hit.teamId)})`);
-    }
+    const hit = hits.get(p.id);
     if (!hit) {
-      if (cands) { ambiguous++; clashNames.push(`${p.fullName} (${p.position}): ESPN has ${cands.map((c) => `${c.a.position?.abbreviation ?? '?'} ${abbr.get(c.teamId)}`).join(', ')}`); }
-      else if (!p.legend && (p.teamId != null || p.version?.startsWith('seed-'))) {
-        released.push({ id: p.id, label: `${p.fullName} (${p.position}, ${abbr.get(p.teamId ?? -1) ?? 'FA'})`, placeholder: !!p.version?.startsWith('seed-') });
-      }
+      const label = `${p.fullName} (${p.position}, ${abbr.get(p.teamId ?? -1) ?? 'FA'})`;
+      if (cands && isPlaceholder(p) && !p.legend && free(cands).length === 0) released.push({ id: p.id, label: `${label}, duplicate`, placeholder: true });
+      else if (cands) { ambiguous++; clashNames.push(`${p.fullName} (${p.position}): ESPN has ${cands.map((c) => `${c.a.position?.abbreviation ?? '?'} ${abbr.get(c.teamId)}`).join(', ')}`); }
+      else if (!p.legend && (p.teamId != null || isPlaceholder(p))) released.push({ id: p.id, label, placeholder: isPlaceholder(p) });
       continue;
     }
     matched++;
     const set: Partial<typeof schema.players.$inferInsert> = { espnId: hit.a.id };
+    // ESPN has the number a player wears now, which changes with trades; EA's can be a season old.
+    const jersey = Number(hit.a.jersey);
+    if (hit.a.jersey && Number.isInteger(jersey) && jersey >= 0 && jersey <= 99) set.jerseyNumber = jersey;
     // A changed ESPN id means the old one belonged to someone else (a namesake), so its headshot goes too.
     if (!p.imageUrl || (p.espnId && p.espnId !== hit.a.id)) set.imageUrl = hit.a.headshot?.href ?? `https://a.espncdn.com/i/headshots/nfl/players/full/${hit.a.id}.png`;
     if (athletes >= 1000 && p.teamId !== hit.teamId) { set.teamId = hit.teamId; moved++; movedNames.push(`${p.fullName} (${p.position}) ${abbr.get(p.teamId ?? -1) ?? 'FA'} -> ${abbr.get(hit.teamId)}`); }
@@ -100,7 +119,7 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
   // Full roster audit, readable in the worker's deploy logs. Player names are public, so this logs no PII.
   const faNames = released.filter((r) => !r.placeholder).map((r) => r.label);
   const retiredNames = released.filter((r) => r.placeholder).map((r) => r.label);
-  for (const [label, list] of [['moved', movedNames], ['matched by team and last name', fuzzyNames], ['name clash, left alone', clashNames],
+  for (const [label, list] of [['moved', movedNames], ['matched by last name', fuzzyNames], ['name clash, left alone', clashNames],
     [releasing ? 'on no ESPN roster, now free agents' : 'on no ESPN roster, kept EA team', faNames],
     [releasing ? 'placeholder rows retired' : 'placeholder rows on no ESPN roster, kept', retiredNames]] as const) {
     for (let i = 0; i < list.length; i += 25) console.log(`[espn] ${label} (${list.length}): ${list.slice(i, i + 25).join('; ')}`);

@@ -30,7 +30,7 @@ export function PickRounds({ signedIn, meta }: { signedIn: boolean; meta: Meta }
               <p className="m-kicker" style={{ margin: '0 0 8px' }}>Round {i + 1} · {d.right ? 'Right' : 'Missed'}</p>
               <div style={{ display: 'grid', gap: 8 }}>
                 {d.options.map((o, k) => (
-                  <div key={o.id} className="m-row" style={{ justifyContent: 'space-between', fontWeight: k === d.correct ? 700 : 400, opacity: k === d.correct || k === d.pick ? 1 : 0.7 }}>
+                  <div key={o.id} className="m-row" style={{ justifyContent: 'space-between', fontWeight: k === d.correct ? 700 : 400 }}>
                     <Face c={o} />
                     <span className="num">{o.note}{k === d.correct ? ' ✓' : k === d.pick ? ' ✗' : ''}</span>
                   </div>
