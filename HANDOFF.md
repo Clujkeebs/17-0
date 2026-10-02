@@ -91,4 +91,4 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - Value per player: points per game this season blended with Sleeper's season projection, the projection counted as 3 games of evidence (`src/lib/game/fantasy.ts`). Grade letters are relative to position (A+ at roughly a top-three PPR pace).
 - Record: team strength is total points per week. The win floor (points) is re-fit after every sync by `tuneFantasyFloor()` so a re-rolling drafter goes 17-0 about 11 percent of the time; stored in Redis `fantasy:win-floor`, logged as `[fantasy] win floor`. Span is 60 points.
 - The option shows "Points loading" and the API refuses Fantasy until at least 150 active players have points or projections.
-- The container cannot reach Sleeper; verify through the worker logs.
+- The container cannot reach Sleeper; verify through the worker logs. First live sync (2026-10-02, week 4): 575/576 matched, 383 with points, 471 with projections, win floor 70.7 (re-roll 11.1%, Hard 2.5%, random 0%). Name matching ignores Jr/Sr/II/III suffixes.

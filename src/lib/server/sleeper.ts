@@ -56,7 +56,8 @@ export async function seasonProjections(season: string, fetchImpl: typeof fetch)
   return out;
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '');
+/** Name key that ignores case, punctuation and suffixes, so Brian Robinson Jr. matches Brian Robinson. */
+const norm = (s: string) => s.toLowerCase().replace(/[.,']/g, '').replace(/\s+(jr|sr|ii|iii|iv|v)$/, '').replace(/[^a-z]/g, '');
 
 /** Pick the Sleeper id for one of our players: ESPN id first, then a unique same-team, same-position name match. */
 export function matchSleeper(

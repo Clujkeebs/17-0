@@ -45,6 +45,7 @@ describe('Sleeper sync', () => {
   it('matches by ESPN id first, then a unique same-team name', () => {
     expect(matchSleeper({ espnId: '4241478', fullName: 'Anyone', position: 'WR', team: 'CAR' }, byEspn, byTeamName)).toBe('s1');
     expect(matchSleeper({ espnId: null, fullName: 'DeVonta Smith', position: 'WR', team: 'PHI' }, byEspn, byTeamName)).toBe('s1');
+    expect(matchSleeper({ espnId: null, fullName: 'DeVonta Smith Jr.', position: 'WR', team: 'PHI' }, byEspn, byTeamName)).toBe('s1');
     expect(matchSleeper({ espnId: null, fullName: 'Jon Smith', position: 'WR', team: 'CAR' }, byEspn, byTeamName)).toBeNull();
     expect(matchSleeper({ espnId: null, fullName: 'DeVonta Smith', position: 'WR', team: null }, byEspn, byTeamName)).toBeNull();
   });
