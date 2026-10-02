@@ -1,30 +1,34 @@
 /**
- * One-off reachability check for 82-0 (NBA) data sources, run from the worker because the dev container cannot
- * reach sports APIs. Logs status, size and a short sample of each so the build can rest on what actually answers.
+ * One-off look at ESPN's NBA core API shapes for 82-0, run from the worker because the dev container cannot
+ * reach sports APIs. Logs the fields the sync will rely on. Remove once the NBA sync is written.
  */
-const PROBES: { name: string; url: string; headers?: Record<string, string>; look?: RegExp }[] = [
-  { name: 'espn-teams', url: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams' },
-  { name: 'espn-roster-now', url: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/13/roster' },
-  { name: 'espn-roster-1996-bulls', url: 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/1996/teams/4/athletes?limit=30' },
-  { name: 'espn-season-stats-1996', url: 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/1996/types/2/athletes/1035/statistics' },
-  { name: 'espn-career-stats', url: 'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/stats' },
-  { name: 'espn-season-leaders-1986', url: 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/1986/types/2/leaders' },
-  { name: '2kratings-team', url: 'https://www.2kratings.com/teams/los-angeles-lakers', look: /overall|rating|"ovr"/i },
-  { name: 'nba-stats', url: 'https://stats.nba.com/stats/leaguedashplayerstats?Season=2025-26&SeasonType=Regular%20Season&PerMode=PerGame&MeasureType=Base&LeagueID=00&PlayerOrTeam=Player', headers: { referer: 'https://www.nba.com/', origin: 'https://www.nba.com', 'x-nba-stats-origin': 'stats', 'x-nba-stats-token': 'true' } },
-  { name: 'nba-cdn-players', url: 'https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json' },
-  { name: 'sleeper-nba', url: 'https://api.sleeper.app/v1/state/nba' },
-];
+const CORE = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba';
+
+async function get(url: string, fetchImpl: typeof fetch) {
+  const r = await fetchImpl(url.replace('http://', 'https://'), { signal: AbortSignal.timeout(15_000) });
+  if (!r.ok) throw new Error(`${r.status} ${url}`);
+  return r.json() as Promise<Record<string, unknown>>;
+}
+const log = (name: string, v: unknown) => console.log(`[nba-probe] ${name} :: ${JSON.stringify(v).slice(0, 900)}`);
 
 export async function probeNbaSources(fetchImpl: typeof fetch = fetch) {
-  for (const p of PROBES) {
-    try {
-      const r = await fetchImpl(p.url, { signal: AbortSignal.timeout(15_000), headers: { 'user-agent': 'Mozilla/5.0 (compatible; UnbeatenBot/1.0; +https://playunbeaten.com)', ...p.headers } });
-      const body = await r.text();
-      const sample = body.replace(/\s+/g, ' ').slice(0, 220);
-      const hit = p.look ? ` look=${p.look.test(body)}` : '';
-      console.log(`[nba-probe] ${p.name} ${r.status} ${r.headers.get('content-type') ?? ''} ${body.length}b${hit} :: ${sample}`);
-    } catch (e) {
-      console.log(`[nba-probe] ${p.name} FAILED ${(e as Error).message}`);
-    }
-  }
+  const step = async (name: string, fn: () => Promise<unknown>) => { try { log(name, await fn()); } catch (e) { log(name, `FAILED ${(e as Error).message}`); } };
+  await step('site-default-ua', async () => (await fetchImpl('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams', { signal: AbortSignal.timeout(15_000) })).status);
+  await step('seasons-index', async () => { const j = await get(`${CORE}/seasons?limit=100`, fetchImpl); return { count: j.count, first: (j.items as { $ref: string }[])?.slice(-3) }; });
+  await step('teams-1996', async () => { const j = await get(`${CORE}/seasons/1996/teams?limit=50`, fetchImpl); return { count: j.count }; });
+  await step('teams-2026', async () => { const j = await get(`${CORE}/seasons/2026/teams?limit=50`, fetchImpl); return { count: j.count }; });
+  await step('teams-2027', async () => { const j = await get(`${CORE}/seasons/2027/teams?limit=50`, fetchImpl); return { count: j.count }; });
+  await step('team-1996-4', async () => { const j = await get(`${CORE}/seasons/1996/teams/4`, fetchImpl); return { keys: Object.keys(j), id: j.id, displayName: j.displayName, abbreviation: j.abbreviation, location: j.location, name: j.name, color: j.color, logos: (j.logos as unknown[])?.slice(0, 1) }; });
+  await step('team-1986-25', async () => { const j = await get(`${CORE}/seasons/1986/teams/25`, fetchImpl); return { displayName: j.displayName, abbreviation: j.abbreviation }; });
+  await step('athlete-1996-1035', async () => {
+    const j = await get(`${CORE}/seasons/1996/athletes/1035`, fetchImpl);
+    return { keys: Object.keys(j), fullName: j.fullName, position: j.position, headshot: j.headshot, height: j.displayHeight, team: j.team, experience: j.experience };
+  });
+  await step('stats-1996-1035', async () => {
+    const j = await get(`${CORE}/seasons/1996/types/2/athletes/1035/statistics`, fetchImpl);
+    const cats = ((j.splits as { categories?: { name: string; stats: { name: string; value: number }[] }[] })?.categories ?? []);
+    return cats.map((c) => ({ c: c.name, s: c.stats.map((s) => `${s.name}=${s.value}`).slice(0, 40) }));
+  });
+  await step('roster-2026-13', async () => { const j = await get(`${CORE}/seasons/2026/teams/13/athletes?limit=30`, fetchImpl); return { count: j.count }; });
+  await step('roster-1986-2', async () => { const j = await get(`${CORE}/seasons/1986/teams/2/athletes?limit=30`, fetchImpl); return { count: j.count }; });
 }
