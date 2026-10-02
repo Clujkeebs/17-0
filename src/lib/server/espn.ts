@@ -1,7 +1,7 @@
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { slugify } from '@/lib/site';
-import { lastNameKey, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily, type EspnCandidate } from './espn-match';
+import { firstNamesCompatible, lastNameKey, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily, type EspnCandidate } from './espn-match';
 
 const MAX_RELEASES = 100;
 
@@ -79,7 +79,9 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
       if (hit) { claimed.add(hit.id); hits.set(p.id, hit); fuzzyNames.push(`${p.fullName} = ${hit.a.fullName} (${abbr.get(hit.teamId)})`); }
     }
   }
-  const movedNames: string[] = [], clashNames: string[] = [], released: { id: string; label: string; placeholder: boolean }[] = [];
+  const byId = new Map<string, EspnAthlete>();
+  for (const list of espnIndex.values()) for (const c of list) byId.set(c.id, c.a);
+  const movedNames: string[] = [], clashNames: string[] = [], unlistedNames: string[] = [], unlinked: string[] = [], released: { id: string; label: string; placeholder: boolean }[] = [];
   let matched = 0, moved = 0, ambiguous = 0;
   for (const p of players) {
     const cands = espnIndex.get(norm(p.fullName));
@@ -88,7 +90,16 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
       const label = `${p.fullName} (${p.position}, ${abbr.get(p.teamId ?? -1) ?? 'FA'})`;
       if (cands && isPlaceholder(p) && !p.legend && free(cands).length === 0) released.push({ id: p.id, label: `${label}, duplicate`, placeholder: true });
       else if (cands) { ambiguous++; clashNames.push(`${p.fullName} (${p.position}): ESPN has ${cands.map((c) => `${c.a.position?.abbreviation ?? '?'} ${abbr.get(c.teamId)}`).join(', ')}`); }
-      else if (!p.legend && (p.teamId != null || isPlaceholder(p))) released.push({ id: p.id, label, placeholder: isPlaceholder(p) });
+      // Missing from ESPN is not proof of a release: ESPN leaves some injured-reserve players off its rosters
+      // (Jalon Walker, 2026). Real EA rows keep their EA team; only placeholder rows are retired.
+      else if (!p.legend && isPlaceholder(p)) released.push({ id: p.id, label, placeholder: true });
+      else if (!p.legend && p.teamId != null) unlistedNames.push(label);
+      // An ESPN link to someone with an incompatible name came from a bad match: drop it and its photo.
+      const linked = p.espnId ? byId.get(p.espnId) : undefined;
+      if (linked && lastNameKey(linked.fullName) === lastNameKey(p.fullName) && !firstNamesCompatible(p.fullName, linked.fullName)) {
+        await db.update(schema.players).set({ espnId: null, imageUrl: null }).where(eq(schema.players.id, p.id));
+        unlinked.push(`${p.fullName} (was linked to ${linked.fullName})`);
+      }
       continue;
     }
     matched++;
@@ -101,8 +112,7 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
     if (athletes >= 1000 && p.teamId !== hit.teamId) { set.teamId = hit.teamId; moved++; movedNames.push(`${p.fullName} (${p.position}) ${abbr.get(p.teamId ?? -1) ?? 'FA'} -> ${abbr.get(hit.teamId)}`); }
     await db.update(schema.players).set(set).where(eq(schema.players.id, p.id));
   }
-  // Current players on no ESPN roster (IR included) were cut, retired or are unsigned: they become free agents,
-  // so 17-0 stops offering them for their old team. A huge count means ESPN returned bad data, so do nothing.
+  // Placeholder rows on no ESPN roster are retired. A huge count means ESPN returned bad data, so do nothing.
   const releasing = athletes >= 1000 && released.length <= MAX_RELEASES;
   // Placeholder rows from the seed file (never confirmed by the EA feed) are usually a second spelling of a real
   // player (Cam / Cameron Heyward) with generated ratings, so they are retired rather than kept as free agents.
@@ -120,7 +130,7 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
   const faNames = released.filter((r) => !r.placeholder).map((r) => r.label);
   const retiredNames = released.filter((r) => r.placeholder).map((r) => r.label);
   for (const [label, list] of [['moved', movedNames], ['matched by last name', fuzzyNames], ['name clash, left alone', clashNames],
-    [releasing ? 'on no ESPN roster, now free agents' : 'on no ESPN roster, kept EA team', faNames],
+    ['on no ESPN roster (IR, suspended or unsigned), kept EA team', unlistedNames], ['bad ESPN link removed', unlinked], ['on no ESPN roster, now free agents', faNames],
     [releasing ? 'placeholder rows retired' : 'placeholder rows on no ESPN roster, kept', retiredNames]] as const) {
     for (let i = 0; i < list.length; i += 25) console.log(`[espn] ${label} (${list.length}): ${list.slice(i, i + 25).join('; ')}`);
   }

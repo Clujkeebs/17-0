@@ -50,19 +50,37 @@ export function lastNameKey(full: string): string {
  * Fallback when ESPN spells the first name differently (Cam / Cameron Heyward, Chigoziem / Chig Okonkwo):
  * the only same-family athlete with this last name on the player's own team.
  */
-export function pickSameTeamNamesake<C extends EspnCandidate>(player: { position: string }, sameTeamSameLast: C[]): C | null {
+export function pickSameTeamNamesake<C extends EspnCandidate & { a: { fullName: string } }>(player: { fullName: string; position: string }, sameTeamSameLast: C[]): C | null {
   const fam = positionFamily(player.position);
-  const fits = sameTeamSameLast.filter((c) => c.family === null || fam === null || c.family === fam);
+  const fits = sameTeamSameLast.filter((c) => (c.family === null || fam === null || c.family === fam) && firstNamesCompatible(player.fullName, c.a.fullName));
   return fits.length === 1 ? fits[0] : null;
 }
 
+// Nicknames that share no prefix with the given name. Keep this short and certain.
+const ALIASES: [string, string][] = [['jacob', 'jake'], ['marquise', 'hollywood'], ['william', 'bill'], ['robert', 'bob'], ['richard', 'dick'], ['charles', 'chuck']];
+const firstToken = (full: string) => full.trim().split(/\s+/)[0] ?? '';
+
 /**
- * Same idea for a player with no team (released by an earlier run): last name, position family and first initial
- * must all agree, and only one athlete in the league may fit.
+ * Whether two first names can be the same person: equal, one a prefix of the other (Cam / Cameron),
+ * three shared opening letters (Andres / Andy, Nathan / Nate), initials (JT / Jaylahn), or a known alias.
+ * Jalon and Johnny are not.
  */
+export function firstNamesCompatible(a: string, b: string): boolean {
+  const ra = firstToken(a), rb = firstToken(b);
+  const x = ra.toLowerCase().replace(/[^a-z]/g, ''), y = rb.toLowerCase().replace(/[^a-z]/g, '');
+  if (!x || !y) return false;
+  if (x === y || x.startsWith(y) || y.startsWith(x)) return true;
+  let common = 0;
+  while (common < Math.min(x.length, y.length) && x[common] === y[common]) common++;
+  if (common >= 3) return true;
+  const initials = (r: string) => /^([A-Z]\.?){2,3}$/.test(r);
+  if ((initials(ra) || initials(rb)) && x[0] === y[0]) return true;
+  return ALIASES.some(([p, q]) => (x === p && y === q) || (x === q && y === p));
+}
+
+/** Same idea for a player with no team: last name, position family and a compatible first name, unique league-wide. */
 export function pickLeagueNamesake<C extends EspnCandidate & { a: { fullName: string } }>(player: { fullName: string; position: string }, sameLast: C[]): C | null {
   const fam = positionFamily(player.position);
-  const initial = player.fullName.trim().charAt(0).toLowerCase();
-  const fits = sameLast.filter((c) => (c.family === null || fam === null || c.family === fam) && c.a.fullName.trim().charAt(0).toLowerCase() === initial);
+  const fits = sameLast.filter((c) => (c.family === null || fam === null || c.family === fam) && firstNamesCompatible(player.fullName, c.a.fullName));
   return fits.length === 1 ? fits[0] : null;
 }

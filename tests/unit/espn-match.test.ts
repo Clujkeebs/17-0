@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lastNameKey, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily } from '@/lib/server/espn-match';
+import { firstNamesCompatible, lastNameKey, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily } from '@/lib/server/espn-match';
 
 const PHI = 26, CAR = 5;
 const wr = { id: '4241478', teamId: PHI, family: positionFamily('WR') };
@@ -35,17 +35,29 @@ describe('ESPN roster matching', () => {
   it('matches spelling differences by team and last name', () => {
     expect(lastNameKey('Ray-Ray McCloud III')).toBe('mccloud');
     expect(lastNameKey('Cameron Heyward')).toBe(lastNameKey('Cam Heyward'));
-    const dt = { id: 'cam', teamId: 25, family: positionFamily('DT') };
-    expect(pickSameTeamNamesake({ position: 'DT' }, [dt])).toBe(dt);
-    expect(pickSameTeamNamesake({ position: 'WR' }, [dt])).toBeNull();
-    expect(pickSameTeamNamesake({ position: 'DT' }, [dt, { ...dt, id: 'other' }])).toBeNull();
+    const dt = { id: 'cam', teamId: 25, family: positionFamily('DT'), a: { fullName: 'Cameron Heyward' } };
+    expect(pickSameTeamNamesake({ fullName: 'Cam Heyward', position: 'DT' }, [dt])).toBe(dt);
+    expect(pickSameTeamNamesake({ fullName: 'Cam Heyward', position: 'WR' }, [dt])).toBeNull();
+    expect(pickSameTeamNamesake({ fullName: 'Cam Heyward', position: 'DT' }, [dt, { ...dt, id: 'other' }])).toBeNull();
+    const walker = { id: 'jw', teamId: 10, family: positionFamily('LB'), a: { fullName: 'Johnny Walker' } };
+    expect(pickSameTeamNamesake({ fullName: 'Jalon Walker', position: 'LEDG' }, [walker])).toBeNull();
   });
-  it('finds a released player league-wide only by last name, position and first initial', () => {
+  it('finds a released player league-wide by last name, position and a compatible first name', () => {
     const cam = { id: 'c', teamId: 25, family: positionFamily('DT'), a: { fullName: 'Cameron Heyward' } };
-    const other = { id: 'o', teamId: 3, family: positionFamily('DT'), a: { fullName: 'Connor Heyward' } };
+    const other = { id: 'o', teamId: 3, family: positionFamily('DT'), a: { fullName: 'Camden Heyward' } };
+    const connor = { id: 'n', teamId: 3, family: positionFamily('DT'), a: { fullName: 'Connor Heyward' } };
+    expect(pickLeagueNamesake({ fullName: 'Cam Heyward', position: 'DT' }, [cam, connor])).toBe(cam);
     expect(pickLeagueNamesake({ fullName: 'Cam Heyward', position: 'DT' }, [cam])).toBe(cam);
     expect(pickLeagueNamesake({ fullName: 'Cam Heyward', position: 'DT' }, [cam, other])).toBeNull();
     expect(pickLeagueNamesake({ fullName: 'Mike Heyward', position: 'DT' }, [cam])).toBeNull();
     expect(pickLeagueNamesake({ fullName: 'Cam Heyward', position: 'WR' }, [cam])).toBeNull();
+  });
+  it('only treats first names as the same person when they plausibly are', () => {
+    for (const [a, b] of [['Cam', 'Cameron'], ['Josh', 'Joshua'], ['Andres', 'Andy'], ['Nathan', 'Nate'], ['JT', 'Jaylahn'], ['Jacob', 'Jake'], ['Marquise', 'Hollywood'], ['Chigoziem', 'Chig']]) {
+      expect(firstNamesCompatible(`${a} X`, `${b} X`)).toBe(true);
+    }
+    for (const [a, b] of [['Jalon', 'Johnny'], ['Tyreek', 'Tyler'], ['Mike', 'Matt'], ['Jo', 'Jalen']]) {
+      expect(firstNamesCompatible(`${a} X`, `${b} X`)).toBe(false);
+    }
   });
 });
