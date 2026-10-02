@@ -33,7 +33,8 @@ If you are changing this repo, read this section, then `HANDOFF.md` (current sta
 10. **Do not disguise the site** (category, metadata) to get past school filters. Declined on purpose.
 11. **Never log PII or raw IPs.** Hash IPs with `hashIp`. Public mutations are rate limited.
 12. **Game logic stays pure.** Everything in `src/lib/game/` uses the seeded PRNG, never `Math.random()`.
-13. **Coach ratings never read as a liability.** Current head coaches are ranked onto 80 to 97 in `src/lib/server/coaches.ts`.
+13. **Ads stay small and to the side.** One fixed 160x600 unit in a side rail on wide screens only. No inline, banner, anchor or pop-up ads, nothing on phones, and nothing inside a game.
+14. **Coach ratings never read as a liability.** Current head coaches are ranked onto 80 to 97 in `src/lib/server/coaches.ts`.
 
 ### How to make a change
 
@@ -149,7 +150,8 @@ To make yourself an admin, add your email to `ADMIN_EMAILS`, register, and open 
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | web | The Google button is hidden when these are unset |
 | `RESEND_API_KEY`, `EMAIL_FROM` | web, worker | Email is logged to stdout when unset |
 | `MAILING_ADDRESS` | web, worker | Physical address in every email (CAN-SPAM) |
-| `GOOGLE_ADSENSE_CLIENT`, `NEXT_PUBLIC_ADSENSE_CLIENT` | web (the second at build time) | Ads render nothing when unset |
+| `NEXT_PUBLIC_ADSENSE_SIDE_SLOT` | web (build time) | Numeric ID of the 160x600 side-rail unit. The rail renders nothing when unset |
+| `GOOGLE_ADSENSE_CLIENT`, `NEXT_PUBLIC_ADSENSE_CLIENT` | web | Optional overrides; the publisher ID defaults to the one in `src/lib/ads.ts` |
 | `CRON_SECRET` | web, cron | Bearer token for `/api/internal/cron/*` |
 | `SENTRY_DSN` | web, worker | Optional |
 | `IP_HASH_SALT` | web | Salt for hashed IPs used by rate limits |

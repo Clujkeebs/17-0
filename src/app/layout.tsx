@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { ADSENSE_CLIENT } from '@/lib/ads';
 import localFont from 'next/font/local';
 import './globals.css';
 import { SITE } from '@/lib/site';
@@ -24,11 +25,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: '#FFFFFF', width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const adsense = process.env.GOOGLE_ADSENSE_CLIENT;
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
-        {adsense ? <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsense}`} crossOrigin="anonymous" /> : null}
+        <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`} crossOrigin="anonymous" />
       </head>
       <body>
         <a className="skip-link" href="#main">Skip to content</a>

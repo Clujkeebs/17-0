@@ -105,6 +105,16 @@ tbody tr { transition: background-color .12s ease; }
 tbody tr:hover { background: #FAF9F6; }
 td.num, th.num { text-align: right; }
 .table-wrap { overflow-x: auto; }
+/* Side-rail ad: only beside content on wide screens, sticky, fixed 160px. */
+.with-side-ad { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
+.side-ad { display: none; }
+@media (min-width: 1100px) {
+  .with-side-ad:has(> .side-ad) { grid-template-columns: minmax(0, 1fr) 160px; gap: 48px; }
+  .side-ad { display: block; position: sticky; top: 96px; align-self: start; width: 160px; }
+  .side-ad .eyebrow { display: block; margin-bottom: 8px; }
+}
+.mini-result { max-width: 880px; }
+@media (min-width: 1100px) { .mini-result:has(> .side-ad) { max-width: 1088px; } }
 /* Result grade tables: three columns, secondary detail stacked under the main value so they fit a phone. */
 .grade-table td { vertical-align: top; }
 .grade-table .pick { display: block; font-weight: 600; }

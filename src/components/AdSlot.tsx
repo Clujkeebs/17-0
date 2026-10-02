@@ -1,19 +1,27 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
+import { ADSENSE_CLIENT, ADSENSE_SIDE_SLOT, SIDE_AD_MIN_WIDTH } from '@/lib/ads';
 
-/** Non-intrusive AdSense slot. Reserves space to avoid layout shift. Renders nothing without a configured client. */
-export function AdSlot({ slot, minWidth = 0, className }: { slot: string; minWidth?: number; className?: string }) {
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
-  const ref = useRef<HTMLModElement>(null);
+const query = `(min-width: ${SIDE_AD_MIN_WIDTH}px)`;
+const subscribe = (cb: () => void) => { const m = window.matchMedia(query); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb); };
+const isWide = () => window.matchMedia(query).matches;
+
+/**
+ * One small, fixed-size ad (160x600) in a side rail. Never inline with content, never on narrow screens,
+ * and nothing at all until an ad unit ID is configured.
+ */
+export function SideAd() {
+  const wide = useSyncExternalStore(subscribe, isWide, () => false);
+  const show = wide && !!ADSENSE_SIDE_SLOT;
   useEffect(() => {
-    if (!client || window.innerWidth < minWidth) return;
+    if (!show) return;
     try { ((window as unknown as { adsbygoogle: unknown[] }).adsbygoogle ||= []).push({}); } catch { /* blocked */ }
-  }, [client, minWidth]);
-  if (!client) return null;
+  }, [show]);
+  if (!show) return null;
   return (
-    <aside aria-label="Advertisement" className={className}>
+    <aside aria-label="Advertisement" className="side-ad">
       <span className="eyebrow">Advertisement</span>
-      <ins ref={ref} className="adsbygoogle" style={{ display: 'block', minHeight: 250 }} data-ad-client={client} data-ad-slot={slot} data-ad-format="auto" data-full-width-responsive="true" />
+      <ins className="adsbygoogle" style={{ display: 'inline-block', width: 160, height: 600 }} data-ad-client={ADSENSE_CLIENT} data-ad-slot={ADSENSE_SIDE_SLOT} />
     </aside>
   );
 }

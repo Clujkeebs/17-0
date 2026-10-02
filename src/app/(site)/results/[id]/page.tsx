@@ -7,7 +7,7 @@ import { TeamLogo } from '@/components/TeamLogo';
 import { notFound } from 'next/navigation';
 import { getResult } from '@/lib/server/leaderboard';
 import { getTeams } from '@/lib/server/data';
-import { AdSlot } from '@/components/AdSlot';
+import { SideAd } from '@/components/AdSlot';
 import { ShareButton } from '@/components/game/ShareButton';
 import { ATTRIBUTE_LABELS, type AttributeKey } from '@/lib/game/attributes';
 import { SLOT_LABELS, type SlotResult, type GameLine } from '@/lib/game/seventeen';
@@ -56,7 +56,7 @@ export default async function ResultPage({ params }: Props) {
 
   return (
     <div className="container section">
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 32 }} className="result-grid">
+      <div className="with-side-ad">
         <div>
           <span className="eyebrow">{is17 ? '17-0' : 'Build a Player'}{d.hard ? ' · Hard mode' : ''}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
           <Celebration tier={is17 ? seasonTier(Number(d.wins)) : buildTier(Number(d.rating))} />
@@ -164,9 +164,8 @@ export default async function ResultPage({ params }: Props) {
               )}
             </>
           )}
-
-          <AdSlot slot="result-inline" className="section" />
         </div>
+        <SideAd />
       </div>
     </div>
   );
@@ -176,7 +175,8 @@ function MiniResultPage({ r, name, slug, tagline }: { r: { id: string; isDaily: 
   const d = r.resultData as { summary?: string; perfect?: boolean };
   const text = `${name}: ${d.summary}${r.isDaily ? ` (Today, ${r.dailyDate})` : ''}. Beat it on Unbeaten.`;
   return (
-    <div className="container section" style={{ maxWidth: 880 }}>
+    <div className="container section with-side-ad mini-result">
+      <div style={{ maxWidth: 880 }}>
       <span className="eyebrow">{name}{r.isDaily ? ` · Today ${r.dailyDate}` : ' · Casual'}</span>
       <figure style={{ margin: '0 0 24px' }}>
         <img src={`/api/og/game-result?id=${r.id}`} alt={`Score card: ${text}`} width={1200} height={630} style={{ width: '100%', height: 'auto', aspectRatio: '1200 / 630', border: '1px solid var(--steel)', borderRadius: 16 }} />
@@ -185,6 +185,8 @@ function MiniResultPage({ r, name, slug, tagline }: { r: { id: string; isDaily: 
       <p className="muted">{tagline}</p>
       <div style={{ margin: '20px 0' }}><ShareButton text={text} url={`/results/${r.id}`} imageUrl={`/api/og/game-result?id=${r.id}`} fileName={`unbeaten-${slug}.png`} /></div>
       <div className="row"><Link className="btn btn-primary" href={`/games/${slug}`}>Play {name}</Link><Link className="btn" href="/games">More games</Link></div>
+      </div>
+      <SideAd />
     </div>
   );
 }

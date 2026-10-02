@@ -50,6 +50,10 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
   2. Enter the CNAME and `_railway-verify` TXT records Railway shows at the registrar, then wait for the certificate (`domain-status`).
   3. Only after the domain serves the site: set `SITE_URL` and `NEXTAUTH_URL` on web to `https://playunbeaten.com`, add the new redirect URI to the Google OAuth client, and redeploy web. Changing them before DNS works breaks sign-in.
   4. Remove the two stray generated domains `web-production-519a6.up.railway.app` and `web-production-56dcd.up.railway.app` (created by mistake on 2026-10-02; `delete-domain` timed out). Keep `web-production-3f1b7`.
+- [ ] **AdSense** (code done on the branch, not deployed): `public/ads.txt` has the publisher line, the AdSense script loads with `ca-pub-3526440256333845` (`src/lib/ads.ts`), and ads are limited to one fixed 160x600 unit in a sticky right rail on result pages, only on screens 1100px and wider. No ads on phones, in games, or inline with content. Remaining:
+  1. Owner: in AdSense, turn **Auto ads off** for the site (Auto ads inject large anchor and full-screen ads everywhere), and create one **160x600 fixed-size display unit**.
+  2. Set `NEXT_PUBLIC_ADSENSE_SIDE_SLOT` on web to that unit's numeric ID and redeploy web (it is a build arg). Until then the rail renders nothing.
+  3. `ads.txt` must be reachable at `https://playunbeaten.com/ads.txt` once the domain is connected.
 - [ ] Contact emails (the owner creates them after buying the domain), then wire them into the contact and legal pages.
 - [ ] Confirm the live coach ratings after the worker deploy. They should be 80–97; check `/coaches`.
   - Done locally, not deployed: `recomputeCoachImpact` now logs `[coaches] recomputed N: current head coaches MIN-MAX (n=32)`, and the worker logs recompute failures instead of swallowing them. Locally it reads 80-97 (n=32). After the worker deploys, read that line in the worker's Railway deploy logs to confirm the live range.
