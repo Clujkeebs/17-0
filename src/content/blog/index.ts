@@ -83,7 +83,7 @@ const POSTS: BlogPost[] = [
       {
         h2: 'Where they are weakest',
         paragraphs: [
-          'Ratings are opinions with a scale attached. They lag real performance, especially for young players who break out midseason, and they carry reputation longer than they should for veterans. Offensive and defensive linemen are the hardest to rate from the outside, which is part of why 17-0 does not include an offensive line slot at all.',
+          'Ratings are opinions with a scale attached. They lag real performance, especially for young players who break out midseason, and they carry reputation longer than they should for veterans. Offensive and defensive linemen are the hardest to rate from the outside, which is part of why the classic six-man 17-0 roster has no offensive line slot. The 12 and 16 man rosters add one, graded on blocking alone.',
           'Awareness and play recognition are the fuzziest attributes. They try to capture processing speed, which is hard to observe even on film. Our quarterback and defensive formulas lean on them anyway, because leaving them out would be worse.',
         ],
       },

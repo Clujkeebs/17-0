@@ -37,7 +37,7 @@ describe('formulas', () => {
     expect(ratePlayer(a, 'QB')).toBeCloseTo(50 + 50 * 0.2, 1);
   });
   it('maps defensive groups to branches', () => {
-    expect(formulaFor('EDGE')).toBe('DL'); expect(formulaFor('LB')).toBe('LB'); expect(formulaFor('S')).toBe('S'); expect(formulaFor('OL')).toBe('TE');
+    expect(formulaFor('EDGE')).toBe('DL'); expect(formulaFor('LB')).toBe('LB'); expect(formulaFor('S')).toBe('S'); expect(formulaFor('OL')).toBe('OL');
   });
   it('empty weights return 0; missing attributes default to 50', () => { expect(applyWeights({}, {})).toBe(0); expect(applyWeights({}, { speed: 1 })).toBe(50); });
   it('coach impact clamps to 0..99', () => {

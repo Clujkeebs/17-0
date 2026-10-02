@@ -58,7 +58,7 @@ export default async function ResultPage({ params }: Props) {
     <div className="container section">
       <div className="with-side-ad">
         <div>
-          <span className="eyebrow">{is17 ? '17-0' : 'Build a Player'}{d.hard ? ' · Hard mode' : ''}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
+          <span className="eyebrow">{is17 ? '17-0' : 'Build a Player'}{is17 && d.format && d.format !== '6' ? ` · ${String(d.format)}-man roster` : ''}{is17 && d.pool === 'all-time' ? ' · All-time' : ''}{d.hard ? ' · Hard mode' : ''}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
           <Celebration tier={is17 ? seasonTier(Number(d.wins)) : buildTier(Number(d.rating))} />
           {/* Share card preview */}
           <figure style={{ margin: '0 0 24px' }}>

@@ -6,9 +6,9 @@ Repo: github.com/clujkeebs/17-0, branch `main`. The working branch `gridiron-lab
 ## What it is
 NFL ratings game site built on Next.js 16 (App Router, standalone output), React 19, TypeScript, Drizzle with Postgres, Redis, BullMQ, NextAuth v5, Vitest and Playwright.
 
-- **17-0:** spin a team, draft QB, RB, WR, TE, DEF and HC one team at a time, then simulate a season. Has re-rolls, Hard mode (type to draft, overalls hidden), and a reel that spins even with Reduce Motion on.
+- **17-0:** spin a team, draft one player from it into an open slot, one team at a time, then simulate a season. A setup sheet opens first: Today (ranked) or Casual; a 6, 12 or 16 man roster; Current or All-time players (franchise legends join their team's board); Easy (overalls, 2 re-rolls) or Hard (type names, no overalls, no re-rolls). Today is always the 6-man board with current players. Formats live in `FORMATS` in `src/lib/game/seventeen.ts`.
 - **Build a Player:** five spins, one trait each.
-- **12 daily mini games:** Higher or Lower, Grid, Mystery Player, Where's He From, Blind Resume, Rating Match, Guess the Overall, Top Ten, Rank 'Em, Name That Team, Speed Trap, Odd One Out.
+- **16 daily mini games:** Higher or Lower, Grid, Mystery Player, Where's He From, Blind Resume, Rating Match, Guess the Overall, Top Ten, Rank 'Em, Name That Team, Speed Trap, Odd One Out, Numbers Game, Size Up, Vet Check, Division Line.
 - Every game has two modes: Today (ranked, account required, one try) and Casual (unlimited). Never call it "practice".
 - Share sheet on every result (native share, copy link, copy text, SMS, X, Facebook, save image) and OG score cards.
 - Ratings come from EA's Madden 27 ratings pages. ESPN supplies current rosters, headshots and head coaches.
@@ -42,6 +42,7 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - Balance check: run `calibrate()` from `src/lib/server/calibrate.ts`.
   - Target: a perfect (greedy) draft goes 17-0 about 10–12% of the time; random drafts about 0%.
   - The knobs are `WIN_FLOOR`/`WIN_SPAN` in `src/lib/game/seventeen.ts` (currently 67.25/26).
+  - 12 and 16 man rosters have their own weights and floors (12: 67.75, 16: 68.1), calibrated locally to about 11.6 percent. Re-check on live ratings with the worker's `CALIBRATE=1` boot, which now runs all three formats.
   - Slot weights (2026-10, live; seed wrote v2 on 2026-10-02): QB 30, WR 22, RB 18, DEF 13, HC 9, TE 8. Win floor 67.25. Local calibration: greedy 12.2% 17-0, random 0%. After the web deploy, the seed writes them as `17-0/slot_weights` v2 unless an admin edited that key (then set them in `/admin/formulas`). Re-check calibration on live ratings by booting the worker once with `CALIBRATE=1`.
 - Coach ratings are ranked onto 80–97 in `src/lib/server/coaches.ts`. They must never read as a liability.
   - Fixed and deployed: the web boot seed used to overwrite every coach's score with the raw 30s-70s value, so each web deploy dropped live coach ratings until the next worker boot or Monday recompute. The seed now leaves existing scores alone.
@@ -65,7 +66,7 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
   - Correction (2026-10-02): ESPN leaves some injured-reserve players off its rosters (Jalon Walker, ACL, 2026), so absence from ESPN no longer releases a real EA player; only a listing on another team moves him. Spelling matches need compatible first names (`firstNamesCompatible`: prefix, three shared letters, initials, a short alias list), after a loose match sent Jalon Walker to DEN as Johnny Walker. Links to an incompatible name are removed with their photo. Real EA players wrongly released earlier get their EA team back at the next daily EA sync (10:00 UTC).
 - [ ] Missing headshots: about 28 players still show initials after the ESPN search fallback. Try another source or name matching.
 - [x] Hard mode for Build a Player (type a name, then pick a trait; overalls and trait ratings never leave the server until the result) and a "Hard mode only" filter on the daily leaderboard for 17-0 and Build a Player. Hard runs carry a Hard tag; the daily table no longer shows the raw score.
-- [ ] More games. Shipped 2026-10-02: **Numbers Game** (`/games/numbers-game`): a team and a jersey number, three of that team's players, pick who wears it; 8 rounds from 8 teams. Jersey numbers now come from ESPN rosters, so they stay current after trades. Still open: a draft-class quiz, a trade-machine "who won" game, a weekly bracket.
+- [ ] More games. Shipped 2026-10-02: **Size Up** (who is taller), **Vet Check** (who has more seasons), **Division Line** (three share a division, find the odd one). Earlier: **Numbers Game** (`/games/numbers-game`): a team and a jersey number, three of that team's players, pick who wears it; 8 rounds from 8 teams. Jersey numbers now come from ESPN rosters, so they stay current after trades. Still open: a draft-class quiz, a trade-machine "who won" game, a weekly bracket.
 - [x] Polish the mobile results page (check the slot grades table at 375px).
   - Deployed: the 17-0 slot grades and Build a Player trait tables are now three columns (team stacked under the pick, number under the letter grade), so neither scrolls sideways at 375px.
 - [x] Streaks and stats on the profile page: current and longest streak, games played, best 17-0 record, perfect seasons. The mixed-game "average score" and raw score columns are gone, and recent runs say Today or Casual.

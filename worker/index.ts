@@ -52,7 +52,10 @@ void (async () => {
   }
   await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
   await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
-  if (process.env.CALIBRATE === '1') await (await import('@/lib/server/calibrate')).calibrate().catch((e) => console.warn('[calibrate]', e.message));
+  if (process.env.CALIBRATE === '1') {
+    const { calibrate } = await import('@/lib/server/calibrate');
+    for (const f of ['6', '12', '16'] as const) await calibrate(f).catch((e) => console.warn('[calibrate]', e.message));
+  }
   await fetch(`${process.env.INTERNAL_WEB_URL ?? 'http://localhost:3000'}/api/internal/revalidate`, { method: 'POST', headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } }).catch(() => {});
 })();
 

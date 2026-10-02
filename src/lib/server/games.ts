@@ -4,7 +4,8 @@ import { db, schema } from '@/db';
 import { getTeams, getRosters, getCoachesForTeams, GROUP_RAW } from './data';
 import { token as newToken } from './request';
 import { positionGroup, type PositionGroup } from '@/lib/game/attributes';
-import { SLOTS, MAX_RESPINS, TEAMS_PER_GAME, slotAccepts, type Slot } from '@/lib/game/seventeen';
+import { FORMATS, MAX_RESPINS, TEAMS_PER_GAME, slotsFor as formatSlots, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
+import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { BUILD_CATEGORIES, BUILD_ELIGIBLE, BUILD_TEAMS, type BuildPosition } from '@/lib/game/build';
 import { createRng } from '@/lib/game/prng';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
@@ -18,13 +19,16 @@ export interface SpinPayload {
   reserves: number[];
   respinsUsed: number;
   position?: BuildPosition;
-  /** Hard mode: search players by name, overall ratings hidden until the result. */
+  /** Hard mode: search players by name, overall ratings hidden until the result, no re-rolls. */
   hard?: boolean;
+  /** 17-0 roster size (default 6) and player pool (default current). Today is always 6 and current. */
+  format?: FormatKey;
+  pool?: PoolKey;
   /** Server-side draft log. One entry per revealed team, in order. The next team is revealed only after a pick. */
-  picks?: { teamId: number; id: string; slot?: Slot; trait?: string }[];
+  picks?: { teamId: number; id: string; slot?: string; trait?: string }[];
 }
 
-export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: Slot[]; attrs?: Partial<Record<string, number>>; img?: string | null }
+export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean }
 export interface PublicTeam { id: number; name: string; city: string; abbreviation: string; slug: string; color: string; logoUrl: string | null; players: PublicPlayer[] }
 
 const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
@@ -43,15 +47,18 @@ async function eligibleTeamPool(gameType: GameType, position?: BuildPosition): P
   return rows.map((r) => r.teamId).filter((x): x is number => x !== null);
 }
 
-export async function createGameSession(opts: { gameType: GameType; userId?: string | null; daily?: boolean; position?: BuildPosition; hard?: boolean }) {
+export async function createGameSession(opts: { gameType: GameType; userId?: string | null; daily?: boolean; position?: BuildPosition; hard?: boolean; format?: FormatKey; pool?: PoolKey }) {
   const { gameType } = opts;
   const date = dailyDateET();
   const seed = opts.daily ? dailySeed(`${gameType}:${opts.position ?? ''}`, date) : newToken(12);
   const pool = await eligibleTeamPool(gameType, opts.position);
-  const count = gameType === '17-0' ? TEAMS_PER_GAME : BUILD_TEAMS;
+  // Today is one shared puzzle: the classic six from current rosters. Size and pool are Casual choices.
+  const format: FormatKey = gameType === '17-0' && !opts.daily ? opts.format ?? '6' : '6';
+  const playerPool: PoolKey = gameType === '17-0' && !opts.daily ? opts.pool ?? 'current' : 'current';
+  const count = gameType === '17-0' ? FORMATS[format].slots.length : BUILD_TEAMS;
   if (pool.length < count + MAX_RESPINS) throw new Error('Not enough teams with eligible players. Has the database been seeded?');
   const { teams, reserves } = draftOrder(seed, pool, count);
-  const payload: SpinPayload = { teams, reserves, respinsUsed: 0, position: opts.position, hard: !!opts.hard };
+  const payload: SpinPayload = { teams, reserves, respinsUsed: 0, position: opts.position, hard: !!opts.hard, ...(gameType === '17-0' ? { format, pool: playerPool } : {}) };
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
     userId: opts.userId ?? null, gameType, seed, spinPayload: payload, token: hashToken(tok),
@@ -67,20 +74,30 @@ export async function loadSession(id: string, tok: string) {
   return row;
 }
 
-export function slotsFor(group: PositionGroup | 'HC'): Slot[] {
-  return SLOTS.filter((s) => slotAccepts(s, group));
+/** All-time greats, active and teamless, keyed by the franchise they belong to in All-time mode. */
+async function legendsByTeam(): Promise<Map<number, (typeof schema.players.$inferSelect)[]>> {
+  const [teams, rows] = await Promise.all([getTeams(), db.select().from(schema.players).where(and(eq(schema.players.isAllTimeGreat, true), eq(schema.players.isActive, true)))]);
+  const out = new Map<number, (typeof schema.players.$inferSelect)[]>();
+  for (const r of rows) {
+    const t = teams.find((x) => x.abbreviation === LEGEND_FRANCHISE[r.slug]);
+    if (t) out.set(t.id, [...(out.get(t.id) ?? []), r]);
+  }
+  return out;
 }
 
 /** Team cards for the client: names, positions and OVR only. Raw attributes stay server-side. */
-export async function publicTeams(teamIds: number[], gameType: GameType, position?: BuildPosition): Promise<PublicTeam[]> {
-  const [teams, players, coaches] = await Promise.all([getTeams(), getRosters(teamIds), gameType === '17-0' ? getCoachesForTeams(teamIds) : Promise.resolve([])]);
+export async function publicTeams(teamIds: number[], gameType: GameType, position?: BuildPosition, opts: { format?: FormatKey; pool?: PoolKey } = {}): Promise<PublicTeam[]> {
+  const format = opts.format ?? '6';
+  const slotsFor = (g: PositionGroup | 'HC') => formatSlots(g, format);
+  const [teams, players, coaches, legends] = await Promise.all([getTeams(), getRosters(teamIds), gameType === '17-0' ? getCoachesForTeams(teamIds) : Promise.resolve([]),
+    gameType === '17-0' && opts.pool === 'all-time' ? legendsByTeam() : Promise.resolve(new Map<number, never[]>())]);
   const allowed = position ? new Set(BUILD_ELIGIBLE[position]) : null;
   return teamIds.map((id) => {
     const t = teams.find((x) => x.id === id)!;
-    const list: PublicPlayer[] = players.filter((p) => p.teamId === id).map((p) => {
+    const list: PublicPlayer[] = [...(legends.get(id) ?? []), ...players.filter((p) => p.teamId === id)].map((p) => {
       const group = positionGroup(p.position);
       const attrs = position ? Object.fromEntries(BUILD_CATEGORIES[position].map((k) => [k, (p.attributes as Record<string, number>)[k] ?? 50])) : undefined;
-      return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl };
+      return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}) };
     }).filter((p) => (allowed ? allowed.has(p.group) : p.slots!.length > 0));
     for (const c of coaches.filter((c) => c.teamId === id)) {
       list.push({ id: `coach:${c.id}`, name: c.fullName, slug: c.slug, position: 'HC', group: 'HC', ovr: c.coachImpactScore, slots: ['HC'], img: c.imageUrl });

@@ -6,10 +6,10 @@ Live: https://playunbeaten.com
 
 Unbeaten is an NFL ratings game site built on EA Sports Madden NFL ratings:
 
-- **17-0**: one reel spins a single team at a time, and you draft one player from it into an open slot: QB, RB, WR, TE, DEF (any defender) or HC. Six spins fill the roster. The server grades the roster and projects a 17-game record. A daily puzzle resets at midnight ET and has its own leaderboard.
+- **17-0**: one reel spins a single team at a time, and you draft one player from it into an open slot. A setup sheet picks Today or Casual, a 6, 12 or 16 man roster, Current or All-time players, and Easy or Hard (no overalls, no re-rolls). The server grades the roster and projects a 17-game record. Today is one shared 6-man board that resets at midnight ET and has its own leaderboard.
 - **Build a Player**: pick a position (a position of the day is preselected) and spin five teams, one at a time, with no repeats. Each position has five weighted traits. On each spin you take one trait from one player. The result is a weighted score, a letter grade, the best possible score from those five teams, and a simulated season.
 
-- **12 daily mini games**: Higher or Lower, Grid, Mystery Player, Where's He From, Blind Resume, Rating Match, Guess the Overall, Top Ten, Rank 'Em, Name That Team, Speed Trap and Odd One Out.
+- **16 daily mini games**: Higher or Lower, Grid, Mystery Player, Where's He From, Blind Resume, Rating Match, Guess the Overall, Top Ten, Rank 'Em, Name That Team, Speed Trap, Odd One Out, Numbers Game, Size Up, Vet Check and Division Line.
 
 Every game has a Today mode (ranked, account required, one try) and a Casual mode (unlimited), and every result gets a share sheet and a score card.
 

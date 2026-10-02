@@ -12,7 +12,10 @@ export function buildNarrative(seed: string, slots: SlotLike[], wins: number, lo
   const best = sorted[0], worst = sorted[sorted.length - 1];
   const wk = () => rng.int(2, 17);
   const opp = () => rng.pick(OPPONENTS);
-  const label = (s: SlotLike) => ({ QB: 'quarterback', RB: 'backfield', WR: 'receiver room', TE: 'tight end', DEF: 'defense', HC: 'sideline' } as Record<string, string>)[s.slot] ?? s.slot;
+  const label = (s: SlotLike) => ({
+    QB: 'quarterback', RB: 'backfield', WR: 'receiver room', TE: 'tight end', DEF: 'defense', HC: 'sideline',
+    OL: 'offensive line', EDGE: 'pass rush', DL: 'interior line', LB: 'linebacker corps', CB: 'secondary', S: 'secondary',
+  } as Record<string, string>)[s.slot.replace(/\d+$/, '')] ?? s.slot;
 
   const opening = [
     `${lastName(best.name)} carried the load, and your ${label(best)} graded out as the best unit on the roster.`,

@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { loadSession, publicTeams, type GameType, type PublicTeam, type SpinPayload } from './games';
-import { MAX_RESPINS, SLOTS, type Slot } from '@/lib/game/seventeen';
+import { FORMATS, MAX_RESPINS, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
 import { TRAITS, traitValue } from '@/lib/game/build';
 
 export class DraftError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
@@ -12,10 +12,18 @@ export interface DraftState {
   total: number;            // teams in this game
   team: PublicTeam | null;  // current team, null when the draft is complete
   respinsLeft: number;
-  picks: { teamId: number; id: string; slot?: Slot; trait?: string; value?: number; name: string; position: string; ovr: number; team: string; teamColor: string; logoUrl: string | null }[];
+  picks: { teamId: number; id: string; slot?: string; trait?: string; value?: number; name: string; position: string; ovr: number; team: string; teamColor: string; logoUrl: string | null }[];
   done: boolean;
   hard: boolean;
+  /** 17-0 only: roster size, player pool and the slots to fill, in order. */
+  format?: FormatKey;
+  pool?: PoolKey;
+  slots?: { key: string; label: string; hint: string }[];
 }
+
+/** Hard mode has no re-rolls. */
+const respinsLeft = (p: SpinPayload) => (p.hard ? 0 : Math.max(0, MAX_RESPINS - p.respinsUsed));
+const teamOpts = (p: SpinPayload) => ({ format: p.format ?? '6', pool: p.pool ?? 'current' }) as const;
 
 /** Builds the client view. Only the team currently on the clock is revealed; future teams stay server-side. */
 export async function draftState(sessionId: string, gameType: GameType, p: SpinPayload): Promise<DraftState> {
@@ -23,7 +31,7 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
   const index = picks.length;
   const done = index >= p.teams.length;
   const pickedTeams = picks.map((x) => x.teamId);
-  const [current, ...past] = await publicTeams(done ? pickedTeams : [p.teams[index], ...pickedTeams], gameType, p.position);
+  const [current, ...past] = await publicTeams(done ? pickedTeams : [p.teams[index], ...pickedTeams], gameType, p.position, teamOpts(p));
   const pastTeams = done ? [current, ...past] : past;
   // Hard mode: overalls and trait ratings never leave the server until the result page, and the list is
   // alphabetical so its order cannot leak the ranking.
@@ -33,7 +41,8 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
   return {
     sessionId, index, total: p.teams.length, done, hard: !!p.hard,
     team,
-    respinsLeft: MAX_RESPINS - p.respinsUsed,
+    respinsLeft: respinsLeft(p),
+    ...(gameType === '17-0' ? { format: teamOpts(p).format, pool: teamOpts(p).pool, slots: FORMATS[teamOpts(p).format].slots.map(({ key, label, hint }) => ({ key, label, hint })) } : {}),
     picks: picks.map((x, i) => {
       const t = pastTeams[i];
       const pl = t?.players.find((y) => y.id === x.id);
@@ -56,25 +65,26 @@ export async function respinCurrent(sessionId: string, token: string, gameType: 
   const p = s.spinPayload as SpinPayload;
   const index = (p.picks ?? []).length;
   if (index >= p.teams.length) throw new DraftError('The draft is complete.');
-  if (p.respinsUsed >= MAX_RESPINS) throw new DraftError('No re-spins left.');
+  if (p.hard) throw new DraftError('Hard mode has no re-rolls.');
+  if (respinsLeft(p) <= 0) throw new DraftError('No re-spins left.');
   const next: SpinPayload = { ...p, teams: [...p.teams], respinsUsed: p.respinsUsed + 1 };
   next.teams[index] = p.reserves[p.respinsUsed];
   await db.update(schema.gameSessions).set({ spinPayload: next }).where(eq(schema.gameSessions.id, s.id));
   return draftState(s.id, gameType, next);
 }
 
-export async function pickPlayer(sessionId: string, token: string, gameType: GameType, playerId: string, slot?: Slot, trait?: string) {
+export async function pickPlayer(sessionId: string, token: string, gameType: GameType, playerId: string, slot?: string, trait?: string) {
   const s = await open(sessionId, token, gameType);
   const p = s.spinPayload as SpinPayload;
   const picks = p.picks ?? [];
   const index = picks.length;
   if (index >= p.teams.length) throw new DraftError('The draft is complete.');
-  const [team] = await publicTeams([p.teams[index]], gameType, p.position);
+  const [team] = await publicTeams([p.teams[index]], gameType, p.position, teamOpts(p));
   const player = team.players.find((x) => x.id === playerId);
   if (!player) throw new DraftError(`That player is not on the ${team.name}.`);
-  let chosenSlot: Slot | undefined;
+  let chosenSlot: string | undefined;
   if (gameType === '17-0') {
-    const open = SLOTS.filter((x) => !picks.some((y) => y.slot === x));
+    const open = FORMATS[teamOpts(p).format].slots.map((d) => d.key).filter((x) => !picks.some((y) => y.slot === x));
     const fits = (player.slots ?? []).filter((x) => open.includes(x));
     chosenSlot = slot && fits.includes(slot) ? slot : fits[0];
     if (!chosenSlot) throw new DraftError(`Your ${player.slots?.[0] ?? 'slot'} spot is already filled.`);

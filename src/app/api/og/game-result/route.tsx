@@ -17,10 +17,12 @@ export async function GET(req: Request) {
   if (!r) {
     res = await renderCard({ eyebrow: 'Six picks. Seventeen games.', headline: '17-0', perfect: true, lines: [], footer: 'Spin your roster' });
   } else if (r.gameType === '17-0') {
-    const d = r.resultData as { wins: number; losses: number; slots: SlotResult[] };
+    const d = r.resultData as { wins: number; losses: number; slots: SlotResult[]; format?: string; pool?: string };
+    const lines = d.slots.map((s) => ({ k: SLOT_LABELS[s.slot] ?? s.slot, v: `${last(s.name)}  ${s.letter}` }));
+    const extra = [d.format && d.format !== '6' ? `${d.format}-man` : null, d.pool === 'all-time' ? 'All-time' : null].filter(Boolean).join(' · ');
     res = await renderCard({
-      eyebrow: r.isDaily ? `Daily 17-0 · ${r.dailyDate}` : '17-0 projected record', headline: `${d.wins}-${d.losses}`, perfect: d.wins === 17,
-      lines: d.slots.map((s) => ({ k: SLOT_LABELS[s.slot] ?? s.slot, v: `${last(s.name)}  ${s.letter}` })), footer: 'Can you beat it?',
+      eyebrow: r.isDaily ? `Daily 17-0 · ${r.dailyDate}` : `17-0 projected record${extra ? ` · ${extra}` : ''}`, headline: `${d.wins}-${d.losses}`, perfect: d.wins === 17,
+      lines: lines.length > 6 ? [...lines.slice(0, 5), { k: '+', v: `${lines.length - 5} more picks` }] : lines, footer: 'Can you beat it?',
     });
   } else if (r.gameType !== 'build-a-player') {
     const g = getMiniGame(r.gameType);

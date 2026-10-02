@@ -19,7 +19,7 @@ export function weightsFor(g: PositionGroup): Weights {
 
 export const FORMULA_NOTE: Partial<Record<PositionGroup, string>> = {
   EDGE: 'Edge rushers share the defensive line formula.',
-  OL: 'Offensive linemen are not draftable in 17-0, so the site borrows the tight end formula as a rough blocking and awareness proxy.',
+  OL: 'Offensive linemen are graded on blocking: pass block and run block at 30 percent each, then strength, awareness and agility.',
 };
 
 /** Supplementary attributes shown after the weighted ones, per group. */
@@ -57,7 +57,7 @@ export const POSITION_EXPLAINERS: Record<PositionGroup, string> = {
   RB: 'The running back formula rewards what happens after the handoff. Ball carrier vision and carrying (ball security) each take 20 percent, speed another 20, and acceleration plus break tackle make up most of the rest. Juke move is only 10 percent. A back who sees the hole, holds the ball, and hits the second level quickly grades higher than a highlight-reel cutback artist.',
   WR: 'Hands come first. Catching is 25 percent of the receiver grade, with route running and speed at 20 each. Release off the line gets 15, and contested catches plus awareness close it out. A 4.3 sprinter who drops the ball grades worse than a technician with average speed and elite hands.',
   TE: 'Tight end is the most balanced formula on the site. Run blocking gets 20 percent, the same as catching, with route running, speed, awareness, and traffic catching sharing the rest. A pure receiving tight end loses a fifth of the grade if he cannot hold a block on the edge.',
-  OL: 'Offensive linemen are not draftable in 17-0, and the EA Sports Madden NFL ratings overall is the best single number for them. For completeness, the site grades linemen with the tight end formula, which leans on run blocking and awareness. Treat that number as a proxy, not a verdict. The overall rating in the table is the one to trust.',
+  OL: 'Offensive linemen fill the OL slots in the 12 and 16 man 17-0 rosters. They are graded on what the job is: pass block and run block at 30 percent each, strength at 20, then awareness and agility at 10. A tackle who wins in both phases grades in the 90s; a mauler who cannot pass protect gives a third of the grade away.',
   DL: 'Interior defensive linemen are graded on the defensive line formula: block shedding at 25 percent, power and finesse moves at 20 each, then tackling, pursuit, and play recognition. Getting off the block is the whole job. A tackle who sheds quickly and has one reliable move grades well even with modest speed.',
   EDGE: 'Edge rushers use the same defensive line formula as interior linemen. Block shedding leads at 25 percent, with power moves and finesse moves at 20 each. That makes a two-move rusher more valuable than a speed-only one, since the formula does not weight speed at all. Tackle, pursuit, and play recognition decide the run game.',
   LB: 'Linebacker is the most spread-out defensive formula. Tackle, pursuit, and play recognition each take 20 percent, hit power 15, and coverage (zone 15, man 10) the remaining quarter. A thumper who cannot drop into a zone loses real points, and so does a coverage backer who misses tackles.',

@@ -26,6 +26,9 @@ test('account lifecycle', async ({ page, request }, info) => {
   await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 
   await page.goto('/games/17-0?mode=today');
+  const sheet = page.getByRole('dialog', { name: 'Game setup' });
+  await sheet.getByRole('group', { name: 'Difficulty' }).locator('label', { hasText: /^Easy/ }).click();
+  await sheet.getByRole('button', { name: 'Start' }).click();
   for (let i = 0; i < 6; i++) {
     const btn = page.locator('.g-player:not([disabled])').first();
     await expect(btn).toBeVisible({ timeout: 20_000 });

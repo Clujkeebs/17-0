@@ -7,7 +7,7 @@ import type { GPlayer, MiniGame } from '../types';
 /** Formula keys for a player's group, heaviest weight first. */
 const OL_KEYS: AttributeKey[] = ['passBlock', 'runBlock', 'strength', 'awareness', 'agility', 'acceleration'];
 export function keyAttrs(p: GPlayer, n: number): AttributeKey[] {
-  // The OL shares the TE formula for team grading; for a ratings sheet, blocking is what matters.
+  // For a ratings sheet, the position formula's attributes are what matter.
   if (p.group === 'OL') return OL_KEYS.slice(0, n);
   const w = DEFAULT_FORMULAS[formulaFor(p.group)] ?? {};
   return (Object.entries(w) as [AttributeKey, number][]).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);

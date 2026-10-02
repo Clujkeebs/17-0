@@ -54,7 +54,7 @@ html, body { width: 1200px; height: 630px; background: #FFFFFF; color: #0A0A0A; 
   <div class="score">17-<span class="z">0</span></div>
   <div>
     <div class="tag">Six picks. Seventeen games.<br>One perfect season.</div>
-    <div class="more">Plus Build a Player and 13 daily NFL games.</div>
+    <div class="more">Plus Build a Player and 16 daily NFL games.</div>
   </div>
 </div>
 <div class="side">

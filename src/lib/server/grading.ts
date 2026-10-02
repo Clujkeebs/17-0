@@ -4,7 +4,8 @@ import { getFormulas, getSlotWeights } from './config';
 import { invalidatePrefix } from './redis';
 import { loadSession, type SpinPayload } from './games';
 import { positionGroup, type Attributes } from '@/lib/game/attributes';
-import { SLOTS, gradeRoster, slotAccepts, type Pick, type Slot } from '@/lib/game/seventeen';
+import { FORMATS, gradeRoster, slotAccepts, type Pick } from '@/lib/game/seventeen';
+import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { BUILD_ELIGIBLE, TRAITS, bestPossible, gradeTraitBuild, traitValue } from '@/lib/game/build';
 
 export class GradeError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
@@ -51,13 +52,16 @@ async function saveResultTx(s: { id: string; isDaily: boolean; dailyDate: string
 export async function gradeSeventeen(ctx: Ctx) {
   const s = await openSession(ctx, '17-0');
   const payload = s.spinPayload as SpinPayload;
-  const picks = (payload.picks ?? []).map((x) => ({ slot: x.slot as Slot, id: x.id }));
-  if (picks.length !== 6 || new Set(picks.map((p) => p.slot)).size !== 6 || !SLOTS.every((sl) => picks.some((p) => p.slot === sl))) {
-    throw new GradeError('Fill all six slots.');
+  const format = payload.format ?? '6', pool = payload.pool ?? 'current';
+  const slotKeys = FORMATS[format].slots.map((d) => d.key);
+  const picks = (payload.picks ?? []).map((x) => ({ slot: x.slot ?? '', id: x.id, teamId: x.teamId }));
+  if (picks.length !== slotKeys.length || new Set(picks.map((p) => p.slot)).size !== slotKeys.length || !slotKeys.every((sl) => picks.some((p) => p.slot === sl))) {
+    throw new GradeError(`Fill all ${slotKeys.length} slots.`);
   }
   const playerIds = picks.filter((p) => !p.id.startsWith('coach:')).map((p) => p.id);
   const coachIds = picks.filter((p) => p.id.startsWith('coach:')).map((p) => Number(p.id.slice(6)));
   if (playerIds.some((id) => !/^[0-9a-f-]{36}$/i.test(id)) || coachIds.some((n) => !Number.isInteger(n))) throw new GradeError('Invalid pick.');
+  const teamRows = await db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation }).from(schema.teams);
   const [players, coaches, formulas, weights] = await Promise.all([
     playerIds.length ? db.select().from(schema.players).where(inArray(schema.players.id, playerIds)) : [],
     coachIds.length ? db.select().from(schema.coaches).where(inArray(schema.coaches.id, coachIds)) : [],
@@ -71,21 +75,28 @@ export async function gradeSeventeen(ctx: Ctx) {
       return { slot: p.slot, teamId: c.teamId, name: c.fullName, group: 'HC' as const, coachImpact: c.coachImpactScore };
     }
     const pl = players.find((x) => x.id === p.id);
-    if (!pl || pl.teamId === null) throw new GradeError('Unknown player.');
-    return { slot: p.slot, teamId: pl.teamId, name: pl.fullName, group: positionGroup(pl.position), attributes: pl.attributes as Attributes, overall: pl.overallRating };
+    if (!pl) throw new GradeError('Unknown player.');
+    // A legend has no current team; in All-time mode he counts for his franchise, which must be the team he was drafted from.
+    let teamId = pl.teamId;
+    if (pl.isAllTimeGreat) {
+      const abbr = teamRows.find((t) => t.id === p.teamId)?.abbr;
+      if (pool !== 'all-time' || !abbr || LEGEND_FRANCHISE[pl.slug] !== abbr) throw new GradeError(`${pl.fullName} is not on one of your spun teams.`);
+      teamId = p.teamId;
+    }
+    if (teamId === null) throw new GradeError('Unknown player.');
+    return { slot: p.slot, teamId, name: pl.fullName, group: positionGroup(pl.position), attributes: pl.attributes as Attributes, overall: pl.overallRating };
   });
   for (const p of full) {
     if (!payload.teams.includes(p.teamId)) throw new GradeError(`${p.name} is not on one of your spun teams.`);
     if (usedTeams.has(p.teamId)) throw new GradeError('One pick per team.');
     usedTeams.add(p.teamId);
-    if (!slotAccepts(p.slot, p.group)) throw new GradeError(`${p.name} cannot play ${p.slot}.`);
+    if (!slotAccepts(p.slot, p.group, format)) throw new GradeError(`${p.name} cannot play ${p.slot}.`);
   }
   // Daily results must be identical for identical rosters, so seed from the date plus the roster.
   const seed = s.isDaily ? `${s.seed}:${[...playerIds, ...coachIds].sort().join(',')}` : s.id;
-  const teamRows = await db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation }).from(schema.teams);
   const opponents = teamRows.filter((t) => !usedTeams.has(t.id)).map((t) => t.abbr);
-  const result = gradeRoster(seed, full, formulas, weights, opponents);
-  const resultData = { ...result, hard: !!payload.hard, picks: full.map(({ slot, name, teamId, group, overall }) => ({ slot, name, teamId, group, overall })) };
+  const result = gradeRoster(seed, full, formulas, weights, opponents, format);
+  const resultData = { ...result, hard: !!payload.hard, format, pool, picks: full.map(({ slot, name, teamId, group, overall }) => ({ slot, name, teamId, group, overall })) };
   const id = await saveResult(s, ctx, '17-0', resultData, result.score, result.wins === 17);
   return { id, result: resultData, daily: s.isDaily };
 }

@@ -2,7 +2,7 @@ import type { AttributeKey, Attributes, PositionGroup } from './attributes';
 import { clamp } from './prng';
 
 export type Weights = Partial<Record<AttributeKey, number>>;
-export type FormulaKey = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DL' | 'LB' | 'CB' | 'S';
+export type FormulaKey = 'QB' | 'RB' | 'WR' | 'TE' | 'OL' | 'K' | 'DL' | 'LB' | 'CB' | 'S';
 
 /** Default rating formulas. Admin overrides are stored in game_configs (key "formulas"). */
 export const DEFAULT_FORMULAS: Record<FormulaKey, Weights> = {
@@ -10,6 +10,7 @@ export const DEFAULT_FORMULAS: Record<FormulaKey, Weights> = {
   RB: { speed: 0.2, acceleration: 0.15, carrying: 0.2, breakTackle: 0.15, jukeMove: 0.1, bcVision: 0.2 },
   WR: { catching: 0.25, routeRunning: 0.2, speed: 0.2, release: 0.15, catchInTraffic: 0.1, awareness: 0.1 },
   TE: { catching: 0.2, catchInTraffic: 0.15, runBlock: 0.2, speed: 0.15, routeRunning: 0.15, awareness: 0.15 },
+  OL: { passBlock: 0.3, runBlock: 0.3, strength: 0.2, awareness: 0.1, agility: 0.1 },
   DL: { blockShedding: 0.25, powerMoves: 0.2, finesseMoves: 0.2, tackle: 0.15, pursuit: 0.1, playRecognition: 0.1 },
   LB: { tackle: 0.2, pursuit: 0.2, playRecognition: 0.2, zoneCoverage: 0.15, manCoverage: 0.1, hitPower: 0.15 },
   CB: { manCoverage: 0.25, zoneCoverage: 0.2, speed: 0.2, agility: 0.15, playRecognition: 0.1, press: 0.1 },
@@ -20,7 +21,6 @@ export const DEFAULT_FORMULAS: Record<FormulaKey, Weights> = {
 export function formulaFor(group: PositionGroup): FormulaKey {
   switch (group) {
     case 'EDGE': case 'DL': return 'DL';
-    case 'OL': return 'TE';
     default: return group as FormulaKey;
   }
 }
