@@ -72,3 +72,24 @@ test('82-0 hard mode hides stats and has no re-spins', async ({ page }) => {
   await expect(page.locator('.g-player').first()).toBeVisible();
   await expect(page.locator('.g-player .g-ovr').first()).toHaveText('??');
 });
+
+for (const [slug, rounds] of [['nba-higher-lower', 10], ['nba-blind-resume', 6], ['nba-who-led', 6], ['nba-whose-team', 6]] as const) {
+  test(`${slug} casual round trip`, async ({ page }) => {
+    await page.goto(`/games/${slug}`);
+    await page.getByRole('tab', { name: 'Casual' }).click();
+    for (let i = 0; i < rounds; i++) {
+      await expect(page.getByText(`Round ${i + 1} of ${rounds}`)).toBeVisible();
+      await page.locator('button.m-opt').first().click();
+    }
+    await expect(page.locator('.m-score')).toContainText(`/${rounds}`);
+  });
+}
+
+test('Games page has a Basketball tab with 82-0 and the NBA puzzles', async ({ page }) => {
+  await page.goto('/games');
+  await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'Basketball' }).click();
+  await expect(page).toHaveURL(/sport=nba/);
+  await expect(page.getByRole('link', { name: /82-0/ }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /Who Led/ })).toBeVisible();
+  await expect(page.locator('main').getByRole('link', { name: /Build a Player/ })).toHaveCount(0);
+});

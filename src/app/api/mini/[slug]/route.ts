@@ -3,8 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { db, schema } from '@/db';
-import { getMiniGame } from '@/lib/minigames/registry';
-import { loadGameData } from '@/lib/minigames/data';
+import { dataFor, getMiniGame } from '@/lib/minigames/registry';
 import { dailyDateET } from '@/lib/game/daily';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp } from '@/lib/server/rate-limit';
@@ -42,7 +41,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     seed = `casual:${slug}:${randomBytes(8).toString('hex')}`;
   }
   try {
-    const puzzle = game.generate(seed, await loadGameData());
+    const puzzle = game.generate(seed, await dataFor(game));
     return json({ mode, date, seed, puzzle: game.publicView(puzzle) });
   } catch (e) {
     console.error(`[mini:${slug}]`, (e as Error).message);
@@ -72,7 +71,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   let result;
   let finalAnswer = answer;
   if (mode === 'today' && userId && game.applyChecks) finalAnswer = game.applyChecks(answer, await readChecks(slug, date, userId));
-  try { result = game.score(game.generate(seed, await loadGameData()), finalAnswer); }
+  try { result = game.score(game.generate(seed, await dataFor(game)), finalAnswer); }
   catch (e) { return errorJson(400, (e as Error).message || 'Invalid answer.'); }
   const resultData = { summary: result.summary, detail: result.detail, perfect: !!result.perfect };
   try {

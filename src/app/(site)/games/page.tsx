@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { games } from '@/lib/minigames/games';
+import { nbaGames } from '@/lib/minigames/nba/games';
 import { ArrowIcon } from '@/components/Icons';
 
 export const metadata: Metadata = {
@@ -43,7 +44,19 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </Link>
           ))}
         </div>
-      ) : (<>
+      ) : null}
+      {nba ? (<>
+        <h2 style={{ marginTop: 56 }}>Daily puzzles</h2>
+        <div className="hub-grid">
+          {nbaGames.map((g) => (
+            <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+              <h3>{g.name}</h3>
+              <p>{g.tagline}</p>
+              <span className="hub-cta">Play <ArrowIcon size={14} /></span>
+            </Link>
+          ))}
+        </div>
+      </>) : (<>
       <div className="hub-featured">
         {FEATURED.map((g, i) => (
           <Link key={g.slug} href={`/games/${g.slug}`} className={`hub-card hub-feature ${i === 0 ? 'hub-dark' : ''}`}>

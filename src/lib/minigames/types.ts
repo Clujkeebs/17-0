@@ -20,13 +20,15 @@ export interface ScoreResult {
   perfect?: boolean;
 }
 
-export interface MiniGame<Puzzle = unknown, Answer = unknown> {
+export interface MiniGame<Puzzle = unknown, Answer = unknown, Data = GameData> {
   slug: string;
+  /** Basketball games draw on the NBA season tables instead of the Madden player list. */
+  sport?: 'nba';
   name: string;
   tagline: string;
   howTo: string[];
   /** Deterministic from the seed. Includes secrets; never sent to the client as-is. */
-  generate(seed: string, data: GameData): Puzzle;
+  generate(seed: string, data: Data): Puzzle;
   /** What the client is allowed to see before answering. */
   publicView(p: Puzzle): unknown;
   score(p: Puzzle, answer: Answer): ScoreResult;
@@ -34,7 +36,7 @@ export interface MiniGame<Puzzle = unknown, Answer = unknown> {
    * Optional per-step feedback for guess games (e.g. "right team, older, higher OVR").
    * Must not reveal the full answer. Not saved; the final score is recomputed from the submitted answer.
    */
-  check?(p: Puzzle, guess: unknown, data: GameData): unknown;
+  check?(p: Puzzle, guess: unknown, data: Data): unknown;
   /**
    * Ranked (Today) integrity: rewrite the submitted answer using the checks this user actually made,
    * e.g. lock each round to the first pick checked, or count attempts. Called only for Today.
