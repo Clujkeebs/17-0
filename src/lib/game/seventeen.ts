@@ -7,10 +7,12 @@ import { buildNarrative } from './narrative';
 export const SLOTS = ['QB', 'RB', 'WR', 'TE', 'DEF', 'HC'] as const;
 export type Slot = (typeof SLOTS)[number];
 export const SLOT_LABELS: Record<Slot, string> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', DEF: 'DEF', HC: 'HC' };
-export const SLOT_WEIGHTS: Record<Slot, number> = { QB: 0.25, DEF: 0.2, RB: 0.15, WR: 0.15, TE: 0.1, HC: 0.15 };
+// Weights follow how much each spot moves a real NFL offense: quarterback first, then the receivers and backs
+// who touch the ball, with tight end and head coach mattering least. A 97 WR with a 90 TE beats the reverse.
+export const SLOT_WEIGHTS: Record<Slot, number> = { QB: 0.3, WR: 0.22, RB: 0.18, DEF: 0.13, HC: 0.09, TE: 0.08 };
 export const TEAMS_PER_GAME = 6;
 export const MAX_RESPINS = 2;
-export const WIN_FLOOR = 67;
+export const WIN_FLOOR = 67.25;
 export const WIN_SPAN = 26;
 
 export function slotAccepts(slot: Slot, group: PositionGroup | 'HC'): boolean {
@@ -93,7 +95,7 @@ export function gradeRoster(
   const wsum = SLOTS.reduce((s, k) => s + slotWeights[k], 0);
   const teamStrength = Math.round((slots.reduce((s, r) => s + r.grade * slotWeights[r.slot], 0) / wsum) * 10) / 10;
   const rng = createRng(`grade:${seed}`);
-  // Calibrated so a well-built roster (every pick a star) goes 17-0 roughly one time in eleven.
+  // Calibrated so a well-built roster (every pick a star) goes 17-0 roughly one time in eight.
   const jitter = rng.int(-2, 1);
   const wins = clamp(Math.round(((teamStrength - WIN_FLOOR) / WIN_SPAN) * 17 + jitter), 0, 17);
   const losses = 17 - wins;

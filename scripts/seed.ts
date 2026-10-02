@@ -3,7 +3,7 @@
  * overwrite a row that the live ratings sync has already claimed, configs and ad slots only insert
  * when absent.   Usage: npx tsx scripts/seed.ts
  */
-import { and, eq, inArray, sql as dsql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql as dsql } from 'drizzle-orm';
 import { db, schema, sql } from '../src/db';
 import { slugify } from '../src/lib/site';
 import { coachImpact, DEFAULT_FORMULAS } from '../src/lib/game/formulas';
@@ -100,8 +100,11 @@ async function seedCoaches(teamIds: Map<string, number>) {
       superBowlWins: c.superBowlWins, yearsWithTeam: c.yearsWithTeam, recent3yrWinPct: Math.round(c.recent3yrWinPct * 1000),
       playoffAppearances3yr: c.playoffAppearances3yr,
     };
+    // The worker ranks coach scores onto 80-97; the seed's raw score is only a starting value for new coaches.
+    // Overwriting it on every web boot would drop live coach ratings back to the raw scale until the next recompute.
+    const { coachImpactScore: _raw, ...refresh } = values; void _raw;
     const [row] = await db.insert(schema.coaches).values({ ...values, impactHistory: [{ at: now, score }] })
-      .onConflictDoUpdate({ target: schema.coaches.slug, set: values })
+      .onConflictDoUpdate({ target: schema.coaches.slug, set: refresh })
       .returning({ id: schema.coaches.id, impactHistory: schema.coaches.impactHistory });
     if (row && row.impactHistory.length === 0) {
       await db.update(schema.coaches).set({ impactHistory: [{ at: now, score }] }).where(eq(schema.coaches.id, row.id));
@@ -120,16 +123,26 @@ async function seedAds() {
   await db.insert(schema.adPlacements).values(slots.map((s) => ({ ...s, enabled: false }))).onConflictDoNothing({ target: schema.adPlacements.slotName });
 }
 
+const sortKeys = (v: unknown): unknown => v && typeof v === 'object' && !Array.isArray(v)
+  ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys((v as Record<string, unknown>)[k])])) : v;
+
 async function seedConfigs() {
+  // followCode: when the code default changes, publish it as a new version, unless an admin has edited the key.
   const defaults = [
-    { gameType: 'global', configKey: 'formulas', configValue: DEFAULT_FORMULAS },
-    { gameType: '17-0', configKey: 'slot_weights', configValue: SLOT_WEIGHTS },
+    { gameType: 'global', configKey: 'formulas', configValue: DEFAULT_FORMULAS, followCode: false },
+    { gameType: '17-0', configKey: 'slot_weights', configValue: SLOT_WEIGHTS, followCode: true },
   ];
   let inserted = 0;
-  for (const d of defaults) {
-    const [exists] = await db.select({ id: schema.gameConfigs.id }).from(schema.gameConfigs)
-      .where(and(eq(schema.gameConfigs.gameType, d.gameType), eq(schema.gameConfigs.configKey, d.configKey))).limit(1);
-    if (!exists) { await db.insert(schema.gameConfigs).values({ ...d, version: 1, updatedBy: 'seed' }); inserted++; }
+  for (const { followCode, ...d } of defaults) {
+    const [latest] = await db.select().from(schema.gameConfigs)
+      .where(and(eq(schema.gameConfigs.gameType, d.gameType), eq(schema.gameConfigs.configKey, d.configKey)))
+      .orderBy(desc(schema.gameConfigs.version)).limit(1);
+    if (!latest) { await db.insert(schema.gameConfigs).values({ ...d, version: 1, updatedBy: 'seed' }); inserted++; continue; }
+    const changed = JSON.stringify(sortKeys(latest.configValue)) !== JSON.stringify(sortKeys(d.configValue));
+    if (followCode && changed && latest.updatedBy === 'seed') {
+      await db.insert(schema.gameConfigs).values({ ...d, version: latest.version + 1, updatedBy: 'seed' }); inserted++;
+      console.log(`[seed] ${d.gameType}/${d.configKey} updated to code default (v${latest.version + 1})`);
+    }
   }
   return inserted;
 }

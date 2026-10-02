@@ -33,7 +33,7 @@ const POSTS: BlogPost[] = [
       {
         h2: 'You only see one team at a time',
         paragraphs: [
-          'This is the real constraint. You do not get to look at all six teams and plan. You see one team, you commit, and the slot is gone. If the reel opens on a team with an elite tight end and an average quarterback, taking the tight end is safe but spends a spin on the 10 percent slot. Taking the quarterback bets that no better one is coming.',
+          'This is the real constraint. You do not get to look at all six teams and plan. You see one team, you commit, and the slot is gone. If the reel opens on a team with an elite tight end and an average quarterback, taking the tight end is safe but spends a spin on the 8 percent slot. Taking the quarterback bets that no better one is coming.',
           'So every pick is a guess about what the rest of the reel will bring. Defense is the easiest slot to fill late, because five position groups qualify for it and almost every team has a good defender. Quarterback is the hardest, because many teams do not have a good one. When the reel hands you a great quarterback, take him.',
         ],
       },
@@ -41,13 +41,13 @@ const POSTS: BlogPost[] = [
         h2: 'What the grade measures',
         paragraphs: [
           'Every pick gets a grade from 0 to 99. Players are graded on a position formula that weights only the attributes that decide the job, drawn from EA Sports Madden NFL 27 ratings. A quarterback grade is mostly accuracy, pressure, and awareness. A corner grade is mostly man and zone coverage plus speed. Overall rating is shown for reference, but the formula grade is what counts. Coaches are graded on the coach impact score.',
-          'The six grades are combined into team strength with fixed weights: QB 25 percent, defense 20, running back 15, wide receiver 15, head coach 15, tight end 10. Team strength is then converted to wins with a small, seeded dose of luck. The details are in a separate post on the projected record.',
+          'The six grades are combined into team strength with fixed weights: QB 30 percent, wide receiver 22, running back 18, defense 13, head coach 9, tight end 8. The order follows how much each spot moves a real offense, so a 97 receiver with a 90 tight end beats the reverse. Team strength is then converted to wins with a small, seeded dose of luck. The details are in a separate post on the projected record.',
         ],
       },
       {
         h2: 'Why 17-0 is hard on purpose',
         paragraphs: [
-          'A perfect season requires team strength of roughly 84.7 or better and a good luck roll, or about 89.4 and any roll at all. A well-drafted roster goes 17-0 roughly one time in eleven. Most competent rosters land between 10 and 14 wins, which is also roughly where good real teams land. The name of the game is the goal, not the expected result.',
+          'A perfect season requires team strength of roughly 91 or better and a good luck roll, or about 95.6 and any roll at all. A well-drafted roster goes 17-0 roughly one time in eight. Most competent rosters land between 10 and 14 wins, which is also roughly where good real teams land. The name of the game is the goal, not the expected result.',
           'When you do not get there, the season recap names the slot that got exposed. Usually it is the one you filled last, from whatever team the reel had left.',
         ],
       },
@@ -100,34 +100,34 @@ const POSTS: BlogPost[] = [
     slug: 'the-math-behind-the-projected-record',
     title: 'The math behind the projected record',
     date: '2026-09-01',
-    excerpt: 'Team strength is a weighted average. Wins are strength minus 60, over 27, times 17, plus a seeded roll from minus 2 to plus 1. Here is what that implies.',
+    excerpt: 'Team strength is a weighted average. Wins are strength minus 67.25, over 26, times 17, plus a seeded roll from minus 2 to plus 1. Here is what that implies.',
     sections: [
       {
         h2: 'Step one: team strength',
         paragraphs: [
-          'Each of your six picks gets a grade from 0 to 99. Team strength is the weighted average of those grades: quarterback 25 percent, defense 20, running back 15, wide receiver 15, head coach 15, tight end 10. The weights add to 100, so strength stays on the same 0 to 99 scale as the grades, and it is rounded to one decimal.',
-          'Quarterback and defense together are 45 percent of the result. A roster with a 95 quarterback and a 94 defender is at 42.6 points of strength before anyone else is picked. A roster with a 78 quarterback and an 80 defender is at 35.5. The remaining four slots can close that gap, but they have to be very good to do it.',
+          'Each of your six picks gets a grade from 0 to 99. Team strength is the weighted average of those grades: quarterback 30 percent, wide receiver 22, running back 18, defense 13, head coach 9, tight end 8. The weights add to 100, so strength stays on the same 0 to 99 scale as the grades, and it is rounded to one decimal.',
+          'Quarterback and wide receiver together are 52 percent of the result. A roster with a 95 quarterback and a 94 receiver is at 49.2 points of strength before anyone else is picked. A roster with a 78 quarterback and an 80 receiver is at 41.0. The remaining four slots can close that gap, but they have to be very good to do it.',
         ],
       },
       {
         h2: 'Step two: strength to wins',
         paragraphs: [
-          'Projected wins are round((strength minus 60) / 27 x 17 + jitter), clamped between 0 and 17. Losses are 17 minus wins. The jitter is a whole number from minus 2 to plus 1, drawn from a deterministic random number generator seeded by your session. The same session always produces the same roll, so you cannot refresh your way to a better record.',
-          'The 60 is a floor. A roster at 60 strength projects to zero wins before luck, which is harsh on purpose: a lineup of replacement-level players should look like a replacement-level team. Everything above 60 is spread across 27 points of strength and 17 games.',
+          'Projected wins are round((strength minus 67.25) / 26 x 17 + jitter), clamped between 0 and 17. Losses are 17 minus wins. The jitter is a whole number from minus 2 to plus 1, drawn from a deterministic random number generator seeded by your session. The same session always produces the same roll, so you cannot refresh your way to a better record.',
+          'The 67.25 is a floor. A roster at 67.25 strength projects to zero wins before luck, which is harsh on purpose: a lineup of replacement-level players should look like a replacement-level team. Everything above 67.25 is spread across 26 points of strength and 17 games.',
         ],
       },
       {
         h2: 'What the numbers imply',
         paragraphs: [
-          'Each point of team strength is worth 17/27 of a win, about 0.63. Put the other way, it takes about 1.6 points of strength to add one projected win. Upgrading your running back from a 75 grade to a 90 grade adds 2.25 points of strength, which is about 1.4 wins. Small upgrades matter far more here than they would on a flatter curve.',
-          'The jitter has four equally likely values, so its average is minus 0.5. Luck tends to cost you a little rather than help. A roster with strength 80 expects about 12 wins: 12.6 from strength minus half a win of luck on average. The realistic range for that roster is 11 to 14.',
+          'Each point of team strength is worth 17/26 of a win, about 0.65. Put the other way, it takes about 1.5 points of strength to add one projected win. Upgrading your running back from a 75 grade to a 90 grade adds 2.7 points of strength, which is about 1.8 wins. Small upgrades matter far more here than they would on a flatter curve.',
+          'The jitter has four equally likely values, so its average is minus 0.5. Luck tends to cost you a little rather than help. A roster with strength 85 expects about 11 wins: 11.6 from strength minus half a win of luck on average. The realistic range for that roster is 10 to 13.',
         ],
       },
       {
         h2: 'The threshold for 17-0',
         paragraphs: [
-          'To reach 17 wins after rounding, the formula has to produce at least 16.5. With the best roll of plus 1, team strength of 84.7 gets there. With a roll of 0, you need 86.3. With minus 1, 87.8. At 89.4 or above, even the worst roll of minus 2 still rounds to 17.',
-          'So a perfect season is within reach of any roster that grades in the mid 80s, with a one-in-four roll, and guaranteed only for rosters near 90. In practice a well-drafted roster goes 17-0 roughly one time in eleven. For 16-1 with the best roll, the bar drops to 83.1.',
+          'To reach 17 wins after rounding, the formula has to produce at least 16.5. With the best roll of plus 1, team strength of 91.0 gets there. With a roll of 0, you need 92.5. With minus 1, 94.1. At 95.6 or above, even the worst roll of minus 2 still rounds to 17.',
+          'So a perfect season is within reach of any roster that grades around 91, with a one-in-four roll, and guaranteed only for rosters above 95.5. In practice a well-drafted roster goes 17-0 roughly one time in eight. For 16-1 with the best roll, the bar drops to 89.5.',
         ],
       },
       {
@@ -141,14 +141,14 @@ const POSTS: BlogPost[] = [
   },
   {
     slug: 'the-tight-end-slot',
-    title: 'The tight end slot (10 percent)',
+    title: 'The tight end slot (8 percent)',
     date: '2026-09-08',
     excerpt: 'The smallest weight in 17-0 is also the one most likely to decide whether a good roster finishes 16-1 or 17-0.',
     sections: [
       {
         h2: 'The case against caring',
         paragraphs: [
-          'The tight end slot is 10 percent of team strength, the smallest weight in 17-0. Quarterback is two and a half times bigger. The obvious play is to leave tight end for last and take whatever the final spin gives you, and on plenty of boards that works out.',
+          'The tight end slot is 8 percent of team strength, the smallest weight in 17-0. Quarterback is almost four times bigger, and a wide receiver counts nearly three times as much. The obvious play is to leave tight end for last and take whatever the final spin gives you, and on plenty of boards that works out.',
           'The problem is that the reel only shows you one team at a time. If you leave tight end for last, the last team decides it for you, and some teams do not have a tight end worth a roster spot. The rosters that get close to a perfect season are the ones where every point of strength matters, and those are exactly the rosters where a forced tight end pick costs you.',
         ],
       },
@@ -156,14 +156,14 @@ const POSTS: BlogPost[] = [
         h2: 'Tight end grades have a wide spread',
         paragraphs: [
           'Tight ends are graded on six attributes: catching and run blocking at 20 percent each, then catch in traffic, speed, route running, and awareness at 15 each. That formula rewards a complete player. A tight end who only catches or only blocks gives away a third of the grade.',
-          'The result is a wide range. A true two-way starter grades in the high 80s. A blocking specialist or a big receiver with no interest in the run game often lands around 70. That 18-point gap, at 10 percent, is 1.8 points of team strength. At 0.63 wins per point, it is worth more than a full projected win.',
+          'The result is a wide range. A true two-way starter grades in the high 80s. A blocking specialist or a big receiver with no interest in the run game often lands around 70. That 18-point gap, at 8 percent, is 1.4 points of team strength. At 0.65 wins per point, it is worth almost a full projected win.',
         ],
       },
       {
         h2: 'The threshold math',
         paragraphs: [
-          'A perfect season needs team strength of at least 84.7 with the best luck roll, or 89.4 to be safe with any roll. Strength is rounded to one decimal, so a roster at 84.6 with a plus 1 roll finishes 16-1, and a roster at 84.7 with the same roll finishes 17-0. That is a tenth of a point.',
-          'On a roster that is already strong at quarterback, defense, and head coach, the tight end is the slot most likely to be carrying that tenth. It is also the slot most people fill without thinking, which is why it so often shows up in the season recap as the unit that got exposed.',
+          'A perfect season needs team strength of at least 91.0 with the best luck roll, or 95.6 to be safe with any roll. Strength is rounded to one decimal, so a roster at 90.9 with a plus 1 roll finishes 16-1, and a roster at 91.0 with the same roll finishes 17-0. That is a tenth of a point.',
+          'On a roster that is already strong at quarterback, receiver, and running back, the tight end is the slot most likely to be carrying that tenth. It is also the slot most people fill without thinking, which is why it so often shows up in the season recap as the unit that got exposed.',
         ],
       },
       {
@@ -176,8 +176,8 @@ const POSTS: BlogPost[] = [
       {
         h2: 'When to wait',
         paragraphs: [
-          'If the same team offers a quarterback who grades in the 90s, the quarterback wins. Twenty-five percent beats ten, and a great quarterback is even harder to find than a great tight end. The same goes for a top head coach on a team with a thin roster.',
-          'A simple rule: fill quarterback when you see a good one, fill tight end when you see an elite one, and let defense come last, since almost any team can fill it. Ten percent is small. It is also the slot where one early decision is most likely to be the difference between very good and perfect.',
+          'If the same team offers a quarterback who grades in the 90s, the quarterback wins. Thirty percent beats eight, and a great quarterback is even harder to find than a great tight end. The same goes for a top receiver or running back.',
+          'A simple rule: fill quarterback when you see a good one, fill tight end when you see an elite one, and let defense come last, since almost any team can fill it. Eight percent is small. It is also the slot where one early decision is most likely to be the difference between very good and perfect.',
         ],
       },
     ],
@@ -235,7 +235,7 @@ const POSTS: BlogPost[] = [
       {
         h2: 'Why coaches need a number',
         paragraphs: [
-          'The head coach slot is 15 percent of team strength in 17-0, the same as running back or wide receiver. Players have attribute ratings. Coaches do not, at least not in a form anyone agrees on. So we built one, kept it simple, and published the formula.',
+          'The head coach slot is 9 percent of team strength in 17-0. A coach matters, just less than the quarterback the offense runs through. Players have attribute ratings. Coaches do not, at least not in a form anyone agrees on. So we built one, kept it simple, and published the formula.',
           'The coach impact score runs from 0 to 99, like a player grade, and it plugs straight into team strength. There is no separate coach formula inside the game. The score is the grade.',
         ],
       },

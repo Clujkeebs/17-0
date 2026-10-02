@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRng, hashSeed, clamp } from '@/lib/game/prng';
 import { applyWeights, coachImpact, DEFAULT_FORMULAS, formulaFor, letterGrade, ratePlayer } from '@/lib/game/formulas';
-import { gradeRoster, slotAccepts, spinTeams, SLOTS, WIN_FLOOR, WIN_SPAN, type Pick } from '@/lib/game/seventeen';
+import { gradeRoster, slotAccepts, spinTeams, SLOTS, SLOT_WEIGHTS, WIN_FLOOR, WIN_SPAN, type Pick } from '@/lib/game/seventeen';
 import { assemble, buildRating, simulateSeason, BUILD_CATEGORIES, BUILD_POSITIONS, type BuildSource } from '@/lib/game/build';
 import { computeStreak, dailyDateET, dailySeed } from '@/lib/game/daily';
 import { buildNarrative } from '@/lib/game/narrative';
@@ -88,6 +88,23 @@ describe('17-0', () => {
   });
   it('score orders by wins then strength', () => { const r = gradeRoster('q', roster(90)); expect(r.score).toBe(r.wins * 1000 + Math.round(r.teamStrength * 10)); });
   it('throws on a missing slot', () => { expect(() => gradeRoster('m', roster(80).slice(1))).toThrow(/QB/); });
+  it('weights put QB first and receivers and backs ahead of tight end and coach', () => {
+    const w = SLOT_WEIGHTS;
+    expect(Object.values(w).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 10);
+    expect(w.QB).toBeGreaterThan(w.WR); expect(w.WR).toBeGreaterThan(w.TE); expect(w.RB).toBeGreaterThan(w.TE);
+    expect(w.QB).toBeGreaterThan(w.HC); expect(w.WR).toBeGreaterThan(w.HC);
+  });
+  it('a 97 WR with a 90 TE beats a 90 WR with a 97 TE', () => {
+    const swap = (wr: number, te: number) => roster(90).map((p) => p.slot === 'WR' ? { ...p, attributes: flat(wr) } : p.slot === 'TE' ? { ...p, attributes: flat(te) } : p);
+    let better = 0, worse = 0;
+    for (let i = 0; i < 200; i++) {
+      const a = gradeRoster(`b${i}`, swap(97, 90)), b = gradeRoster(`b${i}`, swap(90, 97));
+      expect(a.teamStrength).toBeGreaterThan(b.teamStrength + 0.8);
+      expect(a.wins).toBeGreaterThanOrEqual(b.wins);
+      if (a.wins > b.wins) better++; else worse++;
+    }
+    expect(better).toBeGreaterThan(worse / 2); // same luck roll, so the receiver roster is usually a full game better
+  });
   it('uses all six slots', () => { expect(gradeRoster('a', roster(70)).slots.map((s) => s.slot)).toEqual([...SLOTS]); });
   it('narrative covers every record tier', () => {
     const slots = [{ slot: 'QB', name: 'A B', grade: 90 }, { slot: 'K', name: 'C D', grade: 60 }];
