@@ -6,7 +6,7 @@ import { SoundToggle } from './SoundToggle';
 import { PlayerFace } from './PlayerFace';
 import { track } from '@/lib/analytics';
 import { POSITION_NAMES, type Attributes } from '@/lib/game/attributes';
-import { BUILD_POSITIONS, TRAITS, traitValue, type BuildPosition } from '@/lib/game/build';
+import { BUILD_POSITIONS, TRAITS, traitValue, type BuildPosition, type Trait } from '@/lib/game/build';
 import type { DraftState } from '@/lib/server/draft';
 import './game.css';
 
@@ -38,6 +38,10 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
   const stageRef = useRef<HTMLElement>(null);
   useEffect(() => { if (spinKey > 1) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [spinKey]);
   const [showAll, setShowAll] = useState(false);
+  // Hard mode: find players by typing their name; overalls and trait ratings stay hidden until the result.
+  const [hard, setHard] = useState(false);
+  const hardRef = useRef(false);
+  const [query, setQuery] = useState('');
 
   const traits = TRAITS[position];
   const filled = new Map((draft?.picks ?? []).map((p) => [p.trait!, p]));
@@ -45,6 +49,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
   const team = draft?.team ?? null;
 
   useEffect(() => {
+    try { hardRef.current = localStorage.getItem('gl-bap-hard') === '1'; setHard(hardRef.current); } catch { /* storage blocked */ }
     if (initialMode === 'today' && signedIn && !playedTodayId) void start('today');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -58,13 +63,13 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
     setBusy('start'); setError('');
     const pos = m === 'today' ? positionOfDay : position;
     try {
-      const res = await fetch('/api/games/build-a-player/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'start', position: pos, daily: m === 'today' }) });
+      const res = await fetch('/api/games/build-a-player/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'start', position: pos, daily: m === 'today', hard: hardRef.current }) });
       const d = await res.json().catch(() => ({}));
       if (res.status === 409 && d.resultId) { setPlayedId(d.resultId); return; }
       if (!res.ok) throw new Error(d.error ?? 'Something went wrong. Try again.');
       if (m === 'today') setPosition(positionOfDay);
       setDraft(d); setLanded(false); setSpinKey((k) => k + 1);
-      track('game_started', { game: 'build-a-player', position: pos, mode: m });
+      track('game_started', { game: 'build-a-player', position: pos, mode: m, hard: hardRef.current });
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
@@ -76,7 +81,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
       setDraft({ ...draft, ...d });
       setAnnounce(label);
       if (d.done) await grade({ ...draft, ...d });
-      else { setLanded(false); setShowAll(false); setSpinKey((k) => k + 1); }
+      else { setLanded(false); setShowAll(false); setQuery(''); setSpinKey((k) => k + 1); }
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
@@ -89,17 +94,32 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
     router.push(`/results/${data.id}`);
   }
 
+  function toggleHard() {
+    if (draft && draft.picks.length > 0 && !draft.done && !window.confirm('Switching difficulty starts a new game. Continue?')) return;
+    const next = !hardRef.current;
+    hardRef.current = next; setHard(next);
+    try { localStorage.setItem('gl-bap-hard', next ? '1' : '0'); } catch { /* storage blocked */ }
+    if (!draft) return;
+    if (mode === 'casual') { setDraft(null); setError(''); }
+    else if (signedIn && !playedId) void start('today');
+  }
+
   const tabs = (
-    <div className="g-modes" role="tablist" aria-label="Mode">
-      <button role="tab" aria-selected={mode === 'today'} className={mode === 'today' ? 'on' : ''} onClick={() => switchMode('today')}>Today</button>
-      <button role="tab" aria-selected={mode === 'casual'} className={mode === 'casual' ? 'on' : ''} onClick={() => switchMode('casual')}>Casual</button>
+    <div className="row" style={{ gap: 8 }}>
+      <div className="g-modes" role="tablist" aria-label="Mode">
+        <button role="tab" aria-selected={mode === 'today'} className={mode === 'today' ? 'on' : ''} onClick={() => switchMode('today')}>Today</button>
+        <button role="tab" aria-selected={mode === 'casual'} className={mode === 'casual' ? 'on' : ''} onClick={() => switchMode('casual')}>Casual</button>
+      </div>
+      <button type="button" className={`g-hard ${hard ? 'on' : ''}`} role="switch" aria-checked={hard} onClick={toggleHard} title="Search players by name. Ratings hidden.">
+        <span className="g-hard-dot" aria-hidden="true" /> Hard mode
+      </button>
     </div>
   );
 
   if (!draft) {
     return (
       <div className="g-wrap">
-        <header className="g-head"><h1 className="g-kicker" style={{ margin: 0 }}>Build a Player · {mode === 'today' ? 'Today, ranked' : 'Casual'}</h1>{tabs}</header>
+        <header className="g-head"><h1 className="g-kicker" style={{ margin: 0 }}>Build a Player · {mode === 'today' ? 'Today, ranked' : 'Casual'}{hard ? ' · Hard' : ''}</h1>{tabs}</header>
         {mode === 'today' && !signedIn ? (
           <section className="g-done">
             <p className="g-kicker">Today is ranked</p>
@@ -152,7 +172,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
       <div className="g-main">
         <header className="g-head">
           <div>
-            <h1 className="g-kicker" style={{ margin: 0 }}>Build a {POSITION_NAMES[position]} · {draft && mode === 'today' ? 'Today, ranked · ' : 'Casual · '}Spin {Math.min(draft.index + 1, draft.total)} of {draft.total}</h1>
+            <h1 className="g-kicker" style={{ margin: 0 }}>Build a {POSITION_NAMES[position]} · {draft && mode === 'today' ? 'Today, ranked · ' : 'Casual · '}{draft.hard ? 'Hard · ' : ''}Spin {Math.min(draft.index + 1, draft.total)} of {draft.total}</h1>
             <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={draft.total} aria-valuenow={draft.picks.length} aria-label="Traits filled">
               {Array.from({ length: draft.total }, (_, i) => <span key={i} className={i < draft.picks.length ? 'on' : i === draft.index ? 'now' : ''} />)}
             </div>
@@ -168,7 +188,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
               <Reel pool={reelPool} target={{ id: team.id, abbreviation: team.abbreviation, city: team.city, name: team.name, color: team.color, logoUrl: team.logoUrl }}
                 spinKey={`${draft.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.city} ${team.name}`); }} />
               <div className="g-spin-status">
-                <p className="g-kicker" style={{ margin: 0 }} id="clock-h">{landed ? 'Tap the trait you want him to give you' : 'Spinning'}</p>
+                <p className="g-kicker" style={{ margin: 0 }} id="clock-h">{!landed ? 'Spinning' : draft.hard ? 'Name a player, then pick a trait' : 'Tap the trait you want him to give you'}</p>
                 <div className="row" style={{ gap: 10 }}>
                   <span className="g-kicker num" style={{ margin: 0 }}>{openTraits.length} open</span>
                   <button type="button" className="btn btn-sm g-respin" disabled={!landed || !!busy || draft.respinsLeft <= 0}
@@ -184,7 +204,9 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
                 </div>
               </div>
             </div>
-            {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : <div className="g-roster in">
+            {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : draft.hard ? (
+              <HardTraitSearch team={team} openTraits={openTraits} query={query} setQuery={setQuery} busy={!!busy} onPlace={place} />
+            ) : <div className="g-roster in">
               <ul className="b-rows">
                 {shown.map((p) => {
                   const vals = openTraits.map((t) => ({ t, v: traitValue(p.attrs as Attributes, t) })).sort((a, b) => b.v - a.v);
@@ -229,7 +251,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
                     <span className="g-slot-v">
                       {p.logoUrl ? <img src={p.logoUrl} alt="" width={22} height={22} /> : <span className="g-dot" style={{ background: p.teamColor }} />}
                       <span className="g-slot-name">{p.name}</span>
-                      <span className="num g-slot-ovr">{p.value}</span>
+                      <span className="num g-slot-ovr">{p.value ?? '??'}</span>
                     </span>
                   ) : <span className="g-slot-empty">{Math.round(t.weight * 100)}%</span>}
                 </li>
@@ -239,6 +261,43 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
           <button className="btn-link g-reset" onClick={() => { setDraft(null); setError(''); }}>Start over</button>
         </div>
       </aside>
+    </div>
+  );
+}
+
+/** Hard mode picker: type a name from the team on the clock, then choose a trait. No ratings shown. */
+function HardTraitSearch({ team, openTraits, query, setQuery, busy, onPlace }: {
+  team: NonNullable<DraftState['team']>; openTraits: Trait[]; query: string; setQuery: (q: string) => void; busy: boolean;
+  onPlace: (playerId: string, trait: string, label: string) => void;
+}) {
+  const norm = (x: string) => x.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, '');
+  const q = norm(query).trim();
+  const hits = q.length >= 2 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 5) : [];
+  const miss = q.length >= 3 && hits.length === 0;
+  return (
+    <div className="g-roster in g-hardsearch">
+      <label htmlFor="hard-q" className="g-group-h" style={{ display: 'block' }}>Name a {team.name} player</label>
+      <input id="hard-q" type="search" autoComplete="off" autoFocus placeholder={`Type a ${team.name} player's name`} value={query} onChange={(e) => setQuery(e.target.value)} />
+      <p className="hint" aria-live="polite">{miss ? `No eligible ${team.name} player by that name.` : q.length < 2 ? 'Two letters to start. Ratings stay hidden until your player is built.' : `${hits.length} match${hits.length === 1 ? '' : 'es'}`}</p>
+      <ul className="b-rows" style={{ marginTop: 8 }}>
+        {hits.map((p) => (
+          <li key={p.id} className="b-row">
+            <div className="b-row-head">
+              <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
+              <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position}</span></span>
+              <span className="g-ovr num" aria-hidden="true">??</span>
+            </div>
+            <div className="b-traits" role="group" aria-label={`Traits ${p.name} can give you`}>
+              {openTraits.map((t) => (
+                <button key={t.key} type="button" className="b-trait" disabled={busy}
+                  onClick={() => onPlace(p.id, t.key, `${p.name} fills ${t.label}`)} aria-label={`Take ${t.label} from ${p.name}`}>
+                  <span>{t.label}</span><strong className="num" aria-hidden="true">??</strong>
+                </button>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

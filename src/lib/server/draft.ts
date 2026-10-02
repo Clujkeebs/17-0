@@ -25,9 +25,11 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
   const pickedTeams = picks.map((x) => x.teamId);
   const [current, ...past] = await publicTeams(done ? pickedTeams : [p.teams[index], ...pickedTeams], gameType, p.position);
   const pastTeams = done ? [current, ...past] : past;
-  // Hard mode: overall ratings never leave the server until the result page.
-  const hide = <T extends { ovr: number }>(x: T): T => (p.hard ? { ...x, ovr: -1 } : x);
-  const team = done ? null : current ? { ...current, players: current.players.map(hide) } : null;
+  // Hard mode: overalls and trait ratings never leave the server until the result page, and the list is
+  // alphabetical so its order cannot leak the ranking.
+  const hide = <T extends { ovr: number; attrs?: unknown }>(x: T): T => (p.hard ? { ...x, ovr: -1, attrs: undefined } : x);
+  const order = <T extends { name: string }>(list: T[]) => (p.hard ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : list);
+  const team = done ? null : current ? { ...current, players: order(current.players.map(hide)) } : null;
   return {
     sessionId, index, total: p.teams.length, done, hard: !!p.hard,
     team,
@@ -36,7 +38,7 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
       const t = pastTeams[i];
       const pl = t?.players.find((y) => y.id === x.id);
       const tr = p.position && x.trait ? TRAITS[p.position].find((t) => t.key === x.trait) : undefined;
-      return { ...x, value: tr && pl?.attrs ? traitValue(pl.attrs as never, tr) : undefined, name: pl?.name ?? 'Unknown', position: pl?.position ?? '', ovr: p.hard ? -1 : pl?.ovr ?? 0, team: t ? `${t.city} ${t.name}` : '', teamColor: t?.color ?? '#999', logoUrl: t?.logoUrl ?? null };
+      return { ...x, value: !p.hard && tr && pl?.attrs ? traitValue(pl.attrs as never, tr) : undefined, name: pl?.name ?? 'Unknown', position: pl?.position ?? '', ovr: p.hard ? -1 : pl?.ovr ?? 0, team: t ? `${t.city} ${t.name}` : '', teamColor: t?.color ?? '#999', logoUrl: t?.logoUrl ?? null };
     }),
   };
 }

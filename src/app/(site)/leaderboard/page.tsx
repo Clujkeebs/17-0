@@ -12,7 +12,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/leaderboard' },
 };
 
-type SP = Promise<{ tab?: string; game?: string; page?: string }>;
+type SP = Promise<{ tab?: string; game?: string; page?: string; hard?: string }>;
+const HARD_GAMES = new Set(['17-0', 'build-a-player']);
 
 export default async function Leaderboard({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
@@ -20,8 +21,9 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
   const ALL = [{ slug: '17-0', name: '17-0' }, { slug: 'build-a-player', name: 'Build a Player' }, ...games.map((g) => ({ slug: g.slug, name: g.name }))];
   const game = ALL.some((g) => g.slug === sp.game) ? sp.game! : '17-0';
   const page = Math.max(1, Number(sp.page) || 1);
+  const hardOnly = sp.hard === '1' && HARD_GAMES.has(game);
   let error = false;
-  const daily = tab === 'daily' ? await dailyLeaderboard(game).catch(() => { error = true; return []; }) : [];
+  const daily = tab === 'daily' ? await dailyLeaderboard(game, undefined, undefined, hardOnly).catch(() => { error = true; return []; }) : [];
   const all = tab === 'all-time' ? await allTimeLeaderboard(page).catch(() => { error = true; return { rows: [], total: 0 }; }) : { rows: [], total: 0 };
   const pages = Math.max(1, Math.ceil(all.total / 50));
   const tabLink = (t: string, g = game) => `/leaderboard?tab=${t}&game=${g}`;
@@ -36,15 +38,21 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
         ))}
         <Link className={`btn btn-sm ${tab === 'all-time' ? 'btn-primary' : ''}`} href={tabLink('all-time')} aria-current={tab === 'all-time' ? 'page' : undefined}>All-time</Link>
       </nav>
+      {tab === 'daily' && HARD_GAMES.has(game) && (
+        <nav aria-label="Difficulty" className="row" style={{ marginBottom: 20, gap: 8 }}>
+          <Link className={`btn btn-sm ${!hardOnly ? 'btn-primary' : ''}`} href={tabLink('daily')} aria-current={!hardOnly ? 'page' : undefined}>All runs</Link>
+          <Link className={`btn btn-sm ${hardOnly ? 'btn-primary' : ''}`} href={`${tabLink('daily')}&hard=1`} aria-current={hardOnly ? 'page' : undefined}>Hard mode only</Link>
+        </nav>
+      )}
       {error && <div role="alert" className="card card-error">The leaderboard is not responding. Scores are safe, try again in a minute.</div>}
       {tab === 'daily' ? (
         daily.length ? (
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table>
-            <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col">Result</th><th scope="col" className="num">Score</th></tr></thead>
-            <tbody>{daily.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td>{r.username}</td><td><Link href={`/results/${r.resultId}`} className="num">{r.summary}</Link></td><td className="num">{r.score.toLocaleString('en-US')}</td></tr>)}</tbody>
+            <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Result</th></tr></thead>
+            <tbody>{daily.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td>{r.username}{r.hard && <span className="tag-hard">Hard</span>}</td><td className="num"><Link href={`/results/${r.resultId}`}>{r.summary}</Link></td></tr>)}</tbody>
           </table></div>
         ) : !error && (
-          <div className="card"><p>No daily results yet. Be first. Sign in, play the daily, and your name goes here.</p>
+          <div className="card"><p>{hardOnly ? 'Nobody has played today in Hard mode yet. Turn it on in the game and claim the top spot.' : 'No daily results yet. Be first. Sign in, play the daily, and your name goes here.'}</p>
             <Link className="btn btn-primary" href={`/games/${game}?mode=today`}>Play Today</Link></div>
         )
       ) : (

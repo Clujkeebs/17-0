@@ -25,7 +25,7 @@ export function NameThatTeam({ signedIn, meta }: { signedIn: boolean; meta: Meta
             </div>
             <p className="muted" style={{ marginTop: 0 }}>{d.solved ? `Solved on clue ${d.used}.` : 'Not solved in six.'} {r.score} pts.</p>
             <ol className="gc-clues">
-              {d.clues.map((c, i) => <li key={i} className="gc-clue" style={{ opacity: i < d.used ? 1 : 0.6 }}><b>Clue {i + 1}{i >= d.used ? ' (unused)' : ''}</b>{c}</li>)}
+              {d.clues.map((c, i) => <li key={i} className={`gc-clue${i < d.used ? '' : ' unused'}`}><b>Clue {i + 1}{i >= d.used ? ' (unused)' : ''}</b>{c}</li>)}
             </ol>
             <p className="gc-label">Your guesses</p>
             <div className="m-row">{d.guesses.map((g, i) => <span key={i} className="m-pill"><TeamTag abbr={tm(g)?.abbr ?? String(g)} logoUrl={tm(g)?.logoUrl} color={tm(g)?.color} label={tm(g)?.name ?? String(g)} />: {g === d.team.id ? 'Right' : 'Wrong'}</span>)}</div>

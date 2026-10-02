@@ -5,20 +5,21 @@ import { allTimePointsExpr } from './leaderboard-sql';
 import { scoreSummary } from './result-summary';
 import { dailyDateET } from '@/lib/game/daily';
 
-export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string }
+export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string; hard: boolean }
 
-export async function dailyLeaderboard(gameType: string, date = dailyDateET(), limit = 100): Promise<DailyRow[]> {
-  return cached(`lb:daily:${gameType}:${date}`, 60, async () => {
+export async function dailyLeaderboard(gameType: string, date = dailyDateET(), limit = 100, hardOnly = false): Promise<DailyRow[]> {
+  return cached(`lb:daily:${gameType}:${date}${hardOnly ? ':hard' : ''}`, 60, async () => {
     // Best result per user for the day; ties broken by earliest submission.
     const rows = await db.execute<{ id: string; username: string; score: number; result_data: Record<string, unknown>; created_at: string }>(dsql`
       select distinct on (user_id) id, coalesce(username, 'anonymous') as username, score, result_data, created_at
       from game_results
       where game_type = ${gameType} and daily_date = ${date} and is_daily and user_id is not null and not flagged
+        ${hardOnly ? dsql`and coalesce((result_data->>'hard')::boolean, false)` : dsql``}
       order by user_id, score desc, created_at asc`);
     return [...rows]
       .sort((a, b) => b.score - a.score || +new Date(a.created_at) - +new Date(b.created_at))
       .slice(0, limit)
-      .map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: scoreSummary(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id }));
+      .map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: scoreSummary(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id, hard: r.result_data?.hard === true }));
   });
 }
 

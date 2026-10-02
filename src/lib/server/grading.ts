@@ -110,7 +110,7 @@ export async function gradeBuildAPlayer(ctx: Ctx) {
   const best = bestPossible(position, picks.map((x) => teamRosters.filter((r) => r.teamId === x.teamId && eligible.includes(positionGroup(r.position))).map((r) => r.attributes as Attributes)));
   const seed = s.isDaily ? `${s.seed}:${picks.map((x) => `${x.id}:${x.trait}`).join(',')}` : s.id;
   const result = gradeTraitBuild(position, traitPicks, best, seed);
-  const resultData = { position, ...result, sources: traitPicks.map((x) => ({ name: x.name, teamId: x.teamId, trait: x.trait })) };
+  const resultData = { position, ...result, hard: !!payload.hard, sources: traitPicks.map((x) => ({ name: x.name, teamId: x.teamId, trait: x.trait })) };
   const id = await saveResult(s, ctx, 'build-a-player', resultData, result.score, result.rating >= 95);
   return { id, result: resultData, daily: s.isDaily };
 }

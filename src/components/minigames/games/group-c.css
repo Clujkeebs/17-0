@@ -23,9 +23,11 @@
 .gc-arrows button:disabled { opacity: .35; cursor: default; }
 .gc-clues { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 8px; }
 .gc-clue { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--steel); background: var(--green); animation: gc-in .35s ease-out; }
+.gc-clue.unused { background: var(--surface); border-style: dashed; color: var(--bone-dim); }
 .gc-clue b { display: block; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--bone-dim); margin-bottom: 2px; }
 .gc-feedback { min-height: 1.5em; font-weight: 600; margin: 10px 0 0; }
-@keyframes gc-pop { from { transform: scale(.97); opacity: .4; } to { transform: none; opacity: 1; } }
-@keyframes gc-in { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* Entry motion moves, it never fades: half-transparent text fails contrast and is hard to read. */
+@keyframes gc-pop { from { transform: scale(.97); } to { transform: none; } }
+@keyframes gc-in { from { transform: translateY(6px); } to { transform: none; } }
 @keyframes gc-shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 @media (prefers-reduced-motion: reduce) { .gc-slot.hit, .gc-strike.on, .gc-clue, .gc-item { animation: none; transition: none; } }

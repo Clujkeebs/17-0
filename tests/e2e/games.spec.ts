@@ -81,6 +81,34 @@ test('17-0 hard mode: type to find players, overalls hidden', async ({ page }) =
   await expect(page.locator('.g-player .g-ovr').first()).toHaveText('??');
 });
 
+test('build a player hard mode: ratings never reach the browser', async ({ page }) => {
+  await page.goto('/games/build-a-player?mode=casual');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  await page.getByRole('switch', { name: /Hard mode/ }).click();
+  await expect(page.getByRole('switch', { name: /Hard mode/ })).toHaveAttribute('aria-checked', 'true');
+  const started = page.waitForResponse((r) => r.url().includes('/api/games/build-a-player/spin') && r.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Spin your first team' }).click();
+  const body = await (await started).json();
+  expect(body.hard).toBe(true);
+  for (const p of body.team.players) { expect(p.ovr).toBe(-1); expect(p.attrs).toBeUndefined(); }
+  const box = page.getByRole('searchbox');
+  await expect(box).toBeVisible({ timeout: 20_000 });
+  const first = String(body.team.players[0].name).split(' ')[0].slice(0, 3);
+  await box.fill(first);
+  const trait = page.locator('.b-trait').first();
+  await expect(trait).toBeVisible();
+  await expect(trait.locator('strong')).toHaveText('??');
+  await trait.click();
+  await expect(page.locator('.g-slots li.filled .g-slot-ovr').first()).toHaveText('??');
+});
+
+test('leaderboard has a Hard mode filter for 17-0', async ({ page }) => {
+  await page.goto('/leaderboard?tab=daily&game=17-0');
+  await page.getByRole('link', { name: 'Hard mode only' }).click();
+  await expect(page).toHaveURL(/hard=1/);
+  await expect(page.getByRole('link', { name: 'Hard mode only' })).toHaveAttribute('aria-current', 'page');
+});
+
 test('reel still spins with reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/games/17-0?mode=casual');

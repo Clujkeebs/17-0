@@ -45,7 +45,7 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
     } catch (e) { console.warn(`[espn] ${code} failed`, (e as Error).message); }
   }
   if (athletes < 1000) { console.warn(`[espn] only ${athletes} athletes indexed; skipping roster moves`); }
-  const players = await db.select({ id: schema.players.id, fullName: schema.players.fullName, position: schema.players.position, teamId: schema.players.teamId, espnId: schema.players.espnId, imageUrl: schema.players.imageUrl, legend: schema.players.isAllTimeGreat })
+  const players = await db.select({ id: schema.players.id, fullName: schema.players.fullName, position: schema.players.position, teamId: schema.players.teamId, espnId: schema.players.espnId, imageUrl: schema.players.imageUrl, legend: schema.players.isAllTimeGreat, version: schema.players.maddenVersion })
     .from(schema.players).where(eq(schema.players.isActive, true));
   const abbr = new Map(teams.map((t) => [t.id, t.abbreviation]));
   // Second chance for spelling differences (Cam vs Cameron Heyward): same team and same last name.
@@ -59,7 +59,7 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
     const hit = espnIndex.get(norm(p.fullName)) && pickEspnMatch(p, espnIndex.get(norm(p.fullName))!);
     if (hit) claimed.add(hit.id);
   }
-  const movedNames: string[] = [], clashNames: string[] = [], fuzzyNames: string[] = [], released: { id: string; label: string }[] = [];
+  const movedNames: string[] = [], clashNames: string[] = [], fuzzyNames: string[] = [], released: { id: string; label: string; placeholder: boolean }[] = [];
   let matched = 0, moved = 0, ambiguous = 0;
   for (const p of players) {
     const cands = espnIndex.get(norm(p.fullName));
@@ -70,7 +70,9 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
     }
     if (!hit) {
       if (cands) { ambiguous++; clashNames.push(`${p.fullName} (${p.position}): ESPN has ${cands.map((c) => `${c.a.position?.abbreviation ?? '?'} ${abbr.get(c.teamId)}`).join(', ')}`); }
-      else if (p.teamId != null && !p.legend) released.push({ id: p.id, label: `${p.fullName} (${p.position}, ${abbr.get(p.teamId)})` });
+      else if (!p.legend && (p.teamId != null || p.version?.startsWith('seed-'))) {
+        released.push({ id: p.id, label: `${p.fullName} (${p.position}, ${abbr.get(p.teamId ?? -1) ?? 'FA'})`, placeholder: !!p.version?.startsWith('seed-') });
+      }
       continue;
     }
     matched++;
@@ -83,7 +85,9 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
   // Current players on no ESPN roster (IR included) were cut, retired or are unsigned: they become free agents,
   // so 17-0 stops offering them for their old team. A huge count means ESPN returned bad data, so do nothing.
   const releasing = athletes >= 1000 && released.length <= MAX_RELEASES;
-  if (releasing) for (const r of released) await db.update(schema.players).set({ teamId: null }).where(eq(schema.players.id, r.id));
+  // Placeholder rows from the seed file (never confirmed by the EA feed) are usually a second spelling of a real
+  // player (Cam / Cameron Heyward) with generated ratings, so they are retired rather than kept as free agents.
+  if (releasing) for (const r of released) await db.update(schema.players).set(r.placeholder ? { teamId: null, isActive: false } : { teamId: null }).where(eq(schema.players.id, r.id));
   else if (released.length) console.warn(`[espn] ${released.length} players on no ESPN roster; over the ${MAX_RELEASES} limit or roster data too thin, so none released`);
   // Players ESPN rosters don't list by the same name (suffixes, nicknames): try ESPN search.
   let searched = 0;
@@ -94,8 +98,11 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
     if (hit) { await db.update(schema.players).set({ espnId: hit, imageUrl: `https://a.espncdn.com/i/headshots/nfl/players/full/${hit}.png` }).where(eq(schema.players.id, p.id)); searched++; }
   }
   // Full roster audit, readable in the worker's deploy logs. Player names are public, so this logs no PII.
-  const releasedNames = released.map((r) => r.label);
-  for (const [label, list] of [['moved', movedNames], ['matched by team and last name', fuzzyNames], ['name clash, left alone', clashNames], [releasing ? 'on no ESPN roster, now free agents' : 'on no ESPN roster, kept EA team', releasedNames]] as const) {
+  const faNames = released.filter((r) => !r.placeholder).map((r) => r.label);
+  const retiredNames = released.filter((r) => r.placeholder).map((r) => r.label);
+  for (const [label, list] of [['moved', movedNames], ['matched by team and last name', fuzzyNames], ['name clash, left alone', clashNames],
+    [releasing ? 'on no ESPN roster, now free agents' : 'on no ESPN roster, kept EA team', faNames],
+    [releasing ? 'placeholder rows retired' : 'placeholder rows on no ESPN roster, kept', retiredNames]] as const) {
     for (let i = 0; i < list.length; i += 25) console.log(`[espn] ${label} (${list.length}): ${list.slice(i, i + 25).join('; ')}`);
   }
   console.log(`[espn] search filled ${searched}/${missing.length} missing headshots`);

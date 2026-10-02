@@ -8,7 +8,7 @@
 .ga-ta li.used { opacity: .45; cursor: not-allowed; }
 .ga-lbl { display: block; font-size: .8rem; font-weight: 600; color: var(--bone-dim); margin: 0 0 6px; }
 .ga-live { min-height: 1.4em; margin: 10px 0 0; font-weight: 600; }
-@keyframes ga-pop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes ga-pop { from { transform: translateY(6px) scale(.98); } to { transform: none; } }
 .ga-in { animation: ga-pop .28s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .ga-in { animation: none; } }
 

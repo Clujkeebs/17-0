@@ -55,12 +55,15 @@ async function seedPlayers(teamIds: Map<string, number>) {
       imageUrl: p.espnId ? espnHeadshot(p.espnId) : null, isActive: true, isAllTimeGreat: !!p.isAllTimeGreat,
       maddenVersion: SEED_VERSION,
     };
-    const { maddenId: _m, slug: _s, ...updatable } = values;
+    // Team, active flag, ESPN id and photo belong to the EA and ESPN syncs once a row exists; rewriting them on
+    // every web boot put cut and traded players back on their old teams. Only legends, which have no live
+    // source, keep taking their data from this file.
+    const { maddenId: _m, slug: _s, teamId: _t, isActive: _a, espnId: _e, imageUrl: _i, ...updatable } = values;
+    void _m; void _s; void _t; void _a; void _e; void _i;
     const res = await db.insert(schema.players).values(values).onConflictDoUpdate({
       target: schema.players.slug,
       set: updatable,
-      // Rows claimed by a real sync keep their feed data.
-      setWhere: eq(schema.players.maddenVersion, SEED_VERSION),
+      setWhere: and(eq(schema.players.maddenVersion, SEED_VERSION), eq(schema.players.isAllTimeGreat, true)),
     }).returning({ id: schema.players.id });
     if (res[0]) upserted++;
   }
@@ -102,7 +105,8 @@ async function seedCoaches(teamIds: Map<string, number>) {
     };
     // The worker ranks coach scores onto 80-97; the seed's raw score is only a starting value for new coaches.
     // Overwriting it on every web boot would drop live coach ratings back to the raw scale until the next recompute.
-    const { coachImpactScore: _raw, ...refresh } = values; void _raw;
+    // Same for the team: ESPN decides who coaches where, so a new hire is not undone by the next deploy.
+    const { coachImpactScore: _raw, teamId: _team, ...refresh } = values; void _raw; void _team;
     const [row] = await db.insert(schema.coaches).values({ ...values, impactHistory: [{ at: now, score }] })
       .onConflictDoUpdate({ target: schema.coaches.slug, set: refresh })
       .returning({ id: schema.coaches.id, impactHistory: schema.coaches.impactHistory });
