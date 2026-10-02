@@ -45,7 +45,11 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - Coach ratings are ranked onto 80–97 in `src/lib/server/coaches.ts`. They must never read as a liability.
 
 ## To do
-- [ ] **Domain:** buy and connect **playunbeaten.com** (available as of 2026-09-30; other options: unbeaten.games, unbeatenfootball.com, unbeaten.football). The owner must approve the purchase. Then add it as a Railway custom domain, update `NEXT_PUBLIC_SITE_URL`/`AUTH_URL`, and set up the contact emails on it.
+- [ ] **Domain:** **playunbeaten.com was bought on 2026-10-02.** Remaining steps:
+  1. Add `playunbeaten.com` and `www.playunbeaten.com` as custom domains on the web service, port 8080 (Railway dashboard: web > Settings > Networking > Custom Domain). The Railway MCP and its agent cannot create custom domains.
+  2. Enter the CNAME and `_railway-verify` TXT records Railway shows at the registrar, then wait for the certificate (`domain-status`).
+  3. Only after the domain serves the site: set `SITE_URL` and `NEXTAUTH_URL` on web to `https://playunbeaten.com`, add the new redirect URI to the Google OAuth client, and redeploy web. Changing them before DNS works breaks sign-in.
+  4. Remove the two stray generated domains `web-production-519a6.up.railway.app` and `web-production-56dcd.up.railway.app` (created by mistake on 2026-10-02; `delete-domain` timed out). Keep `web-production-3f1b7`.
 - [ ] Contact emails (the owner creates them after buying the domain), then wire them into the contact and legal pages.
 - [ ] Confirm the live coach ratings after the worker deploy. They should be 80–97; check `/coaches`.
   - Done locally, not deployed: `recomputeCoachImpact` now logs `[coaches] recomputed N: current head coaches MIN-MAX (n=32)`, and the worker logs recompute failures instead of swallowing them. Locally it reads 80-97 (n=32). After the worker deploys, read that line in the worker's Railway deploy logs to confirm the live range.
