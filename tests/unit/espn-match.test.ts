@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickEspnMatch, positionFamily } from '@/lib/server/espn-match';
+import { lastNameKey, pickEspnMatch, pickSameTeamNamesake, positionFamily } from '@/lib/server/espn-match';
 
 const PHI = 26, CAR = 5;
 const wr = { id: '4241478', teamId: PHI, family: positionFamily('WR') };
@@ -25,5 +25,19 @@ describe('ESPN roster matching', () => {
   });
   it('never matches across positions', () => {
     expect(pickEspnMatch({ position: 'WR', espnId: null }, [cb])).toBeNull();
+  });
+  it('accepts a lone cross-position namesake only on the same team', () => {
+    const jaxWr = { id: 'h', teamId: 15, family: positionFamily('WR') };
+    expect(pickEspnMatch({ position: 'CB', espnId: null, teamId: 15 }, [jaxWr])).toBe(jaxWr);
+    expect(pickEspnMatch({ position: 'CB', espnId: null, teamId: 3 }, [jaxWr])).toBeNull();
+    expect(pickEspnMatch({ position: 'WR', espnId: null, teamId: PHI }, [cb])).toBeNull();
+  });
+  it('matches spelling differences by team and last name', () => {
+    expect(lastNameKey('Ray-Ray McCloud III')).toBe('mccloud');
+    expect(lastNameKey('Cameron Heyward')).toBe(lastNameKey('Cam Heyward'));
+    const dt = { id: 'cam', teamId: 25, family: positionFamily('DT') };
+    expect(pickSameTeamNamesake({ position: 'DT' }, [dt])).toBe(dt);
+    expect(pickSameTeamNamesake({ position: 'WR' }, [dt])).toBeNull();
+    expect(pickSameTeamNamesake({ position: 'DT' }, [dt, { ...dt, id: 'other' }])).toBeNull();
   });
 });

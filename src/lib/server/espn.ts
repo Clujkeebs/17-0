@@ -1,7 +1,9 @@
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { slugify } from '@/lib/site';
-import { pickEspnMatch, positionFamily, type EspnCandidate } from './espn-match';
+import { lastNameKey, pickEspnMatch, pickSameTeamNamesake, positionFamily, type EspnCandidate } from './espn-match';
+
+const MAX_RELEASES = 100;
 
 const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g, '').replace(/[^a-z]/g, '');
 
@@ -43,16 +45,34 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
     } catch (e) { console.warn(`[espn] ${code} failed`, (e as Error).message); }
   }
   if (athletes < 1000) { console.warn(`[espn] only ${athletes} athletes indexed; skipping roster moves`); }
-  const players = await db.select({ id: schema.players.id, fullName: schema.players.fullName, position: schema.players.position, teamId: schema.players.teamId, espnId: schema.players.espnId, imageUrl: schema.players.imageUrl })
+  const players = await db.select({ id: schema.players.id, fullName: schema.players.fullName, position: schema.players.position, teamId: schema.players.teamId, espnId: schema.players.espnId, imageUrl: schema.players.imageUrl, legend: schema.players.isAllTimeGreat })
     .from(schema.players).where(eq(schema.players.isActive, true));
   const abbr = new Map(teams.map((t) => [t.id, t.abbreviation]));
-  const movedNames: string[] = [], clashNames: string[] = [], unlisted: string[] = [];
+  // Second chance for spelling differences (Cam vs Cameron Heyward): same team and same last name.
+  const byTeamLast = new Map<string, (EspnCandidate & { a: EspnAthlete })[]>();
+  for (const list of espnIndex.values()) for (const c of list) {
+    const k = `${c.teamId}:${lastNameKey(c.a.fullName)}`;
+    byTeamLast.set(k, [...(byTeamLast.get(k) ?? []), c]);
+  }
+  const claimed = new Set<string>();
+  for (const p of players) {
+    const hit = espnIndex.get(norm(p.fullName)) && pickEspnMatch(p, espnIndex.get(norm(p.fullName))!);
+    if (hit) claimed.add(hit.id);
+  }
+  const movedNames: string[] = [], clashNames: string[] = [], fuzzyNames: string[] = [], released: { id: string; label: string }[] = [];
   let matched = 0, moved = 0, ambiguous = 0;
   for (const p of players) {
     const cands = espnIndex.get(norm(p.fullName));
-    if (!cands) { if (p.teamId != null) unlisted.push(`${p.fullName} (${p.position}, ${abbr.get(p.teamId)})`); continue; } // legends have no team
-    const hit = pickEspnMatch({ position: p.position, espnId: p.espnId }, cands);
-    if (!hit) { ambiguous++; clashNames.push(`${p.fullName} (${p.position}): ESPN has ${cands.map((c) => `${c.a.position?.abbreviation ?? '?'} ${abbr.get(c.teamId)}`).join(', ')}`); continue; }
+    let hit = cands ? pickEspnMatch(p, cands) : null;
+    if (!hit && !cands && p.teamId != null) {
+      hit = pickSameTeamNamesake(p, (byTeamLast.get(`${p.teamId}:${lastNameKey(p.fullName)}`) ?? []).filter((c) => !claimed.has(c.id)));
+      if (hit) fuzzyNames.push(`${p.fullName} = ${hit.a.fullName} (${abbr.get(hit.teamId)})`);
+    }
+    if (!hit) {
+      if (cands) { ambiguous++; clashNames.push(`${p.fullName} (${p.position}): ESPN has ${cands.map((c) => `${c.a.position?.abbreviation ?? '?'} ${abbr.get(c.teamId)}`).join(', ')}`); }
+      else if (p.teamId != null && !p.legend) released.push({ id: p.id, label: `${p.fullName} (${p.position}, ${abbr.get(p.teamId)})` });
+      continue;
+    }
     matched++;
     const set: Partial<typeof schema.players.$inferInsert> = { espnId: hit.a.id };
     // A changed ESPN id means the old one belonged to someone else (a namesake), so its headshot goes too.
@@ -60,6 +80,11 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
     if (athletes >= 1000 && p.teamId !== hit.teamId) { set.teamId = hit.teamId; moved++; movedNames.push(`${p.fullName} (${p.position}) ${abbr.get(p.teamId ?? -1) ?? 'FA'} -> ${abbr.get(hit.teamId)}`); }
     await db.update(schema.players).set(set).where(eq(schema.players.id, p.id));
   }
+  // Current players on no ESPN roster (IR included) were cut, retired or are unsigned: they become free agents,
+  // so 17-0 stops offering them for their old team. A huge count means ESPN returned bad data, so do nothing.
+  const releasing = athletes >= 1000 && released.length <= MAX_RELEASES;
+  if (releasing) for (const r of released) await db.update(schema.players).set({ teamId: null }).where(eq(schema.players.id, r.id));
+  else if (released.length) console.warn(`[espn] ${released.length} players on no ESPN roster; over the ${MAX_RELEASES} limit or roster data too thin, so none released`);
   // Players ESPN rosters don't list by the same name (suffixes, nicknames): try ESPN search.
   let searched = 0;
   const missing = await db.select({ id: schema.players.id, fullName: schema.players.fullName }).from(schema.players)
@@ -69,11 +94,12 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
     if (hit) { await db.update(schema.players).set({ espnId: hit, imageUrl: `https://a.espncdn.com/i/headshots/nfl/players/full/${hit}.png` }).where(eq(schema.players.id, p.id)); searched++; }
   }
   // Full roster audit, readable in the worker's deploy logs. Player names are public, so this logs no PII.
-  for (const [label, list] of [['moved', movedNames], ['name clash, left alone', clashNames], ['not on any ESPN roster, kept EA team', unlisted]] as const) {
+  const releasedNames = released.map((r) => r.label);
+  for (const [label, list] of [['moved', movedNames], ['matched by team and last name', fuzzyNames], ['name clash, left alone', clashNames], [releasing ? 'on no ESPN roster, now free agents' : 'on no ESPN roster, kept EA team', releasedNames]] as const) {
     for (let i = 0; i < list.length; i += 25) console.log(`[espn] ${label} (${list.length}): ${list.slice(i, i + 25).join('; ')}`);
   }
   console.log(`[espn] search filled ${searched}/${missing.length} missing headshots`);
-  console.log(`[espn] matched ${matched}/${players.length}, moved ${moved} to current teams, skipped ${ambiguous} name clashes, head coaches seen ${coachesSeen}, changed ${coachesChanged}`);
+  console.log(`[espn] matched ${matched}/${players.length}, moved ${moved} to current teams, skipped ${ambiguous} name clashes, ${releasing ? 'released' : 'kept'} ${released.length} not on a roster, head coaches seen ${coachesSeen}, changed ${coachesChanged}`);
   return { matched, moved, coachesChanged };
 }
 
