@@ -4,8 +4,10 @@ import { seasonValue } from '@/lib/game/eightytwo';
 import { getRedis } from './redis';
 
 /**
- * 82-0 data from ESPN's public core API: every franchise's roster for every season since 1980, with each
- * player's per-game regular season stats. Runs in the worker (the dev container cannot reach ESPN).
+ * 82-0 data from ESPN's public core API: every franchise's players for every season since 1980, with each
+ * player's per-game regular season stats. Who played for whom comes from each team-season's stat leaders
+ * (15 deep in 16 categories, which covers the whole rotation). ESPN's per-season team roster endpoint is not
+ * used: it returns today's roster for past seasons. Runs in the worker (the dev container cannot reach ESPN).
  * Finished team-seasons are skipped on later runs, so an interrupted backfill resumes where it stopped;
  * the latest season is always refreshed.
  */
@@ -30,6 +32,11 @@ async function get(url: string, fetchImpl: typeof fetch, tries = 3): Promise<Jso
   }
   return null;
 }
+/** Bump when stored rows were built wrong and must be rebuilt from scratch. */
+const DATA_VERSION = 2;
+
+export const leaderIds = (j: Json | null) => [...new Set(((j?.categories as { leaders?: { athlete?: { $ref?: string } }[] }[] | undefined) ?? [])
+  .flatMap((c) => c.leaders ?? []).map((l) => Number(l.athlete?.$ref?.match(/athletes\/(\d+)/)?.[1])).filter(Number.isFinite))];
 const idsFrom = (j: Json | null) => ((j?.items as { $ref: string }[] | undefined) ?? []).map((x) => Number(x.$ref.match(/\/(\d+)\?/)?.[1])).filter(Number.isFinite);
 
 /** Flattens ESPN's statistics categories into name -> value. */
@@ -73,6 +80,14 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
   const from = opts.from ?? FIRST_SEASON, to = opts.to ?? latest;
   const lock = await getRedis().set('nba:sync-lock', '1', 'EX', 3 * 3600, 'NX').catch(() => 'OK');
   if (!lock) { console.log('[nba] sync already running'); return null; }
+  const [ver] = await db.select().from(schema.gameConfigs).where(and(eq(schema.gameConfigs.gameType, '82-0'), eq(schema.gameConfigs.configKey, 'data_version'))).limit(1);
+  if (Number(ver?.configValue ?? 0) < DATA_VERSION) {
+    await db.delete(schema.nbaPlayerSeasons);
+    await db.delete(schema.nbaTeamSeasons);
+    if (ver) await db.update(schema.gameConfigs).set({ configValue: DATA_VERSION, updatedAt: new Date() }).where(eq(schema.gameConfigs.id, ver.id));
+    else await db.insert(schema.gameConfigs).values({ gameType: '82-0', configKey: 'data_version', configValue: DATA_VERSION, updatedBy: 'nba-sync' });
+    console.log('[nba] cleared stored seasons for a rebuild, data version', DATA_VERSION);
+  }
   const known = new Set((await db.select({ id: schema.nbaPlayers.id }).from(schema.nbaPlayers)).map((r) => r.id));
   // A team-season is done only when it has a real roster stored, so a pass that came back empty is retried.
   const done = new Set((await db.select({ t: schema.nbaPlayerSeasons.teamId, s: schema.nbaPlayerSeasons.season, n: dsql<number>`count(*)::int` })
@@ -87,7 +102,7 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
       await pool(todo, 4, async (teamId) => {
         const team = await get(`${CORE}/seasons/${season}/teams/${teamId}`, fetchImpl);
         if (!team) return;
-        const athletes = idsFrom(await get(`${CORE}/seasons/${season}/teams/${teamId}/athletes?limit=100`, fetchImpl));
+        const athletes = leaderIds(await get(`${CORE}/seasons/${season}/types/2/teams/${teamId}/leaders`, fetchImpl));
         await pool(athletes, 6, async (pid) => {
           if (!known.has(pid)) {
             // The league-wide record can be thin for retired players; the season record always names them.

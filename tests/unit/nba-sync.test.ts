@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { latestSeason, lineFrom, readStats } from '@/lib/server/nba-sync';
+import { latestSeason, leaderIds, lineFrom, readStats } from '@/lib/server/nba-sync';
 
 describe('82-0 ESPN parsing', () => {
   it('reads per-game lines from ESPN stat categories', () => {
@@ -24,5 +24,14 @@ describe('82-0 ESPN parsing', () => {
     expect(latestSeason(new Date('2026-10-02T12:00:00Z'))).toBe(2026);
     expect(latestSeason(new Date('2026-10-25T12:00:00Z'))).toBe(2027);
     expect(latestSeason(new Date('2027-03-01T12:00:00Z'))).toBe(2027);
+  });
+});
+
+describe('82-0 rosters from team leaders', () => {
+  it('collects each player once across categories', () => {
+    const ref = (id: number) => ({ athlete: { $ref: `http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/1996/athletes/${id}?lang=en` } });
+    const j = { categories: [{ name: 'pointsPerGame', leaders: [ref(1035), ref(663)] }, { name: 'reboundsPerGame', leaders: [ref(726), ref(1035)] }] };
+    expect(leaderIds(j).sort()).toEqual([1035, 663, 726].sort());
+    expect(leaderIds(null)).toEqual([]);
   });
 });
