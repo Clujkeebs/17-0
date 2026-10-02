@@ -12,7 +12,8 @@ export type NbaSlot = (typeof NBA_SLOTS)[number];
 export const NBA_SLOT_NAMES: Record<NbaSlot, string> = { PG: 'Point guard', SG: 'Shooting guard', SF: 'Small forward', PF: 'Power forward', C: 'Center' };
 
 export const ERAS = [
-  { key: '1980s', label: "'80s", from: 1980, to: 1989 },
+  // ESPN's stats start with 1984-85, so the '80s are 1985 to 1989.
+  { key: '1980s', label: "'80s", from: 1985, to: 1989 },
   { key: '1990s', label: "'90s", from: 1990, to: 1999 },
   { key: '2000s', label: "'00s", from: 2000, to: 2009 },
   { key: '2010s', label: "'10s", from: 2010, to: 2019 },

@@ -12,7 +12,8 @@ import { getRedis } from './redis';
  * the latest season is always refreshed.
  */
 const CORE = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba';
-export const FIRST_SEASON = 1980;
+/** ESPN has no per-player stats before the 1984-85 season. */
+export const FIRST_SEASON = 1985;
 
 /** ESPN names a season by its end year. A season counts once its regular season has started (late October). */
 export function latestSeason(now = new Date()): number {

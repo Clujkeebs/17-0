@@ -3,7 +3,7 @@ import { db, schema } from '@/db';
 import { ERAS, NBA_SLOTS, fitMultiplier, gradeNbaRoster, type EraKey, type NbaPick, type NbaSlot } from '@/lib/game/eightytwo';
 import { createRng } from '@/lib/game/prng';
 import { getRedis } from './redis';
-import { NBA_FLOOR_KEY } from './nba-game';
+import { NBA_FLOOR_KEY } from './nba-floor';
 
 type Cand = { name: string; position: string; teamId: number; season: number; value: number };
 const TARGET_P17 = 0.06;

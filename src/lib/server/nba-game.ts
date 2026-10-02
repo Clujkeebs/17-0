@@ -4,10 +4,11 @@ import { db, schema } from '@/db';
 import { token as newToken } from './request';
 import { getRedis } from './redis';
 import { saveResult } from './grading';
+import { getNbaFloor } from './nba-floor';
 import { createRng } from '@/lib/game/prng';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
 import {
-  ERAS, ERA_RESPINS, NBA_ROUNDS, NBA_SLOTS, NBA_WIN_FLOOR_DEFAULT, TEAM_RESPINS, eraOf, fitMultiplier, gradeNbaRoster, naturalSlots, seasonLabel,
+  ERAS, ERA_RESPINS, NBA_ROUNDS, NBA_SLOTS, TEAM_RESPINS, eraOf, fitMultiplier, gradeNbaRoster, naturalSlots, seasonLabel,
   type EraKey, type NbaPick, type NbaSlot,
 } from '@/lib/game/eightytwo';
 
@@ -191,10 +192,6 @@ export async function moveNba(sessionId: string, tok: string, from: NbaSlot, to:
   return state(s.id, next);
 }
 
-export const NBA_FLOOR_KEY = 'nba:win-floor';
-export async function getNbaFloor(): Promise<number> {
-  try { const v = Number(await getRedis().get(NBA_FLOOR_KEY)); return Number.isFinite(v) && v > 0 ? v : NBA_WIN_FLOOR_DEFAULT; } catch { return NBA_WIN_FLOOR_DEFAULT; }
-}
 
 export async function gradeNba(ctx: { sessionId: string; token: string; userId?: string | null; username?: string | null }) {
   const s = await open(ctx.sessionId, ctx.token);
