@@ -485,3 +485,13 @@ html[data-rules=hidden] .rules-card { display: none; }
 .sport-tabs a { padding: 8px 18px; border-radius: 999px; font-weight: 600; color: var(--bone); text-decoration: none; }
 .sport-tabs a[aria-current=page] { background: var(--bone); color: #fff; }
 .sport-tabs a:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
+/* Players page live search */
+.ps-list { list-style: none; padding: 0; margin: 12px 0 0; border: 1px solid var(--steel); border-radius: 14px; overflow: hidden; background: var(--surface); }
+.ps-list li + li { border-top: 1px solid var(--steel); }
+.ps-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: var(--bone); text-decoration: none; min-height: 56px; }
+.ps-item:hover, .ps-item:focus-visible { background: var(--green); }
+.ps-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ps-name strong, .ps-name .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ps-name .muted { font-size: .85rem; }
+.ps-ovr { font-size: 1.25rem; font-weight: 700; }

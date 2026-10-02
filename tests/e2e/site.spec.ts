@@ -51,3 +51,15 @@ test('footer questionnaire sends a rating and a note', async ({ page, request },
   await expect(form.getByRole('status')).toContainText('Thanks');
   expect((await request.post('/api/feedback', { data: { rating: 9 } })).status()).toBe(400);
 });
+
+test('players page searches as you type and links to the player', async ({ page }) => {
+  await page.goto('/players', { waitUntil: 'networkidle' });
+  const first = (await page.locator('table tbody tr td a').first().textContent())!.trim();
+  await page.getByLabel('Search players').fill(first.slice(0, 1));
+  const hit = page.locator('.ps-list a').first();
+  await expect(hit).toBeVisible();
+  await page.getByLabel('Search players').fill(first);
+  await expect(page.locator('.ps-list a', { hasText: first }).first()).toBeVisible();
+  await page.locator('.ps-list a', { hasText: first }).first().click();
+  await expect(page).toHaveURL(/\/players\/[a-z0-9-]+$/);
+});

@@ -12,6 +12,7 @@ import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
 import { EmptyState } from '@/components/seo/EmptyState';
 import { PlayerTable } from '@/components/seo/PlayerTable';
 import { PlayCta } from '@/components/seo/PlayCta';
+import { PlayerSearch } from '@/components/PlayerSearch';
 
 export const revalidate = 86400;
 
@@ -32,7 +33,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function PlayersPage({ searchParams }: Props) {
   const q = readQ((await searchParams).q);
   const [top, teams] = await Promise.all([loadTop(100), loadTeamMap()]);
-  const results = q.length >= 2 ? await safe(() => searchPlayers(q, 25), []) : null;
+  const results = q.length >= 1 ? await safe(() => searchPlayers(q, 25), []) : null;
 
   return (
     <div className="container section">
@@ -45,17 +46,13 @@ export default async function PlayersPage({ searchParams }: Props) {
 
       <form method="get" action="/players" role="search" style={{ maxWidth: 520, margin: '28px 0' }}>
         <label htmlFor="player-q">Search players</label>
-        <div className="row" style={{ flexWrap: 'nowrap' }}>
-          <input id="player-q" name="q" type="search" defaultValue={q} minLength={2} maxLength={60} placeholder="Last name, for example Kelce" autoComplete="off" />
-          <button className="btn btn-primary" type="submit">Search</button>
-        </div>
-        <p className="hint">Two characters minimum.</p>
+        <PlayerSearch initial={q} />
       </form>
 
       {q && (
         <section aria-labelledby="results-h" style={{ marginBottom: 40 }}>
           <h2 id="results-h" style={{ fontSize: '1.2rem' }}>
-            {q.length < 2 ? 'Type at least two characters.' : results && results.length ? `${results.length} match${results.length === 1 ? '' : 'es'} for "${q}"` : `No players match "${q}".`}
+            {results && results.length ? `${results.length} match${results.length === 1 ? '' : 'es'} for "${q}"` : `No players match "${q}".`}
           </h2>
           {results && results.length > 0 && (
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
