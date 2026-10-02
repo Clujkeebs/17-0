@@ -12,7 +12,7 @@ import { BUILD_ELIGIBLE, TRAITS, bestPossible, gradeTraitBuild, traitValue } fro
 
 export class GradeError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
 
-interface Ctx { sessionId: string; token: string; userId?: string | null; username?: string | null }
+export interface Ctx { sessionId: string; token: string; userId?: string | null; username?: string | null }
 
 async function openSession(ctx: Ctx, gameType: string) {
   const s = await loadSession(ctx.sessionId, ctx.token);
@@ -22,7 +22,7 @@ async function openSession(ctx: Ctx, gameType: string) {
   return s;
 }
 
-async function saveResult(...args: Parameters<typeof saveResultTx>) {
+export async function saveResult(...args: Parameters<typeof saveResultTx>) {
   const id = await saveResultTx(...args);
   const [s, ctx, gameType] = args;
   // Signed-in results change the leaderboards; clear their cache so the player sees themselves immediately.

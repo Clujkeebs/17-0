@@ -74,8 +74,10 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
   const lock = await getRedis().set('nba:sync-lock', '1', 'EX', 3 * 3600, 'NX').catch(() => 'OK');
   if (!lock) { console.log('[nba] sync already running'); return null; }
   const known = new Set((await db.select({ id: schema.nbaPlayers.id }).from(schema.nbaPlayers)).map((r) => r.id));
-  const done = new Set((await db.select({ t: schema.nbaTeamSeasons.teamId, s: schema.nbaTeamSeasons.season }).from(schema.nbaTeamSeasons)).map((r) => `${r.t}:${r.s}`));
-  let rows = 0, seasonsDone = 0;
+  // A team-season is done only when it has a real roster stored, so a pass that came back empty is retried.
+  const done = new Set((await db.select({ t: schema.nbaPlayerSeasons.teamId, s: schema.nbaPlayerSeasons.season, n: dsql<number>`count(*)::int` })
+    .from(schema.nbaPlayerSeasons).groupBy(schema.nbaPlayerSeasons.teamId, schema.nbaPlayerSeasons.season)).filter((r) => r.n >= 5).map((r) => `${r.t}:${r.s}`));
+  let rows = 0, seasonsDone = 0, misses = 0, noStats = 0;
   try {
     for (let season = to; season >= from; season--) {
       const teams = idsFrom(await get(`${CORE}/seasons/${season}/teams?limit=50`, fetchImpl));
@@ -88,8 +90,10 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
         const athletes = idsFrom(await get(`${CORE}/seasons/${season}/teams/${teamId}/athletes?limit=100`, fetchImpl));
         await pool(athletes, 6, async (pid) => {
           if (!known.has(pid)) {
-            const a = await get(`${CORE}/athletes/${pid}`, fetchImpl) ?? await get(`${CORE}/seasons/${season}/athletes/${pid}`, fetchImpl);
-            if (!a?.fullName) return;
+            // The league-wide record can be thin for retired players; the season record always names them.
+            let a = await get(`${CORE}/seasons/${season}/athletes/${pid}`, fetchImpl);
+            if (!a?.fullName) a = await get(`${CORE}/athletes/${pid}`, fetchImpl);
+            if (!a?.fullName) { misses++; return; }
             const pos = (a.position as { abbreviation?: string } | undefined)?.abbreviation ?? 'F';
             const headshot = (a.headshot as { href?: string } | undefined)?.href ?? null;
             await db.insert(schema.nbaPlayers).values({ id: pid, fullName: String(a.fullName), position: pos, headshot })
@@ -98,7 +102,7 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
           }
           if (!stats.has(pid)) stats.set(pid, lineFrom(readStats(await get(`${CORE}/seasons/${season}/types/2/athletes/${pid}/statistics`, fetchImpl))));
           const line = stats.get(pid);
-          if (!line || line.gp < 1) return;
+          if (!line || line.gp < 1) { noStats++; return; }
           const row = { playerId: pid, teamId, season, ...line, value: seasonValue(line) };
           await db.insert(schema.nbaPlayerSeasons).values(row)
             .onConflictDoUpdate({ target: [schema.nbaPlayerSeasons.playerId, schema.nbaPlayerSeasons.teamId, schema.nbaPlayerSeasons.season], set: row });
@@ -109,14 +113,14 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
         await db.insert(schema.nbaTeamSeasons).values(ts).onConflictDoUpdate({ target: [schema.nbaTeamSeasons.teamId, schema.nbaTeamSeasons.season], set: ts });
       });
       seasonsDone++;
-      console.log(`[nba] season ${season} synced: ${todo.length} teams, ${rows} player-seasons so far`);
+      console.log(`[nba] season ${season} synced: ${todo.length} teams, ${rows} player-seasons so far, ${misses} unnamed, ${noStats} without stats`);
     }
   } finally {
     await getRedis().del('nba:sync-lock').catch(() => {});
   }
   const [c] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.nbaPlayerSeasons);
   const [p] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.nbaPlayers);
-  const summary = { from, to, seasonsDone, rowsWritten: rows, totalPlayerSeasons: c.n, players: p.n };
+  const summary = { from, to, seasonsDone, rowsWritten: rows, unnamed: misses, withoutStats: noStats, totalPlayerSeasons: c.n, players: p.n };
   console.log('[nba] sync done', JSON.stringify(summary));
   return summary;
 }

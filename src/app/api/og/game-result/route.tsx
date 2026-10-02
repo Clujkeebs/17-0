@@ -24,6 +24,12 @@ export async function GET(req: Request) {
       eyebrow: r.isDaily ? `Daily 17-0 · ${r.dailyDate}` : `17-0 projected record${extra ? ` · ${extra}` : ''}`, headline: `${d.wins}-${d.losses}`, perfect: d.wins === 17,
       lines: lines.length > 6 ? [...lines.slice(0, 5), { k: '+', v: `${lines.length - 5} more picks` }] : lines, footer: 'Can you beat it?',
     });
+  } else if (r.gameType === '82-0') {
+    const d = r.resultData as { wins: number; losses: number; slots: { slot: string; name: string; letter: string }[] };
+    res = await renderCard({
+      eyebrow: r.isDaily ? `Daily 82-0 · ${r.dailyDate}` : '82-0 projected record', headline: `${d.wins}-${d.losses}`, perfect: d.wins === 82,
+      lines: d.slots.map((x) => ({ k: x.slot, v: `${last(x.name)}  ${x.letter}` })), footer: 'Can you beat it?',
+    });
   } else if (r.gameType !== 'build-a-player') {
     const g = getMiniGame(r.gameType);
     const d = r.resultData as { summary?: string; perfect?: boolean };

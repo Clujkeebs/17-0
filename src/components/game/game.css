@@ -151,3 +151,15 @@
 }
 
 .tag-legend { display: inline-block; margin-left: 8px; padding: 0 6px; border-radius: 999px; background: var(--bone); color: var(--surface); font-size: .62rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; vertical-align: 1px; }
+
+/* 82-0 */
+.nba-era { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.nba-era-k { font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--bone-dim); }
+.nba-era-v { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em; transform: translateY(2px); transition: transform .2s; }
+.nba-era.in .nba-era-v { transform: none; color: var(--orange); }
+.nba-slots li { padding: 0; }
+.nba-slot { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; background: none; border: 0; border-radius: 12px; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.nba-slot:disabled { cursor: default; }
+.nba-slots li.sel .nba-slot { box-shadow: inset 0 0 0 2px var(--orange); }
+.nba-slot:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+.nba-oop { font-size: .72rem; font-weight: 700; color: var(--danger); white-space: nowrap; }
