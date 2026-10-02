@@ -1,7 +1,7 @@
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { slugify } from '@/lib/site';
-import { firstNamesCompatible, lastNameKey, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily, type EspnCandidate } from './espn-match';
+import { firstNamesCompatible, lastNameKey, positionGroupOf, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily, type EspnCandidate } from './espn-match';
 
 const MAX_RELEASES = 100;
 
@@ -32,7 +32,7 @@ export async function backfillEspnHeadshots(fetchImpl: typeof fetch = fetch) {
       for (const a of (body.athletes ?? []).flatMap((g) => g.items ?? [])) {
         const key = norm(a.fullName);
         const list = espnIndex.get(key) ?? [];
-        list.push({ id: a.id, teamId: t.id, family: positionFamily(a.position?.abbreviation), a });
+        list.push({ id: a.id, teamId: t.id, family: positionFamily(a.position?.abbreviation), group: positionGroupOf(a.position?.abbreviation), a });
         espnIndex.set(key, list); athletes++;
       }
       const hc = body.coach?.[0];

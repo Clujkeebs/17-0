@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { firstNamesCompatible, lastNameKey, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily } from '@/lib/server/espn-match';
+import { firstNamesCompatible, lastNameKey, positionGroupOf, pickEspnMatch, pickLeagueNamesake, pickSameTeamNamesake, positionFamily } from '@/lib/server/espn-match';
 
 const PHI = 26, CAR = 5;
 const wr = { id: '4241478', teamId: PHI, family: positionFamily('WR') };
@@ -59,5 +59,11 @@ describe('ESPN roster matching', () => {
     for (const [a, b] of [['Jalon', 'Johnny'], ['Tyreek', 'Tyler'], ['Mike', 'Matt'], ['Jo', 'Jalen']]) {
       expect(firstNamesCompatible(`${a} X`, `${b} X`)).toBe(false);
     }
+  });
+  it('tells same-family namesakes apart by exact position, even against a crossed ESPN id', () => {
+    const edge = { id: 'e', teamId: 18, family: positionFamily('DE'), group: positionGroupOf('DE') };
+    const tackle = { id: 't', teamId: 26, family: positionFamily('DT'), group: positionGroupOf('DT') };
+    expect(pickEspnMatch({ position: 'LEDG', espnId: 't' }, [edge, tackle])).toBe(edge);
+    expect(pickEspnMatch({ position: 'DT', espnId: 'e' }, [edge, tackle])).toBe(tackle);
   });
 });

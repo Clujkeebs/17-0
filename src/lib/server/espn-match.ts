@@ -20,7 +20,15 @@ export function positionFamily(raw?: string | null): Family | null {
   }
 }
 
-export interface EspnCandidate { id: string; teamId: number; family: Family | null }
+export interface EspnCandidate { id: string; teamId: number; family: Family | null; group?: string | null }
+
+/** Fine-grained group (EDGE vs DL, CB vs S) for telling same-family namesakes apart. */
+export function positionGroupOf(raw?: string | null): string | null {
+  if (!raw) return null;
+  const up = raw.toUpperCase();
+  if (ESPN_EXTRA[up]) return ESPN_EXTRA[up];
+  return positionGroup(up);
+}
 
 /**
  * Picks the ESPN athlete that is this player, among everyone ESPN lists under the same name.
@@ -30,6 +38,11 @@ export interface EspnCandidate { id: string; teamId: number; family: Family | nu
 export function pickEspnMatch<C extends EspnCandidate>(player: { position: string; espnId: string | null; teamId?: number | null }, candidates: C[]): C | null {
   const fam = positionFamily(player.position);
   const fits = candidates.filter((c) => c.family === null || fam === null || c.family === fam);
+  // Same family can still be two people (Byron Young the edge rusher and Byron Young the tackle): an exact
+  // position-group match settles it, and beats a stored ESPN id that an older, looser match may have crossed.
+  const group = positionGroupOf(player.position);
+  const exact = fits.filter((c) => c.group != null && c.group === group);
+  if (fits.length > 1 && exact.length === 1) return exact[0];
   const known = player.espnId ? fits.find((c) => c.id === player.espnId) : undefined;
   if (known) return known;
   if (fits.length === 1) return fits[0];
