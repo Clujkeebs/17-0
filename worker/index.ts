@@ -26,6 +26,7 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
     await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
     await refreshFantasy();
+    await import('@/lib/server/nba-sync').then((m) => m.syncNba({ from: m.latestSeason() - 1 })).catch((e) => console.warn('[nba] refresh failed', (e as Error).message));
     console.log('[sync] done', JSON.stringify(summary).slice(0, 600));
     // Fresh ratings: purge the web service's ISR pages so player pages update now, not in a day.
     const base = process.env.INTERNAL_WEB_URL ?? 'http://localhost:3000';
@@ -59,8 +60,8 @@ void (async () => {
   await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
   await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
   await refreshFantasy();
-  // Temporary (82-0 planning): log which NBA data sources answer from production. Remove once 82-0 data is wired.
-  await import('@/lib/server/nba-probe').then((m) => m.probeNbaSources()).catch(() => {});
+  // 82-0: backfill NBA seasons in the background (resumes where it stopped; the newest seasons always refresh).
+  void import('@/lib/server/nba-sync').then(async (m) => { await m.syncNba(); await m.nbaSpotCheck(); }).catch((e) => console.warn('[nba] sync failed', (e as Error).message));
   if (process.env.CALIBRATE === '1') {
     const { calibrate } = await import('@/lib/server/calibrate');
     for (const f of ['6', '12', '16'] as const) await calibrate(f).catch((e) => console.warn('[calibrate]', e.message));
