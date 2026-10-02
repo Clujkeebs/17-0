@@ -59,6 +59,8 @@ void (async () => {
   await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
   await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
   await refreshFantasy();
+  // Temporary (82-0 planning): log which NBA data sources answer from production. Remove once 82-0 data is wired.
+  await import('@/lib/server/nba-probe').then((m) => m.probeNbaSources()).catch(() => {});
   if (process.env.CALIBRATE === '1') {
     const { calibrate } = await import('@/lib/server/calibrate');
     for (const f of ['6', '12', '16'] as const) await calibrate(f).catch((e) => console.warn('[calibrate]', e.message));
