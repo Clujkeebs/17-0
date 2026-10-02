@@ -12,7 +12,7 @@ export const SLOT_LABELS: Record<string, string> = { QB: 'QB', RB: 'RB', WR: 'WR
 export const SLOT_WEIGHTS: Record<Slot, number> = { QB: 0.3, WR: 0.22, RB: 0.18, DEF: 0.13, HC: 0.09, TE: 0.08 };
 export const TEAMS_PER_GAME = 6;
 export const MAX_RESPINS = 2;
-export const WIN_FLOOR = 67.25;
+export const WIN_FLOOR = 68.8;
 export const WIN_SPAN = 26;
 
 /* ------------------------------------------------------------------ Roster formats */
@@ -46,7 +46,7 @@ export const FORMATS: Record<FormatKey, FormatDef> = {
   },
   // Bigger rosters average out weak spots, so their floors sit higher to keep a perfect draft near 12% 17-0.
   '12': {
-    name: '12-man roster', winFloor: 67.75, winSpan: WIN_SPAN,
+    name: '12-man roster', winFloor: 68.55, winSpan: WIN_SPAN,
     slots: [
       s('QB', 'QB', 'Quarterback', ['QB'], 0.2), s('RB', 'RB', 'Running back', ['RB'], 0.1),
       s('WR1', 'WR1', 'Wide receiver', ['WR'], 0.09), s('WR2', 'WR2', 'Wide receiver', ['WR'], 0.07),
@@ -57,7 +57,7 @@ export const FORMATS: Record<FormatKey, FormatDef> = {
     ],
   },
   '16': {
-    name: '16-man roster', winFloor: 68.1, winSpan: WIN_SPAN,
+    name: '16-man roster', winFloor: 68.8, winSpan: WIN_SPAN,
     slots: [
       s('QB', 'QB', 'Quarterback', ['QB'], 0.19), s('RB', 'RB', 'Running back', ['RB'], 0.08),
       s('WR1', 'WR1', 'Wide receiver', ['WR'], 0.07), s('WR2', 'WR2', 'Wide receiver', ['WR'], 0.06), s('WR3', 'WR3', 'Wide receiver', ['WR'], 0.04),

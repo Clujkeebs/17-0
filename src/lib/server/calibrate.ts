@@ -1,6 +1,6 @@
 import { db, schema } from '@/db';
 import { positionGroup } from '@/lib/game/attributes';
-import { FORMATS, gradePick, gradeRoster, slotAccepts, type FormatKey, type Pick } from '@/lib/game/seventeen';
+import { FORMATS, MAX_RESPINS, gradePick, gradeRoster, slotAccepts, type FormatKey, type Pick } from '@/lib/game/seventeen';
 import { createRng } from '@/lib/game/prng';
 import { eq } from 'drizzle-orm';
 
@@ -17,15 +17,25 @@ for (const t of teams) {
   byTeam.set(t, list);
 }
 const out: Record<string, { strength: number; p17: number }> = {};
-for (const mode of ['greedy', 'random']) {
+// greedy: best player on each team, no re-rolls (Hard mode). reroll: the same, but spends both re-rolls on any
+// team whose best available player grades under REROLL_BELOW, which is how people actually play Easy. random: no skill.
+const REROLL_BELOW = 88;
+for (const mode of ['greedy', 'reroll', 'random']) {
   const dist = new Array(18).fill(0); let st = 0;
   for (let g = 0; g < games; g++) {
-    const rng = createRng(`c${mode}${g}`); const board = rng.shuffle(teams).slice(0, fmt.slots.length);
+    const rng = createRng(`c${mode}${g}`); const order = rng.shuffle(teams);
+    const board = order.slice(0, fmt.slots.length); const reserves = order.slice(fmt.slots.length, fmt.slots.length + MAX_RESPINS);
     const picks: Pick[] = []; const open = new Set(fmt.slots.map((d) => d.key));
-    for (const t of board) {
+    const bestOn = (t: number) => {
       const opts = byTeam.get(t)!.flatMap((p) => [...open].filter((s) => slotAccepts(s, p.group, format)).map((s) => ({ ...p, slot: s })));
       let best: Pick | null = null, bv = -1;
-      if (mode === 'random') best = rng.pick(opts); else for (const o of opts) { const v = gradePick(o); if (v > bv) { bv = v; best = o; } }
+      for (const o of opts) { const v = gradePick(o); if (v > bv) { bv = v; best = o; } }
+      return { opts, best, bv };
+    };
+    for (let t of board) {
+      let r = bestOn(t);
+      while (mode === 'reroll' && r.bv < REROLL_BELOW && reserves.length) { t = reserves.shift()!; r = bestOn(t); }
+      const best = mode === 'random' ? rng.pick(r.opts) : r.best;
       if (best) { picks.push(best); open.delete(best.slot); }
     }
     if (picks.length < fmt.slots.length) continue;

@@ -100,7 +100,7 @@ const POSTS: BlogPost[] = [
     slug: 'the-math-behind-the-projected-record',
     title: 'The math behind the projected record',
     date: '2026-09-01',
-    excerpt: 'Team strength is a weighted average. Wins are strength minus 67.25, over 26, times 17, plus a seeded roll from minus 2 to plus 1. Here is what that implies.',
+    excerpt: 'Team strength is a weighted average. Wins are strength minus 68.8, over 26, times 17, plus a seeded roll from minus 2 to plus 1. Here is what that implies.',
     sections: [
       {
         h2: 'Step one: team strength',
@@ -112,8 +112,8 @@ const POSTS: BlogPost[] = [
       {
         h2: 'Step two: strength to wins',
         paragraphs: [
-          'Projected wins are round((strength minus 67.25) / 26 x 17 + jitter), clamped between 0 and 17. Losses are 17 minus wins. The jitter is a whole number from minus 2 to plus 1, drawn from a deterministic random number generator seeded by your session. The same session always produces the same roll, so you cannot refresh your way to a better record.',
-          'The 67.25 is a floor. A roster at 67.25 strength projects to zero wins before luck, which is harsh on purpose: a lineup of replacement-level players should look like a replacement-level team. Everything above 67.25 is spread across 26 points of strength and 17 games.',
+          'Projected wins are round((strength minus 68.8) / 26 x 17 + jitter), clamped between 0 and 17. Losses are 17 minus wins. The jitter is a whole number from minus 2 to plus 1, drawn from a deterministic random number generator seeded by your session. The same session always produces the same roll, so you cannot refresh your way to a better record.',
+          'The 68.8 is a floor. A roster at 68.8 strength projects to zero wins before luck, which is harsh on purpose: a lineup of replacement-level players should look like a replacement-level team. Everything above 68.8 is spread across 26 points of strength and 17 games.',
         ],
       },
       {

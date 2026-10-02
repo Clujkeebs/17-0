@@ -41,9 +41,9 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
   - Clear rate limits between runs: `redis-cli keys 'rate:*' | xargs -r redis-cli del`
 - Balance check: run `calibrate()` from `src/lib/server/calibrate.ts`.
   - Target: a perfect (greedy) draft goes 17-0 about 10–12% of the time; random drafts about 0%.
-  - The knobs are `WIN_FLOOR`/`WIN_SPAN` in `src/lib/game/seventeen.ts` (currently 67.25/26).
-  - 12 and 16 man rosters have their own weights and floors (12: 67.75, 16: 68.1), calibrated locally to about 11.6 percent. Re-check on live ratings with the worker's `CALIBRATE=1` boot, which now runs all three formats.
-  - Slot weights (2026-10, live; seed wrote v2 on 2026-10-02): QB 30, WR 22, RB 18, DEF 13, HC 9, TE 8. Win floor 67.25. Local calibration: greedy 12.2% 17-0, random 0%. After the web deploy, the seed writes them as `17-0/slot_weights` v2 unless an admin edited that key (then set them in `/admin/formulas`). Re-check calibration on live ratings by booting the worker once with `CALIBRATE=1`.
+  - The knobs are `WIN_FLOOR`/`WIN_SPAN` in `src/lib/game/seventeen.ts` (currently 68.8/26).
+  - 12 and 16 man rosters have their own weights and floors (12: 68.55, 16: 68.8). All three are calibrated (2026-10-02) so a player who drafts the best player and spends both re-rolls on weak teams goes 17-0 about 11 percent of the time; Hard (no re-rolls) is about 3 to 5 percent, random 0. Re-check on live ratings with the worker's `CALIBRATE=1` boot, which now runs all three formats.
+  - Slot weights (2026-10, live; seed wrote v2 on 2026-10-02): QB 30, WR 22, RB 18, DEF 13, HC 9, TE 8. Win floor 68.8 (raised from 67.25 because re-rolls were doubling perfect seasons). After the web deploy, the seed writes them as `17-0/slot_weights` v2 unless an admin edited that key (then set them in `/admin/formulas`). Re-check calibration on live ratings by booting the worker once with `CALIBRATE=1`.
 - Coach ratings are ranked onto 80–97 in `src/lib/server/coaches.ts`. They must never read as a liability.
   - Fixed and deployed: the web boot seed used to overwrite every coach's score with the raw 30s-70s value, so each web deploy dropped live coach ratings until the next worker boot or Monday recompute. The seed now leaves existing scores alone.
   - Still open: the seed also resets each coach's `teamId` to the seed file on every web boot, which could undo an ESPN head-coach change. Worth checking against the ESPN sync.
