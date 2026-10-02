@@ -69,5 +69,7 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
   - Deployed: the 17-0 slot grades and Build a Player trait tables are now three columns (team stacked under the pick, number under the letter grade), so neither scrolls sideways at 375px.
 - [x] Streaks and stats on the profile page: current and longest streak, games played, best 17-0 record, perfect seasons. The mixed-game "average score" and raw score columns are gone, and recent runs say Today or Casual.
 - [ ] Push reminders or the daily email for Today puzzles (the newsletter worker already exists).
+- [x] Share preview (2026-10-02): `public/og-default.png` still said "Gridiron Lab" on the old dark design. Regenerated in the current light design with the goalpost mark and playunbeaten.com (`npx tsx scripts/og-default.ts`), and the site description now mentions every game.
+- [ ] Email templates (`src/lib/server/email.ts`) still use the old dark palette. Restyle them when email is switched on.
 - [ ] Watch Railway logs for errors after each deploy.
 - Fixed 2026-10-02: an intermittent e2e failure on `/games/name-that-team` was a real contrast failure. Mini-game entry animations faded text in from transparent; axe caught them mid-fade. Entry animations now move without fading, and unused clues no longer use 60% opacity.
