@@ -1,6 +1,6 @@
 # Unbeaten: handoff and to-do list
 
-Live site: https://web-production-3f1b7.up.railway.app
+Live site: https://playunbeaten.com
 Repo: github.com/clujkeebs/17-0, branch `main`. The working branch `gridiron-lab-build` is kept equal to `main`.
 
 ## What it is
@@ -42,29 +42,28 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - Balance check: run `calibrate()` from `src/lib/server/calibrate.ts`.
   - Target: a perfect (greedy) draft goes 17-0 about 10–12% of the time; random drafts about 0%.
   - The knobs are `WIN_FLOOR`/`WIN_SPAN` in `src/lib/game/seventeen.ts` (currently 67.25/26).
-  - Slot weights (2026-10, on the branch, not deployed): QB 30, WR 22, RB 18, DEF 13, HC 9, TE 8. Win floor 67.25. Local calibration: greedy 12.2% 17-0, random 0%. After the web deploy, the seed writes them as `17-0/slot_weights` v2 unless an admin edited that key (then set them in `/admin/formulas`). Re-check calibration on live ratings by booting the worker once with `CALIBRATE=1`.
+  - Slot weights (2026-10, live; seed wrote v2 on 2026-10-02): QB 30, WR 22, RB 18, DEF 13, HC 9, TE 8. Win floor 67.25. Local calibration: greedy 12.2% 17-0, random 0%. After the web deploy, the seed writes them as `17-0/slot_weights` v2 unless an admin edited that key (then set them in `/admin/formulas`). Re-check calibration on live ratings by booting the worker once with `CALIBRATE=1`.
 - Coach ratings are ranked onto 80–97 in `src/lib/server/coaches.ts`. They must never read as a liability.
-  - Fixed on the branch: the web boot seed used to overwrite every coach's score with the raw 30s-70s value, so each web deploy dropped live coach ratings until the next worker boot or Monday recompute. The seed now leaves existing scores alone.
+  - Fixed and deployed: the web boot seed used to overwrite every coach's score with the raw 30s-70s value, so each web deploy dropped live coach ratings until the next worker boot or Monday recompute. The seed now leaves existing scores alone.
   - Still open: the seed also resets each coach's `teamId` to the seed file on every web boot, which could undo an ESPN head-coach change. Worth checking against the ESPN sync.
 
 ## To do
-- [ ] **Domain:** **playunbeaten.com was bought on 2026-10-02.** Remaining steps:
-  1. Add `playunbeaten.com` and `www.playunbeaten.com` as custom domains on the web service, port 8080 (Railway dashboard: web > Settings > Networking > Custom Domain). The Railway MCP and its agent cannot create custom domains.
-  2. Enter the CNAME and `_railway-verify` TXT records Railway shows at the registrar, then wait for the certificate (`domain-status`).
-  3. Only after the domain serves the site: set `SITE_URL` and `NEXTAUTH_URL` on web to `https://playunbeaten.com`, add the new redirect URI to the Google OAuth client, and redeploy web. Changing them before DNS works breaks sign-in.
-  4. Remove the two stray generated domains `web-production-519a6.up.railway.app` and `web-production-56dcd.up.railway.app` (created by mistake on 2026-10-02; `delete-domain` timed out). Keep `web-production-3f1b7`.
-- [ ] **AdSense** (code done on the branch, not deployed): `public/ads.txt` has the publisher line, the AdSense script loads with `ca-pub-3526440256333845` (`src/lib/ads.ts`), and ads are limited to one fixed 160x600 unit in a sticky right rail on result pages, only on screens 1100px and wider. No ads on phones, in games, or inline with content. Remaining:
+- [x] **Domain:** playunbeaten.com is live (bought 2026-10-02 at Porkbun, Railway custom domain verified, certificate valid). `SITE_URL` and `NEXTAUTH_URL` on web and `SITE_URL` on worker are `https://playunbeaten.com`. The `*.up.railway.app` service domains were removed, so the site is only on playunbeaten.com.
+- [ ] **www:** add in Porkbun: CNAME `www` -> `v1phzxbs.up.railway.app` and TXT `_railway-verify.www` -> the value shown in Railway (web > Networking). Then add a `www` -> apex redirect (a host-matched redirect in `next.config.ts`).
+- [ ] **Google sign-in:** add `https://playunbeaten.com/api/auth/callback/google` as an authorized redirect URI (and `https://playunbeaten.com` as a JavaScript origin) on the Google OAuth client, if `GOOGLE_CLIENT_ID` is set.
+- [ ] **Email is off:** `RESEND_API_KEY` is not set on web or worker, so no email is sent (verification, newsletter, alerts). Set up Resend on playunbeaten.com (SPF, DKIM, DMARC in Porkbun), then set `RESEND_API_KEY` and `EMAIL_FROM`.
+- [ ] **AdSense** (deployed): `public/ads.txt` has the publisher line, the AdSense script loads with `ca-pub-3526440256333845` (`src/lib/ads.ts`), and ads are limited to one fixed 160x600 unit in a sticky right rail on result pages, only on screens 1100px and wider. No ads on phones, in games, or inline with content. Remaining:
   1. Owner: in AdSense, turn **Auto ads off** for the site (Auto ads inject large anchor and full-screen ads everywhere), and create one **160x600 fixed-size display unit**.
   2. Set `NEXT_PUBLIC_ADSENSE_SIDE_SLOT` on web to that unit's numeric ID and redeploy web (it is a build arg). Until then the rail renders nothing.
   3. `ads.txt` must be reachable at `https://playunbeaten.com/ads.txt` once the domain is connected.
 - [ ] Contact emails (the owner creates them after buying the domain), then wire them into the contact and legal pages.
-- [ ] Confirm the live coach ratings after the worker deploy. They should be 80–97; check `/coaches`.
-  - Done locally, not deployed: `recomputeCoachImpact` now logs `[coaches] recomputed N: current head coaches MIN-MAX (n=32)`, and the worker logs recompute failures instead of swallowing them. Locally it reads 80-97 (n=32). After the worker deploys, read that line in the worker's Railway deploy logs to confirm the live range.
+- [x] Confirm the live coach ratings after the worker deploy. Confirmed 2026-10-02 from the worker log: 80-97 (n=32).
+  - Deployed: `recomputeCoachImpact` now logs `[coaches] recomputed N: current head coaches MIN-MAX (n=32)`, and the worker logs recompute failures instead of swallowing them. Locally it reads 80-97 (n=32). Read that line in the worker's Railway deploy logs to confirm the live range.
 - [ ] Missing headshots: about 28 players still show initials after the ESPN search fallback. Try another source or name matching.
 - [ ] Hard mode for Build a Player and a Hard leaderboard filter for 17-0.
 - [ ] More games: ideas include a guess-the-jersey-number streak, a draft-class quiz, a trade-machine "who won" game, and a weekly bracket.
-- [ ] Polish the mobile results page (check the slot grades table at 375px).
-  - Done locally, not deployed: the 17-0 slot grades and Build a Player trait tables are now three columns (team stacked under the pick, number under the letter grade), so neither scrolls sideways at 375px. Needs a web deploy.
+- [x] Polish the mobile results page (check the slot grades table at 375px).
+  - Deployed: the 17-0 slot grades and Build a Player trait tables are now three columns (team stacked under the pick, number under the letter grade), so neither scrolls sideways at 375px.
 - [ ] Streaks and stats on the profile page (daily streak, best 17-0 record, games played).
 - [ ] Push reminders or the daily email for Today puzzles (the newsletter worker already exists).
 - [ ] Watch Railway logs for errors after each deploy.

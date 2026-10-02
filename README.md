@@ -2,7 +2,7 @@
 
 **Six picks. Seventeen games. One perfect season.**
 
-Live: https://web-production-3f1b7.up.railway.app
+Live: https://playunbeaten.com
 
 Unbeaten is an NFL ratings game site built on EA Sports Madden NFL ratings:
 
@@ -146,7 +146,7 @@ To make yourself an admin, add your email to `ADMIN_EMAILS`, register, and open 
 | `DATABASE_URL` | web, worker, backup | `${{Postgres.DATABASE_URL}}` |
 | `REDIS_URL` | web, worker | `${{Redis.REDIS_URL}}` |
 | `AUTH_SECRET` (or `NEXTAUTH_SECRET`) | web | `openssl rand -base64 32` |
-| `NEXTAUTH_URL`, `SITE_URL` | web | Public origin, for example `https://unbeaten.com` |
+| `NEXTAUTH_URL`, `SITE_URL` | web | Public origin: `https://playunbeaten.com` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | web | The Google button is hidden when these are unset |
 | `RESEND_API_KEY`, `EMAIL_FROM` | web, worker | Email is logged to stdout when unset |
 | `MAILING_ADDRESS` | web, worker | Physical address in every email (CAN-SPAM) |
