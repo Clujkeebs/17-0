@@ -59,6 +59,7 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - [ ] Contact emails (the owner creates them after buying the domain), then wire them into the contact and legal pages.
 - [x] Confirm the live coach ratings after the worker deploy. Confirmed 2026-10-02 from the worker log: 80-97 (n=32).
   - Deployed: `recomputeCoachImpact` now logs `[coaches] recomputed N: current head coaches MIN-MAX (n=32)`, and the worker logs recompute failures instead of swallowing them. Locally it reads 80-97 (n=32). Read that line in the worker's Railway deploy logs to confirm the live range.
+- [x] ESPN namesakes (2026-10-02): roster matching keyed on name alone, so the Panthers' rookie DB DeVonta Smith moved the Eagles WR DeVonta Smith to CAR (and gave him the wrong photo). Matching now also requires the same position family (`src/lib/server/espn-match.ts`), prefers a known ESPN id, and skips true ties; the worker log reports `skipped N name clashes`. The headshot search fallback still matches by name only.
 - [ ] Missing headshots: about 28 players still show initials after the ESPN search fallback. Try another source or name matching.
 - [ ] Hard mode for Build a Player and a Hard leaderboard filter for 17-0.
 - [ ] More games: ideas include a guess-the-jersey-number streak, a draft-class quiz, a trade-machine "who won" game, and a weekly bracket.
