@@ -272,13 +272,13 @@ function HardTraitSearch({ team, openTraits, query, setQuery, busy, onPlace }: {
 }) {
   const norm = (x: string) => x.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, '');
   const q = norm(query).trim();
-  const hits = q.length >= 2 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 5) : [];
+  const hits = q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 5) : [];
   const miss = q.length >= 3 && hits.length === 0;
   return (
     <div className="g-roster in g-hardsearch">
       <label htmlFor="hard-q" className="g-group-h" style={{ display: 'block' }}>Name a {team.name} player</label>
       <input id="hard-q" type="search" autoComplete="off" autoFocus placeholder={`Type a ${team.name} player's name`} value={query} onChange={(e) => setQuery(e.target.value)} />
-      <p className="hint" aria-live="polite">{miss ? `No eligible ${team.name} player by that name.` : q.length < 2 ? 'Two letters to start. Ratings stay hidden until your player is built.' : `${hits.length} match${hits.length === 1 ? '' : 'es'}`}</p>
+      <p className="hint" aria-live="polite">{miss ? `No eligible ${team.name} player by that name.` : q.length < 1 ? 'Type a letter to start. Ratings stay hidden until your player is built.' : `${hits.length} match${hits.length === 1 ? '' : 'es'}`}</p>
       <ul className="b-rows" style={{ marginTop: 8 }}>
         {hits.map((p) => (
           <li key={p.id} className="b-row">

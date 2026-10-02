@@ -1,5 +1,6 @@
 import { clamp, createRng } from './prng';
 import { letterGrade } from './formulas';
+import { lastName } from '@/lib/names';
 
 /**
  * 82-0 (NBA). Each round spins an era, then a franchise; you take one player from that franchise in that era
@@ -89,7 +90,7 @@ export function gradeNbaRoster(seed: string, picks: NbaPick[], winFloor = NBA_WI
   return { slots, teamStrength, wins, losses, narrative: nbaNarrative(seed, slots, wins), score: wins * 1000 + Math.min(999, Math.round(teamStrength * 10)) };
 }
 
-const last = (n: string) => n.split(' ').slice(-1)[0];
+const last = lastName;
 function nbaNarrative(seed: string, slots: NbaSlotResult[], wins: number): string[] {
   const rng = createRng(`nbastory:${seed}`);
   const sorted = [...slots].sort((a, b) => b.grade - a.grade);

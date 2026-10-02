@@ -338,7 +338,7 @@ function HardSearch({ team, openSlots, query, setQuery, busy, onPick }: {
   const openKeys = openSlots.map((s) => s.key);
   const label = (key: string) => openSlots.find((s) => s.key === key)?.label ?? key;
   const eligible = team.players.filter((p) => p.slots?.some((s) => openKeys.includes(s)));
-  const hits = q.length >= 2 ? eligible.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 6) : [];
+  const hits = q.length >= 1 ? eligible.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 6) : [];
   const miss = q.length >= 3 && hits.length === 0;
   const openLabels = [...new Set(openSlots.map((s) => s.label.replace(/\d+$/, '')))].join(', ');
   return (
@@ -346,7 +346,7 @@ function HardSearch({ team, openSlots, query, setQuery, busy, onPick }: {
       <label htmlFor="hard-q" className="g-group-h" style={{ display: 'block' }}>Name a {team.name} player for an open slot ({openLabels})</label>
       <input id="hard-q" type="search" autoComplete="off" autoFocus placeholder={`Type a ${team.name} player's name`} value={query} onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && hits.length === 1) onPick(hits[0]); }} />
-      <p className="hint" aria-live="polite">{miss ? `No ${team.name} player by that name fits an open slot.` : q.length < 2 ? 'Two letters to start. Overalls stay hidden until the season is played.' : `${hits.length} match${hits.length === 1 ? '' : 'es'}`}</p>
+      <p className="hint" aria-live="polite">{miss ? `No ${team.name} player by that name fits an open slot.` : q.length < 1 ? 'Type a letter to start. Overalls stay hidden until the season is played.' : `${hits.length} match${hits.length === 1 ? '' : 'es'}`}</p>
       <ul className="g-list" style={{ marginTop: 8 }}>
         {hits.map((p) => (
           <li key={p.id}>

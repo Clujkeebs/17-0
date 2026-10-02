@@ -1,10 +1,11 @@
 import { createRng } from './prng';
+import { lastName } from '@/lib/names';
 
 interface SlotLike { slot: string; name: string; grade: number }
 
 const OPPONENTS = ['a top-five passing attack', 'a division rival', 'the defending champs', 'a blitz-heavy front', 'a run-first bully', 'a team on a six-game win streak', 'a rookie quarterback with nothing to lose', 'the league\'s best pass rush'];
 
-const lastName = (n: string) => n.split(' ').slice(-1)[0];
+
 
 export function buildNarrative(seed: string, slots: SlotLike[], wins: number, losses: number, diff: number): string[] {
   const rng = createRng(`story:${seed}`);

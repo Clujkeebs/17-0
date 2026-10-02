@@ -101,3 +101,10 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - Win line: re-fit after each sync (`tuneNbaFloor`, Redis `nba:win-floor`) so a drafter who uses both re-spins well goes 82-0 about 6 percent of the time. Logged as `[nba] win floor`.
 - NBA mini games (`src/lib/minigames/nba/`, sport 'nba', data from `loadNbaGameData`: rotation players with 40+ games and 15+ minutes): Higher or Lower: Hoops, Blind Résumé: Hoops, Who Led?, Whose Team?. They reuse the football HigherLower and PickRounds screens and the same /api/mini route (`dataFor(game)` picks the data set). They are on the Basketball tab and the leaderboard. Football games built on Madden attributes (speed, OVR, archetype) have no NBA equivalent in box-score data, so they were not copied.
 - Not built: the 2K "Standard" edition. No reachable source for NBA 2K ratings (2kratings.com sits behind a Cloudflare challenge; nba.com stats time out from Railway). Needs an owner decision. NBA versions of the football mini games are next.
+
+## Feedback log
+- 2026-10-02 19:05-19:11 UTC, five responses (ratings 3-5).
+  - Fixed: "the game crashed" (x2) and "fix build a player" were 429s. Every request came from one school IP, which spent the old 30-spins-per-hour-per-IP limit in minutes. Per-IP limits for spin and grade are now 1500/hour, register and feedback 120/hour (`src/lib/server/rate-limit.ts`), and the message says it is the network's limit.
+  - Fixed: names with suffixes showed as "II" in the season story and share card ("Patrick Surtain II"). Shared `lastName()` in `src/lib/names.ts` skips Jr/Sr/II/III/IV/V.
+  - Fixed: Hard mode name search now suggests after one letter (17-0, Build a Player, 82-0).
+  - To do: more legends on All-time boards (22 now; needs a sourced list of legend ratings, no invented numbers); All-time "make it harder" (check All-time calibration separately, legends raise the ceiling); "the players section sucks" (no specifics; look at /players search and browse on a phone).

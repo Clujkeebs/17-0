@@ -5,10 +5,11 @@ import { renderCard } from '@/lib/server/og/card';
 import { SLOT_LABELS, type SlotResult } from '@/lib/game/seventeen';
 import { ATTRIBUTE_LABELS, type AttributeKey } from '@/lib/game/attributes';
 import type { StatLine } from '@/lib/game/build';
+import { lastName } from '@/lib/names';
 
 export const runtime = 'nodejs';
 
-const last = (n: string) => n.split(' ').slice(-1)[0];
+const last = lastName;
 
 export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get('id') ?? '';

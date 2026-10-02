@@ -145,7 +145,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchise
   const target: ReelTeam | null = team ? { id: team.id, abbreviation: team.abbreviation, city: team.location, name: team.name, color: team.color, logoUrl: team.logoUrl } : null;
   const norm = (x: string) => x.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '');
   const q = norm(query).trim();
-  const list = team ? (game.hard ? (q.length >= 2 ? team.players.filter((p) => norm(p.name).includes(q)).slice(0, 6) : []) : showAll ? team.players : team.players.slice(0, 8)) : [];
+  const list = team ? (game.hard ? (q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 6) : []) : showAll ? team.players : team.players.slice(0, 8)) : [];
 
   return (
     <div className="g-wrap g-board">
@@ -184,7 +184,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchise
                   <>
                     <label htmlFor="nba-q" className="g-group-h" style={{ display: 'block' }}>Name a {team.eraLabel} {team.name} player</label>
                     <input id="nba-q" type="search" autoComplete="off" autoFocus placeholder={`Type a ${team.name} player's name`} value={query} onChange={(e) => setQuery(e.target.value)} />
-                    <p className="hint" aria-live="polite">{q.length < 2 ? 'Two letters to start. Stats stay hidden until the season is played.' : list.length ? `${list.length} match${list.length === 1 ? '' : 'es'}` : `No ${team.name} player by that name in this era.`}</p>
+                    <p className="hint" aria-live="polite">{q.length < 1 ? 'Type a letter to start. Stats stay hidden until the season is played.' : list.length ? `${list.length} match${list.length === 1 ? '' : 'es'}` : `No ${team.name} player by that name in this era.`}</p>
                   </>
                 )}
                 <ul className="g-list">
