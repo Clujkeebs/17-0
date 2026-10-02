@@ -9,6 +9,7 @@ export const LIMITS = {
   delete: { max: 1, windowSec: 86400 },
   register: { max: 10, windowSec: 3600 },
   contact: { max: 5, windowSec: 3600 },
+  feedback: { max: 5, windowSec: 3600 },
 } as const;
 export type LimitScope = keyof typeof LIMITS;
 

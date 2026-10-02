@@ -71,6 +71,7 @@ export default function PrivacyPage() {
         <li>To send email you asked for: sign-in links, account notices, and the daily newsletter if you opted in and confirmed.</li>
         <li>To keep the Service fair and secure: detect automated score submission, enforce rate limits, and investigate abuse.</li>
         <li>To fix bugs, using error reports scrubbed of personal data.</li>
+        <li>To improve the Service: read the optional feedback form at the bottom of each page (a rating, your note, the page you were on, and your account if you were signed in).</li>
         <li>To comply with the law and enforce our <Link href="/legal/terms">Terms</Link>.</li>
       </ul>
       <p>
@@ -82,6 +83,7 @@ export default function PrivacyPage() {
       <ul>
         <li><strong>Accounts:</strong> kept until you delete them.</li>
         <li><strong>Account deletion:</strong> when you delete your account, your game results are anonymized immediately (unlinked from you and your username removed). Remaining account data is permanently deleted within 30 days.</li>
+        <li><strong>Feedback:</strong> kept until it has been read and acted on. Deleting your account unlinks it from you.</li>
         <li><strong>Newsletter:</strong> when you unsubscribe, we stop sending immediately and keep a suppression record for 90 days so we do not email you by mistake, then hard delete it.</li>
         <li><strong>Sync snapshots</strong> (copies of public ratings pages used to update player data, containing no user data): 30 days.</li>
         <li><strong>Server logs:</strong> scrubbed of personal data. Rate-limit counters expire in minutes to hours.</li>

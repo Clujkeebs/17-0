@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 const LINKS = [
   ['/admin', 'Sync'], ['/admin/formulas', 'Formulas'], ['/admin/subscribers', 'Subscribers'],
-  ['/admin/rate-limits', 'Rate limits'], ['/admin/results', 'Flagged results'], ['/admin/messages', 'Messages'], ['/admin/audit', 'Audit log'],
+  ['/admin/rate-limits', 'Rate limits'], ['/admin/results', 'Flagged results'], ['/admin/messages', 'Messages'], ['/admin/feedback', 'Feedback'], ['/admin/audit', 'Audit log'],
 ] as const;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

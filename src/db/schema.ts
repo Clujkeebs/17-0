@@ -220,6 +220,17 @@ export const contactMessages = pgTable('contact_messages', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('contact_messages_created_idx').on(t.createdAt)]);
 
+/** Footer questionnaire: a 1-5 rating and an optional note. Anonymous unless the sender is signed in. */
+export const feedback = pgTable('feedback', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  rating: integer('rating').notNull(),
+  message: text('message').notNull().default(''),
+  page: text('page'),
+  userId: uuid('user_id'),
+  ipHash: text('ip_hash'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('feedback_created_idx').on(t.createdAt)]);
+
 export type Player = typeof players.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Coach = typeof coaches.$inferSelect;

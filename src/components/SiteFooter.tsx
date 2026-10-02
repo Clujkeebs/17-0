@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NewsletterForm } from './NewsletterForm';
+import { FeedbackForm } from './FeedbackForm';
 import { LogoMark } from './Icons';
 import { SITE } from '@/lib/site';
 
@@ -39,6 +40,10 @@ export function SiteFooter() {
             </ul>
           </div>
         </div>
+        <hr className="divider" />
+        <section className="footer-feedback" aria-label="Feedback">
+          <FeedbackForm />
+        </section>
         <hr className="divider" />
         <div className="footer-brand">
           <span className="brand" style={{ gap: 8 }}><LogoMark size={20} /><span className="wordmark" style={{ fontSize: '1.05rem' }}>Unbeaten</span></span>

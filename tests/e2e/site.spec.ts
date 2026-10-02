@@ -38,3 +38,16 @@ test('health endpoint', async ({ request }) => {
   expect(r.status()).toBe(200);
   expect((await r.json()).db).toBeTruthy();
 });
+
+test('footer questionnaire sends a rating and a note', async ({ page, request }, info) => {
+  test.skip(info.project.name !== 'desktop', 'one run is enough');
+  await page.goto('/blog');
+  const form = page.locator('.footer-feedback');
+  await form.getByRole('button', { name: 'Send feedback' }).click();
+  await expect(form.getByRole('alert')).toHaveText('Pick a rating first.');
+  await form.locator('label', { hasText: 'Good' }).click();
+  await form.getByLabel(/What would you change/).fill('e2e: more games please');
+  await form.getByRole('button', { name: 'Send feedback' }).click();
+  await expect(form.getByRole('status')).toContainText('Thanks');
+  expect((await request.post('/api/feedback', { data: { rating: 9 } })).status()).toBe(400);
+});

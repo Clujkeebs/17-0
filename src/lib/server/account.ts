@@ -154,6 +154,7 @@ export async function deleteAccount(userId: string): Promise<boolean> {
   await db.transaction(async (tx) => {
     await tx.update(schema.gameResults).set({ userId: null, username: label }).where(eq(schema.gameResults.userId, userId));
     await tx.update(schema.gameSessions).set({ userId: null }).where(eq(schema.gameSessions.userId, userId));
+    await tx.update(schema.feedback).set({ userId: null }).where(eq(schema.feedback.userId, userId));
     await tx.delete(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.email, email));
     await tx.delete(schema.accounts).where(eq(schema.accounts.userId, userId));
     await tx.delete(schema.sessions).where(eq(schema.sessions.userId, userId));

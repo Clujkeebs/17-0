@@ -149,6 +149,19 @@ td.num, th.num { text-align: right; }
 .footer-links a:hover { color: var(--orange); }
 .footer-base { display: grid; gap: 8px; }
 .fine { font-size: .8rem; color: var(--bone-dim); line-height: 1.6; margin: 0; max-width: 110ch; }
+.footer-feedback { max-width: 560px; padding: 8px 0 24px; }
+.fb-rate { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
+.fb-rate legend { font-size: 1.25rem; font-weight: 700; color: var(--bone); letter-spacing: -0.02em; margin-bottom: 12px; padding: 0; }
+.fb-scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.fb-scale label { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 0; padding: 10px 4px; border: 1px solid var(--steel); border-radius: 12px; background: #fff; color: var(--bone); cursor: pointer; transition: border-color .15s, transform .15s; }
+.fb-scale label:hover { border-color: var(--bone); }
+.fb-scale label.on { border-color: var(--bone); background: var(--bone); color: #fff; }
+.fb-scale label:has(input:focus-visible) { box-shadow: 0 0 0 3px rgba(200,16,46,.28); }
+.fb-scale input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.fb-scale .num { font-size: 1.15rem; font-weight: 700; line-height: 1.1; }
+.fb-scale small { font-size: .72rem; font-weight: 500; }
+.fb-form textarea { width: 100%; resize: vertical; }
+.fb-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .footer-brand { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
 
 .banner { padding: 10px var(--gutter); font-size: .88rem; text-align: center; border-bottom: 1px solid var(--steel); }
