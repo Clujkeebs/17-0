@@ -65,6 +65,6 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - [ ] More games: ideas include a guess-the-jersey-number streak, a draft-class quiz, a trade-machine "who won" game, and a weekly bracket.
 - [x] Polish the mobile results page (check the slot grades table at 375px).
   - Deployed: the 17-0 slot grades and Build a Player trait tables are now three columns (team stacked under the pick, number under the letter grade), so neither scrolls sideways at 375px.
-- [ ] Streaks and stats on the profile page (daily streak, best 17-0 record, games played).
+- [x] Streaks and stats on the profile page: current and longest streak, games played, best 17-0 record, perfect seasons. The mixed-game "average score" and raw score columns are gone, and recent runs say Today or Casual.
 - [ ] Push reminders or the daily email for Today puzzles (the newsletter worker already exists).
 - [ ] Watch Railway logs for errors after each deploy.

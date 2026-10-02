@@ -3,7 +3,7 @@ import { createRng, hashSeed, clamp } from '@/lib/game/prng';
 import { applyWeights, coachImpact, DEFAULT_FORMULAS, formulaFor, letterGrade, ratePlayer } from '@/lib/game/formulas';
 import { gradeRoster, slotAccepts, spinTeams, SLOTS, SLOT_WEIGHTS, WIN_FLOOR, WIN_SPAN, type Pick } from '@/lib/game/seventeen';
 import { assemble, buildRating, simulateSeason, BUILD_CATEGORIES, BUILD_POSITIONS, type BuildSource } from '@/lib/game/build';
-import { computeStreak, dailyDateET, dailySeed } from '@/lib/game/daily';
+import { computeStreak, dailyDateET, dailySeed, longestStreak } from '@/lib/game/daily';
 import { buildNarrative } from '@/lib/game/narrative';
 import { positionGroup, ATTRIBUTE_KEYS, type Attributes } from '@/lib/game/attributes';
 
@@ -163,6 +163,10 @@ describe('daily + streaks', () => {
     expect(computeStreak(['2026-09-27', '2026-09-28'], '2026-09-29')).toBe(2);
     expect(computeStreak(['2026-09-25', '2026-09-27'], '2026-09-29')).toBe(0);
     expect(computeStreak([], '2026-09-29')).toBe(0);
+    expect(longestStreak(['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-10', '2026-09-11'])).toBe(3);
+    expect(longestStreak(['2026-09-30', '2026-10-01', '2026-10-01'])).toBe(2);
+    expect(longestStreak(['2026-03-07', '2026-03-08', '2026-03-09'])).toBe(3); // across the DST change
+    expect(longestStreak([])).toBe(0);
   });
 });
 

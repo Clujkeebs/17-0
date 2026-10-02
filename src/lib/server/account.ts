@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { and, desc, eq, ne, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
-import { computeStreak, dailyDateET } from '@/lib/game/daily';
+import { computeStreak, dailyDateET, longestStreak } from '@/lib/game/daily';
 import { audit } from './audit';
 import { accountDeleted, sendEmail } from './email';
 import { scoreSummary } from './result-summary';
@@ -57,18 +57,21 @@ export async function getPlayDates(userId: string): Promise<string[]> {
 export async function getStreak(userId: string) {
   const dates = await getPlayDates(userId);
   const today = dailyDateET();
-  return { streak: computeStreak(dates, today), playedToday: dates.includes(today), today };
+  return { streak: computeStreak(dates, today), longest: longestStreak(dates), playedToday: dates.includes(today), today };
 }
 
 export async function getUserStats(userId: string) {
   const [totals, byTypeRows, recentRows, bestRows, streak] = await Promise.all([
-    db.select({ n: dsql<number>`count(*)::int`, avg: dsql<number | null>`avg(${schema.gameResults.score})::float` })
-      .from(schema.gameResults).where(eq(schema.gameResults.userId, userId)),
+    // 17-0 results store wins in result_data; perfect seasons and the best record come from there.
+    db.select({
+      n: dsql<number>`count(*)::int`,
+      perfect: dsql<number>`count(*) filter (where ${schema.gameResults.gameType} = '17-0' and (${schema.gameResults.resultData}->>'wins')::int = 17)::int`,
+      bestWins: dsql<number | null>`max((${schema.gameResults.resultData}->>'wins')::int) filter (where ${schema.gameResults.gameType} = '17-0')`,
+    }).from(schema.gameResults).where(eq(schema.gameResults.userId, userId)),
     db.select({
       gameType: schema.gameResults.gameType,
       n: dsql<number>`count(*)::int`,
       best: dsql<number>`max(${schema.gameResults.score})::int`,
-      avg: dsql<number>`avg(${schema.gameResults.score})::float`,
     }).from(schema.gameResults).where(eq(schema.gameResults.userId, userId)).groupBy(schema.gameResults.gameType),
     db.select({
       id: schema.gameResults.id, gameType: schema.gameResults.gameType, score: schema.gameResults.score,
@@ -94,7 +97,12 @@ export async function getUserStats(userId: string) {
     gameName: await gameName(r.gameType),
     summary: scoreSummary(r.gameType, r.resultData),
   })));
-  return { played: totals[0]?.n ?? 0, average: totals[0]?.avg ?? null, byType, recent, ...streak };
+  const bestWins = totals[0]?.bestWins ?? null;
+  return {
+    played: totals[0]?.n ?? 0, perfectSeasons: totals[0]?.perfect ?? 0,
+    bestRecord: bestWins == null ? null : `${bestWins}-${17 - bestWins}`,
+    byType, recent, ...streak,
+  };
 }
 
 export async function exportAccount(userId: string) {

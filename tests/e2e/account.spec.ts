@@ -38,6 +38,8 @@ test('account lifecycle', async ({ page, request }, info) => {
   await page.goto('/profile');
   await expect(page.getByText(/🔥/)).toBeVisible();
   await expect(page.locator('body')).toContainText('1');
+  await expect(page.locator('.stat', { hasText: 'Best 17-0 record' })).toContainText(/\d+-\d+/);
+  await expect(page.locator('.grade-sub', { hasText: /^Today$/ }).first()).toBeVisible();
 
   await page.goto('/leaderboard?tab=daily&game=17-0');
   await expect(page.getByRole('cell', { name: u })).toBeVisible();

@@ -20,3 +20,11 @@ export function computeStreak(dates: string[], today: string = dailyDateET()): n
   while (set.has(cursor)) { streak++; cursor = prev(cursor); }
   return streak;
 }
+
+/** Longest run of consecutive days in the history, current or not. */
+export function longestStreak(dates: string[]): number {
+  const days = [...new Set(dates)].map((d) => Date.parse(`${d}T12:00:00Z`) / 86_400_000).sort((a, b) => a - b);
+  let best = 0, run = 0;
+  for (let i = 0; i < days.length; i++) { run = i > 0 && Math.round(days[i] - days[i - 1]) === 1 ? run + 1 : 1; best = Math.max(best, run); }
+  return best;
+}
