@@ -4,7 +4,9 @@ import { getFormulas, getSlotWeights } from './config';
 import { invalidatePrefix } from './redis';
 import { loadSession, type SpinPayload } from './games';
 import { positionGroup, type Attributes } from '@/lib/game/attributes';
-import { FORMATS, gradeRoster, slotAccepts, type Pick } from '@/lib/game/seventeen';
+import { FORMATS, gradeRoster, isFantasy, slotAccepts, type Pick } from '@/lib/game/seventeen';
+import { fantasyValue } from '@/lib/game/fantasy';
+import { getFantasyFloor } from './calibrate';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { BUILD_ELIGIBLE, TRAITS, bestPossible, gradeTraitBuild, traitValue } from '@/lib/game/build';
 
@@ -84,7 +86,8 @@ export async function gradeSeventeen(ctx: Ctx) {
       teamId = p.teamId;
     }
     if (teamId === null) throw new GradeError('Unknown player.');
-    return { slot: p.slot, teamId, name: pl.fullName, group: positionGroup(pl.position), attributes: pl.attributes as Attributes, overall: pl.overallRating };
+    return { slot: p.slot, teamId, name: pl.fullName, group: positionGroup(pl.position), attributes: pl.attributes as Attributes, overall: pl.overallRating,
+      ...(isFantasy(format) ? { fantasy: fantasyValue(pl.fantasyPpg, pl.fantasyGames, pl.fantasyProjPpg) } : {}) };
   });
   for (const p of full) {
     if (!payload.teams.includes(p.teamId)) throw new GradeError(`${p.name} is not on one of your spun teams.`);
@@ -95,8 +98,8 @@ export async function gradeSeventeen(ctx: Ctx) {
   // Daily results must be identical for identical rosters, so seed from the date plus the roster.
   const seed = s.isDaily ? `${s.seed}:${[...playerIds, ...coachIds].sort().join(',')}` : s.id;
   const opponents = teamRows.filter((t) => !usedTeams.has(t.id)).map((t) => t.abbr);
-  const result = gradeRoster(seed, full, formulas, weights, opponents, format);
-  const resultData = { ...result, hard: !!payload.hard, format, pool, picks: full.map(({ slot, name, teamId, group, overall }) => ({ slot, name, teamId, group, overall })) };
+  const result = gradeRoster(seed, full, formulas, weights, opponents, format, isFantasy(format) ? await getFantasyFloor() : undefined);
+  const resultData = { ...result, hard: !!payload.hard, format, pool, picks: full.map(({ slot, name, teamId, group, overall, fantasy }) => ({ slot, name, teamId, group, overall, ...(fantasy !== undefined ? { fantasy } : {}) })) };
   const id = await saveResult(s, ctx, '17-0', resultData, result.score, result.wins === 17);
   return { id, result: resultData, daily: s.isDaily };
 }

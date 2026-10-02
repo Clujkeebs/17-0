@@ -1,17 +1,19 @@
 import { expect, test } from '@playwright/test';
+import postgres from 'postgres';
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('gl-17-0-rules', '1'); localStorage.setItem('gl-cookie-ack', '1'); });
   await page.emulateMedia({ reducedMotion: 'reduce' });
 });
 
-type Setup = { mode?: 'Today' | 'Casual'; roster?: '6' | '12' | '16'; players?: 'Current' | 'All-time'; difficulty?: 'Easy' | 'Hard' };
+type Setup = { mode?: 'Today' | 'Casual'; scoring?: 'Ratings' | 'Fantasy'; roster?: '6' | '12' | '16'; players?: 'Current' | 'All-time'; difficulty?: 'Easy' | 'Hard' };
 /** Fill in the 17-0 setup sheet and press Start. */
 async function setup(page: import('@playwright/test').Page, s: Setup = {}) {
   const sheet = page.getByRole('dialog', { name: 'Game setup' });
   await expect(sheet).toBeVisible();
   const pick = async (legend: string, label: string) => sheet.getByRole('group', { name: legend }).locator('label', { hasText: new RegExp(`^${label}`) }).click();
   await pick('Mode', s.mode ?? 'Casual');
+  if (s.scoring) await pick('Scoring', s.scoring);
   if (s.roster) await pick('Roster', s.roster);
   if (s.players) await pick('Players', s.players);
   await pick('Difficulty', s.difficulty ?? 'Easy');
@@ -174,3 +176,23 @@ for (const [slug, rounds] of [['speed-trap', 8], ['odd-one-out', 6], ['numbers-g
     await expect(page.locator('.m-score')).toContainText(`/${rounds}`);
   });
 }
+
+test('17-0 Fantasy: seven-man lineup scored on points per game', async ({ page }) => {
+  // Test databases have no Sleeper data; give skill players a stand-in projection so the edition opens.
+  const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
+  await sql`update players set fantasy_proj_ppg = round((overall_rating / 5.0)::numeric, 1), fantasy_games = 0
+    where fantasy_proj_ppg is null and fantasy_ppg is null and is_active and position in ('QB','HB','FB','WR','TE')`;
+  await sql.end();
+  await page.goto('/games/17-0');
+  await setup(page, { mode: 'Casual', scoring: 'Fantasy', difficulty: 'Easy' });
+  await expect(page.locator('.g-slots li')).toHaveCount(7);
+  await expect(page.locator('.g-slots')).toContainText('FLEX');
+  await expect(page.locator('.g-fpts').first()).toHaveText(/^\d+\.\d$/, { timeout: 20_000 });
+  await draftAll(page, 7);
+  await page.getByRole('button', { name: 'Simulate the season' }).first().click();
+  await page.waitForURL(/\/results\//);
+  await expect(page.locator('.eyebrow').first()).toContainText('Fantasy');
+  await expect(page.getByText('Points per week')).toBeVisible();
+  await expect(page.locator('.grade-table tbody tr')).toHaveCount(7);
+  await expect(page.locator('.grade-table .grade-sub').first()).toContainText('pts/g');
+});

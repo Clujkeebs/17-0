@@ -58,7 +58,7 @@ export default async function ResultPage({ params }: Props) {
     <div className="container section">
       <div className="with-side-ad">
         <div>
-          <span className="eyebrow">{is17 ? '17-0' : 'Build a Player'}{is17 && d.format && d.format !== '6' ? ` · ${String(d.format)}-man roster` : ''}{is17 && d.pool === 'all-time' ? ' · All-time' : ''}{d.hard ? ' · Hard mode' : ''}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
+          <span className="eyebrow">{is17 ? '17-0' : 'Build a Player'}{is17 && d.format === 'fantasy' ? ' · Fantasy' : is17 && d.format && d.format !== '6' ? ` · ${String(d.format)}-man roster` : ''}{is17 && d.pool === 'all-time' ? ' · All-time' : ''}{d.hard ? ' · Hard mode' : ''}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
           <Celebration tier={is17 ? seasonTier(Number(d.wins)) : buildTier(Number(d.rating))} />
           {/* Share card preview */}
           <figure style={{ margin: '0 0 24px' }}>
@@ -69,7 +69,7 @@ export default async function ResultPage({ params }: Props) {
             <div className="stack" style={{ paddingBottom: 8 }}>
               {is17 ? (
                 <>
-                  <span className="stat"><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">Team strength</span></span>
+                  <span className="stat"><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">{d.format === 'fantasy' ? 'Points per week' : 'Team strength'}</span></span>
                   <span className="muted num">Point diff {Number(d.pointDiff) >= 0 ? '+' : ''}{String(d.pointDiff)}</span>
                 </>
               ) : (
@@ -117,7 +117,7 @@ export default async function ResultPage({ params }: Props) {
                       <tr key={s.slot}>
                         <td className="mono">{SLOT_LABELS[s.slot] ?? s.slot}</td>
                         <td><span className="pick">{s.name}</span><span className="pick-team mono">{teamCell(s.teamId)}</span></td>
-                        <td className="num"><span className="letter">{s.letter}</span><span className="grade-sub">{s.grade.toFixed(1)}</span></td>
+                        <td className="num"><span className="letter">{s.letter}</span><span className="grade-sub">{s.points !== undefined ? `${s.points.toFixed(1)} pts/g` : s.grade.toFixed(1)}</span></td>
                       </tr>
                     ))}
                   </tbody>

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { createGameSession, isGameType, todaysResult } from '@/lib/server/games';
+import { createGameSession, fantasyReady, isGameType, todaysResult } from '@/lib/server/games';
 import { DraftError, draftState, pickPlayer, respinCurrent } from '@/lib/server/draft';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp } from '@/lib/server/rate-limit';
@@ -33,6 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ type: s
     const limited = await limitByIp(req, 'spin');
     if (limited) return limited;
     if (type === 'build-a-player' && !body.position) return errorJson(400, 'Pick a position first.');
+    if (body.format === 'fantasy' && !body.daily && !(await fantasyReady())) return errorJson(503, 'Fantasy points are still loading. Try a ratings game for now.');
     const session = await auth().catch(() => null);
     if (body.daily) {
       // Today is ranked: account required, one attempt per game per day.

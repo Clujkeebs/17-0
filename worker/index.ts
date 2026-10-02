@@ -9,6 +9,11 @@ import { renderResultCard } from './og';
 import { backfillEspnHeadshots } from '@/lib/server/espn';
 import { recomputeCoachImpact } from '@/lib/server/coaches';
 import { getQueue } from '@/lib/server/queue';
+import { syncFantasy } from '@/lib/server/sleeper';
+import { tuneFantasyFloor } from '@/lib/server/calibrate';
+
+/** Fantasy points, then a fresh fantasy win line fitted to them. Never fails the ratings sync. */
+const refreshFantasy = () => syncFantasy().then(() => tuneFantasyFloor()).catch((e) => console.warn('[fantasy] refresh failed', (e as Error).message));
 
 if (process.env.SENTRY_DSN) Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0 });
 
@@ -20,6 +25,7 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
     const summary = await runSync({ dryRun: false });
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
     await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
+    await refreshFantasy();
     console.log('[sync] done', JSON.stringify(summary).slice(0, 600));
     // Fresh ratings: purge the web service's ISR pages so player pages update now, not in a day.
     const base = process.env.INTERNAL_WEB_URL ?? 'http://localhost:3000';
@@ -52,6 +58,7 @@ void (async () => {
   }
   await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
   await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
+  await refreshFantasy();
   if (process.env.CALIBRATE === '1') {
     const { calibrate } = await import('@/lib/server/calibrate');
     for (const f of ['6', '12', '16'] as const) await calibrate(f).catch((e) => console.warn('[calibrate]', e.message));

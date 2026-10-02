@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { SeventeenGame } from '@/components/game/SeventeenGame';
 import { getTeams } from '@/lib/server/data';
 import { auth } from '@/auth';
-import { todaysResult } from '@/lib/server/games';
+import { fantasyReady, todaysResult } from '@/lib/server/games';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -23,5 +23,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
   let pool: ReelTeam[] = [];
   try { pool = (await getTeams()).map((t) => ({ id: t.id, abbreviation: t.abbreviation, city: t.city, name: t.name, color: t.primaryColor, logoUrl: t.logoUrl })); } catch { /* reel falls back */ }
   
-  return <SeventeenGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} />;
+  const fantasy = await fantasyReady().catch(() => false);
+  return <SeventeenGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} fantasyReady={fantasy} />;
 }

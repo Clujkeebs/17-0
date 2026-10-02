@@ -16,7 +16,13 @@ const STATE_KEY = 'gl-17-0-draft-v4';
 const SETUP_KEY = 'gl-17-0-setup';
 
 type Mode = 'today' | 'casual';
-export interface Setup { mode: Mode; format: FormatKey; pool: PoolKey; hard: boolean }
+type Scoring = 'ratings' | 'fantasy';
+export interface Setup { mode: Mode; format: FormatKey; pool: PoolKey; hard: boolean; scoring: Scoring }
+/** The format the server sees: Fantasy is its own lineup; otherwise the chosen roster size. */
+const formatFor = (s: Setup): FormatKey => (s.mode === 'today' ? '6' : s.scoring === 'fantasy' ? 'fantasy' : s.format === 'fantasy' ? '6' : s.format);
+/** What a player is worth on the board: fantasy points per game, or the overall. */
+const worth = (p: { ovr: number; fpts?: number }) => p.fpts ?? p.ovr;
+const showWorth = (p: { ovr: number; fpts?: number }) => (p.fpts !== undefined ? (p.fpts >= 0 ? p.fpts.toFixed(1) : '') : p.ovr >= 0 ? String(p.ovr) : '');
 const CLASSIC: SlotView[] = FORMATS['6'].slots.map(({ key, label, hint }) => ({ key, label, hint }));
 
 async function post(body: object) {
@@ -27,13 +33,13 @@ async function post(body: object) {
 }
 
 const describe = (s: { daily: boolean; format?: FormatKey; pool?: PoolKey; hard: boolean }) =>
-  [s.daily ? 'Today, ranked' : 'Casual', s.format && s.format !== '6' ? `${s.format}-man` : null, s.pool === 'all-time' ? 'All-time' : null, s.hard ? 'Hard' : null].filter(Boolean).join(' · ');
+  [s.daily ? 'Today, ranked' : 'Casual', s.format === 'fantasy' ? 'Fantasy' : s.format && s.format !== '6' ? `${s.format}-man` : null, s.pool === 'all-time' ? 'All-time' : null, s.hard ? 'Hard' : null].filter(Boolean).join(' · ');
 
-export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }: { reelPool: ReelTeam[]; signedIn: boolean; playedTodayId: string | null; initialMode: Mode }) {
+export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, fantasyReady = false }: { reelPool: ReelTeam[]; signedIn: boolean; playedTodayId: string | null; initialMode: Mode; fantasyReady?: boolean }) {
   const router = useRouter();
   usePreloadLogos(reelPool);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [setup, setSetup] = useState<Setup>({ mode: initialMode, format: '6', pool: 'current', hard: false });
+  const [setup, setSetup] = useState<Setup>({ mode: initialMode, format: '6', pool: 'current', hard: false, scoring: 'ratings' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [playedId, setPlayedId] = useState<string | null>(playedTodayId);
   const [spinKey, setSpinKey] = useState(0);
@@ -50,7 +56,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
   useEffect(() => {
     let saved: Partial<Setup> = {};
     try { saved = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}') as Partial<Setup>; } catch { /* storage blocked */ }
-    setSetup((s) => ({ ...s, format: saved.format ?? s.format, pool: saved.pool ?? s.pool, hard: saved.hard ?? s.hard }));
+    setSetup((s) => ({ ...s, format: saved.format && saved.format !== 'fantasy' ? saved.format : s.format, pool: saved.pool ?? s.pool, hard: saved.hard ?? s.hard, scoring: saved.scoring === 'fantasy' && fantasyReady ? 'fantasy' : 'ratings' }));
     try {
       const d = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Draft | null;
       if (d?.sessionId && !d.done && d.daily === (initialMode === 'today')) { setDraft(d); setLanded(true); return; }
@@ -69,14 +75,14 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
   async function start(s: Setup) {
     const daily = s.mode === 'today';
     setBusy('start'); setError(''); setDraft(null); setSheetOpen(false);
-    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ format: s.format, pool: s.pool, hard: s.hard })); } catch {}
+    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ format: s.format, pool: s.pool, hard: s.hard, scoring: s.scoring })); } catch {}
     try {
-      const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'start', daily, hard: s.hard, format: s.format, pool: s.pool }) });
+      const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'start', daily, hard: s.hard, format: formatFor(s), pool: s.pool }) });
       const d = await res.json().catch(() => ({}));
       if (res.status === 409 && d.resultId) { setPlayedId(d.resultId); setSheetOpen(true); return; }
       if (!res.ok) throw new Error(d.error ?? 'Something went wrong. Try again.');
       setDraft(d); setLanded(false); setSpinKey((k) => k + 1);
-      track('game_started', { game: '17-0', daily, hard: s.hard, format: s.format, pool: s.pool });
+      track('game_started', { game: '17-0', daily, hard: s.hard, format: formatFor(s), pool: s.pool });
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
 
@@ -115,7 +121,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
   }
 
   const sheet = sheetOpen && (
-    <SetupSheet value={setup} onChange={setSetup} signedIn={signedIn} playedId={playedId} busy={!!busy}
+    <SetupSheet value={setup} onChange={setSetup} signedIn={signedIn} playedId={playedId} busy={!!busy} fantasyReady={fantasyReady}
       onStart={() => start(setup)} onClose={() => setSheetOpen(false)} />
   );
 
@@ -123,7 +129,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
     return (
       <div className="g-wrap">
         <header className="g-head">
-          <h1 className="g-kicker" style={{ margin: 0 }}>17-0 · {describe({ daily: setup.mode === 'today', format: setup.mode === 'today' ? '6' : setup.format, pool: setup.mode === 'today' ? 'current' : setup.pool, hard: setup.hard })}</h1>
+          <h1 className="g-kicker" style={{ margin: 0 }}>17-0 · {describe({ daily: setup.mode === 'today', format: formatFor(setup), pool: setup.mode === 'today' || setup.scoring === 'fantasy' ? 'current' : setup.pool, hard: setup.hard })}</h1>
           <button type="button" className="btn btn-sm" onClick={() => setSheetOpen(true)}>Game setup</button>
         </header>
         {error ? (
@@ -194,9 +200,9 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
             ) : <div className="g-roster in">
               {groups.map(({ hint, slots: gs }) => {
                 const keys = gs.map((s) => s.key);
-                const all = team.players.filter((p) => p.slots?.some((k) => keys.includes(k))).sort((a, b) => b.ovr - a.ovr);
+                const all = team.players.filter((p) => p.slots?.some((k) => keys.includes(k))).sort((a, b) => worth(b) - worth(a));
                 if (!all.length) return null;
-                const cap = hint === 'Any defender' ? 6 : hint === 'Wide receiver' ? 4 : 2;
+                const cap = hint === 'Any defender' ? 6 : hint === 'Wide receiver' || hint === 'RB, WR or TE' ? 4 : 2;
                 const key = `${team.id}-${hint}`;
                 const options = expanded.has(key) ? all : all.slice(0, cap);
                 return (
@@ -206,10 +212,10 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
                       {options.map((p) => (
                         <li key={p.id}>
                           <button type="button" className="g-player" onClick={() => pick(p, gs[0].key)} disabled={!landed || !!busy}
-                            aria-label={`Draft ${p.name}, ${p.position}, ${p.group === 'HC' ? 'coach impact' : 'overall'} ${p.ovr}, as your ${gs[0].label}${p.legend ? ', all-time legend' : ''}`}>
+                            aria-label={`Draft ${p.name}, ${p.position}, ${p.fpts !== undefined ? `${showWorth(p)} fantasy points per game` : `${p.group === 'HC' ? 'coach impact' : 'overall'} ${p.ovr}`}, as your ${gs[0].label}${p.legend ? ', all-time legend' : ''}`}>
                             <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
                             <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position}{p.legend && <span className="tag-legend">Legend</span>}</span></span>
-                            <span className="g-ovr num">{p.ovr}</span>
+                            <span className={`g-ovr num${p.fpts !== undefined ? ' g-fpts' : ''}`}>{showWorth(p)}</span>
                           </button>
                         </li>
                       ))}
@@ -246,7 +252,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
                     <span className="g-slot-v">
                       {p.logoUrl ? <img src={p.logoUrl} alt="" width={22} height={22} /> : <span className="g-dot" style={{ background: p.teamColor }} />}
                       <span className="g-slot-name">{p.name}</span>
-                      <span className="num g-slot-ovr">{p.ovr >= 0 ? p.ovr : ''}</span>
+                      <span className="num g-slot-ovr">{showWorth(p)}</span>
                     </span>
                   ) : <span className="g-slot-empty">Open</span>}
                 </li>
@@ -263,10 +269,11 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode }
 }
 
 /** The game setup sheet: slides up from the bottom, one row per choice, then Start. */
-function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, busy }: {
-  value: Setup; onChange: (s: Setup) => void; onStart: () => void; onClose?: () => void; signedIn: boolean; playedId: string | null; busy: boolean;
+function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, busy, fantasyReady }: {
+  value: Setup; onChange: (s: Setup) => void; onStart: () => void; onClose?: () => void; signedIn: boolean; playedId: string | null; busy: boolean; fantasyReady: boolean;
 }) {
   const today = value.mode === 'today';
+  const fantasy = !today && value.scoring === 'fantasy';
   const startRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     startRef.current?.focus();
@@ -283,12 +290,15 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
         <h2 id="setup-h" className="sheet-h">Game setup</h2>
         <Choice label="Mode" name="mode" value={value.mode} onChange={(v) => set({ mode: v as Mode })}
           options={[{ v: 'today', t: 'Today', d: 'Ranked, one try' }, { v: 'casual', t: 'Casual', d: 'Unlimited' }]} />
-        <Choice label="Roster" name="format" value={today ? '6' : value.format} disabled={today} onChange={(v) => set({ format: v as FormatKey })}
+        <Choice label="Scoring" name="scoring" value={today ? 'ratings' : value.scoring} disabled={today} onChange={(v) => set({ scoring: v as Scoring })}
+          options={[{ v: 'ratings', t: 'Ratings', d: 'Madden overalls' }, { v: 'fantasy', t: 'Fantasy', d: fantasyReady ? 'Real PPR points' : 'Points loading', off: !fantasyReady }]} />
+        <Choice label="Roster" name="format" value={today ? '6' : value.format} disabled={today || fantasy} onChange={(v) => set({ format: v as FormatKey })}
           options={[{ v: '6', t: '6', d: 'Classic' }, { v: '12', t: '12', d: 'Adds OL and defense' }, { v: '16', t: '16', d: 'Full lineup' }]} />
-        <Choice label="Players" name="pool" value={today ? 'current' : value.pool} disabled={today} onChange={(v) => set({ pool: v as PoolKey })}
+        <Choice label="Players" name="pool" value={today || fantasy ? 'current' : value.pool} disabled={today || fantasy} onChange={(v) => set({ pool: v as PoolKey })}
           options={[{ v: 'current', t: 'Current', d: 'Today’s rosters' }, { v: 'all-time', t: 'All-time', d: 'Plus franchise legends' }]} />
         <Choice label="Difficulty" name="hard" value={value.hard ? 'hard' : 'easy'} onChange={(v) => set({ hard: v === 'hard' })}
-          options={[{ v: 'easy', t: 'Easy', d: 'Overalls shown, 2 re-rolls' }, { v: 'hard', t: 'Hard', d: 'Type names, no overalls, no re-rolls' }]} />
+          options={[{ v: 'easy', t: 'Easy', d: fantasy ? 'Points shown, 2 re-rolls' : 'Overalls shown, 2 re-rolls' }, { v: 'hard', t: 'Hard', d: fantasy ? 'Type names, no points, no re-rolls' : 'Type names, no overalls, no re-rolls' }]} />
+        {fantasy && <p className="hint" style={{ margin: '4px 0 0' }}>Fantasy drafts a seven-man lineup (QB, two RBs, two WRs, TE, FLEX) from current rosters. Each player counts his PPR points per game this season, blended with his projection while the sample is small. Your weekly total sets the record.</p>}
         {today && <p className="hint" style={{ margin: '4px 0 0' }}>Today is the same board for everyone: six slots, current rosters. Roster size and legends are Casual options.</p>}
         {today && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/17-0">Sign in</a> or <a href="/register?next=/games/17-0">create one</a>.</p>}
         {today && playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. A new board drops at midnight ET.</p>}
@@ -302,15 +312,15 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
 }
 
 function Choice({ label, name, value, options, onChange, disabled }: {
-  label: string; name: string; value: string; options: { v: string; t: string; d: string }[]; onChange: (v: string) => void; disabled?: boolean;
+  label: string; name: string; value: string; options: { v: string; t: string; d: string; off?: boolean }[]; onChange: (v: string) => void; disabled?: boolean;
 }) {
   return (
     <fieldset className="sheet-row" disabled={disabled}>
       <legend className="sheet-label">{label}</legend>
       <div className="sheet-seg">
         {options.map((o) => (
-          <label key={o.v} className={`sheet-opt${value === o.v ? ' on' : ''}`}>
-            <input type="radio" name={name} value={o.v} checked={value === o.v} onChange={() => onChange(o.v)} />
+          <label key={o.v} className={`sheet-opt${value === o.v ? ' on' : ''}${o.off ? ' off' : ''}`}>
+            <input type="radio" name={name} value={o.v} checked={value === o.v} disabled={o.off} onChange={() => onChange(o.v)} />
             <strong>{o.t}</strong><span>{o.d}</span>
           </label>
         ))}

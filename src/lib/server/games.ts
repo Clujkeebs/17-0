@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { getTeams, getRosters, getCoachesForTeams, GROUP_RAW } from './data';
 import { token as newToken } from './request';
 import { positionGroup, type PositionGroup } from '@/lib/game/attributes';
-import { FORMATS, MAX_RESPINS, TEAMS_PER_GAME, slotsFor as formatSlots, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
+import { FORMATS, MAX_RESPINS, TEAMS_PER_GAME, isFantasy, slotsFor as formatSlots, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
+import { fantasyValue } from '@/lib/game/fantasy';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { BUILD_CATEGORIES, BUILD_ELIGIBLE, BUILD_TEAMS, type BuildPosition } from '@/lib/game/build';
 import { createRng } from '@/lib/game/prng';
@@ -28,7 +29,7 @@ export interface SpinPayload {
   picks?: { teamId: number; id: string; slot?: string; trait?: string }[];
 }
 
-export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean }
+export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
 export interface PublicTeam { id: number; name: string; city: string; abbreviation: string; slug: string; color: string; logoUrl: string | null; players: PublicPlayer[] }
 
 const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
@@ -54,7 +55,8 @@ export async function createGameSession(opts: { gameType: GameType; userId?: str
   const pool = await eligibleTeamPool(gameType, opts.position);
   // Today is one shared puzzle: the classic six from current rosters. Size and pool are Casual choices.
   const format: FormatKey = gameType === '17-0' && !opts.daily ? opts.format ?? '6' : '6';
-  const playerPool: PoolKey = gameType === '17-0' && !opts.daily ? opts.pool ?? 'current' : 'current';
+  // Fantasy points exist only for current players.
+  const playerPool: PoolKey = gameType === '17-0' && !opts.daily && !isFantasy(format) ? opts.pool ?? 'current' : 'current';
   const count = gameType === '17-0' ? FORMATS[format].slots.length : BUILD_TEAMS;
   if (pool.length < count + MAX_RESPINS) throw new Error('Not enough teams with eligible players. Has the database been seeded?');
   const { teams, reserves } = draftOrder(seed, pool, count);
@@ -89,16 +91,19 @@ async function legendsByTeam(): Promise<Map<number, (typeof schema.players.$infe
 export async function publicTeams(teamIds: number[], gameType: GameType, position?: BuildPosition, opts: { format?: FormatKey; pool?: PoolKey } = {}): Promise<PublicTeam[]> {
   const format = opts.format ?? '6';
   const slotsFor = (g: PositionGroup | 'HC') => formatSlots(g, format);
-  const [teams, players, coaches, legends] = await Promise.all([getTeams(), getRosters(teamIds), gameType === '17-0' ? getCoachesForTeams(teamIds) : Promise.resolve([]),
-    gameType === '17-0' && opts.pool === 'all-time' ? legendsByTeam() : Promise.resolve(new Map<number, never[]>())]);
+  const fantasy = gameType === '17-0' && isFantasy(format);
+  const [teams, players, coaches, legends] = await Promise.all([getTeams(), getRosters(teamIds), gameType === '17-0' && !fantasy ? getCoachesForTeams(teamIds) : Promise.resolve([]),
+    gameType === '17-0' && opts.pool === 'all-time' && !fantasy ? legendsByTeam() : Promise.resolve(new Map<number, never[]>())]);
   const allowed = position ? new Set(BUILD_ELIGIBLE[position]) : null;
   return teamIds.map((id) => {
     const t = teams.find((x) => x.id === id)!;
     const list: PublicPlayer[] = [...(legends.get(id) ?? []), ...players.filter((p) => p.teamId === id)].map((p) => {
       const group = positionGroup(p.position);
       const attrs = position ? Object.fromEntries(BUILD_CATEGORIES[position].map((k) => [k, (p.attributes as Record<string, number>)[k] ?? 50])) : undefined;
-      return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}) };
+      return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}), ...(fantasy ? { fpts: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg) } : {}) };
     }).filter((p) => (allowed ? allowed.has(p.group) : p.slots!.length > 0));
+    // Fantasy boards list by points, best first.
+    if (fantasy) list.sort((a, b) => (b.fpts ?? 0) - (a.fpts ?? 0));
     for (const c of coaches.filter((c) => c.teamId === id)) {
       list.push({ id: `coach:${c.id}`, name: c.fullName, slug: c.slug, position: 'HC', group: 'HC', ovr: c.coachImpactScore, slots: ['HC'], img: c.imageUrl });
     }
@@ -120,4 +125,16 @@ export async function todaysResult(userId: string, gameType: GameType): Promise<
   const [r] = await db.select({ id: schema.gameResults.id }).from(schema.gameResults)
     .where(and(eq(schema.gameResults.userId, userId), eq(schema.gameResults.gameType, gameType), eq(schema.gameResults.isDaily, true), eq(schema.gameResults.dailyDate, dailyDateET()))).limit(1);
   return r?.id ?? null;
+}
+
+let fantasyCache: { at: number; ready: boolean } | null = null;
+/** Fantasy needs Sleeper points on enough players to fill a board. */
+export async function fantasyReady(): Promise<boolean> {
+  if (fantasyCache && Date.now() - fantasyCache.at < 300_000) return fantasyCache.ready;
+  const [r] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.players)
+    .where(and(eq(schema.players.isActive, true), or(isNotNull(schema.players.fantasyPpg), isNotNull(schema.players.fantasyProjPpg))));
+  const ready = (r?.n ?? 0) >= 150;
+  // Only a yes is cached, so the edition opens as soon as the first sync lands.
+  if (ready) fantasyCache = { at: Date.now(), ready };
+  return ready;
 }

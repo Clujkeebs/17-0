@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
-  pgTable, uuid, text, integer, boolean, jsonb, timestamp, serial, primaryKey, index, uniqueIndex,
+  pgTable, uuid, text, integer, real, boolean, jsonb, timestamp, serial, primaryKey, index, uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 export const teams = pgTable('teams', {
@@ -41,6 +41,11 @@ export const players = pgTable('players', {
   isAllTimeGreat: boolean('is_all_time_great').notNull().default(false),
   maddenVersion: text('madden_version').notNull(),
   lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }).notNull().defaultNow(),
+  // Fantasy edition (Sleeper, PPR): this season's points per game and games played, plus the season projection per game.
+  fantasyPpg: real('fantasy_ppg'),
+  fantasyGames: integer('fantasy_games'),
+  fantasyProjPpg: real('fantasy_proj_ppg'),
+  fantasyUpdatedAt: timestamp('fantasy_updated_at', { withTimezone: true }),
 }, (t) => [index('players_team_idx').on(t.teamId), index('players_pos_idx').on(t.position)]);
 
 export const coaches = pgTable('coaches', {

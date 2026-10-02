@@ -2,6 +2,7 @@ import type { Attributes, PositionGroup } from './attributes';
 import { DEFAULT_FORMULAS, letterGrade, ratePlayer, type FormulaKey, type Weights } from './formulas';
 import { clamp, createRng } from './prng';
 import { buildNarrative } from './narrative';
+import { FANTASY_FLOOR_DEFAULT, FANTASY_SPAN, fantasyGrade } from './fantasy';
 
 // Roster matches the StickToTheModel 17-0 format: QB, RB, WR, TE, one defender, head coach.
 export const SLOTS = ['QB', 'RB', 'WR', 'TE', 'DEF', 'HC'] as const;
@@ -17,16 +18,19 @@ export const WIN_SPAN = 26;
 
 /* ------------------------------------------------------------------ Roster formats */
 
-/** Roster size: the classic six, or a fuller 12 or 16 man roster. One spin per slot, one pick per team. */
-export type FormatKey = '6' | '12' | '16';
-export const FORMAT_KEYS: FormatKey[] = ['6', '12', '16'];
+/**
+ * Roster size: the classic six, or a fuller 12 or 16 man roster. One spin per slot, one pick per team.
+ * 'fantasy' is the Fantasy edition: a seven-man fantasy lineup scored on real PPR points, not ratings.
+ */
+export type FormatKey = '6' | '12' | '16' | 'fantasy';
+export const FORMAT_KEYS: FormatKey[] = ['6', '12', '16', 'fantasy'];
 /** Player pool: today's rosters, or today's rosters plus each franchise's all-time greats. */
 export type PoolKey = 'current' | 'all-time';
 export const POOL_KEYS: PoolKey[] = ['current', 'all-time'];
 
 type Group = PositionGroup | 'HC';
 export interface SlotDef { key: string; label: string; hint: string; accepts: readonly Group[]; weight: number }
-export interface FormatDef { name: string; slots: readonly SlotDef[]; winFloor: number; winSpan: number }
+export interface FormatDef { name: string; slots: readonly SlotDef[]; winFloor: number; winSpan: number; scoring?: 'ratings' | 'fantasy' }
 const DEFENDERS = ['DL', 'EDGE', 'LB', 'CB', 'S'] as const;
 const s = (key: string, label: string, hint: string, accepts: readonly Group[], weight: number): SlotDef => ({ key, label, hint, accepts, weight });
 
@@ -68,7 +72,18 @@ export const FORMATS: Record<FormatKey, FormatDef> = {
       s('HC', 'HC', 'Head coach', ['HC'], 0.07),
     ],
   },
+  // Fantasy: team strength is total points per week, so weights are not used. The floor is recalibrated
+  // by the worker after every points sync and passed in at grading time.
+  fantasy: {
+    name: 'Fantasy lineup', winFloor: FANTASY_FLOOR_DEFAULT, winSpan: FANTASY_SPAN, scoring: 'fantasy',
+    slots: [
+      s('QB', 'QB', 'Quarterback', ['QB'], 1), s('RB1', 'RB1', 'Running back', ['RB'], 1), s('RB2', 'RB2', 'Running back', ['RB'], 1),
+      s('WR1', 'WR1', 'Wide receiver', ['WR'], 1), s('WR2', 'WR2', 'Wide receiver', ['WR'], 1), s('TE', 'TE', 'Tight end', ['TE'], 1),
+      s('FLEX', 'FLEX', 'RB, WR or TE', ['RB', 'WR', 'TE'], 1),
+    ],
+  },
 };
+export const isFantasy = (format: FormatKey) => FORMATS[format].scoring === 'fantasy';
 export const isFormat = (x: unknown): x is FormatKey => typeof x === 'string' && (FORMAT_KEYS as string[]).includes(x);
 export const formatOf = (x: unknown): FormatKey => (isFormat(x) ? x : '6');
 export const slotDef = (key: string, format: FormatKey = '6') => FORMATS[format].slots.find((d) => d.key === key);
@@ -95,9 +110,11 @@ export interface Pick {
   attributes?: Attributes;
   coachImpact?: number;
   overall?: number;
+  /** Fantasy edition: blended PPR points per game. */
+  fantasy?: number;
 }
 
-export interface SlotResult { slot: string; name: string; teamId: number; grade: number; letter: string }
+export interface SlotResult { slot: string; name: string; teamId: number; grade: number; letter: string; points?: number }
 export interface SeventeenResult {
   slots: SlotResult[];
   teamStrength: number;
@@ -130,6 +147,7 @@ export function buildSchedule(seed: string, wins: number, strength: number, oppo
 }
 
 export function gradePick(p: Pick, formulas: Record<FormulaKey, Weights> = DEFAULT_FORMULAS): number {
+  if (p.fantasy !== undefined) return fantasyGrade(p.fantasy, p.group);
   if (p.slot === 'HC') return clamp(p.coachImpact ?? 60, 0, 99);
   return ratePlayer(p.attributes ?? {}, p.group as PositionGroup, formulas);
 }
@@ -141,27 +159,33 @@ export function gradeRoster(
   slotWeights: Record<Slot, number> = SLOT_WEIGHTS,
   opponents: readonly string[] = [],
   format: FormatKey = '6',
+  winFloor?: number,
 ): SeventeenResult {
   const fmt = FORMATS[format];
+  const fantasy = isFantasy(format);
+  const floor = winFloor ?? fmt.winFloor;
   // The classic format takes its weights from config; bigger rosters use their own.
   const weightOf = (key: string) => (format === '6' ? slotWeights[key as Slot] : slotDef(key, format)!.weight);
   const slots = fmt.slots.map(({ key: slot }) => {
     const p = picks.find((x) => x.slot === slot);
     if (!p) throw new Error(`Missing pick for ${slot}`);
     const grade = gradePick(p, formulas);
-    return { slot, name: p.name, teamId: p.teamId, grade, letter: letterGrade(grade) };
+    return { slot, name: p.name, teamId: p.teamId, grade, letter: letterGrade(grade), ...(fantasy ? { points: p.fantasy ?? 0 } : {}) };
   });
   const wsum = fmt.slots.reduce((s, d) => s + weightOf(d.key), 0);
-  const teamStrength = Math.round((slots.reduce((s, r) => s + r.grade * weightOf(r.slot), 0) / wsum) * 10) / 10;
+  // Fantasy strength is the lineup's points per week; everything else is the weighted average grade.
+  const teamStrength = fantasy
+    ? Math.round(slots.reduce((s, r) => s + (r.points ?? 0), 0) * 10) / 10
+    : Math.round((slots.reduce((s, r) => s + r.grade * weightOf(r.slot), 0) / wsum) * 10) / 10;
   const rng = createRng(`grade:${seed}`);
   // Calibrated so a well-built roster (every pick a star) goes 17-0 roughly one time in eight.
   const jitter = rng.int(-2, 1);
-  const wins = clamp(Math.round(((teamStrength - fmt.winFloor) / fmt.winSpan) * 17 + jitter), 0, 17);
+  const wins = clamp(Math.round(((teamStrength - floor) / fmt.winSpan) * 17 + jitter), 0, 17);
   const losses = 17 - wins;
-  const schedule = buildSchedule(seed, wins, teamStrength, opponents);
+  const schedule = buildSchedule(seed, wins, fantasy ? 70 + wins : teamStrength, opponents);
   const pointDiff = schedule.reduce((d, g) => d + g.us - g.them, 0);
   const narrative = buildNarrative(seed, slots, wins, losses, pointDiff);
   // Leaderboard score: wins dominate, strength breaks ties.
-  const score = wins * 1000 + Math.round(teamStrength * 10);
+  const score = wins * 1000 + Math.min(999, Math.round(teamStrength * (fantasy ? 5 : 10)));
   return { slots, teamStrength, wins, losses, pointDiff, narrative, score, schedule };
 }

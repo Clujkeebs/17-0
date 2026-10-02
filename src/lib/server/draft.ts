@@ -12,7 +12,7 @@ export interface DraftState {
   total: number;            // teams in this game
   team: PublicTeam | null;  // current team, null when the draft is complete
   respinsLeft: number;
-  picks: { teamId: number; id: string; slot?: string; trait?: string; value?: number; name: string; position: string; ovr: number; team: string; teamColor: string; logoUrl: string | null }[];
+  picks: { teamId: number; id: string; slot?: string; trait?: string; value?: number; name: string; position: string; ovr: number; fpts?: number; team: string; teamColor: string; logoUrl: string | null }[];
   done: boolean;
   hard: boolean;
   /** 17-0 only: roster size, player pool and the slots to fill, in order. */
@@ -35,7 +35,7 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
   const pastTeams = done ? [current, ...past] : past;
   // Hard mode: overalls and trait ratings never leave the server until the result page, and the list is
   // alphabetical so its order cannot leak the ranking.
-  const hide = <T extends { ovr: number; attrs?: unknown }>(x: T): T => (p.hard ? { ...x, ovr: -1, attrs: undefined } : x);
+  const hide = <T extends { ovr: number; attrs?: unknown; fpts?: number }>(x: T): T => (p.hard ? { ...x, ovr: -1, attrs: undefined, ...(x.fpts !== undefined ? { fpts: -1 } : {}) } : x);
   const order = <T extends { name: string }>(list: T[]) => (p.hard ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : list);
   const team = done ? null : current ? { ...current, players: order(current.players.map(hide)) } : null;
   return {
@@ -47,7 +47,7 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
       const t = pastTeams[i];
       const pl = t?.players.find((y) => y.id === x.id);
       const tr = p.position && x.trait ? TRAITS[p.position].find((t) => t.key === x.trait) : undefined;
-      return { ...x, value: !p.hard && tr && pl?.attrs ? traitValue(pl.attrs as never, tr) : undefined, name: pl?.name ?? 'Unknown', position: pl?.position ?? '', ovr: p.hard ? -1 : pl?.ovr ?? 0, team: t ? `${t.city} ${t.name}` : '', teamColor: t?.color ?? '#999', logoUrl: t?.logoUrl ?? null };
+      return { ...x, value: !p.hard && tr && pl?.attrs ? traitValue(pl.attrs as never, tr) : undefined, name: pl?.name ?? 'Unknown', position: pl?.position ?? '', ovr: p.hard ? -1 : pl?.ovr ?? 0, ...(pl?.fpts !== undefined ? { fpts: p.hard ? -1 : pl.fpts } : {}), team: t ? `${t.city} ${t.name}` : '', teamColor: t?.color ?? '#999', logoUrl: t?.logoUrl ?? null };
     }),
   };
 }

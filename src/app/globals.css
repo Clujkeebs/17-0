@@ -404,6 +404,7 @@ html[data-rules=hidden] .rules-card { display: none; }
 .sheet-opt.on { border-color: var(--bone); box-shadow: inset 0 0 0 1px var(--bone); }
 .sheet-opt:has(input:focus-visible) { outline: 2px solid var(--orange); outline-offset: 3px; }
 .sheet-row:disabled .sheet-opt { cursor: not-allowed; background: var(--green); }
+.sheet-opt.off { cursor: not-allowed; background: var(--green); }
 .sheet-actions { display: flex; gap: 10px; margin-top: 18px; }
 .sheet-actions .btn { flex: 1; }
 @media (min-width: 700px) { .sheet-scrim { align-items: center; } .sheet { border-radius: 22px; } }

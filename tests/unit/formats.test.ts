@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { ATTRIBUTE_KEYS, type Attributes } from '@/lib/game/attributes';
-import { FORMATS, FORMAT_KEYS, gradeRoster, slotAccepts, slotsFor, type Pick } from '@/lib/game/seventeen';
+import { FORMATS, FORMAT_KEYS as ALL_FORMATS, gradeRoster, slotAccepts, slotsFor, type Pick } from '@/lib/game/seventeen';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { ratePlayer } from '@/lib/game/formulas';
 
 const flat = (v: number): Attributes => Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, v]));
 const GROUP_FOR: Record<string, string> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', EDGE: 'EDGE', DL: 'DL', LB: 'LB', CB: 'CB', S: 'S', DEF: 'CB', HC: 'HC' };
-const rosterFor = (format: (typeof FORMAT_KEYS)[number], v: number): Pick[] => FORMATS[format].slots.map((d, i) => {
+// Fantasy scores on points, not weighted ratings; it has its own tests in fantasy.test.ts.
+const FORMAT_KEYS = ALL_FORMATS.filter((f) => f !== 'fantasy');
+const rosterFor = (format: (typeof ALL_FORMATS)[number], v: number): Pick[] => FORMATS[format].slots.map((d, i) => {
   const group = GROUP_FOR[d.key.replace(/\d+$/, '')] as Pick['group'];
   return group === 'HC' ? { slot: d.key, teamId: i + 1, name: `C ${i}`, group, coachImpact: v } : { slot: d.key, teamId: i + 1, name: `P ${i}`, group, attributes: flat(v) };
 });
