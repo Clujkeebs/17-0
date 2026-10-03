@@ -13,10 +13,10 @@ type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 const LO = 40, HI = 99;
 const pct = (v: number) => `${((v - LO) / (HI - LO)) * 100}%`;
 
-export function GuessTheOvr({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
+export function GuessTheOvr({ signedIn, meta, ratingName = 'Madden 27' }: { signedIn: boolean; meta: Meta; ratingName?: string }) {
   return (
     <MiniGameShell<P> {...meta} signedIn={signedIn}
-      render={({ puzzle, submit, busy }) => <Play puzzle={puzzle} submit={submit} busy={busy} />}
+      render={({ puzzle, submit, busy }) => <Play puzzle={puzzle} submit={submit} busy={busy} ratingName={ratingName} />}
       renderResult={(r) => (
         <ol className="m-grid" style={{ listStyle: 'none', padding: 0 }}>
           {(r.detail as D[]).map((d, i) => {
@@ -40,7 +40,7 @@ export function GuessTheOvr({ signedIn, meta }: { signedIn: boolean; meta: Meta 
   );
 }
 
-function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Promise<unknown>; busy: boolean }) {
+function Play({ puzzle, submit, busy, ratingName }: { puzzle: P; submit: (a: unknown) => Promise<unknown>; busy: boolean; ratingName: string }) {
   const [guesses, setGuesses] = useState<number[]>([]);
   const [v, setV] = useState(75);
   const n = puzzle.rounds.length;
@@ -75,7 +75,7 @@ function Play({ puzzle, submit, busy }: { puzzle: P; submit: (a: unknown) => Pro
           </div>
         ))}
       </div>
-      <label htmlFor="go-range" className="m-kicker" style={{ display: 'block' }}>Your guess: Madden 27 overall</label>
+      <label htmlFor="go-range" className="m-kicker" style={{ display: 'block' }}>Your guess: {ratingName} overall</label>
       <div className="gb-dial">
         <button type="button" className="gb-step" aria-label="Lower by one" onClick={() => set(v - 1)} disabled={v <= LO || busy}>-</button>
         <output htmlFor="go-range" className="num" aria-live="polite">{v}</output>

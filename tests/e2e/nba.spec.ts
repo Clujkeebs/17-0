@@ -23,14 +23,14 @@ test.beforeAll(async () => {
     }
   }
   // Standard (2K): stand-in overalls on 22 current rosters of six, so the edition opens.
-  const [{ r }] = await sql`select count(*)::int as r from nba_players where id >= 9000000 and rating_2k is not null`;
-  if (r === 0) {
+  const [{ r }] = await sql`select count(distinct rating_2k)::int as r from nba_players where id >= 9500000 and rating_2k is not null`;
+  if (r < 15) {
     for (let t = 1; t <= 22; t++) {
       await sql`insert into nba_team_seasons (team_id, season, name, location, abbreviation, color) values (${9000 + t}, 2024, ${`Testers ${t}`}, ${'Test City'}, ${`T${t}`}, ${'#335577'}) on conflict do nothing`;
       for (let i = 0; i < 6; i++) {
         const id = 9500000 + t * 10 + i;
-        await sql`insert into nba_players (id, full_name, position, rating_2k, rating_2k_position, rating_2k_team_id) values (${id}, ${`Test 2K ${t}-${i}`}, ${['PG', 'SG', 'SF', 'PF', 'C', 'G'][i]}, ${72 + i * 3}, ${['PG', 'SG', 'SF', 'PF', 'C', 'G'][i]}, ${9000 + t})
-          on conflict (id) do update set rating_2k = excluded.rating_2k, rating_2k_team_id = excluded.rating_2k_team_id`;
+        await sql`insert into nba_players (id, full_name, position, rating_2k, rating_2k_position, rating_2k_team_id) values (${id}, ${`Test 2K ${t}-${i}`}, ${['PG', 'SG', 'SF', 'PF', 'C', 'G'][i]}, ${70 + i * 3 + (t % 3)}, ${['PG', 'SG', 'SF', 'PF', 'C', 'G'][i]}, ${9000 + t})
+          on conflict (id) do update set rating_2k = excluded.rating_2k, rating_2k_position = excluded.rating_2k_position, rating_2k_team_id = excluded.rating_2k_team_id`;
       }
     }
     const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
@@ -111,7 +111,7 @@ test('82-0 hard mode hides stats and has no re-spins', async ({ page }) => {
   await expect(page.locator('.g-player .g-ovr').first()).toHaveText('??');
 });
 
-for (const [slug, rounds] of [['nba-higher-lower', 10], ['nba-blind-resume', 6], ['nba-who-led', 6], ['nba-whose-team', 6]] as const) {
+for (const [slug, rounds] of [['nba-higher-lower', 10], ['nba-blind-resume', 6], ['nba-who-led', 6], ['nba-whose-team', 6], ['nba-2k-higher-lower', 10]] as const) {
   test(`${slug} casual round trip`, async ({ page }) => {
     await page.goto(`/games/${slug}`);
     await page.getByRole('tab', { name: 'Casual' }).click();
@@ -122,6 +122,23 @@ for (const [slug, rounds] of [['nba-higher-lower', 10], ['nba-blind-resume', 6],
     await expect(page.locator('.m-score')).toContainText(`/${rounds}`);
   });
 }
+
+test("nba-2k-rank-em: order five, lock in, see the true 2K order", async ({ page }) => {
+  await page.goto('/games/nba-2k-rank-em');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  await expect(page.getByText(/Rank by nba 2k overall/i)).toBeVisible();
+  await page.getByRole('button', { name: 'Lock it in' }).click();
+  await expect(page.getByText(/pairs in order/)).toBeVisible();
+});
+
+test('nba-2k-guess: six guesses, scored against the 2K overall', async ({ page }) => {
+  await page.goto('/games/nba-2k-guess');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  await expect(page.getByText('Your guess: NBA 2K overall')).toBeVisible();
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: 'Lock in', exact: true }).click();
+  await page.getByRole('button', { name: 'Lock in and score' }).click();
+  await expect(page.locator('.m-score')).toContainText('pts');
+});
 
 test('Games page has a Basketball tab with 82-0 and the NBA puzzles', async ({ page }) => {
   await page.goto('/games');

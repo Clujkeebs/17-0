@@ -24,6 +24,9 @@ export function parse2k(html: string): Row2k[] {
 export const nameKey = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/[.,']/g, '').replace(/\s+(jr|sr|ii|iii|iv|v)$/, '').replace(/[^a-z]/g, '');
 
+/** Last-name key, for the fallback match ("Nicolas Claxton" = "Nic Claxton" on the same team). */
+export const lastKey = (s: string) => nameKey(s.replace(/\s+(jr|sr|ii|iii|iv|v)\.?$/i, '').split(/\s+/).slice(-1)[0] ?? '');
+
 export async function sync2k(fetchImpl: typeof fetch = fetch) {
   const r = await fetchImpl(URL_2K, { signal: AbortSignal.timeout(30_000), headers: { 'user-agent': 'Mozilla/5.0 (compatible; UnbeatenBot/1.0; +https://playunbeaten.com)' } });
   if (!r.ok) throw new Error(`2K ratings page HTTP ${r.status}`);
@@ -40,12 +43,15 @@ export async function sync2k(fetchImpl: typeof fetch = fetch) {
   const recent = await db.select({ id: schema.nbaPlayers.id, name: schema.nbaPlayers.fullName, teamId: schema.nbaPlayerSeasons.teamId, season: schema.nbaPlayerSeasons.season })
     .from(schema.nbaPlayers).innerJoin(schema.nbaPlayerSeasons, eq(schema.nbaPlayerSeasons.playerId, schema.nbaPlayers.id));
   const byName = new Map<string, { id: number; teams: Set<number> }[]>();
+  const byLastTeam = new Map<string, Set<number>>();
   for (const p of recent.filter((x) => x.season >= latest - 1)) {
     const k = nameKey(p.name);
     const list = byName.get(k) ?? [];
     let e = list.find((x) => x.id === p.id);
     if (!e) { e = { id: p.id, teams: new Set() }; list.push(e); byName.set(k, list); }
     e.teams.add(p.teamId);
+    const lt = `${lastKey(p.name)}|${p.teamId}`;
+    byLastTeam.set(lt, (byLastTeam.get(lt) ?? new Set()).add(p.id));
   }
 
   const now = new Date();
@@ -54,7 +60,12 @@ export async function sync2k(fetchImpl: typeof fetch = fetch) {
   for (const row of rows) {
     const teamId = teamByName.get(nameKey(row.team)) ?? null;
     const cands = byName.get(nameKey(row.name)) ?? [];
-    const pick = cands.length === 1 ? cands[0] : cands.find((c) => teamId != null && c.teams.has(teamId));
+    let pick = cands.length === 1 ? cands[0] : cands.find((c) => teamId != null && c.teams.has(teamId));
+    // Nicknames: same last name on the same team, and only one such player.
+    if (!pick && teamId != null) {
+      const same = byLastTeam.get(`${lastKey(row.name)}|${teamId}`);
+      if (same?.size === 1) pick = { id: [...same][0], teams: new Set([teamId]) };
+    }
     if (!pick) { unmatched.push(row.name); continue; }
     seen.add(pick.id);
     await db.update(schema.nbaPlayers).set({ rating2k: row.overall, rating2kPosition: row.position, rating2kTeamId: teamId, rating2kUpdatedAt: now }).where(eq(schema.nbaPlayers.id, pick.id));
