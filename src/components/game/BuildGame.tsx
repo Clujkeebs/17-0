@@ -21,8 +21,8 @@ async function post(body: object) {
 
 type Mode = 'today' | 'casual';
 
-export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, playedTodayId, initialMode }: {
-  reelPool: ReelTeam[]; initialPosition: BuildPosition | null; positionOfDay: BuildPosition; signedIn: boolean; playedTodayId: string | null; initialMode: Mode;
+export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, playedTodayId, initialMode, modeFromLink = false }: {
+  reelPool: ReelTeam[]; initialPosition: BuildPosition | null; positionOfDay: BuildPosition; signedIn: boolean; playedTodayId: string | null; initialMode: Mode; modeFromLink?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [playedId, setPlayedId] = useState<string | null>(playedTodayId);
@@ -50,7 +50,11 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
 
   useEffect(() => {
     try { hardRef.current = localStorage.getItem('gl-bap-hard') === '1'; setHard(hardRef.current); } catch { /* storage blocked */ }
-    if (initialMode === 'today' && signedIn && !playedTodayId) void start('today');
+    // The last mode played comes back, unless the link asked for one or Today is not playable now.
+    let m = initialMode;
+    try { const saved = localStorage.getItem('gl-bap-mode'); if (!modeFromLink && (saved === 'casual' || (saved === 'today' && signedIn && !playedTodayId))) m = saved; } catch { /* storage blocked */ }
+    if (m !== initialMode) setMode(m);
+    if (m === 'today' && signedIn && !playedTodayId) void start('today');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -60,6 +64,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
   }
 
   async function start(m: Mode = mode) {
+    try { localStorage.setItem('gl-bap-mode', m); } catch { /* storage blocked */ }
     setBusy('start'); setError('');
     const pos = m === 'today' ? positionOfDay : position;
     try {

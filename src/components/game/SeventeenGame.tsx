@@ -35,7 +35,7 @@ async function post(body: object) {
 const describe = (s: { daily: boolean; format?: FormatKey; pool?: PoolKey; hard: boolean }) =>
   [s.daily ? 'Today, ranked' : 'Casual', s.format === 'fantasy' ? 'Fantasy' : s.format && s.format !== '6' ? `${s.format}-man` : null, s.pool === 'all-time' ? 'All-time' : null, s.hard ? 'Hard' : null].filter(Boolean).join(' · ');
 
-export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, fantasyReady = false }: { reelPool: ReelTeam[]; signedIn: boolean; playedTodayId: string | null; initialMode: Mode; fantasyReady?: boolean }) {
+export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, modeFromLink = false, fantasyReady = false }: { reelPool: ReelTeam[]; signedIn: boolean; playedTodayId: string | null; initialMode: Mode; modeFromLink?: boolean; fantasyReady?: boolean }) {
   const router = useRouter();
   usePreloadLogos(reelPool);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -56,10 +56,12 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
   useEffect(() => {
     let saved: Partial<Setup> = {};
     try { saved = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}') as Partial<Setup>; } catch { /* storage blocked */ }
-    setSetup((s) => ({ ...s, format: saved.format && saved.format !== 'fantasy' ? saved.format : s.format, pool: saved.pool ?? s.pool, hard: saved.hard ?? s.hard, scoring: saved.scoring === 'fantasy' && fantasyReady ? 'fantasy' : 'ratings' }));
+    // The last game's mode comes back too, unless the link asked for one or Today is not playable now.
+    const mode: Mode = !modeFromLink && (saved.mode === 'casual' || (saved.mode === 'today' && signedIn && !playedTodayId)) ? saved.mode : initialMode;
+    setSetup((s) => ({ ...s, mode, format: saved.format && saved.format !== 'fantasy' ? saved.format : s.format, pool: saved.pool ?? s.pool, hard: saved.hard ?? s.hard, scoring: saved.scoring === 'fantasy' && fantasyReady ? 'fantasy' : 'ratings' }));
     try {
       const d = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Draft | null;
-      if (d?.sessionId && !d.done && d.daily === (initialMode === 'today')) { setDraft(d); setLanded(true); return; }
+      if (d?.sessionId && !d.done && d.daily === (mode === 'today')) { setDraft(d); setLanded(true); return; }
     } catch { /* ignore */ }
     setSheetOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,7 +77,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
   async function start(s: Setup) {
     const daily = s.mode === 'today';
     setBusy('start'); setError(''); setDraft(null); setSheetOpen(false);
-    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ format: s.format, pool: s.pool, hard: s.hard, scoring: s.scoring })); } catch {}
+    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ mode: s.mode, format: s.format, pool: s.pool, hard: s.hard, scoring: s.scoring })); } catch {}
     try {
       const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'start', daily, hard: s.hard, format: formatFor(s), pool: s.pool }) });
       const d = await res.json().catch(() => ({}));

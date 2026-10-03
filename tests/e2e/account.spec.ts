@@ -135,6 +135,17 @@ test('sign up with just a username and password, then sign back in with the user
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL((url) => !url.pathname.startsWith('/login'));
   await expect(page.locator('.hp')).toBeVisible();
+  // Signed in, a fresh visit opens on Today; after a Casual game it opens on Casual.
+  await page.goto('/games/82-0');
+  const sheet = page.getByRole('dialog', { name: 'Game setup' });
+  await expect(sheet.getByRole('group', { name: 'Mode' }).getByRole('radio', { name: /Today/ })).toBeChecked();
+  await sheet.getByRole('group', { name: 'Mode' }).locator('label', { hasText: /^Casual/ }).click();
+  await sheet.getByRole('button', { name: 'Start' }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole('button', { name: /New team/ })).toBeVisible({ timeout: 20_000 });
+  await page.evaluate(() => sessionStorage.clear());
+  await page.goto('/games/82-0');
+  await expect(page.getByRole('dialog', { name: 'Game setup' }).getByRole('group', { name: 'Mode' }).getByRole('radio', { name: /Casual/ })).toBeChecked();
   await sql`delete from user_accounts where username = ${u}`;
 });
 

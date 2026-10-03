@@ -26,5 +26,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
   
   const day = Math.floor(Date.parse(`${dailyDateET()}T12:00:00Z`) / 86400000);
   const positionOfDay = BUILD_POSITIONS[day % BUILD_POSITIONS.length];
-  return <BuildGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} positionOfDay={positionOfDay} initialPosition={(BUILD_POSITIONS as readonly string[]).includes(pos) ? (pos as BuildPosition) : null} />;
+  return <BuildGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={sp.mode === 'casual' || sp.mode === 'today' || !!sp.position} positionOfDay={positionOfDay} initialPosition={(BUILD_POSITIONS as readonly string[]).includes(pos) ? (pos as BuildPosition) : null} />;
 }

@@ -24,5 +24,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
   try { pool = (await getTeams()).map((t) => ({ id: t.id, abbreviation: t.abbreviation, city: t.city, name: t.name, color: t.primaryColor, logoUrl: t.logoUrl })); } catch { /* reel falls back */ }
   
   const fantasy = await fantasyReady().catch(() => false);
-  return <SeventeenGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} fantasyReady={fantasy} />;
+  return <SeventeenGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={!!asked} fantasyReady={fantasy} />;
 }

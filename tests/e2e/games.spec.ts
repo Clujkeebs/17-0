@@ -191,6 +191,24 @@ for (const [slug, rounds] of [['speed-trap', 8], ['odd-one-out', 6], ['numbers-g
   });
 }
 
+test('17-0 remembers the last setup: Fantasy and Hard come back without touching the sheet', async ({ page }) => {
+  const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
+  await sql`update players set fantasy_proj_ppg = round((overall_rating / 5.0)::numeric, 1), fantasy_games = 0
+    where fantasy_proj_ppg is null and fantasy_ppg is null and is_active and position in ('QB','HB','FB','WR','TE')`;
+  await sql.end();
+  await page.goto('/games/17-0');
+  await setup(page, { mode: 'Casual', scoring: 'Fantasy', difficulty: 'Hard' });
+  // Leave the draft (an unfinished draft resumes instead of opening the sheet).
+  await expect(page.getByRole('searchbox')).toBeVisible({ timeout: 20_000 });
+  await page.evaluate(() => sessionStorage.clear());
+  await page.goto('/games/17-0');
+  const sheet = page.getByRole('dialog', { name: 'Game setup' });
+  await sheet.getByRole('button', { name: /More options/ }).click();
+  await expect(sheet.getByRole('group', { name: 'Mode' }).getByRole('radio', { name: /Casual/ })).toBeChecked();
+  await expect(sheet.getByRole('group', { name: 'Scoring' }).getByRole('radio', { name: /Fantasy/ })).toBeChecked();
+  await expect(sheet.getByRole('group', { name: 'Difficulty' }).getByRole('radio', { name: /Hard/ })).toBeChecked();
+});
+
 test('17-0 Fantasy: seven-man lineup scored on points per game', async ({ page }) => {
   // Test databases have no Sleeper data; give skill players a stand-in projection so the edition opens.
   const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });

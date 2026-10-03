@@ -29,5 +29,5 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ m
   const signedIn = !!session?.user?.id;
   const initialMode = sp.mode === 'today' ? 'today' : sp.mode === 'casual' ? 'casual' : signedIn ? 'today' : 'casual';
   const standardReady = await nbaReady('standard').catch(() => false);
-  return <EightyTwoGame franchises={await franchises()} signedIn={signedIn} initialMode={initialMode} standardReady={standardReady} />;
+  return <EightyTwoGame franchises={await franchises()} signedIn={signedIn} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} standardReady={standardReady} />;
 }

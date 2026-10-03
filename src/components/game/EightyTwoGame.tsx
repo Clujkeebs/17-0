@@ -23,7 +23,7 @@ async function call(body: object) {
 
 const stat = (n: number) => (n >= 0 ? n.toFixed(1) : '');
 
-export function EightyTwoGame({ franchises, signedIn, initialMode, standardReady = false }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode; standardReady?: boolean }) {
+export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink = false, standardReady = false }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode; modeFromLink?: boolean; standardReady?: boolean }) {
   const router = useRouter();
   usePreloadLogos(franchises);
   const [game, setGame] = useState<Game | null>(null);
@@ -43,10 +43,11 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, standardReady
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (typeof s.hard === 'boolean') setHard(s.hard); if (s.edition === 'standard' && standardReady) setEdition('standard'); } catch { /* storage blocked */ }
+    let resumeMode = initialMode;
+    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (!modeFromLink && (s.mode === 'casual' || (s.mode === 'today' && signedIn))) { resumeMode = s.mode; setMode(s.mode); } if (typeof s.hard === 'boolean') setHard(s.hard); if (s.edition === 'standard' && standardReady) setEdition('standard'); } catch { /* storage blocked */ }
     try {
       const g = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Game | null;
-      if (g?.sessionId && g.daily === (initialMode === 'today')) { setGame(g); setEraLanded(true); setLanded(true); return; }
+      if (g?.sessionId && g.daily === (resumeMode === 'today')) { setGame(g); setEraLanded(true); setLanded(true); return; }
     } catch { /* ignore */ }
     setSheet(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,7 +58,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, standardReady
 
   async function start() {
     setBusy('start'); setError(''); setSheet(false); setGame(null);
-    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ hard, edition })); } catch {}
+    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ mode, hard, edition })); } catch {}
     try {
       const d = await call({ action: 'start', daily: mode === 'today', hard, edition: mode === 'today' ? 'classic' : edition });
       spun(d);

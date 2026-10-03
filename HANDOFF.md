@@ -102,6 +102,9 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - NBA mini games (`src/lib/minigames/nba/`, sport 'nba', data from `loadNbaGameData`: rotation players with 40+ games and 15+ minutes): Higher or Lower: Hoops, Blind Résumé: Hoops, Who Led?, Whose Team?. They reuse the football HigherLower and PickRounds screens and the same /api/mini route (`dataFor(game)` picks the data set). They are on the Basketball tab and the leaderboard. Football games built on Madden attributes (speed, OVR, archetype) have no NBA equivalent in box-score data, so they were not copied.
 - Standard (2K) edition: see Phase 4 below.
 
+## Remembered setup (2026-10-03)
+- 17-0, 82-0, 162-0 and Build a Player remember the last game's choices, Mode included (localStorage `gl-17-0-setup`, `gl-82-0-setup`, `gl-162-0-setup`, `gl-bap-mode` / `gl-bap-hard`). A link with `?mode=` (or `?position=` for Build a Player) wins; a remembered Today falls back to Casual when signed out or already played today.
+
 ## Feedback log
 - 2026-10-02 19:05-19:11 UTC, five responses (ratings 3-5).
   - Fixed: "the game crashed" (x2) and "fix build a player" were 429s. Every request came from one school IP, which spent the old 30-spins-per-hour-per-IP limit in minutes. Per-IP limits for spin and grade are now 1500/hour, register and feedback 120/hour (`src/lib/server/rate-limit.ts`), and the message says it is the network's limit.
