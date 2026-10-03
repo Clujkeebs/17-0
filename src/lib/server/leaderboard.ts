@@ -15,7 +15,7 @@ async function stylesFor(userIds: string[]): Promise<Map<string, NameStyle>> {
   return new Map(rows.map((r) => [r.id, resolveStyle({ font: r.font, color: r.color }, isOwnerEmail(r.email))]));
 }
 
-export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string; hard: boolean; style?: NameStyle }
+export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string; hard: boolean; style?: NameStyle; date?: string }
 
 export async function dailyLeaderboard(gameType: string, date = dailyDateET(), limit = 100, hardOnly = false): Promise<DailyRow[]> {
   return cached(`lb:daily:${gameType}:${date}${hardOnly ? ':hard' : ''}`, 60, async () => {
@@ -31,6 +31,31 @@ export async function dailyLeaderboard(gameType: string, date = dailyDateET(), l
       .slice(0, limit);
     const styles = await stylesFor(top.map((r) => r.user_id));
     return top.map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: scoreSummary(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id, hard: r.result_data?.hard === true, style: styles.get(r.user_id) }));
+  });
+}
+
+export type Period = 'today' | 'week' | 'all';
+export const PERIODS: Period[] = ['today', 'week', 'all'];
+
+/**
+ * One game's board for a period: each player's best ranked (Today) result in it. Today is today's puzzle;
+ * This week is the last seven daily puzzles; All time is every daily puzzle ever. Every game stores a score
+ * where higher is better (timed games store a score that rises as the time falls), so one order fits all.
+ */
+export async function gameLeaderboard(gameType: string, period: Period, hardOnly = false, limit = 100): Promise<DailyRow[]> {
+  if (period === 'today') return dailyLeaderboard(gameType, undefined, limit, hardOnly);
+  const today = dailyDateET();
+  const since = period === 'week' ? new Date(Date.parse(`${today}T12:00:00Z`) - 6 * 86_400_000).toISOString().slice(0, 10) : '2000-01-01';
+  return cached(`lb:${period}:${gameType}:${today}${hardOnly ? ':hard' : ''}`, 300, async () => {
+    const rows = await db.execute<{ id: string; user_id: string; username: string; score: number; result_data: Record<string, unknown>; created_at: string; daily_date: string }>(dsql`
+      select distinct on (user_id) id, user_id, coalesce(username, 'anonymous') as username, score, result_data, created_at, daily_date
+      from game_results
+      where game_type = ${gameType} and is_daily and daily_date >= ${since} and user_id is not null and not flagged
+        ${hardOnly ? dsql`and coalesce((result_data->>'hard')::boolean, false)` : dsql``}
+      order by user_id, score desc, created_at asc`);
+    const top = [...rows].sort((a, b) => b.score - a.score || +new Date(a.created_at) - +new Date(b.created_at)).slice(0, limit);
+    const styles = await stylesFor(top.map((r) => r.user_id));
+    return top.map((r, i) => ({ rank: i + 1, username: r.username, score: r.score, summary: scoreSummary(gameType, r.result_data), createdAt: new Date(r.created_at).toISOString(), resultId: r.id, hard: r.result_data?.hard === true, style: styles.get(r.user_id), date: String(r.daily_date) }));
   });
 }
 

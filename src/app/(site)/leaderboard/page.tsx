@@ -1,83 +1,113 @@
-import { games } from '@/lib/minigames/games';
-import { nbaGames } from '@/lib/minigames/nba/games';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { allTimeLeaderboard, dailyLeaderboard } from '@/lib/server/leaderboard';
+import { allTimeLeaderboard, gameLeaderboard, PERIODS, type Period } from '@/lib/server/leaderboard';
 import { dailyDateET } from '@/lib/game/daily';
+import { GAMES, SPORTS, gameEntry, gamesFor, type Sport } from '@/lib/game-registry';
 import { LeaderboardViewed } from '@/components/LeaderboardViewed';
 import { StyledName } from '@/components/StyledName';
+
 const isHandle = (u: string) => /^[A-Za-z0-9_]{3,20}$/.test(u) && !u.startsWith('deleted-user-');
 const Player = ({ u, style }: { u: string; style?: import('@/lib/cosmetics').NameStyle }) => isHandle(u) ? <Link href={`/u/${u}`} className="lb-name"><StyledName name={u} style={style} /></Link> : <span>{u}</span>;
 
 export const revalidate = 60;
 export const metadata: Metadata = {
-  title: 'Leaderboard',
-  description: "Today's best 17-0 and Build a Player results, plus the all-time table. Resets at midnight ET.",
+  title: 'Leaderboards',
+  description: 'Every game has a board: today, this week and all time. Ranked results only, validated on the server. Resets at midnight ET.',
   alternates: { canonical: '/leaderboard' },
 };
 
-type SP = Promise<{ tab?: string; game?: string; page?: string; hard?: string }>;
-const HARD_GAMES = new Set(['17-0', 'build-a-player']);
+type SP = Promise<{ tab?: string; game?: string; page?: string; hard?: string; period?: string; sport?: string; view?: string }>;
+const PERIOD_LABEL: Record<Period, string> = { today: 'Today', week: 'This week', all: 'All time' };
 
 export default async function Leaderboard({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const tab = sp.tab === 'all-time' ? 'all-time' : 'daily';
-  const ALL = [{ slug: '17-0', name: '17-0' }, { slug: 'build-a-player', name: 'Build a Player' }, ...games.map((g) => ({ slug: g.slug, name: g.name })), { slug: '82-0', name: '82-0' }, ...nbaGames.map((g) => ({ slug: g.slug, name: g.name })), { slug: '162-0', name: '162-0' }];
-  const game = ALL.some((g) => g.slug === sp.game) ? sp.game! : '17-0';
+  // Old links: ?tab=all-time is the overall table, ?tab=daily is Today.
+  const overall = sp.view === 'overall' || sp.tab === 'all-time';
+  const entry = gameEntry(sp.game ?? '') ?? (sp.sport ? gamesFor(sp.sport as Sport)[0] : undefined) ?? GAMES[0];
+  const sport = entry.sport;
+  const period: Period = PERIODS.includes(sp.period as Period) ? (sp.period as Period) : 'today';
+  const hardOnly = sp.hard === '1' && !!entry.hard;
   const page = Math.max(1, Number(sp.page) || 1);
-  const hardOnly = sp.hard === '1' && HARD_GAMES.has(game);
   let error = false;
-  const daily = tab === 'daily' ? await dailyLeaderboard(game, undefined, undefined, hardOnly).catch(() => { error = true; return []; }) : [];
-  const all = tab === 'all-time' ? await allTimeLeaderboard(page).catch(() => { error = true; return { rows: [], total: 0 }; }) : { rows: [], total: 0 };
+  const rows = overall ? [] : await gameLeaderboard(entry.slug, period, hardOnly).catch(() => { error = true; return []; });
+  const all = overall ? await allTimeLeaderboard(page).catch(() => { error = true; return { rows: [], total: 0 }; }) : { rows: [], total: 0 };
   const pages = Math.max(1, Math.ceil(all.total / 50));
-  const tabLink = (t: string, g = game) => `/leaderboard?tab=${t}&game=${g}`;
+  const href = (o: { game?: string; period?: Period; hard?: boolean }) => {
+    const g = o.game ?? entry.slug, p = o.period ?? period, h = o.hard ?? hardOnly;
+    return `/leaderboard?game=${g}&period=${p}${h && gameEntry(g)?.hard ? '&hard=1' : ''}`;
+  };
   return (
-    <div className="container section">
-      <LeaderboardViewed tab={tab} />
-      <span className="eyebrow">{tab === 'daily' ? `Daily · ${dailyDateET()} · resets midnight ET` : 'All-time'}</span>
-      <h1>Leaderboard</h1>
-      <nav aria-label="Leaderboard views" className="row" style={{ marginBottom: 24 }}>
-        {ALL.map((g) => (
-          <Link key={g.slug} className={`btn btn-sm ${tab === 'daily' && game === g.slug ? 'btn-primary' : ''}`} href={tabLink('daily', g.slug)} aria-current={tab === 'daily' && game === g.slug ? 'page' : undefined}>{g.name}</Link>
+    <div className="container section lb">
+      <LeaderboardViewed tab={overall ? 'all-time' : period} />
+      <span className="eyebrow">{overall ? 'Overall' : `${entry.name} · ${PERIOD_LABEL[period]}${period === 'today' ? ` · ${dailyDateET()} · resets midnight ET` : ''}`}</span>
+      <h1>Leaderboards</h1>
+
+      <nav aria-label="Sport" className="sport-tabs">
+        {SPORTS.filter((s) => gamesFor(s.key).length).map((s) => (
+          <Link key={s.key} href={href({ game: gamesFor(s.key)[0].slug })} aria-current={!overall && sport === s.key ? 'page' : undefined}>{s.label}</Link>
         ))}
-        <Link className={`btn btn-sm ${tab === 'all-time' ? 'btn-primary' : ''}`} href={tabLink('all-time')} aria-current={tab === 'all-time' ? 'page' : undefined}>All-time</Link>
+        <Link href="/leaderboard?view=overall" aria-current={overall ? 'page' : undefined}>Overall</Link>
       </nav>
-      {tab === 'daily' && HARD_GAMES.has(game) && (
-        <nav aria-label="Difficulty" className="row" style={{ marginBottom: 20, gap: 8 }}>
-          <Link className={`btn btn-sm ${!hardOnly ? 'btn-primary' : ''}`} href={tabLink('daily')} aria-current={!hardOnly ? 'page' : undefined}>All runs</Link>
-          <Link className={`btn btn-sm ${hardOnly ? 'btn-primary' : ''}`} href={`${tabLink('daily')}&hard=1`} aria-current={hardOnly ? 'page' : undefined}>Hard mode only</Link>
-        </nav>
+
+      {!overall && (
+        <>
+          <nav aria-label="Game" className="lb-games">
+            {gamesFor(sport).map((g) => (
+              <Link key={g.slug} className={`lb-chip${g.slug === entry.slug ? ' on' : ''}`} href={href({ game: g.slug, hard: false })} aria-current={g.slug === entry.slug ? 'page' : undefined}>{g.name}</Link>
+            ))}
+          </nav>
+          <div className="row lb-filters">
+            <nav aria-label="Period" className="seg">
+              {PERIODS.map((p) => <Link key={p} href={href({ period: p })} className={p === period ? 'on' : ''} aria-current={p === period ? 'page' : undefined}>{PERIOD_LABEL[p]}</Link>)}
+            </nav>
+            {entry.hard && (
+              <nav aria-label="Difficulty" className="seg">
+                <Link href={href({ hard: false })} className={!hardOnly ? 'on' : ''} aria-current={!hardOnly ? 'page' : undefined}>All runs</Link>
+                <Link href={href({ hard: true })} className={hardOnly ? 'on' : ''} aria-current={hardOnly ? 'page' : undefined}>Hard mode only</Link>
+              </nav>
+            )}
+          </div>
+        </>
       )}
+
       {error && <div role="alert" className="card card-error">The leaderboard is not responding. Scores are safe, try again in a minute.</div>}
-      {tab === 'daily' ? (
-        daily.length ? (
-          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table>
-            <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Result</th></tr></thead>
-            <tbody>{daily.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td><Player u={r.username} style={r.style} />{r.hard && <span className="tag-hard">Hard</span>}</td><td className="num"><Link href={`/results/${r.resultId}`}>{r.summary}</Link></td></tr>)}</tbody>
+
+      {!overall ? (
+        rows.length ? (
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table className="lb-table">
+            <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Result</th>{period !== 'today' && <th scope="col" className="num">Date</th>}</tr></thead>
+            <tbody>{rows.map((r) => (
+              <tr key={r.rank} className={r.rank <= 3 ? `lb-top lb-${r.rank}` : undefined}>
+                <td className="num"><span className="lb-rank">{r.rank}</span></td>
+                <td><Player u={r.username} style={r.style} />{r.hard && <span className="tag-hard">Hard</span>}</td>
+                <td className="num"><Link href={`/results/${r.resultId}`}>{r.summary}</Link></td>
+                {period !== 'today' && <td className="num muted">{r.date}</td>}
+              </tr>
+            ))}</tbody>
           </table></div>
         ) : !error && (
-          <div className="card"><p>{hardOnly ? 'Nobody has played today in Hard mode yet. Turn it on in the game and claim the top spot.' : 'No daily results yet. Be first. Sign in, play the daily, and your name goes here.'}</p>
-            <Link className="btn btn-primary" href={`/games/${game}?mode=today`}>Play Today</Link></div>
+          <div className="card"><p>{hardOnly ? 'Nobody has a Hard mode run here yet. Turn it on in the game and claim the top spot.' : period === 'today' ? 'No ranked results today yet. Be first: sign in, play Today, and your name goes here.' : 'No ranked results yet. Play Today while signed in and your best run lands here.'}</p>
+            <Link className="btn btn-primary" href={`/games/${entry.slug}?mode=today`}>Play {entry.name}</Link></div>
         )
       ) : (
         <>
-          <p className="muted">Points: one per win in 17-0, rating divided by ten in Build a Player. Ties go to whoever got there first.</p>
+          <p className="muted">Points across every game: one per 17-0 win, rating divided by ten in Build a Player. Ties go to whoever got there first.</p>
           {all.rows.length ? (
-            <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table>
+            <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table className="lb-table">
               <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Points</th><th scope="col" className="num">Games</th></tr></thead>
-              <tbody>{all.rows.map((r) => <tr key={r.rank}><td className="num">{r.rank}</td><td><Player u={r.username} style={r.style} /></td><td className="num">{r.points}</td><td className="num">{r.games}</td></tr>)}</tbody>
+              <tbody>{all.rows.map((r) => <tr key={r.rank} className={r.rank <= 3 ? `lb-top lb-${r.rank}` : undefined}><td className="num"><span className="lb-rank">{r.rank}</span></td><td><Player u={r.username} style={r.style} /></td><td className="num">{r.points}</td><td className="num">{r.games}</td></tr>)}</tbody>
             </table></div>
-          ) : !error && <div className="card"><p>The all-time table is empty. Every game you play while signed in counts.</p></div>}
+          ) : !error && <div className="card"><p>The overall table is empty. Every game you play while signed in counts.</p></div>}
           {pages > 1 && (
             <nav aria-label="Pagination" className="row" style={{ marginTop: 16 }}>
-              {page > 1 && <Link className="btn btn-sm" href={`/leaderboard?tab=all-time&page=${page - 1}`}>Previous</Link>}
+              {page > 1 && <Link className="btn btn-sm" href={`/leaderboard?view=overall&page=${page - 1}`}>Previous</Link>}
               <span className="num muted">Page {page} of {pages}</span>
-              {page < pages && <Link className="btn btn-sm" href={`/leaderboard?tab=all-time&page=${page + 1}`}>Next</Link>}
+              {page < pages && <Link className="btn btn-sm" href={`/leaderboard?view=overall&page=${page + 1}`}>Next</Link>}
             </nav>
           )}
         </>
       )}
-      <p className="hint" style={{ marginTop: 24 }}>Only signed-in players appear. Every score is validated on the server.</p>
+      <p className="hint" style={{ marginTop: 24 }}>Only signed-in players appear, and only ranked (Today) results count. Every score is validated on the server.</p>
     </div>
   );
 }

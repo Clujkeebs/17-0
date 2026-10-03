@@ -228,3 +228,16 @@ test('17-0 Fantasy: seven-man lineup scored on points per game', async ({ page }
   await expect(page.locator('.grade-table tbody tr')).toHaveCount(7);
   await expect(page.locator('.grade-table .grade-sub').first()).toContainText('pts/g');
 });
+
+test('leaderboards: every sport has its games, with Today, This week and All time', async ({ page }) => {
+  await page.goto('/leaderboard');
+  await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'Basketball' }).click();
+  await expect(page.getByRole('navigation', { name: 'Game' }).getByRole('link', { name: '82-0', exact: true })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('navigation', { name: 'Game' }).getByRole('link', { name: 'Who Led?' }).click();
+  await page.getByRole('navigation', { name: 'Period' }).getByRole('link', { name: 'This week' }).click();
+  await expect(page).toHaveURL(/game=nba-who-led&period=week/);
+  await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'Baseball' }).click();
+  await expect(page.getByRole('navigation', { name: 'Game' }).getByRole('link', { name: '162-0' })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'Overall' }).click();
+  await expect(page.locator('.eyebrow').first()).toHaveText('Overall');
+});
