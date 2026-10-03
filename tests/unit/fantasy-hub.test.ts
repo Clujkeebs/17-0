@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rankPlayers, snakePicks, tradeVerdict, waiverTargets, type FPlayer } from '@/lib/fantasy/rank';
+import { balancers, evaluateTrade, EXTRA_WEIGHT, rankPlayers, replacementLevels, snakePicks, tradeVerdict, waiverTargets, type FPlayer } from '@/lib/fantasy/rank';
 
 const mk = (id: string, pos: FPlayer['pos'], value: number, extra: Partial<FPlayer> = {}): FPlayer => ({ id, slug: id, name: id, pos, team: 'T', teamColor: '#000', logoUrl: null, img: null, value, recent: null, ppg: null, proj: null, games: 4, popularity: 10, trend: 0, ...extra });
 const pool: FPlayer[] = [
@@ -34,5 +34,42 @@ describe('fantasy hub math', () => {
     const w = waiverTargets(r);
     expect(w[0].id).toBe('sleeper');
     expect(w.every((p) => p.popularity == null || p.popularity > 150)).toBe(true);
+  });
+});
+
+describe('trade calculator engine', () => {
+  const mk2 = (id: string, pos: FPlayer['pos'], value: number) => ({ id, pos, value });
+  const pool = [
+    ...Array.from({ length: 40 }, (_, i) => mk2(`qb${i}`, 'QB' as const, 24 - i * 0.4)),
+    ...Array.from({ length: 80 }, (_, i) => mk2(`rb${i}`, 'RB' as const, 22 - i * 0.2)),
+    ...Array.from({ length: 80 }, (_, i) => mk2(`wr${i}`, 'WR' as const, 22 - i * 0.2)),
+    ...Array.from({ length: 30 }, (_, i) => mk2(`te${i}`, 'TE' as const, 16 - i * 0.4)),
+  ];
+  it('superflex and bigger leagues raise the replacement bar', () => {
+    const base = replacementLevels(pool, { teams: 12, superflex: false });
+    expect(replacementLevels(pool, { teams: 12, superflex: true }).QB).toBeLessThan(base.QB);
+    expect(replacementLevels(pool, { teams: 14, superflex: false }).RB).toBeLessThan(base.RB);
+  });
+  it('superflex makes the same QB worth more in a trade', () => {
+    const qb = pool.find((p) => p.id === 'qb2')!, wr = pool.find((p) => p.id === 'wr8')!;
+    const one = evaluateTrade([qb], [wr], replacementLevels(pool, { teams: 12, superflex: false }));
+    const sf = evaluateTrade([qb], [wr], replacementLevels(pool, { teams: 12, superflex: true }));
+    expect(sf.give).toBeGreaterThan(one.give);
+  });
+  it('extra players in the bigger package count at half', () => {
+    const repl = replacementLevels(pool, { teams: 12, superflex: false });
+    const e = evaluateTrade([pool[40]], [pool[130], pool[131]], repl);
+    expect(e.getLines.map((l) => l.weight)).toEqual([1, EXTRA_WEIGHT]);
+  });
+  it('balancers suggest players that close the gap on the short side', () => {
+    const repl = replacementLevels(pool, { teams: 12, superflex: false });
+    const give = [pool.find((p) => p.id === 'rb0')!], get = [pool.find((p) => p.id === 'rb10')!];
+    const before = evaluateTrade(give, get, repl);
+    expect(before.verdict).toBe('You lose it');
+    const fix = balancers(pool, give, get, repl)!;
+    expect(fix.side).toBe('get');
+    const after = evaluateTrade(give, [...get, fix.players[0]], repl);
+    expect(Math.abs(after.diff)).toBeLessThan(Math.abs(before.diff));
+    expect(balancers(pool, give, give, repl)).toBeNull();
   });
 });

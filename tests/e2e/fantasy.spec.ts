@@ -21,6 +21,22 @@ test('trade calculator gives a verdict', async ({ page }) => {
   await page.getByLabel('Add to you get').fill('e');
   await page.locator('.ps-list button').nth(1).click();
   await expect(page.locator('.trade-verdict .big-num')).toHaveText(/Fair|You win it|You lose it/);
+  // League settings change the math and ride along in the address bar, so a copied link opens the same trade.
+  await page.getByRole('radio', { name: '14 teams' }).click();
+  await page.getByLabel('Superflex').check();
+  await expect(page).toHaveURL(/give=.+&get=.+&teams=14&sf=1/);
+  const url = page.url();
+  await page.goto(url, { waitUntil: 'networkidle' });
+  await expect(page.locator('.trade-list li')).toHaveCount(2);
+  await expect(page.getByRole('radio', { name: '14 teams' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByLabel('Superflex')).toBeChecked();
+  // An uneven trade offers a player to even it out; taking one adds him to the short side.
+  const chips = page.locator('.trade-chip');
+  if (await chips.count()) {
+    const before = await page.locator('.trade-list li').count();
+    await chips.first().click();
+    await expect(page.locator('.trade-list li')).toHaveCount(before + 1);
+  }
 });
 
 test('cheat sheet shows targets for each pick', async ({ page }) => {

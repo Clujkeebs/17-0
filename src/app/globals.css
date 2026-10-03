@@ -529,7 +529,7 @@ html[data-rules=hidden] .rules-card { display: none; }
 .trade-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
 .trade-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
 .trade-list li { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--steel); border-radius: 10px; }
-.trade-list li > span:first-child { flex: 1; min-width: 0; }
+
 .trade-verdict { margin-top: 16px; }
 .cs-field { display: flex; flex-direction: column; gap: 6px; }
 .cs-rounds { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
@@ -883,3 +883,24 @@ a.sn-sec-h:hover { color: var(--bone); }
 @media (prefers-reduced-motion: reduce) { .tl-chip, .tl-items > li { transition: none; } .tl-ghost { transform: translate(-50%, -120%); } }
 /* Narrow phones: the Account pill drops its picture so the menu row keeps room. */
 @media (max-width: 400px) { .sh-me .hp:not(.hp-in) { padding: 4px 12px; gap: 0; } .sh-me .hp:not(.hp-in) .avatar, .sh-me .hp:not(.hp-in) .ring { display: none; } .sh-me .hp { font-size: .85rem; min-height: 36px; } }
+
+/* ---------- Trade calculator ---------- */
+.trade-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 20px; }
+.trade-set-label { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--bone-dim); }
+.seg button { border: 0; background: none; font: inherit; padding: 6px 12px; border-radius: 7px; font-size: .85rem; font-weight: 600; color: var(--bone-dim); cursor: pointer; white-space: nowrap; }
+.seg button.on { background: var(--bone); color: #fff; }
+.trade-toggle { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: .9rem; cursor: pointer; }
+.trade-toggle input { width: 18px; height: 18px; accent-color: var(--bone); }
+.trade-set-note { font-size: .85rem; }
+.trade-who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.trade-who strong { overflow-wrap: break-word; }
+.trade-who .muted { font-size: .85rem; }
+.trade-val { font-weight: 700; }
+.trade-x { flex: none; width: 32px; height: 32px; border: 1px solid var(--steel); border-radius: 50%; background: var(--surface); color: var(--bone-dim); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.trade-x:hover { border-color: var(--bone); color: var(--bone); }
+.trade-note { display: block; font-size: .78rem; color: var(--bone-dim); }
+.trade-bar { height: 8px; margin: 14px 0 4px; border-radius: 999px; background: #15803D; overflow: hidden; }
+.trade-bar span { display: block; height: 100%; background: var(--orange); transition: width .25s ease; }
+.trade-chip { border: 1px solid var(--steel); background: var(--surface); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: .9rem; font-weight: 600; color: var(--bone); cursor: pointer; }
+.trade-chip:hover { border-color: var(--bone); }
+@media (prefers-reduced-motion: reduce) { .trade-bar span { transition: none; } }
