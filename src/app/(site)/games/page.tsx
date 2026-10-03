@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { games } from '@/lib/minigames/games';
 import { nbaGames } from '@/lib/minigames/nba/games';
 import { soccerGames } from '@/lib/minigames/soccer/games';
+import { mlbGames } from '@/lib/minigames/mlb/games';
 import { puzzleGames } from '@/lib/minigames/puzzles/games';
 import { top100Games } from '@/lib/minigames/top100/games';
 import { ArrowIcon } from '@/components/Icons';
@@ -99,7 +100,20 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </span>
           </div>
         </div>
-      </>) : mlb ? <TopCards lg="mlb" /> : soccer ? (<>
+      </>) : mlb ? (<>
+        <h2 style={{ marginTop: 56 }}>Daily puzzles</h2>
+        <div className="hub-grid">
+          {mlbGames.map((g) => (
+            <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+              <span className="eyebrow">New</span>
+              <h3>{g.name}</h3>
+              <p>{g.tagline}</p>
+              <span className="hub-cta">Play <ArrowIcon size={14} /></span>
+            </Link>
+          ))}
+        </div>
+        <TopCards lg="mlb" />
+      </>) : soccer ? (<>
         <p className="muted" style={{ maxWidth: '58ch' }}>Premier League, La Liga, Serie A, Bundesliga, Ligue 1 and MLS. Rosters and scoring lists from ESPN, updated daily.</p>
         <div className="hub-grid">
           {soccerGames.map((g) => (

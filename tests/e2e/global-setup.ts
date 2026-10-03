@@ -72,6 +72,11 @@ async function seedMlb() {
         select 8900000 + t * 100 + ${i}, 9000 + t, ${y}, ${kind}, ${pos[i]}, ${sql.json(line)}, 72 + ${i} from generate_series(1, 22) t on conflict do nothing`;
     }
   }
+  // Varied stat lines (the inserts above give every stand-in the same line), so the baseball minis have real contests.
+  await sql`update mlb_player_seasons set line = line || jsonb_build_object('hr', 15 + (player_id + season) % 31, 'rbi', 60 + (player_id * 7 + season) % 61, 'sb', 15 + (player_id * 3) % 27, 'avg', round(0.26 + ((player_id + season) % 60) / 1000.0, 3))
+    where player_id >= 8000000 and kind = 'bat'`;
+  await sql`update mlb_player_seasons set line = line || jsonb_build_object('so', 120 + (player_id + season) % 121, 'w', 10 + (player_id * 5 + season) % 11) where player_id >= 8000000 and kind = 'sp'`;
+  await sql`update mlb_player_seasons set line = line || jsonb_build_object('sv', 20 + (player_id + season) % 25) where player_id >= 8000000 and kind = 'rp'`;
   await sql.end();
   const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
   await redis.del('mlb:era-teams');

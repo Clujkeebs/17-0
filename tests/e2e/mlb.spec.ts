@@ -64,3 +64,15 @@ test('162-0 Right now: this season only, team spin only', async ({ page }) => {
   await c.click();
   await expect(page.locator('.mlb-slots li.filled')).toHaveCount(1);
 });
+
+for (const [slug, rounds] of [['mlb-higher-lower', 10], ['mlb-blind-resume', 6], ['mlb-who-led', 6], ['mlb-whose-team', 6]] as const) {
+  test(`${slug} casual round trip`, async ({ page }) => {
+    await page.goto(`/games/${slug}`);
+    await page.getByRole('tab', { name: 'Casual' }).click();
+    for (let i = 0; i < rounds; i++) {
+      await expect(page.getByText(`Round ${i + 1} of ${rounds}`)).toBeVisible();
+      await page.locator('button.m-opt').first().click();
+    }
+    await expect(page.locator('.m-score')).toContainText(`/${rounds}`);
+  });
+}
