@@ -91,9 +91,10 @@ export function pitchValue(s: PitchLine, lg: LeagueNorms, kind: 'sp' | 'rp'): nu
     const sample = clamp(s.ip / 140, 0, 1);
     return Math.round(clamp(70 + raw * 0.5, 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
   }
-  const raw = Math.min(eraPlus, 150) * 0.8 + s.sv * 0.5 + (kRate - 0.9) * 20 + (s.ip - 60) / 8;
-  const sample = clamp(s.ip / 50, 0, 1);
-  return Math.round(clamp(66 + raw * 0.4, 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
+  // Relief innings are few and ERA swings on them, so the ERA credit is capped and short seasons pulled down hard.
+  const raw = Math.min(eraPlus, 120) * 0.8 + s.sv * 0.5 + (kRate - 0.9) * 20 + (s.ip - 60) / 8;
+  const sample = clamp(s.ip / 60, 0, 1);
+  return Math.round(clamp(66 + raw * 0.3, 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
 }
 
 /** A season only counts as a draftable line with real playing time. */

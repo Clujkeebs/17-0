@@ -26,6 +26,7 @@ const refreshLegends = (fetchHistory: boolean) => import('@/lib/server/nfl-histo
   .catch((e) => console.warn('[nfl-history] refresh failed', (e as Error).message));
 /** 162-0: MLB history backfill (only missing seasons; the latest two always refresh) and a spot check. */
 const refreshMlb = () => import('@/lib/server/mlb-sync').then(async (m) => { await m.syncMlb(); await m.mlbSpotCheck(); })
+  .then(() => import('@/lib/server/mlb-calibrate')).then((c) => c.tuneMlbFloor())
   .catch((e) => console.warn('[mlb] refresh failed', (e as Error).message));
 const refreshFantasy = () => syncFantasy().then(() => tuneFantasyFloor()).catch((e) => console.warn('[fantasy] refresh failed', (e as Error).message));
 

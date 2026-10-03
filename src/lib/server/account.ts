@@ -33,7 +33,7 @@ export async function isUsernameAvailable(username: string, exceptUserId?: strin
   return !r;
 }
 
-const GAME_NAMES: Record<string, string> = { '17-0': '17-0', 'build-a-player': 'Build a Player', '82-0': '82-0' };
+const GAME_NAMES: Record<string, string> = { '17-0': '17-0', 'build-a-player': 'Build a Player', '82-0': '82-0', '162-0': '162-0' };
 
 /**
  * Display name for a game type. Mini-game names come from the registry via a lazy import:

@@ -31,6 +31,13 @@ export async function GET(req: Request) {
       eyebrow: r.isDaily ? `Daily 82-0 · ${r.dailyDate}` : '82-0 projected record', headline: `${d.wins}-${d.losses}`, perfect: d.wins === 82,
       lines: d.slots.map((x) => ({ k: x.slot, v: `${last(x.name)}  ${x.letter}` })), footer: 'Can you beat it?',
     });
+  } else if (r.gameType === '162-0') {
+    const d = r.resultData as { wins: number; losses: number; slots: { slot: string; name: string; letter: string }[] };
+    const lines = d.slots.map((x) => ({ k: x.slot, v: `${last(x.name)}  ${x.letter}` }));
+    res = await renderCard({
+      eyebrow: r.isDaily ? `Daily 162-0 · ${r.dailyDate}` : '162-0 projected record', headline: `${d.wins}-${d.losses}`, perfect: d.wins === 162,
+      lines: [...lines.slice(0, 5), { k: '+', v: `${lines.length - 5} more picks` }], footer: 'Can you beat it?',
+    });
   } else if (r.gameType !== 'build-a-player') {
     const g = getMiniGame(r.gameType);
     const d = r.resultData as { summary?: string; perfect?: boolean };

@@ -102,6 +102,12 @@
   .g-slots li.filled { border-color: var(--bone) !important; }
   .g-slot-k { font-size: .65rem; }
   .g-slot-v img, .g-slot-v .face, .g-dot, .g-slot-ovr { display: none; }
+  .g-slots.mlb-slots { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .g-slots.mlb-slots li { padding: 2px 6px; }
+  .mlb-slots .nba-slot { flex-direction: column; align-items: flex-start; gap: 0; min-height: 40px; padding: 2px 0; }
+  .mlb-slots .g-slot-v { width: 100%; min-width: 0; gap: 4px; }
+  .mlb-slots .g-slot-name, .mlb-slots .g-slot-empty { font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .g-side:has(.mlb-slots) .hint { display: none; }
   .g-slot-name, .g-slot-empty { font-size: .78rem; }
   /* 12 and 16 man rosters: one swipeable row instead of a tall sticky grid. */
   .g-slots-many { display: flex; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }

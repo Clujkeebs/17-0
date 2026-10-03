@@ -6,12 +6,16 @@ import { ArrowIcon } from '@/components/Icons';
 
 export const metadata: Metadata = {
   title: 'Games',
-  description: 'Free daily football and basketball games. NFL games built on Madden ratings, NBA games built on real stats since 1980. Play Today for the leaderboard, or Casual as much as you like.',
+  description: 'Free daily football, basketball and baseball games. NFL games built on Madden ratings, NBA and MLB games built on real stats. Play Today for the leaderboard, or Casual as much as you like.',
   alternates: { canonical: '/games' },
 };
 
 const NBA = [
   { slug: '82-0', name: '82-0', tagline: 'Spin an era, spin a franchise, draft five. Move anyone between positions, then play 82.', meta: 'Draft · 3 min' },
+];
+
+const MLB = [
+  { slug: '162-0', name: '162-0', tagline: 'Spin an era since 1970, spin a franchise, eleven times. Fill a lineup, a starter and a closer, then play 162.', meta: 'Draft · 4 min' },
 ];
 
 const FEATURED = [
@@ -20,22 +24,24 @@ const FEATURED = [
 ];
 
 export default async function GamesHub({ searchParams }: { searchParams: Promise<{ sport?: string }> }) {
-  const nba = (await searchParams).sport === 'nba';
+  const sport = (await searchParams).sport;
+  const nba = sport === 'nba', mlb = sport === 'mlb';
   return (
     <div className="container section">
       <p className="eyebrow">Free · New puzzles at midnight ET</p>
       <h1 style={{ maxWidth: '16ch' }}>Every game, every day.</h1>
       <nav className="sport-tabs" aria-label="Sport">
-        <Link href="/games" aria-current={!nba ? 'page' : undefined}>Football</Link>
+        <Link href="/games" aria-current={!nba && !mlb ? 'page' : undefined}>Football</Link>
         <Link href="/games?sport=nba" aria-current={nba ? 'page' : undefined}>Basketball</Link>
+        <Link href="/games?sport=mlb" aria-current={mlb ? 'page' : undefined}>Baseball</Link>
       </nav>
       <p className="muted" style={{ maxWidth: '58ch', fontSize: '1.1rem' }}>
         Each game has two modes. <strong>Today</strong> is the same puzzle for everyone, one attempt, ranked on the leaderboard (free account needed). <strong>Casual</strong> is unlimited and open to anyone.
       </p>
 
-      {nba ? (
+      {nba || mlb ? (
         <div className="hub-featured">
-          {NBA.map((g) => (
+          {(nba ? NBA : MLB).map((g) => (
             <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card hub-feature hub-dark">
               <span className="eyebrow">{g.meta}</span>
               <h2>{g.name}</h2>
@@ -56,7 +62,7 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </Link>
           ))}
         </div>
-      </>) : (<>
+      </>) : mlb ? null : (<>
       <div className="hub-featured">
         {FEATURED.map((g, i) => (
           <Link key={g.slug} href={`/games/${g.slug}`} className={`hub-card hub-feature ${i === 0 ? 'hub-dark' : ''}`}>

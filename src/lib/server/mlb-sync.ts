@@ -10,6 +10,8 @@ import { getRedis } from './redis';
  * skipped on later runs and the latest season is always refreshed.
  */
 const API = 'https://statsapi.mlb.com/api/v1';
+/** Bump when the value formulas change: stored seasons are cleared and rebuilt. */
+const DATA_VERSION = 2;
 
 /** The latest season with games: the current year from late March on. */
 export function latestMlbSeason(now = new Date()): number {
@@ -70,6 +72,14 @@ export async function syncMlb(opts: { from?: number; to?: number; fetchImpl?: ty
   const from = opts.from ?? MLB_FIRST_SEASON, to = opts.to ?? latest;
   const lock = await getRedis().set('mlb:sync-lock', '1', 'EX', 3 * 3600, 'NX').catch(() => 'OK');
   if (!lock) { console.log('[mlb] sync already running'); return null; }
+  const [ver] = await db.select().from(schema.gameConfigs).where(and(eq(schema.gameConfigs.gameType, '162-0'), eq(schema.gameConfigs.configKey, 'data_version'))).limit(1);
+  if (Number(ver?.configValue ?? 0) < DATA_VERSION) {
+    await db.delete(schema.mlbPlayerSeasons);
+    if (ver) await db.update(schema.gameConfigs).set({ configValue: DATA_VERSION, updatedAt: new Date() }).where(eq(schema.gameConfigs.id, ver.id));
+    else await db.insert(schema.gameConfigs).values({ gameType: '162-0', configKey: 'data_version', configValue: DATA_VERSION, updatedBy: 'mlb-sync' });
+    await getRedis().del('mlb:era-teams').catch(() => {});
+    console.log('[mlb] cleared stored seasons for a rebuild, data version', DATA_VERSION);
+  }
   const done = new Set((await db.select({ s: schema.mlbPlayerSeasons.season, n: dsql<number>`count(distinct ${schema.mlbPlayerSeasons.teamId})::int` })
     .from(schema.mlbPlayerSeasons).groupBy(schema.mlbPlayerSeasons.season)).filter((r) => r.n >= 24).map((r) => r.s));
   let rows = 0, seasons = 0;

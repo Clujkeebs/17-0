@@ -22,7 +22,7 @@ const HARD_GAMES = new Set(['17-0', 'build-a-player']);
 export default async function Leaderboard({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const tab = sp.tab === 'all-time' ? 'all-time' : 'daily';
-  const ALL = [{ slug: '17-0', name: '17-0' }, { slug: 'build-a-player', name: 'Build a Player' }, ...games.map((g) => ({ slug: g.slug, name: g.name })), { slug: '82-0', name: '82-0' }, ...nbaGames.map((g) => ({ slug: g.slug, name: g.name }))];
+  const ALL = [{ slug: '17-0', name: '17-0' }, { slug: 'build-a-player', name: 'Build a Player' }, ...games.map((g) => ({ slug: g.slug, name: g.name })), { slug: '82-0', name: '82-0' }, ...nbaGames.map((g) => ({ slug: g.slug, name: g.name })), { slug: '162-0', name: '162-0' }];
   const game = ALL.some((g) => g.slug === sp.game) ? sp.game! : '17-0';
   const page = Math.max(1, Number(sp.page) || 1);
   const hardOnly = sp.hard === '1' && HARD_GAMES.has(game);

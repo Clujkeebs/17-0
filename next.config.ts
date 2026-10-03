@@ -15,6 +15,8 @@ const config: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'a.espncdn.com' },
+      { protocol: 'https', hostname: 'www.mlbstatic.com' },
+      { protocol: 'https', hostname: 'img.mlbstatic.com' },
       { protocol: 'https', hostname: 'upload.wikimedia.org' },
       { protocol: 'https', hostname: 'static.www.nfl.com' },
       { protocol: 'https', hostname: '*.r2.dev' },

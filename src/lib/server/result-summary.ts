@@ -6,7 +6,7 @@
 export function scoreSummary(gameType: string, data: unknown): string {
   const d = (data ?? {}) as Record<string, unknown>;
   if (gameType === '17-0') return `${Number(d.wins ?? 0)}-${Number(d.losses ?? 0)}${d.hard ? ' · Hard' : ''}`;
-  if (gameType === '82-0') return `${Number(d.wins ?? 0)}-${Number(d.losses ?? 0)}${d.hard ? ' · Hard' : ''}`;
+  if (gameType === '82-0' || gameType === '162-0') return `${Number(d.wins ?? 0)}-${Number(d.losses ?? 0)}${d.hard ? ' · Hard' : ''}`;
   if (gameType === 'build-a-player') return `${String(d.position ?? '')} ${Number(d.rating ?? 0).toFixed(1)}`;
   return String(d.summary ?? '');
 }
