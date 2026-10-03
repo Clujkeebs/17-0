@@ -7,8 +7,8 @@ import { requireOwner } from '@/lib/server/owner';
 
 export const runtime = 'nodejs';
 
-const Body = z.object({ cmd: z.enum(['sync', 'fantasy', 'nba', 'cache']) });
-const LABEL = { sync: 'Ratings sync started.', fantasy: 'Fantasy points refresh started.', nba: 'NBA history refresh started.', cache: 'Caches cleared.' } as const;
+const Body = z.object({ cmd: z.enum(['sync', 'fantasy', 'nba', 'legends', 'cache']) });
+const LABEL = { sync: 'Ratings sync started.', fantasy: 'Fantasy points refresh started.', nba: 'NBA history refresh started.', legends: 'All-time legends rebuild started.', cache: 'Caches cleared.' } as const;
 
 /** Owner buttons: run a worker job now, or clear the caches so changes show up immediately. */
 export async function POST(req: Request) {
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return errorJson(400, 'Unknown command.');
   const { cmd } = parsed.data;
   if (cmd === 'cache') {
-    await Promise.all([invalidatePrefix('lb:'), getRedis().del('nba:era-teams')]).catch(() => {});
+    await Promise.all([invalidatePrefix('lb:'), getRedis().del('nba:era-teams', 'legends:by-team')]).catch(() => {});
   } else {
     await getQueue(QUEUE_NAMES.sync).add(cmd, { by: 'owner' }, { attempts: 1 });
   }

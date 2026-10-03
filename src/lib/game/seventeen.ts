@@ -112,6 +112,8 @@ export interface Pick {
   overall?: number;
   /** Fantasy edition: blended PPR points per game. */
   fantasy?: number;
+  /** All-time legend from ESPN history: his graded best season with the franchise (no Madden attributes). */
+  legendGrade?: number;
 }
 
 export interface SlotResult { slot: string; name: string; teamId: number; grade: number; letter: string; points?: number }
@@ -149,6 +151,7 @@ export function buildSchedule(seed: string, wins: number, strength: number, oppo
 export function gradePick(p: Pick, formulas: Record<FormulaKey, Weights> = DEFAULT_FORMULAS): number {
   if (p.fantasy !== undefined) return fantasyGrade(p.fantasy, p.group);
   if (p.slot === 'HC') return clamp(p.coachImpact ?? 60, 0, 99);
+  if (p.legendGrade !== undefined) return p.legendGrade;
   return ratePlayer(p.attributes ?? {}, p.group as PositionGroup, formulas);
 }
 

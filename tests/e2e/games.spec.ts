@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import Redis from 'ioredis';
 import postgres from 'postgres';
 
 test.beforeEach(async ({ page }) => {
@@ -47,9 +48,20 @@ test('17-0: setup sheet, draft six slots one team at a time, grade, see result',
 
 test('17-0: 16-man all-time roster drafts sixteen and grades', async ({ page }) => {
   test.setTimeout(120_000);
+  // Test databases have no ESPN history: stand-in legends (names marked "Test Legend") on every franchise.
+  const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
+  await sql`delete from nfl_legends where full_name like 'Test Legend%'`;
+  await sql`insert into nfl_legends (espn_id, full_name, position, "group", team_id, season, grade, line)
+    select 9000000 + t.id * 10 + g.n, 'Test Legend ' || g.grp || ' ' || t.abbreviation, g.pos, g.grp, t.id, 1994, 84 + g.n, g.line
+    from teams t cross join (values (0, 'QB', 'QB', '4,000 pass yds, 30 TD'), (1, 'WR', 'WR', '100 rec, 1,400 yds, 12 TD'), (2, 'EDGE', 'DE', '15 sacks, 50 tkl')) as g(n, grp, pos, line)`;
+  await sql.end();
+  const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+  await redis.del('legends:by-team');
+  redis.disconnect();
   await page.goto('/games/17-0');
   await setup(page, { mode: 'Casual', roster: '16', players: 'All-time', difficulty: 'Easy' });
   await expect(page.locator('.g-slots li')).toHaveCount(16);
+  await expect(page.locator('.g-legend-line').first()).toContainText('1994 ·', { timeout: 20_000 });
   await draftAll(page, 16);
   await page.getByRole('button', { name: 'Simulate the season' }).first().click();
   await page.waitForURL(/\/results\//);

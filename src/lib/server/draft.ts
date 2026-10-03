@@ -35,7 +35,7 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
   const pastTeams = done ? [current, ...past] : past;
   // Hard mode: overalls and trait ratings never leave the server until the result page, and the list is
   // alphabetical so its order cannot leak the ranking.
-  const hide = <T extends { ovr: number; attrs?: unknown; fpts?: number }>(x: T): T => (p.hard ? { ...x, ovr: -1, attrs: undefined, ...(x.fpts !== undefined ? { fpts: -1 } : {}) } : x);
+  const hide = <T extends { ovr: number; attrs?: unknown; fpts?: number; line?: string }>(x: T): T => (p.hard ? { ...x, ovr: -1, attrs: undefined, line: undefined, ...(x.fpts !== undefined ? { fpts: -1 } : {}) } : x);
   const order = <T extends { name: string }>(list: T[]) => (p.hard ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : list);
   const team = done ? null : current ? { ...current, players: order(current.players.map(hide)) } : null;
   return {

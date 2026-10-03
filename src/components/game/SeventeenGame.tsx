@@ -214,7 +214,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
                           <button type="button" className="g-player" onClick={() => pick(p, gs[0].key)} disabled={!landed || !!busy}
                             aria-label={`Draft ${p.name}, ${p.position}, ${p.fpts !== undefined ? `${showWorth(p)} fantasy points per game` : `${p.group === 'HC' ? 'coach impact' : 'overall'} ${p.ovr}`}, as your ${gs[0].label}${p.legend ? ', all-time legend' : ''}`}>
                             <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
-                            <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position}{p.legend && <span className="tag-legend">Legend</span>}</span></span>
+                            <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position}{p.legend && <span className="tag-legend">Legend</span>}{p.line && <span className="g-legend-line"> {p.line}</span>}</span></span>
                             <span className={`g-ovr num${p.fpts !== undefined ? ' g-fpts' : ''}`}>{showWorth(p)}</span>
                           </button>
                         </li>
@@ -303,7 +303,7 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
         <Choice label="Roster" name="format" value={today ? '6' : value.format} disabled={today || fantasy} onChange={(v) => set({ format: v as FormatKey })}
           options={[{ v: '6', t: '6', d: 'Classic' }, { v: '12', t: '12', d: 'Adds OL and defense' }, { v: '16', t: '16', d: 'Full lineup' }]} />
         <Choice label="Players" name="pool" value={today || fantasy ? 'current' : value.pool} disabled={today || fantasy} onChange={(v) => set({ pool: v as PoolKey })}
-          options={[{ v: 'current', t: 'Current', d: 'Today’s rosters' }, { v: 'all-time', t: 'All-time', d: 'Plus franchise legends' }]} />
+          options={[{ v: 'current', t: 'Current', d: 'Today’s rosters' }, { v: 'all-time', t: 'All-time', d: 'Plus every franchise’s legends' }]} />
         <Choice label="Difficulty" name="hard" value={value.hard ? 'hard' : 'easy'} onChange={(v) => set({ hard: v === 'hard' })}
           options={[{ v: 'easy', t: 'Easy', d: fantasy ? 'Points shown, 2 re-rolls' : 'Overalls shown, 2 re-rolls' }, { v: 'hard', t: 'Hard', d: fantasy ? 'Type names, no points, no re-rolls' : 'Type names, no overalls, no re-rolls' }]} />
         </div>}

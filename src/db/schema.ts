@@ -298,6 +298,36 @@ export const feedback = pgTable('feedback', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('feedback_created_idx').on(t.createdAt)]);
 
+/** NFL history for All-time legends: ESPN athletes seen in a team-season's stat leaders since 1980. */
+export const nflHistAthletes = pgTable('nfl_hist_athletes', {
+  id: integer('id').primaryKey(),
+  fullName: text('full_name').notNull(),
+  position: text('position').notNull(),
+  headshot: text('headshot'),
+});
+
+/** One athlete's regular-season leader numbers for one franchise (ESPN team id) in one season. */
+export const nflHistSeasons = pgTable('nfl_hist_seasons', {
+  athleteId: integer('athlete_id').notNull(),
+  espnTeamId: integer('espn_team_id').notNull(),
+  season: integer('season').notNull(),
+  stats: jsonb('stats').notNull(),
+}, (t) => [primaryKey({ columns: [t.athleteId, t.espnTeamId, t.season] }), index('nfl_hist_seasons_season_idx').on(t.season)]);
+
+/** Built from the two tables above: each franchise's best retired players per position group, graded. */
+export const nflLegends = pgTable('nfl_legends', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  espnId: integer('espn_id').notNull(),
+  fullName: text('full_name').notNull(),
+  position: text('position').notNull(),
+  group: text('group').notNull(),
+  teamId: integer('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  season: integer('season').notNull(),
+  grade: real('grade').notNull(),
+  line: text('line').notNull(),
+  headshot: text('headshot'),
+}, (t) => [uniqueIndex('nfl_legends_espn_team_idx').on(t.espnId, t.teamId), index('nfl_legends_team_idx').on(t.teamId)]);
+
 export type Player = typeof players.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Coach = typeof coaches.$inferSelect;

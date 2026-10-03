@@ -3,10 +3,10 @@ import { db, schema } from '@/db';
 import { getFormulas, getSlotWeights } from './config';
 import { invalidatePrefix } from './redis';
 import { loadSession, type SpinPayload } from './games';
-import { positionGroup, type Attributes } from '@/lib/game/attributes';
+import { positionGroup, type Attributes, type PositionGroup } from '@/lib/game/attributes';
 import { FORMATS, gradeRoster, isFantasy, slotAccepts, type Pick } from '@/lib/game/seventeen';
 import { fantasyValue } from '@/lib/game/fantasy';
-import { getFantasyFloor } from './calibrate';
+import { getAllTimeFloor, getFantasyFloor } from './calibrate';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { BUILD_ELIGIBLE, TRAITS, bestPossible, gradeTraitBuild, traitValue } from '@/lib/game/build';
 
@@ -64,10 +64,11 @@ export async function gradeSeventeen(ctx: Ctx) {
   const coachIds = picks.filter((p) => p.id.startsWith('coach:')).map((p) => Number(p.id.slice(6)));
   if (playerIds.some((id) => !/^[0-9a-f-]{36}$/i.test(id)) || coachIds.some((n) => !Number.isInteger(n))) throw new GradeError('Invalid pick.');
   const teamRows = await db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation }).from(schema.teams);
-  const [players, coaches, formulas, weights] = await Promise.all([
+  const [players, coaches, formulas, weights, hist] = await Promise.all([
     playerIds.length ? db.select().from(schema.players).where(inArray(schema.players.id, playerIds)) : [],
     coachIds.length ? db.select().from(schema.coaches).where(inArray(schema.coaches.id, coachIds)) : [],
     getFormulas(), getSlotWeights(),
+    playerIds.length && pool === 'all-time' ? db.select().from(schema.nflLegends).where(inArray(schema.nflLegends.id, playerIds)) : [],
   ]);
   const usedTeams = new Set<number>();
   const full: Pick[] = picks.map((p) => {
@@ -75,6 +76,12 @@ export async function gradeSeventeen(ctx: Ctx) {
       const c = coaches.find((x) => x.id === Number(p.id.slice(6)));
       if (!c || c.teamId === null) throw new GradeError('Unknown coach.');
       return { slot: p.slot, teamId: c.teamId, name: c.fullName, group: 'HC' as const, coachImpact: c.coachImpactScore };
+    }
+    const hl = hist.find((x) => x.id === p.id);
+    if (hl) {
+      // A history legend counts only for his franchise.
+      if (hl.teamId !== p.teamId) throw new GradeError(`${hl.fullName} is not on one of your spun teams.`);
+      return { slot: p.slot, teamId: hl.teamId, name: hl.fullName, group: hl.group as PositionGroup, legendGrade: hl.grade, overall: Math.round(hl.grade) };
     }
     const pl = players.find((x) => x.id === p.id);
     if (!pl) throw new GradeError('Unknown player.');
@@ -98,7 +105,8 @@ export async function gradeSeventeen(ctx: Ctx) {
   // Daily results must be identical for identical rosters, so seed from the date plus the roster.
   const seed = s.isDaily ? `${s.seed}:${[...playerIds, ...coachIds].sort().join(',')}` : s.id;
   const opponents = teamRows.filter((t) => !usedTeams.has(t.id)).map((t) => t.abbr);
-  const result = gradeRoster(seed, full, formulas, weights, opponents, format, isFantasy(format) ? await getFantasyFloor() : undefined);
+  const floor = isFantasy(format) ? await getFantasyFloor() : pool === 'all-time' ? await getAllTimeFloor(format) : undefined;
+  const result = gradeRoster(seed, full, formulas, weights, opponents, format, floor);
   const resultData = { ...result, hard: !!payload.hard, format, pool, picks: full.map(({ slot, name, teamId, group, overall, fantasy }) => ({ slot, name, teamId, group, overall, ...(fantasy !== undefined ? { fantasy } : {}) })) };
   const id = await saveResult(s, ctx, '17-0', resultData, result.score, result.wins === 17);
   return { id, result: resultData, daily: s.isDaily };

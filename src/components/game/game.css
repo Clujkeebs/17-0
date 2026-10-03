@@ -151,6 +151,7 @@
 }
 
 .tag-legend { display: inline-block; margin-left: 8px; padding: 0 6px; border-radius: 999px; background: var(--bone); color: var(--surface); font-size: .62rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; vertical-align: 1px; }
+.g-legend-line { display: block; margin-top: 2px; font-size: .74rem; color: var(--bone-dim); font-variant-numeric: tabular-nums; }
 
 /* 82-0 */
 .nba-era { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }

@@ -1,6 +1,7 @@
 import { db, schema } from '@/db';
 import { positionGroup } from '@/lib/game/attributes';
-import { FORMATS, MAX_RESPINS, gradePick, gradeRoster, isFantasy, slotAccepts, type FormatKey, type Pick } from '@/lib/game/seventeen';
+import { FORMATS, MAX_RESPINS, gradePick, gradeRoster, isFantasy, slotAccepts, type FormatKey, type Pick, type PoolKey } from '@/lib/game/seventeen';
+import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { fantasyValue } from '@/lib/game/fantasy';
 import { createRng } from '@/lib/game/prng';
 import { eq } from 'drizzle-orm';
@@ -11,16 +12,23 @@ type Mode = 'greedy' | 'reroll' | 'random';
 // team whose best available player grades under REROLL_BELOW, which is how people actually play Easy. random: no skill.
 const REROLL_BELOW = 88;
 
-/** Every team's draftable picks for a format, built once from the live database. */
-async function boards(format: FormatKey) {
+/** Every team's draftable picks for a format, built once from the live database. All-time adds both kinds of legends. */
+async function boards(format: FormatKey, pool: PoolKey = 'current') {
   const fantasy = isFantasy(format);
+  const allTime = pool === 'all-time' && !fantasy;
   const players = await db.select().from(schema.players).where(eq(schema.players.isActive, true));
   const coaches = fantasy ? [] : await db.select().from(schema.coaches);
   const teams = [...new Set(players.map((p) => p.teamId).filter(Boolean))] as number[];
+  if (allTime) {
+    const [teamRows, hist] = await Promise.all([db.select().from(schema.teams), db.select().from(schema.nflLegends)]);
+    for (const p of players.filter((x) => x.isAllTimeGreat)) p.teamId = teamRows.find((t) => t.abbreviation === LEGEND_FRANCHISE[p.slug])?.id ?? null;
+    for (const l of hist) players.push({ ...players[0], id: l.id, teamId: l.teamId, fullName: l.fullName, position: l.position, legendGrade: l.grade, legendGroup: l.group } as never);
+  }
   const byTeam = new Map<number, Pick[]>();
   for (const t of teams) {
-    const list: Pick[] = players.filter((p) => p.teamId === t).map((p) => ({
-      slot: 'QB', teamId: t, name: p.fullName, group: positionGroup(p.position), attributes: p.attributes as never,
+    const list: Pick[] = players.filter((p) => p.teamId === t && (allTime || !p.isAllTimeGreat)).map((p) => ({
+      slot: 'QB', teamId: t, name: p.fullName, group: ((p as { legendGroup?: string }).legendGroup ?? positionGroup(p.position)) as Pick['group'], attributes: p.attributes as never,
+      ...((p as { legendGrade?: number }).legendGrade !== undefined ? { legendGrade: (p as { legendGrade?: number }).legendGrade } : {}),
       ...(fantasy ? { fantasy: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : {}),
     }));
     for (const c of coaches.filter((c) => c.teamId === t)) list.push({ slot: 'HC', teamId: t, name: c.fullName, group: 'HC', coachImpact: c.coachImpactScore });
@@ -58,8 +66,8 @@ function simulate(format: FormatKey, b: Awaited<ReturnType<typeof boards>>, mode
 }
 
 /** Logs the win distribution for greedy, re-rolling and random drafting against the live data, for one format. */
-export async function calibrate(format: FormatKey = '6', games = 3000, winFloor?: number) {
-  const b = await boards(format);
+export async function calibrate(format: FormatKey = '6', games = 3000, winFloor?: number, pool: PoolKey = 'current') {
+  const b = await boards(format, pool);
   const out: Record<string, { strength: number; p17: number }> = {};
   for (const mode of ['greedy', 'reroll', 'random'] as const) {
     const r = simulate(format, b, mode, games, winFloor);
@@ -96,4 +104,38 @@ export async function tuneFantasyFloor(games = 1500): Promise<number | null> {
 export async function getFantasyFloor(): Promise<number> {
   try { const v = Number(await getRedis().get(FANTASY_FLOOR_KEY)); return Number.isFinite(v) && v > 0 ? v : FORMATS.fantasy.winFloor; }
   catch { return FORMATS.fantasy.winFloor; }
+}
+
+export const ALL_TIME_FLOOR_KEY = (format: FormatKey) => `seventeen:win-floor:all-time:${format}`;
+const TARGET_P17_ALL_TIME = 0.05;
+/** Until the worker fits one, All-time sits a little above the current-rosters line. */
+const ALL_TIME_DEFAULT_BUMP = 2;
+
+/**
+ * All-time is meant to be harder: legends raise every board, so its win line is fit separately, the lowest
+ * floor at which a re-rolling drafter goes 17-0 no more than about 5 percent of the time (current rosters: 11).
+ */
+export async function tuneAllTimeFloors(games = 1500): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  for (const format of ['6', '12', '16'] as const) {
+    const b = await boards(format, 'all-time');
+    let lo = 50, hi = 99;
+    for (let i = 0; i < 12; i++) {
+      const mid = (lo + hi) / 2;
+      if (simulate(format, b, 'reroll', games, mid).p17 > TARGET_P17_ALL_TIME) lo = mid; else hi = mid;
+    }
+    const floor = Math.ceil(hi * 100) / 100;
+    const check = { reroll: simulate(format, b, 'reroll', games, floor).p17, greedy: simulate(format, b, 'greedy', games, floor).p17, random: simulate(format, b, 'random', games, floor).p17 };
+    await getRedis().set(ALL_TIME_FLOOR_KEY(format), String(floor));
+    console.log('[all-time] win floor', format, floor, 'P17', Object.entries(check).map(([k, v]) => `${k} ${(v * 100).toFixed(1)}%`).join(' '));
+    out[format] = floor;
+  }
+  return out;
+}
+
+/** The All-time floor for a roster size, or the current-rosters floor plus a small bump until calibrated. */
+export async function getAllTimeFloor(format: FormatKey): Promise<number> {
+  const fallback = FORMATS[format].winFloor + ALL_TIME_DEFAULT_BUMP;
+  try { const v = Number(await getRedis().get(ALL_TIME_FLOOR_KEY(format))); return Number.isFinite(v) && v > 0 ? v : fallback; }
+  catch { return fallback; }
 }

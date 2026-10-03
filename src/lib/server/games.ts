@@ -3,6 +3,7 @@ import { and, eq, inArray, isNotNull, or, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { getTeams, getRosters, getCoachesForTeams, GROUP_RAW } from './data';
 import { token as newToken } from './request';
+import { getRedis } from './redis';
 import { positionGroup, type PositionGroup } from '@/lib/game/attributes';
 import { FORMATS, MAX_RESPINS, isFantasy, slotsFor as formatSlots, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
 import { fantasyValue } from '@/lib/game/fantasy';
@@ -29,7 +30,7 @@ export interface SpinPayload {
   picks?: { teamId: number; id: string; slot?: string; trait?: string }[];
 }
 
-export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
+export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** All-time legend from ESPN history: his best season with this franchise, e.g. "1994 · 112 rec, 1,499 yds, 13 TD". */ line?: string; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
 export interface PublicTeam { id: number; name: string; city: string; abbreviation: string; slug: string; color: string; logoUrl: string | null; players: PublicPlayer[] }
 
 const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
@@ -76,6 +77,19 @@ export async function loadSession(id: string, tok: string) {
   return row;
 }
 
+/** Each franchise's graded legends from ESPN's NFL history (see nfl-history.ts), cached for an hour. */
+export type HistLegend = typeof schema.nflLegends.$inferSelect;
+async function historyLegendsByTeam(): Promise<Map<number, HistLegend[]>> {
+  const r = getRedis();
+  const cached = await r.get('legends:by-team').catch(() => null);
+  const rows: HistLegend[] = cached ? JSON.parse(cached) : await db.select().from(schema.nflLegends);
+  if (!cached && rows.length) await r.set('legends:by-team', JSON.stringify(rows), 'EX', 3600).catch(() => {});
+  const out = new Map<number, HistLegend[]>();
+  for (const l of rows) out.set(l.teamId, [...(out.get(l.teamId) ?? []), l]);
+  for (const list of out.values()) list.sort((a, b) => b.grade - a.grade);
+  return out;
+}
+
 /** All-time greats, active and teamless, keyed by the franchise they belong to in All-time mode. */
 async function legendsByTeam(): Promise<Map<number, (typeof schema.players.$inferSelect)[]>> {
   const [teams, rows] = await Promise.all([getTeams(), db.select().from(schema.players).where(and(eq(schema.players.isAllTimeGreat, true), eq(schema.players.isActive, true)))]);
@@ -92,8 +106,9 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
   const format = opts.format ?? '6';
   const slotsFor = (g: PositionGroup | 'HC') => formatSlots(g, format);
   const fantasy = gameType === '17-0' && isFantasy(format);
-  const [teams, players, coaches, legends] = await Promise.all([getTeams(), getRosters(teamIds), gameType === '17-0' && !fantasy ? getCoachesForTeams(teamIds) : Promise.resolve([]),
-    gameType === '17-0' && opts.pool === 'all-time' && !fantasy ? legendsByTeam() : Promise.resolve(new Map<number, never[]>())]);
+  const allTime = gameType === '17-0' && opts.pool === 'all-time' && !fantasy;
+  const [teams, players, coaches, legends, history] = await Promise.all([getTeams(), getRosters(teamIds), gameType === '17-0' && !fantasy ? getCoachesForTeams(teamIds) : Promise.resolve([]),
+    allTime ? legendsByTeam() : Promise.resolve(new Map<number, never[]>()), allTime ? historyLegendsByTeam() : Promise.resolve(new Map<number, HistLegend[]>())]);
   const allowed = position ? new Set(BUILD_ELIGIBLE[position]) : null;
   return teamIds.map((id) => {
     const t = teams.find((x) => x.id === id)!;
@@ -102,6 +117,12 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
       const attrs = position ? Object.fromEntries(BUILD_CATEGORIES[position].map((k) => [k, (p.attributes as Record<string, number>)[k] ?? 50])) : undefined;
       return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}), ...(fantasy ? { fpts: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : {}) };
     }).filter((p) => (allowed ? allowed.has(p.group) : p.slots!.length > 0));
+    // History legends go right after the Madden legends, best first.
+    const hist: PublicPlayer[] = (history.get(id) ?? []).map((l) => {
+      const group = l.group as PositionGroup;
+      return { id: l.id, name: l.fullName, slug: '', position: l.position, group, ovr: Math.round(l.grade), slots: slotsFor(group), img: l.headshot, legend: true, line: `${l.season} · ${l.line}` };
+    }).filter((p) => p.slots!.length > 0);
+    list.splice((legends.get(id) ?? []).length, 0, ...hist);
     // Fantasy boards list by points, best first.
     if (fantasy) list.sort((a, b) => (b.fpts ?? 0) - (a.fpts ?? 0));
     for (const c of coaches.filter((c) => c.teamId === id)) {

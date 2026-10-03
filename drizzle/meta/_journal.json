@@ -78,6 +78,13 @@
       "when": 1790989340884,
       "tag": "0010_nba_2k",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790996688955,
+      "tag": "0011_nfl_legends",
+      "breakpoints": true
     }
   ]
 }

@@ -19,6 +19,11 @@ const refreshNba = (recentOnly: boolean) => import('@/lib/server/nba-sync')
   .then(() => import('@/lib/server/nba2k')).then((k) => k.sync2k().catch((e) => console.warn('[2k] sync failed', (e as Error).message)))
   .then(() => import('@/lib/server/nba-calibrate')).then(async (c) => { await c.tuneNbaFloor(); await c.tune2kFloor(); })
   .catch((e) => console.warn('[nba] refresh failed', (e as Error).message));
+/** All-time: NFL history backfill (only missing seasons are fetched), legends rebuilt against today's grades, then fresh All-time win lines. */
+const refreshLegends = (fetchHistory: boolean) => import('@/lib/server/nfl-history')
+  .then(async (m) => { if (fetchHistory) await m.syncNflHistory(); await m.buildLegends(); await m.legendsSpotCheck('SF'); await m.legendsSpotCheck('DET'); })
+  .then(() => import('@/lib/server/calibrate')).then((c) => c.tuneAllTimeFloors())
+  .catch((e) => console.warn('[nfl-history] refresh failed', (e as Error).message));
 const refreshFantasy = () => syncFantasy().then(() => tuneFantasyFloor()).catch((e) => console.warn('[fantasy] refresh failed', (e as Error).message));
 
 if (process.env.SENTRY_DSN) Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0 });
@@ -31,11 +36,14 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
     // Owner buttons on /owner queue single refreshes by name; anything else is the full ratings sync.
     if (job.name === 'fantasy') return refreshFantasy();
     if (job.name === 'nba') return refreshNba(false);
+    if (job.name === 'legends') return refreshLegends(true);
     const summary = await runSync({ dryRun: false });
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
     await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
     // Fantasy points refresh on their own schedule (after game days), not with the daily ratings sync.
     await refreshNba(true);
+    // New ratings move the grade range legends are placed on, so rebuild them (no ESPN fetch) and re-fit.
+    await refreshLegends(false);
     console.log('[sync] done', JSON.stringify(summary).slice(0, 600));
     // Fresh ratings: purge the web service's ISR pages so player pages update now, not in a day.
     const base = process.env.INTERNAL_WEB_URL ?? 'http://localhost:3000';
@@ -71,7 +79,7 @@ void (async () => {
   await refreshFantasy();
   // 82-0: backfill NBA seasons in the background (resumes where it stopped; the newest seasons always refresh), then re-fit the win line.
   void refreshNba(false);
-  void import('@/lib/server/source-probe').then((m) => m.probeSources()).catch(() => {});
+  void refreshLegends(true);
   if (process.env.CALIBRATE === '1') {
     const { calibrate } = await import('@/lib/server/calibrate');
     for (const f of ['6', '12', '16'] as const) await calibrate(f).catch((e) => console.warn('[calibrate]', e.message));
