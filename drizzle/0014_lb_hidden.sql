@@ -1,0 +1,1 @@
+ALTER TABLE "user_accounts" ADD COLUMN "lb_hidden" boolean DEFAULT false NOT NULL;

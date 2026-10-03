@@ -116,6 +116,8 @@ export const users = pgTable('user_accounts', {
   equipBanner: text('equip_banner'),
   equipTitle: text('equip_title'),
   equipFlair: text('equip_flair'),
+  /** Owner moderation: hidden players never appear on leaderboards or earn board awards. */
+  lbHidden: boolean('lb_hidden').notNull().default(false),
 });
 
 /** Every point earned or spent. (user, reason, ref) is unique, so a grant can never be paid twice. */

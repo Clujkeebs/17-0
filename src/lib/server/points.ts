@@ -65,7 +65,7 @@ export async function awardDailyBoards(date: string): Promise<number> {
     const rows = await db.execute<{ user_id: string }>(dsql`
       select user_id from (
         select distinct on (user_id) user_id, score, created_at from game_results
-        where game_type = ${g.slug} and daily_date = ${date} and is_daily and user_id is not null and not flagged
+        where game_type = ${g.slug} and daily_date = ${date} and is_daily and user_id is not null and not flagged and user_id not in (select id from user_accounts where lb_hidden)
         order by user_id, score desc, created_at asc
       ) t order by score desc, created_at asc limit ${EARN.board.length}`);
     for (const [i, r] of [...rows].entries()) if (await grant(r.user_id, EARN.board[i], 'board', `${g.slug}:${date}`)) paid++;
@@ -81,7 +81,7 @@ export async function awardWeek(weekStart: string): Promise<number> {
     const rows = await db.execute<{ user_id: string }>(dsql`
       select user_id from (
         select distinct on (user_id) user_id, score, created_at from game_results
-        where game_type = ${g.slug} and daily_date between ${weekStart} and ${end} and is_daily and user_id is not null and not flagged
+        where game_type = ${g.slug} and daily_date between ${weekStart} and ${end} and is_daily and user_id is not null and not flagged and user_id not in (select id from user_accounts where lb_hidden)
         order by user_id, score desc, created_at asc
       ) t order by score desc, created_at asc limit ${EARN.week.length}`);
     for (const [i, r] of [...rows].entries()) if (await grant(r.user_id, EARN.week[i], 'week', `${g.slug}:${weekStart}`)) paid++;
@@ -97,6 +97,10 @@ export async function backfillPoints(): Promise<number> {
     from game_results where user_id is not null and is_daily and not flagged group by user_id`);
   let paid = 0;
   for (const r of rows) if (await grant(r.user_id, r.n * EARN.daily + r.p * EARN.perfect, 'backfill', 'launch')) paid++;
+  // Most early players played Casual: one point per casual game before launch, up to 200.
+  const casual = await db.execute<{ user_id: string; n: number }>(dsql`
+    select user_id, count(*)::int as n from game_results where user_id is not null and not is_daily and not flagged and created_at < now() group by user_id`);
+  for (const r of casual) if (await grant(r.user_id, Math.min(200, r.n * EARN.casual), 'backfill', 'launch-casual')) paid++;
   return paid;
 }
 

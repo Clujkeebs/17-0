@@ -5,6 +5,8 @@ import { db, schema } from '@/db';
 import { requireOwner } from '@/lib/server/owner';
 import { OWNER_REPLIES } from '@/content/owner-replies';
 import { OwnerInbox } from './OwnerInbox';
+import { OwnerTools } from './OwnerTools';
+import { GAMES } from '@/lib/game-registry';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Owner', robots: { index: false, follow: false } };
@@ -19,6 +21,7 @@ export default async function OwnerPage() {
       <h1>Notes to Claude</h1>
       <p className="muted">Write what you or your friends found. Notes are read every hour; fixes ship and the reply shows up here. Anything about money, deleting data or accounts waits until you confirm it in the chat.</p>
       <OwnerInbox notes={notes} />
+      <OwnerTools games={GAMES.map((g) => ({ slug: g.slug, name: g.name }))} />
     </div>
   );
 }

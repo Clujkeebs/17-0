@@ -23,7 +23,7 @@ export async function dailyLeaderboard(gameType: string, date = dailyDateET(), l
     const rows = await db.execute<{ id: string; user_id: string; username: string; score: number; result_data: Record<string, unknown>; created_at: string }>(dsql`
       select distinct on (user_id) id, user_id, coalesce(username, 'anonymous') as username, score, result_data, created_at
       from game_results
-      where game_type = ${gameType} and daily_date = ${date} and is_daily and user_id is not null and not flagged
+      where game_type = ${gameType} and daily_date = ${date} and is_daily and user_id is not null and not flagged and user_id not in (select id from user_accounts where lb_hidden)
         ${hardOnly ? dsql`and coalesce((result_data->>'hard')::boolean, false)` : dsql``}
       order by user_id, score desc, created_at asc`);
     const top = [...rows]
@@ -50,7 +50,7 @@ export async function gameLeaderboard(gameType: string, period: Period, hardOnly
     const rows = await db.execute<{ id: string; user_id: string; username: string; score: number; result_data: Record<string, unknown>; created_at: string; daily_date: string }>(dsql`
       select distinct on (user_id) id, user_id, coalesce(username, 'anonymous') as username, score, result_data, created_at, daily_date
       from game_results
-      where game_type = ${gameType} and is_daily and daily_date >= ${since} and user_id is not null and not flagged
+      where game_type = ${gameType} and is_daily and daily_date >= ${since} and user_id is not null and not flagged and user_id not in (select id from user_accounts where lb_hidden)
         ${hardOnly ? dsql`and coalesce((result_data->>'hard')::boolean, false)` : dsql``}
       order by user_id, score desc, created_at asc`);
     const top = [...rows].sort((a, b) => b.score - a.score || +new Date(a.created_at) - +new Date(b.created_at)).slice(0, limit);
@@ -67,7 +67,7 @@ export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows
     // Points expression lives in ./leaderboard-sql (pure, unit tested). It coalesces missing
     // wins/rating so mini-game-only players get 0 base points instead of a NULL that sorts first.
     const pointsExpr = allTimePointsExpr;
-    const where = and(isNotNull(schema.gameResults.userId), eq(schema.gameResults.flagged, false));
+    const where = and(isNotNull(schema.gameResults.userId), eq(schema.gameResults.flagged, false), dsql`${schema.gameResults.userId} not in (select id from user_accounts where lb_hidden)`);
     const rows = await db.select({
       userId: schema.gameResults.userId,
       username: dsql<string>`max(${schema.gameResults.username})`,
