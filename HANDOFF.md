@@ -130,6 +130,8 @@ Plan: `/root/.claude/plans/floating-baking-platypus.md` top section (Q1 162-0 fi
   - Fixed: names with suffixes showed as "II" in the season story and share card ("Patrick Surtain II"). Shared `lastName()` in `src/lib/names.ts` skips Jr/Sr/II/III/IV/V.
   - Fixed: Hard mode name search now suggests after one letter (17-0, Build a Player, 82-0).
   - To do: more legends on All-time boards (22 now; needs a sourced list of legend ratings, no invented numbers); All-time "make it harder" (check All-time calibration separately, legends raise the ceiling); "the players section sucks": first pass done 2026-10-02, live search on /players from the first letter (`/api/players/search`, legends included, links to each player page). Watch for more specific feedback.
+- 2026-10-03 13:36-14:10 UTC, three responses (5, 5, 2; the 2 had no message).
+  - Fixed: "When you select a baseball player it puts you at the bottom of the screen." After a pick the board is swapped for a short placeholder, the page shrinks and the browser lands at the bottom (the lineup on phones). 162-0 and 82-0 now scroll the stage back into view on each new spin, like 17-0 already did. Checked at 375px: after picking the last player in the list, the stage lands at the top.
 
 ## Owner brain dump plan (2026-10-03)
 Full phased plan: Phase 1 quick fixes, 2 owner inbox, 3 fantasy hub, 4 2K + NBA editions, 5 All-time from ESPN history, 6 MLB 162-0 / soccer / Retro Bowl official-embed check. Buy Me a Coffee waits on the owner's page link.

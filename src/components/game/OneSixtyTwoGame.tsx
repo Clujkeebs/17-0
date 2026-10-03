@@ -31,6 +31,9 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
   const [sheet, setSheet] = useState(false);
   const [playedId, setPlayedId] = useState<string | null>(null);
   const [spinKey, setSpinKey] = useState(0);
+  // A new spin swaps the board for a short placeholder; bring the stage back into view instead of leaving you at the bottom.
+  const stageRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (spinKey > 1) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [spinKey]);
   const [eraLanded, setEraLanded] = useState(false);
   const [landed, setLanded] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -191,7 +194,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
         {error && <div role="alert" className="card card-error">{error}</div>}
 
         {team && target ? (
-          <section className="g-stage" aria-labelledby="mlb-clock">
+          <section ref={stageRef} className="g-stage" aria-labelledby="mlb-clock">
             <div className="g-team">
               {game.mode === 'now' ? <p className="g-kicker" style={{ margin: 0 }}>Right now · {team.eraLabel} season</p> : <EraSpin spinKey={`${game.sessionId}-${spinKey}`} target={team.eraLabel} onLand={() => setEraLanded(true)} />}
               {(eraLanded || game.mode === 'now') && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
