@@ -33,13 +33,17 @@ export default async function ProfilePage() {
   return (
     <div className="container section">
       <span className="eyebrow">Profile</span>
-      <div className="profile-head">
-        <Avatar name={name} src={user.image} size={84} />
+      <div className={`profile-head${style.banner ? ` banner ${style.banner}` : ''}`}>
+        <Avatar name={name} src={user.image} size={84} ring={style.border} />
         <div style={{ minWidth: 0 }}>
           <h1 style={{ margin: 0 }}><StyledName name={name} style={style} /></h1>
           {user.username && <p className="muted num" style={{ margin: '4px 0 0' }}>@{user.username}</p>}
         </div>
       </div>
+      <p className="row" style={{ gap: 10, margin: '14px 0 0' }}>
+        <span className="pts-pill num" aria-label={`${user.points} points`}>{user.points.toLocaleString('en-US')} pts</span>
+        <Link className="btn btn-sm" href="/shop">Shop</Link>
+      </p>
       <div className="row" style={{ gap: 8, margin: '16px 0 8px' }}>
         <ProfileEditor displayName={user.name ?? ''} fallbackName={user.username ?? 'Player'} image={user.image} favoriteGames={user.favoriteGames ?? []}
           nameFont={user.nameFont ?? 'classic'} nameColor={user.nameColor ?? 'ink'} longest={stats.longest} owner={style.owner} allGames={ALL_GAMES} />

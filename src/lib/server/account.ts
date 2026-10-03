@@ -21,8 +21,8 @@ export async function getUserByUsername(username: string) {
 }
 
 /** How this user's name renders. Owner status comes from the account email on the server, nothing else. */
-export function nameStyleOf(u: { email: string | null; nameFont: string | null; nameColor: string | null }): NameStyle {
-  return resolveStyle({ font: u.nameFont, color: u.nameColor }, isOwnerEmail(u.email));
+export function nameStyleOf(u: { email: string | null; nameFont: string | null; nameColor: string | null; equipTitle?: string | null; equipFlair?: string | null; equipBorder?: string | null; equipBanner?: string | null }): NameStyle {
+  return resolveStyle({ font: u.nameFont, color: u.nameColor, title: u.equipTitle, flair: u.equipFlair, border: u.equipBorder, banner: u.equipBanner }, isOwnerEmail(u.email));
 }
 
 /** Case-insensitive availability check. */

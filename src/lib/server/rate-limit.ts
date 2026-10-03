@@ -12,6 +12,7 @@ export const LIMITS = {
   register: { max: 120, windowSec: 3600 },
   contact: { max: 5, windowSec: 3600 },
   feedback: { max: 120, windowSec: 3600 },
+  shopUser: { max: 120, windowSec: 3600 },
 } as const;
 export type LimitScope = keyof typeof LIMITS;
 

@@ -21,6 +21,7 @@ export function SiteFooter() {
               <li><Link href="/games/build-a-player">Build a Player</Link></li>
               <li><Link href="/fantasy">Fantasy tools</Link></li>
               <li><Link href="/leaderboard">Leaderboard</Link></li>
+              <li><Link href="/shop">Shop</Link></li>
               <li><Link href="/players">Players</Link></li>
               <li><Link href="/teams">Teams</Link></li>
               <li><Link href="/coaches">Coaches</Link></li>

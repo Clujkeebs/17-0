@@ -27,9 +27,11 @@ export function HeaderProfile() {
   );
 }
 
-export function Avatar({ name, src, size = 40 }: { name: string; src: string | null; size?: number }) {
+export function Avatar({ name, src, size = 40, ring }: { name: string; src: string | null; size?: number; ring?: string | null }) {
   const initials = name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
-  return src
+  const img = src
     ? <img className="avatar" src={src} alt="" width={size} height={size} style={{ width: size, height: size }} />
     : <span className="avatar avatar-i" aria-hidden="true" style={{ width: size, height: size, fontSize: size * 0.4 }}>{initials || '?'}</span>;
+  // An equipped avatar border (shop item) wraps the picture in a ring.
+  return ring ? <span className={`ring ${ring}`}>{img}</span> : img;
 }

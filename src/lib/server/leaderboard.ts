@@ -10,9 +10,9 @@ import { isOwnerEmail, resolveStyle, type NameStyle } from '@/lib/cosmetics';
 async function stylesFor(userIds: string[]): Promise<Map<string, NameStyle>> {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (!ids.length) return new Map();
-  const rows = await db.select({ id: schema.users.id, email: schema.users.email, font: schema.users.nameFont, color: schema.users.nameColor })
+  const rows = await db.select({ id: schema.users.id, email: schema.users.email, font: schema.users.nameFont, color: schema.users.nameColor, title: schema.users.equipTitle, flair: schema.users.equipFlair })
     .from(schema.users).where(inArray(schema.users.id, ids));
-  return new Map(rows.map((r) => [r.id, resolveStyle({ font: r.font, color: r.color }, isOwnerEmail(r.email))]));
+  return new Map(rows.map((r) => [r.id, resolveStyle({ font: r.font, color: r.color, title: r.title, flair: r.flair }, isOwnerEmail(r.email))]));
 }
 
 export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string; hard: boolean; style?: NameStyle; date?: string }

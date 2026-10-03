@@ -86,6 +86,8 @@ void (async () => {
   void refreshNba(false);
   void refreshLegends(true);
   void refreshMlb();
+  // Shop launch: points for every ranked game played before the shop existed (once; idempotent).
+  void import('@/lib/server/points').then((p) => p.backfillPoints()).then((n) => console.log('[points] launch backfill paid', n)).catch((e) => console.warn('[points] backfill failed', (e as Error).message));
   if (process.env.CALIBRATE === '1') {
     const { calibrate } = await import('@/lib/server/calibrate');
     for (const f of ['6', '12', '16'] as const) await calibrate(f).catch((e) => console.warn('[calibrate]', e.message));

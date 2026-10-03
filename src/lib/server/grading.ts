@@ -2,6 +2,7 @@ import { and, eq, inArray, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { getFormulas, getSlotWeights } from './config';
 import { invalidatePrefix } from './redis';
+import { earnForResult } from './points';
 import { loadSession, type SpinPayload } from './games';
 import { positionGroup, type Attributes, type PositionGroup } from '@/lib/game/attributes';
 import { FORMATS, gradeRoster, isFantasy, slotAccepts, type Pick } from '@/lib/game/seventeen';
@@ -24,9 +25,11 @@ async function openSession(ctx: Ctx, gameType: string) {
 
 export async function saveResult(...args: Parameters<typeof saveResultTx>) {
   const id = await saveResultTx(...args);
-  const [s, ctx, gameType] = args;
+  const [s, ctx, gameType, , , perfect] = args;
   // Signed-in results change the leaderboards; clear their cache so the player sees themselves immediately.
-  if (ctx.userId) await Promise.all([s.isDaily ? invalidatePrefix(`lb:daily:${gameType}:`) : null, invalidatePrefix('lb:all:')]).catch(() => {});
+  if (ctx.userId) await Promise.all([s.isDaily ? invalidatePrefix(`lb:daily:${gameType}:`) : null, s.isDaily ? invalidatePrefix(`lb:week:${gameType}:`) : null, invalidatePrefix('lb:all:')]).catch(() => {});
+  // Points never block a result: a failed grant is logged and the game still saves.
+  if (ctx.userId) await earnForResult(ctx.userId, gameType, s.isDaily, perfect, id).catch((e) => console.warn('[points] earn failed', (e as Error).message));
   return id;
 }
 

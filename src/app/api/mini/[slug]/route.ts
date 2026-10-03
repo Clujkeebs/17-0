@@ -7,6 +7,7 @@ import { dataFor, getMiniGame } from '@/lib/minigames/registry';
 import { dailyDateET } from '@/lib/game/daily';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp } from '@/lib/server/rate-limit';
+import { earnForResult } from '@/lib/server/points';
 import { invalidatePrefix } from '@/lib/server/redis';
 import { readChecks } from '@/lib/minigames/checks';
 
@@ -79,7 +80,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       userId, username: session?.user?.username ?? null, gameType: slug, isDaily: mode === 'today', dailyDate: mode === 'today' ? date : null,
       resultData, score: result.score,
     }).returning({ id: schema.gameResults.id });
-    if (mode === 'today') await invalidatePrefix(`lb:daily:${slug}:`).catch(() => {});
+    if (mode === 'today') await Promise.all([invalidatePrefix(`lb:daily:${slug}:`), invalidatePrefix(`lb:week:${slug}:`), invalidatePrefix(`lb:all:${slug}:`)]).catch(() => {});
+    if (userId) await earnForResult(userId, slug, mode === 'today', !!result.perfect, row.id).catch((e) => console.warn('[points] earn failed', (e as Error).message));
     return json({ id: row.id, score: result.score, ...resultData });
   } catch {
     return errorJson(409, 'You already played Today. Casual is unlimited.');

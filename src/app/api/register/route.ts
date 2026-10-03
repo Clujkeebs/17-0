@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
+import { EARN, grant } from '@/lib/server/points';
 import { z } from 'zod';
 import { db, schema } from '@/db';
 import { SITE } from '@/lib/site';
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
   try {
     const [created] = await db.insert(schema.users).values({ email, username: u.username, hashedPassword }).returning({ id: schema.users.id });
     await audit(created.id, 'user.registered', 'user', created.id);
+    await grant(created.id, EARN.welcome, 'welcome', 'v1').catch(() => {});
   } catch (e) {
     // Unique violation from a race: either email (respond as success) or username.
     const msg = (e as { constraint_name?: string; message?: string });

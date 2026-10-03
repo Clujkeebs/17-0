@@ -8,6 +8,8 @@ import { errorJson, json, clientIp, hashIp } from '@/lib/server/request';
 import { getStreak, getUserById, isUsernameAvailable, publicAccount } from '@/lib/server/account';
 import { validateDisplayName, validateUsername, USERNAME_MESSAGES } from '@/lib/server/username';
 import { canEquip } from '@/lib/cosmetics';
+import { shopItem } from '@/lib/shop';
+import { ownedKeys } from '@/lib/server/points';
 import { games } from '@/lib/minigames/games';
 import { subscribe, unsubscribeByEmail } from '@/lib/server/newsletter';
 import { audit } from '@/lib/server/audit';
@@ -64,14 +66,17 @@ export async function PATCH(req: Request) {
   if (body.nameFont !== undefined || body.nameColor !== undefined) {
     // Unlocks are checked here against the player's own streak; the owner style is not equippable at all.
     const { longest } = await getStreak(u.id);
-    if (body.nameFont !== undefined) {
+    // Shop fonts and colors the player owns are equippable too (the owner owns every shop item).
+    const owned = await ownedKeys(u.id, u.email);
+    const ownsShop = (k: string) => owned.has(k) && !!shopItem(k);
+    if (body.nameFont !== undefined && !ownsShop(body.nameFont)) {
       if (!canEquip('font', body.nameFont, longest)) return errorJson(403, 'That font is still locked. Keep the streak going.');
-      set.nameFont = body.nameFont;
     }
-    if (body.nameColor !== undefined) {
+    if (body.nameFont !== undefined) set.nameFont = body.nameFont;
+    if (body.nameColor !== undefined && !ownsShop(body.nameColor)) {
       if (!canEquip('color', body.nameColor, longest)) return errorJson(403, 'That color is still locked. Keep the streak going.');
-      set.nameColor = body.nameColor;
     }
+    if (body.nameColor !== undefined) set.nameColor = body.nameColor;
   }
   if (body.soundEnabled !== undefined) set.soundEnabled = body.soundEnabled;
 

@@ -109,6 +109,37 @@ export const users = pgTable('user_accounts', {
   favoriteGames: jsonb('favorite_games').$type<string[]>().notNull().default([]),
   nameFont: text('name_font'),
   nameColor: text('name_color'),
+  /** Shop: spendable points (the ledger in point_events is the source of truth) and equipped cosmetics. */
+  points: integer('points').notNull().default(0),
+  pointsEarned: integer('points_earned').notNull().default(0),
+  equipBorder: text('equip_border'),
+  equipBanner: text('equip_banner'),
+  equipTitle: text('equip_title'),
+  equipFlair: text('equip_flair'),
+});
+
+/** Every point earned or spent. (user, reason, ref) is unique, so a grant can never be paid twice. */
+export const pointEvents = pgTable('point_events', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  amount: integer('amount').notNull(),
+  reason: text('reason').notNull(),
+  ref: text('ref').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex('point_events_once_idx').on(t.userId, t.reason, t.ref), index('point_events_user_idx').on(t.userId, t.createdAt)]);
+
+/** Shop items a player owns. */
+export const userItems = pgTable('user_items', {
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  itemKey: text('item_key').notNull(),
+  pricePaid: integer('price_paid').notNull().default(0),
+  acquiredAt: timestamp('acquired_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.userId, t.itemKey] })]);
+
+/** Units sold of each limited item; the row is locked during a purchase so stock never oversells. */
+export const shopStock = pgTable('shop_stock', {
+  itemKey: text('item_key').primaryKey(),
+  sold: integer('sold').notNull().default(0),
 });
 
 export const accounts = pgTable('auth_accounts', {
