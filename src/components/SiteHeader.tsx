@@ -8,6 +8,9 @@ import { SPORTS, gamesFor } from '@/lib/game-registry';
 /** The big draft games lead each sport; the rest of the list follows in hub order. */
 const FEATURED: Record<string, string[]> = { nfl: ['17-0', 'build-a-player'], nba: ['82-0'], mlb: ['162-0'], soccer: [], puzzles: [] };
 
+/** The column heading already names the sport, so "Who Led? Baseball" reads "Who Led?" in the menu. */
+const menuName = (n: string) => n.replace(/(:\s*(Hoops|Baseball|Soccer)|\s+(Baseball|Soccer))$/, '');
+
 function menus(): NavItem[] {
   const games: NavItem = {
     label: 'Games', href: '/games',
@@ -15,7 +18,7 @@ function menus(): NavItem[] {
       const list = gamesFor(s.key);
       const lead = list.filter((g) => FEATURED[s.key]?.includes(g.slug));
       const rest = list.filter((g) => !FEATURED[s.key]?.includes(g.slug)).slice(0, 6 - lead.length);
-      return { title: s.label, href: `/games?sport=${s.key}`, links: [...lead, ...rest].map((g) => ({ label: g.name, href: `/games/${g.slug}`, strong: lead.includes(g) })), more: list.length > lead.length + rest.length ? `All ${list.length}` : undefined };
+      return { title: s.label, href: `/games?sport=${s.key}`, links: [...lead, ...rest].map((g) => ({ label: menuName(g.name), href: `/games/${g.slug}`, strong: lead.includes(g) })), more: list.length > lead.length + rest.length ? `All ${list.length}` : undefined };
     }),
   };
   const fantasySection: NavSection = { title: 'Fantasy football', href: '/fantasy', links: [
