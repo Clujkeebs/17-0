@@ -33,7 +33,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:coverage
-      - run: npm run db:migrate && npm run db:seed && npx tsx scripts/e2e-fixtures.ts
+      - run: npm run db:migrate && npm run db:seed && npx tsx tests/e2e/load-fixtures.ts
       - run: npm run build && npm run build:worker
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
