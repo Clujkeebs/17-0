@@ -70,6 +70,8 @@ void (async () => {
   await refreshFantasy();
   // 82-0: backfill NBA seasons in the background (resumes where it stopped; the newest seasons always refresh), then re-fit the win line.
   void refreshNba(false);
+  // Temporary: check the data sources for the next phases (2K, NFL history, MLB, EA FC). Remove after.
+  void import('@/lib/server/source-probe').then((m) => m.probeSources()).catch(() => {});
   if (process.env.CALIBRATE === '1') {
     const { calibrate } = await import('@/lib/server/calibrate');
     for (const f of ['6', '12', '16'] as const) await calibrate(f).catch((e) => console.warn('[calibrate]', e.message));
