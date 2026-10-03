@@ -1,7 +1,7 @@
 import { createRng, type Rng } from '@/lib/game/prng';
 import type { MiniGame } from '../types';
-import type { GPlayer } from '../types';
-import type { PName, PuzzleData } from './data';
+import { WORDS, type PName, type PuzzleData } from './data';
+import { BANK, tileKey, tileKeys } from './connections-bank';
 
 /**
  * Word and logic puzzles. Both are scored on the server from the guesses you made (ranked play records every
@@ -18,61 +18,43 @@ interface CGroup { label: string; level: Level; ids: string[] }
 export interface ConnPuzzle { groups: CGroup[]; tiles: { id: string; name: string }[] }
 export interface ConnAnswer { guesses: string[][] }
 
-/** A category: which players fit, and what to call it. Predicates are rechecked so no player fits two groups. */
-interface Cat { label: string; level: Level; fits: (p: GPlayer) => boolean }
-
-function categories(rng: Rng, players: GPlayer[]): Cat[] {
-  const known = players.filter((p) => p.ovr >= 74);
-  const by = <K>(key: (p: GPlayer) => K | null) => {
-    const m = new Map<K, GPlayer[]>();
-    for (const p of known) { const k = key(p); if (k == null) continue; m.set(k, [...(m.get(k) ?? []), p]); }
-    return [...m.entries()].filter(([, v]) => v.length >= 4);
-  };
-  const cats: Cat[] = [];
-  for (const [team] of rng.shuffle(by((p) => p.teamName))) cats.push({ label: team, level: 0, fits: (p) => p.teamName === team });
-  for (const [college] of rng.shuffle(by((p) => p.college))) cats.push({ label: `Played college ball at ${college}`, level: 1, fits: (p) => p.college === college });
-  for (const [n] of rng.shuffle(by((p) => p.jersey))) cats.push({ label: `Wear number ${n}`, level: 2, fits: (p) => p.jersey === n });
-  cats.push({ label: '6-foot-6 or taller', level: 3, fits: (p) => (p.heightInches ?? 0) >= 78 });
-  cats.push({ label: '320 pounds or more', level: 3, fits: (p) => (p.weightLbs ?? 0) >= 320 });
-  cats.push({ label: 'Rookies', level: 3, fits: (p) => p.yearsPro === 0 });
-  cats.push({ label: 'Age 33 or older', level: 3, fits: (p) => (p.age ?? 0) >= 33 });
-  return cats;
+/**
+ * One category from each level of the hand-written bank (connections-bank.ts), four items each. An item is
+ * only used if neither it nor its last word appears anywhere in the other three categories, so there is
+ * exactly one way to solve the board. Same seed, same board.
+ */
+export function buildConnections(seed: string): ConnPuzzle {
+  const rng = createRng(seed);
+  const byLevel = ([0, 1, 2, 3] as Level[]).map((l) => BANK.filter((c) => c.level === l));
+  for (let attempt = 0; attempt < 600; attempt++) {
+    const pick = byLevel.map((list) => rng.pick(list));
+    const sets = pick.map((c) => new Set(c.items.flatMap(tileKeys)));
+    const groups: { label: string; level: Level; names: string[] }[] = [];
+    for (const [i, c] of pick.entries()) {
+      const clean = c.items.filter((item) => tileKeys(item).every((k) => sets.every((S, j) => j === i || !S.has(k))));
+      const unique = [...new Map(clean.map((x) => [tileKey(x), x])).values()];
+      if (unique.length < 4) break;
+      groups.push({ label: c.label, level: c.level, names: rng.shuffle(unique).slice(0, 4) });
+    }
+    if (groups.length < 4) continue;
+    const order = rng.shuffle(groups.flatMap((g, gi) => g.names.map((name) => ({ gi, name }))));
+    const tiles = order.map((t, k) => ({ id: `t${k}`, name: t.name }));
+    return { tiles, groups: groups.map((g, gi) => ({ label: g.label, level: g.level, ids: order.flatMap((t, k) => (t.gi === gi ? [`t${k}`] : [])) })) };
+  }
+  throw new Error('Could not build a Connections board.');
 }
 
 export const sportsConnections: MiniGame<ConnPuzzle, ConnAnswer, PuzzleData> = {
   slug: 'sports-connections', sport: 'puzzles',
   name: 'Sports Connections',
-  tagline: 'Sixteen NFL players, four hidden groups of four. Find them with fewer than four mistakes.',
+  tagline: 'Sixteen sports words, four hidden groups of four. Teams, players, shows, broadcasters, colleges, champions and wordplay.',
   howTo: [
-    'Pick four players you think share something, then submit. Groups run from easy (a team) to hard (a body type or age).',
-    'Four wrong guesses ends the puzzle. "One away" means three of your four belong together.',
+    'Find groups of four items that share something. Select four and tap Submit.',
+    'Each puzzle has exactly one solution. Watch out for words that seem to belong to more than one group.',
+    'Groups run from yellow (straightforward) to purple (tricky, often wordplay). Four mistakes and the game ends.',
     'Ranked by groups found, then fewest mistakes, then fastest time.',
   ],
-  generate(seed, data) {
-    const rng = createRng(seed);
-    const known = data.nfl.players.filter((p) => p.ovr >= 74);
-    for (let attempt = 0; attempt < 400; attempt++) {
-      const cats = categories(rng, data.nfl.players);
-      const pick: Cat[] = [];
-      for (const level of [0, 1, 2, 3] as Level[]) { const c = rng.shuffle(cats.filter((x) => x.level === level))[0]; if (c) pick.push(c); }
-      if (pick.length < 4) continue;
-      // Four players per group who fit exactly one of the four chosen categories.
-      const used = new Set<string>();
-      const groups: CGroup[] = [];
-      for (const c of pick) {
-        const pool = rng.shuffle(known.filter((p) => !used.has(p.id) && c.fits(p) && pick.filter((o) => o.fits(p)).length === 1));
-        if (pool.length < 4) break;
-        const four = pool.slice(0, 4);
-        four.forEach((p) => used.add(p.id));
-        groups.push({ label: c.label, level: c.level, ids: four.map((p) => p.id) });
-      }
-      if (groups.length < 4) continue;
-      const byId = new Map(known.map((p) => [p.id, p]));
-      const tiles = rng.shuffle(groups.flatMap((g) => g.ids)).map((id) => ({ id, name: byId.get(id)!.name }));
-      return { groups, tiles };
-    }
-    throw new Error('Could not build a Connections board from the current rosters.');
-  },
+  generate: (seed) => buildConnections(seed),
   publicView: (p) => ({ tiles: p.tiles }),
   /** One guess: which group it solves (with its label, now public), or how close it came. */
   check(p, guess) {
@@ -89,8 +71,11 @@ export const sportsConnections: MiniGame<ConnPuzzle, ConnAnswer, PuzzleData> = {
     if (!answer || !Array.isArray(answer.guesses)) throw new Error('No guesses.');
     const solved: CGroup[] = [];
     let mistakes = 0;
+    const levelOf = (id: string) => p.groups.find((x) => x.ids.includes(id))?.level ?? 0;
+    const rows: number[][] = [];
     for (const g of answer.guesses) {
       if (mistakes >= 4 || solved.length === 4) break;
+      rows.push(g.slice(0, 4).map(levelOf));
       const hit = p.groups.find((x) => !solved.includes(x) && x.ids.every((id) => g.includes(id)));
       if (hit) solved.push(hit); else mistakes++;
     }
@@ -99,7 +84,7 @@ export const sportsConnections: MiniGame<ConnPuzzle, ConnAnswer, PuzzleData> = {
     return {
       score, perfect: won && mistakes === 0,
       summary: won ? `Solved · ${mistakes} mistake${mistakes === 1 ? '' : 's'} · ${clock(ctx?.elapsedMs)}` : `${solved.length}/4 groups`,
-      detail: { groups: p.groups.map((g) => ({ label: g.label, level: g.level, names: g.ids.map((id) => p.tiles.find((t) => t.id === id)?.name ?? '') , found: solved.includes(g) })), mistakes, ms: ctx?.elapsedMs ?? null },
+      detail: { groups: p.groups.map((g) => ({ label: g.label, level: g.level, names: g.ids.map((id) => p.tiles.find((t) => t.id === id)?.name ?? '') , found: solved.includes(g) })), mistakes, rows, ms: ctx?.elapsedMs ?? null },
     };
   },
 };
@@ -125,16 +110,21 @@ const clean = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toUpper
 export const sportsWordle: MiniGame<WordlePuzzle, WordleAnswer, PuzzleData> = {
   slug: 'sports-wordle', sport: 'puzzles',
   name: 'Sports Wordle',
-  tagline: 'Guess the five-letter last name of a current NFL, NBA or MLB star in six tries.',
+  tagline: 'Six tries at a five-letter sports word: a star\'s last name, a team name or a sports term.',
   howTo: [
     'Type any five letters. Green is the right letter in the right spot, gold is in the name but elsewhere.',
-    'The answer is a current star from the NFL, NBA or MLB. The league shows from the start.',
+    'The answer is a current NFL, NBA or MLB star\'s last name, a team name, or a sports term. The hint shows which from the start.',
     'Ranked by fewest guesses, then fastest time.',
   ],
   generate(seed, data) {
     const rng = createRng(seed);
     const pool = data.names.filter((n) => clean(n.last).length === 5);
     if (pool.length < 20) throw new Error('Not enough players for today\'s word.');
+    // About half the days are a star's last name, half a team name or sports term.
+    if (rng.next() < 0.5) {
+      const w = rng.pick(WORDS);
+      return { word: w.word, who: { name: w.word.charAt(0) + w.word.slice(1).toLowerCase(), last: w.word, sport: w.hint, team: '', position: '' } };
+    }
     const who = rng.pick(pool);
     return { word: clean(who.last), who };
   },

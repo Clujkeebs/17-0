@@ -60,3 +60,28 @@ describe('Sports Connections', () => {
     expect(sportsConnections.applyChecks!({ guesses: [] }, [{ ids: g0 }])).toEqual({ guesses: [g0] });
   });
 });
+
+describe('Sports Connections bank', () => {
+  it('every category has four or more distinct items', async () => {
+    const { BANK, tileKey } = await import('@/lib/minigames/puzzles/connections-bank');
+    expect(BANK.length).toBeGreaterThan(120);
+    for (const c of BANK) expect(new Set(c.items.map(tileKey)).size, c.label).toBeGreaterThanOrEqual(4);
+    expect(new Set(BANK.map((c) => c.label)).size).toBe(BANK.length);
+  });
+  it('1,000 boards: one category per level, and no tile (or last name) belongs to two of its categories', async () => {
+    const { BANK, tileKeys } = await import('@/lib/minigames/puzzles/connections-bank');
+    const labels = new Set<string>();
+    for (let i = 0; i < 1000; i++) {
+      const p = sportsConnections.generate(`seed-${i}`, data);
+      expect(p.groups.map((g) => g.level).sort()).toEqual([0, 1, 2, 3]);
+      const cats = p.groups.map((g) => BANK.find((c) => c.label === g.label)!);
+      const name = (id: string) => p.tiles.find((t) => t.id === id)!.name;
+      p.groups.forEach((g, gi) => {
+        for (const id of g.ids) for (const k of tileKeys(name(id))) cats.forEach((c, ci) => { if (ci !== gi) expect(c.items.flatMap(tileKeys)).not.toContain(k); });
+      });
+      p.groups.forEach((g) => labels.add(g.label));
+    }
+    // Plenty of variety: most of the bank shows up across 1,000 days.
+    expect(labels.size).toBeGreaterThan(100);
+  });
+});

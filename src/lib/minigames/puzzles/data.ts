@@ -4,7 +4,17 @@ import { loadGameData } from '../data';
 import type { GameData } from '../types';
 
 /** A well-known current player from any of the three leagues, for word puzzles. */
-export interface PName { name: string; last: string; sport: 'NFL' | 'NBA' | 'MLB'; team: string; position: string }
+export interface PName { name: string; last: string; sport: string; team: string; position: string }
+
+/**
+ * Hand-picked five-letter sports words for Sports Wordle, so the answer is not always a surname. The hint
+ * shown from the start is the kind of word.
+ */
+export const WORDS: { word: string; hint: 'Team name' | 'Sports term' }[] = [
+  ...['BEARS', 'BILLS', 'COLTS', 'LIONS', 'MAGIC', 'KINGS', 'SPURS', 'BULLS', 'BUCKS', 'HAWKS', 'TWINS', 'BLUES', 'STARS', 'DUCKS'].map((word) => ({ word, hint: 'Team name' as const })),
+  ...['BLITZ', 'PITCH', 'COURT', 'DRAFT', 'SCORE', 'SERVE', 'SKATE', 'SLIDE', 'SPIKE', 'STEAL', 'TITLE', 'TRACK', 'VAULT', 'WEDGE', 'EAGLE', 'BOGEY', 'DUNKS', 'LAYUP', 'DEUCE', 'RALLY', 'RELAY', 'FIELD', 'GLOVE', 'MOUND', 'STICK', 'GOALS', 'ARENA', 'COACH', 'SQUAD', 'MATCH', 'TRADE', 'SWEEP', 'DRIVE', 'CATCH', 'SNAPS', 'PUNTS', 'HOMER', 'BENCH', 'CHALK', 'UPSET']
+    .map((word) => ({ word, hint: 'Sports term' as const })),
+];
 export interface PuzzleData { nfl: GameData; names: PName[] }
 
 let cache: { at: number; data: PuzzleData } | null = null;
