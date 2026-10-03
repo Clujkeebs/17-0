@@ -14,7 +14,7 @@ test("pick 'em: pick, change, locked at kickoff, right or wrong when final", asy
   await sql`insert into pickem_games (id, season, week, kickoff, home_abbr, away_abbr, home_name, away_name, status) values
     ('e2e1', 2099, 1, ${soon}, 'BUF', 'KC', 'Buffalo Bills', 'Kansas City Chiefs', 'pre'),
     ('e2e2', 2099, 1, ${new Date(past.getTime() - 60_000)}, 'DET', 'GB', 'Detroit Lions', 'Green Bay Packers', 'in')`;
-  const u = `pk_${Date.now().toString(36)}`;
+  const u = `pk_${String(Date.now()).slice(-9)}`;
   await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
   await page.goto('/register');
   await page.locator('#reg-username').fill(u);

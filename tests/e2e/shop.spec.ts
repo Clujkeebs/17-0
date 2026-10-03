@@ -17,7 +17,7 @@ async function signUp(page: Page, username: string, email?: string) {
 
 test('shop: welcome points, buy a title, equip it, it shows on the profile', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop');
-  const u = `shop_${Date.now().toString(36)}`;
+  const u = `shop_${String(Date.now()).slice(-9)}`;
   await signUp(page, u);
   await page.goto('/shop');
   await expect(page.getByTestId('balance')).toHaveText('50 pts');
@@ -41,7 +41,7 @@ test('shop: welcome points, buy a title, equip it, it shows on the profile', asy
 
 test('limited items never oversell: two players race for the last one, one wins', async ({ browser }, info) => {
   test.skip(info.project.name !== 'desktop');
-  const stamp = Date.now().toString(36);
+  const stamp = String(Date.now()).slice(-9);
   const ctxA = await (browser as Browser).newContext(), ctxB = await (browser as Browser).newContext();
   const a = await ctxA.newPage(), b = await ctxB.newPage();
   await signUp(a, `race_a_${stamp}`); await signUp(b, `race_b_${stamp}`);
@@ -65,7 +65,7 @@ test('the owner owns every item, including exclusives nobody else can see', asyn
   test.skip(info.project.name !== 'desktop');
   const owner = 'clujkeebs@aol.com';
   await sql`delete from user_accounts where email = ${owner}`;
-  await signUp(page, `own3_${Date.now().toString(36)}`, owner);
+  await signUp(page, `own3_${String(Date.now()).slice(-9)}`, owner);
   await page.goto('/shop');
   await page.getByRole('button', { name: 'Titles' }).click();
   const comm = page.locator('.shop-card', { hasText: 'Commissioner' });

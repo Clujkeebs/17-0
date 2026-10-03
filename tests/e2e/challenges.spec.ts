@@ -36,7 +36,7 @@ async function draftAll(page: Page, n: number) {
 test('17-0 challenge: same spins for a friend, a shared board, and a head-to-head', async ({ browser }, info) => {
   test.skip(info.project.name !== 'desktop');
   test.setTimeout(150_000);
-  const stamp = Date.now().toString(36);
+  const stamp = String(Date.now()).slice(-9); // digits only: random letters can trip the username filter
   const a = `cha_${stamp}`, b = `chb_${stamp}`;
 
   // A plays a Casual 6-man game and turns it into a challenge.

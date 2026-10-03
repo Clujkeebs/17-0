@@ -8,7 +8,7 @@ test.afterAll(async () => { await sql.end(); });
 
 test('account lifecycle', async ({ page, request }, info) => {
   test.skip(info.project.name !== 'desktop', 'one run is enough; mobile covers the games');
-  const u = `e2e_${Date.now().toString(36)}`;
+  const u = `e2e_${String(Date.now()).slice(-9)}`;
   const email = process.env.E2E_ADMIN_EMAIL ?? 'you@example.com';
   await sql`delete from user_accounts where email = ${email}`;
   await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); localStorage.setItem('gl-17-0-rules', '1'); });
@@ -101,7 +101,7 @@ test('owner account gets the owner style; nobody else can', async ({ page, reque
   await sql`delete from user_accounts where email = ${owner}`;
   await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
   await page.goto('/register');
-  await page.locator('#reg-username').fill(`own_${Date.now().toString(36)}`);
+  await page.locator('#reg-username').fill(`own_${String(Date.now()).slice(-9)}`);
   await page.locator('#reg-email').fill(owner);
   await page.locator('main input[type=password]').first().fill('correct-horse-battery');
   await page.getByRole('button', { name: 'Create account' }).click();
@@ -120,7 +120,7 @@ test('owner account gets the owner style; nobody else can', async ({ page, reque
 
 test('sign up with just a username and password, then sign back in with the username', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop');
-  const u = `noemail_${Date.now().toString(36)}`;
+  const u = `noemail_${String(Date.now()).slice(-9)}`;
   await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
   await page.goto('/register');
   await page.locator('#reg-username').fill(u);
@@ -158,7 +158,7 @@ test('owner page: only the owner sees it, notes save and log', async ({ page, re
   await sql`delete from user_accounts where email = ${owner}`;
   await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
   await page.goto('/register');
-  await page.locator('#reg-username').fill(`own2_${Date.now().toString(36)}`);
+  await page.locator('#reg-username').fill(`own2_${String(Date.now()).slice(-9)}`);
   await page.locator('#reg-email').fill(owner);
   await page.locator('main input[type=password]').first().fill('correct-horse-battery');
   await page.getByRole('button', { name: 'Create account' }).click();

@@ -62,7 +62,7 @@ test('82-0 normal mode: twelve players, find box, era reel', async ({ page }) =>
 
 test('after Today is played, 82-0 and 162-0 open on Casual instead of a locked board', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop');
-  const u = `daily_${Date.now().toString(36)}`;
+  const u = `daily_${String(Date.now()).slice(-9)}`;
   await page.goto('/register');
   await page.locator('#reg-username').fill(u);
   await page.locator('main input[type=password]').first().fill('correct-horse-battery');
