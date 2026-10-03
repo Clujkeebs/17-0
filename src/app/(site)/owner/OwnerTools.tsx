@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { SHOP_ITEMS } from '@/lib/shop';
 
-type Stats = { gamesToday: number; activeNow: number; signupsToday: number; players: number; pointsHeld: number; topGames: { game: string; n: number }[] };
+type Stats = { gamesToday: number; activeNow: number; signupsToday: number; players: number; pointsHeld: number; topGames: { game: string; n: number }[]; challengesToday?: number; challengeEntriesToday?: number };
 
 /** Owner tools: live numbers, a site banner, and player tools (points, items, leaderboard moderation, replays). */
 export function OwnerTools({ games }: { games: { slug: string; name: string }[] }) {
@@ -36,6 +36,8 @@ export function OwnerTools({ games }: { games: { slug: string; name: string }[] 
             <div className="stat"><span className="v num">{stats.activeNow}</span><span className="l">Playing now</span></div>
             <div className="stat"><span className="v num">{stats.gamesToday}</span><span className="l">Games today</span></div>
             <div className="stat"><span className="v num">{stats.signupsToday}</span><span className="l">Sign-ups today</span></div>
+            <div className="stat"><span className="v num">{stats.challengesToday ?? 0}</span><span className="l">Challenges today</span></div>
+            <div className="stat"><span className="v num">{stats.challengeEntriesToday ?? 0}</span><span className="l">Challenge plays today</span></div>
             <div className="stat"><span className="v num">{stats.players}</span><span className="l">Accounts</span></div>
             <div className="stat"><span className="v num">{stats.pointsHeld.toLocaleString('en-US')}</span><span className="l">Points held</span></div>
           </>

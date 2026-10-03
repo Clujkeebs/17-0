@@ -5,6 +5,7 @@ import { db, schema } from '@/db';
 import { NBA_SLOTS } from '@/lib/game/eightytwo';
 import { dailyDateET } from '@/lib/game/daily';
 import { NBA_EDITIONS, NBA_GAME, NbaError, gradeNba, moveNba, pickNba, respinNba, startNba } from '@/lib/server/nba-game';
+import { ChallengeError, challengeStart } from '@/lib/server/challenges';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp, rateLimit } from '@/lib/server/rate-limit';
 
@@ -13,7 +14,7 @@ export const runtime = 'nodejs';
 const Auth = { sessionId: z.string().uuid(), token: z.string().min(10).max(100) };
 const Slot = z.enum(NBA_SLOTS);
 const Body = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('start'), daily: z.boolean().optional(), hard: z.boolean().optional(), edition: z.enum(NBA_EDITIONS as [string, ...string[]]).optional() }),
+  z.object({ action: z.literal('start'), daily: z.boolean().optional(), hard: z.boolean().optional(), edition: z.enum(NBA_EDITIONS as [string, ...string[]]).optional(), challenge: z.string().min(6).max(24).optional() }),
   z.object({ action: z.literal('respin'), what: z.enum(['era', 'team']), ...Auth }),
   z.object({ action: z.literal('pick'), playerId: z.number().int().positive(), slot: Slot.optional(), ...Auth }),
   z.object({ action: z.literal('move'), from: Slot, to: Slot, ...Auth }),
@@ -40,6 +41,10 @@ export async function POST(req: Request) {
     }
     const limited = await limitByIp(req, 'spin');
     if (limited) return limited;
+    if (b.challenge) {
+      const c = await challengeStart(b.challenge, '82-0');
+      return json(await startNba({ userId, hard: c.setup.hard, edition: c.setup.edition as 'classic' | 'standard' | undefined, challenge: c }));
+    }
     if (b.daily) {
       if (!userId) return errorJson(401, 'Sign in to play Today. It is ranked.', { requireAccount: true });
       const [done] = await db.select({ id: schema.gameResults.id }).from(schema.gameResults)
@@ -48,7 +53,7 @@ export async function POST(req: Request) {
     }
     return json(await startNba({ userId, daily: b.daily, hard: b.hard, edition: b.edition as 'classic' | 'standard' | undefined }));
   } catch (e) {
-    if (e instanceof NbaError) return errorJson(e.status, e.message);
+    if (e instanceof NbaError || e instanceof ChallengeError) return errorJson(e.status, e.message);
     console.error('[82-0]', (e as Error).message);
     return errorJson(503, 'The reel jammed. Try again in a moment.');
   }

@@ -766,3 +766,35 @@ html[data-rules=hidden] .rules-card { display: none; }
   .shop-look-name { font-size: 1rem; flex: 1 1 0; }
   .shop-look-meta { flex: 1 0 100%; flex-direction: row; justify-content: space-between; align-items: center; margin-left: 0; }
 }
+
+/* ---------- Challenges ---------- */
+.ch-title { font-size: clamp(2rem, 7vw, 3.4rem); line-height: 1.02; letter-spacing: -0.03em; margin: 6px 0 10px; }
+.ch-lede { max-width: 60ch; margin: 0 0 14px; }
+.ch-chips { list-style: none; padding: 0; margin: 0 0 18px; display: flex; flex-wrap: wrap; gap: 6px; }
+.ch-chips li { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--steel); }
+.ch-actions { gap: 10px; margin: 0 0 24px; }
+.ch-verdict { margin: 0 0 24px; display: grid; gap: 6px; }
+.ch-verdict.win { border-color: #15803D; box-shadow: inset 0 0 0 1px rgba(21,128,61,.3); }
+.ch-verdict.loss { border-color: var(--steel); }
+.ch-score { font-size: clamp(2rem, 8vw, 3rem); font-weight: 800; letter-spacing: -0.03em; margin: 0; }
+.ch-face { margin: 0 0 28px; }
+.ch-table { width: 100%; border-collapse: collapse; }
+.ch-table th, .ch-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--steel); vertical-align: middle; }
+.ch-table thead th { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--bone-dim); }
+.ch-table tbody th { width: 3.5rem; font-weight: 700; }
+.ch-table td.ch-edge { background: #F0FDF4; }
+.ch-name { font-weight: 600; }
+.ch-letter { display: inline-block; min-width: 2.1em; text-align: center; font-weight: 800; font-size: .8rem; padding: 2px 6px; border-radius: 6px; background: var(--bone); color: #fff; margin-left: 4px; }
+.ch-board h2, .ch-face h2 { margin-bottom: 10px; }
+.ch-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.ch-list li { display: grid; grid-template-columns: 2.2rem 1fr auto; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--steel); border-radius: 14px; background: var(--surface); }
+.ch-list li.you { border-color: var(--bone); box-shadow: inset 0 0 0 1px var(--bone); }
+.ch-rank { font-weight: 800; color: var(--bone-dim); }
+.ch-who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; font-weight: 600; }
+.ch-who a { color: inherit; text-decoration: none; }
+.ch-tag { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: #FEF3C7; color: #78350F; }
+.ch-tag.you { background: var(--bone); color: #fff; }
+.ch-rec { font-weight: 800; font-size: 1.1rem; }
+.ch-callout { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0 0 20px; }
+.ch-callout.card { justify-content: space-between; }
+.g-challenge { margin: 4px 0 0; font-size: .8rem; font-weight: 700; letter-spacing: .04em; color: #78350F; background: #FEF3C7; display: inline-block; padding: 3px 10px; border-radius: 999px; }

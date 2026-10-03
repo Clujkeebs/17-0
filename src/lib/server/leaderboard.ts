@@ -7,7 +7,7 @@ import { dailyDateET } from '@/lib/game/daily';
 import { isOwnerEmail, resolveStyle, type NameStyle } from '@/lib/cosmetics';
 
 /** Name styles for the players on a page, in one query. Emails stay here; only the resolved style leaves. */
-async function stylesFor(userIds: string[]): Promise<Map<string, NameStyle>> {
+export async function stylesFor(userIds: string[]): Promise<Map<string, NameStyle>> {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (!ids.length) return new Map();
   const rows = await db.select({ id: schema.users.id, email: schema.users.email, font: schema.users.nameFont, color: schema.users.nameColor, title: schema.users.equipTitle, flair: schema.users.equipFlair })

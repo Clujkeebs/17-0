@@ -3,6 +3,7 @@ import { db, schema } from '@/db';
 import { getFormulas, getSlotWeights } from './config';
 import { invalidatePrefix } from './redis';
 import { earnForResult } from './points';
+import { recordEntry } from './challenges';
 import { loadSession, type SpinPayload } from './games';
 import { positionGroup, type Attributes, type PositionGroup } from '@/lib/game/attributes';
 import { FORMATS, gradeRoster, isFantasy, slotAccepts, type Pick } from '@/lib/game/seventeen';
@@ -25,7 +26,10 @@ async function openSession(ctx: Ctx, gameType: string) {
 
 export async function saveResult(...args: Parameters<typeof saveResultTx>) {
   const id = await saveResultTx(...args);
-  const [s, ctx, gameType, , , perfect] = args;
+  const [s, ctx, gameType, , score, perfect] = args;
+  // A challenge game joins its challenge's board (and may pay a head-to-head win). Never blocks the result.
+  const challengeId = (s.spinPayload as { challengeId?: unknown } | undefined)?.challengeId;
+  if (typeof challengeId === 'string') await recordEntry(challengeId, id, score, ctx.userId, ctx.username).catch((e) => console.warn('[challenge] entry failed', (e as Error).message));
   // Signed-in results change the leaderboards; clear their cache so the player sees themselves immediately.
   if (ctx.userId) await Promise.all([s.isDaily ? invalidatePrefix(`lb:daily:${gameType}:`) : null, s.isDaily ? invalidatePrefix(`lb:week:${gameType}:`) : null, invalidatePrefix('lb:all:')]).catch(() => {});
   // Points never block a result: a failed grant is logged and the game still saves.
@@ -33,7 +37,7 @@ export async function saveResult(...args: Parameters<typeof saveResultTx>) {
   return id;
 }
 
-async function saveResultTx(s: { id: string; isDaily: boolean; dailyDate: string | null }, ctx: Ctx, gameType: string, resultData: unknown, score: number, perfect: boolean) {
+async function saveResultTx(s: { id: string; isDaily: boolean; dailyDate: string | null; spinPayload?: unknown }, ctx: Ctx, gameType: string, resultData: unknown, score: number, perfect: boolean) {
   return db.transaction(async (tx) => {
     const done = await tx.update(schema.gameSessions).set({ completed: true })
       .where(and(eq(schema.gameSessions.id, s.id), eq(schema.gameSessions.completed, false))).returning({ id: schema.gameSessions.id });
@@ -106,7 +110,7 @@ export async function gradeSeventeen(ctx: Ctx) {
     if (!slotAccepts(p.slot, p.group, format)) throw new GradeError(`${p.name} cannot play ${p.slot}.`);
   }
   // Daily results must be identical for identical rosters, so seed from the date plus the roster.
-  const seed = s.isDaily ? `${s.seed}:${[...playerIds, ...coachIds].sort().join(',')}` : s.id;
+  const seed = s.isDaily || payload.challengeId ? `${s.seed}:${[...playerIds, ...coachIds].sort().join(',')}` : s.id;
   const opponents = teamRows.filter((t) => !usedTeams.has(t.id)).map((t) => t.abbr);
   const floor = isFantasy(format) ? await getFantasyFloor() : pool === 'all-time' ? await getAllTimeFloor(format) : undefined;
   const result = gradeRoster(seed, full, formulas, weights, opponents, format, floor);

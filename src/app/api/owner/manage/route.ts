@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { challengeCounts } from '@/lib/server/challenges';
 import { and, eq, gte, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { requireOwner } from '@/lib/server/owner';
@@ -46,7 +47,8 @@ export async function POST(req: Request) {
       db.select({ n: dsql<number>`coalesce(sum(${schema.users.points}), 0)::int` }).from(schema.users),
     ]);
     const top = await db.select({ game: schema.gameResults.gameType, n: dsql<number>`count(*)::int` }).from(schema.gameResults).where(gte(schema.gameResults.createdAt, dayStart)).groupBy(schema.gameResults.gameType).orderBy(dsql`count(*) desc`).limit(5);
-    return json({ ok: true, stats: { gamesToday: g.n, activeNow: a.n, signupsToday: u.n, players: n.n, pointsHeld: p.n, topGames: top } });
+    const ch = await challengeCounts(dayStart).catch(() => ({ challenges: 0, entries: 0 }));
+    return json({ ok: true, stats: { gamesToday: g.n, activeNow: a.n, signupsToday: u.n, players: n.n, pointsHeld: p.n, topGames: top, challengesToday: ch.challenges, challengeEntriesToday: ch.entries } });
   }
 
   if (b.action === 'banner') {

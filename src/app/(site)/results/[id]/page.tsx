@@ -9,6 +9,8 @@ import { getResult } from '@/lib/server/leaderboard';
 import { getTeams } from '@/lib/server/data';
 import { SideAd } from '@/components/AdSlot';
 import { ShareButton } from '@/components/game/ShareButton';
+import { ChallengeButton } from '@/components/game/ChallengeButton';
+import { getChallenge, challengeOfResult } from '@/lib/server/challenges';
 import { ATTRIBUTE_LABELS, type AttributeKey } from '@/lib/game/attributes';
 import { SLOT_LABELS, type SlotResult, type GameLine } from '@/lib/game/seventeen';
 import type { StatLine } from '@/lib/game/build';
@@ -86,6 +88,7 @@ export default async function ResultPage({ params }: Props) {
             <Link className="btn btn-primary" href={is17 ? '/games/17-0' : '/games/build-a-player'}>Play again</Link>
             <Link className="btn" href={is17 ? '/games/build-a-player' : '/games/17-0'}>Try {is17 ? 'Build a Player' : '17-0'}</Link>
           </div>
+          {is17 && <ChallengeBlock r={r} />}
           {r.isDaily && !r.userId && <p className="hint">Sign in before your next daily to get on the <Link href="/leaderboard">leaderboard</Link> and start a streak.</p>}
 
           <hr className="divider" />
@@ -214,6 +217,7 @@ function NbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
           <Link className="btn btn-primary" href="/games/82-0">Play again</Link>
           <Link className="btn" href="/games?sport=nba">More basketball</Link>
         </div>
+        <ChallengeBlock r={r} />
         <hr className="divider" />
         <h2>The season</h2>
         <div className="prose">{d.narrative.map((x, i) => <p key={i}>{x}</p>)}</div>
@@ -260,6 +264,7 @@ function MlbResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
           <Link className="btn btn-primary" href="/games/162-0">Play again</Link>
           <Link className="btn" href="/games?sport=mlb">More baseball</Link>
         </div>
+        <ChallengeBlock r={r} />
         <hr className="divider" />
         <h2>The season</h2>
         <div className="prose">{d.narrative.map((x, i) => <p key={i}>{x}</p>)}</div>
@@ -283,6 +288,30 @@ function MlbResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
         </div>
         <p className="hint" style={{ marginTop: 16 }}>Grades come from each player&apos;s real season with that franchise (MLB Stats API), measured against that year&apos;s league: OPS for hitters, ERA for pitchers.</p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Challenges on a result: a game played from a challenge links back to the head-to-head; any other Casual
+ * 17-0, 82-0 or 162-0 game can become one. Today is the same for everyone already, so it has neither.
+ */
+async function ChallengeBlock({ r }: { r: { id: string; isDaily: boolean } }) {
+  if (r.isDaily) return null;
+  const cid = await challengeOfResult(r.id).catch(() => null);
+  const c = cid ? await getChallenge(cid).catch(() => null) : null;
+  if (c && c.creatorResultId !== r.id) {
+    return (
+      <div className="card ch-callout">
+        <p style={{ margin: 0 }}><strong>You took {c.creatorName ?? 'a friend'}&apos;s challenge.</strong> See who won, spot by spot.</p>
+        <Link className="btn btn-primary" href={`/c/${c.id}?r=${r.id}`}>See the head-to-head</Link>
+      </div>
+    );
+  }
+  return (
+    <div className="ch-callout plain">
+      <ChallengeButton resultId={r.id} existing={c?.id ?? null} />
+      <span className="hint">Friends get these exact spins. Best record wins.</span>
     </div>
   );
 }

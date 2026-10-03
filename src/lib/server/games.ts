@@ -28,6 +28,8 @@ export interface SpinPayload {
   pool?: PoolKey;
   /** Server-side draft log. One entry per revealed team, in order. The next team is revealed only after a pick. */
   picks?: { teamId: number; id: string; slot?: string; trait?: string }[];
+  /** Set when this game is someone's challenge: same seed, same setup, graded from the roster (see challenges.ts). */
+  challengeId?: string;
 }
 
 export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** All-time legend from ESPN history: his best season with this franchise, e.g. "1994 · 112 rec, 1,499 yds, 13 TD". */ line?: string; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
@@ -49,10 +51,10 @@ async function eligibleTeamPool(gameType: GameType, position?: BuildPosition): P
   return rows.map((r) => r.teamId).filter((x): x is number => x !== null);
 }
 
-export async function createGameSession(opts: { gameType: GameType; userId?: string | null; daily?: boolean; position?: BuildPosition; hard?: boolean; format?: FormatKey; pool?: PoolKey }) {
+export async function createGameSession(opts: { gameType: GameType; userId?: string | null; daily?: boolean; position?: BuildPosition; hard?: boolean; format?: FormatKey; pool?: PoolKey; challenge?: { seed: string; challengeId: string } }) {
   const { gameType } = opts;
   const date = dailyDateET();
-  const seed = opts.daily ? dailySeed(`${gameType}:${opts.position ?? ''}`, date) : newToken(12);
+  const seed = opts.daily ? dailySeed(`${gameType}:${opts.position ?? ''}`, date) : opts.challenge?.seed ?? newToken(12);
   const pool = await eligibleTeamPool(gameType, opts.position);
   // Today is one shared puzzle: the classic six from current rosters. Size and pool are Casual choices.
   const format: FormatKey = gameType === '17-0' && !opts.daily ? opts.format ?? '6' : '6';
@@ -61,7 +63,7 @@ export async function createGameSession(opts: { gameType: GameType; userId?: str
   const count = gameType === '17-0' ? FORMATS[format].slots.length : BUILD_TEAMS;
   if (pool.length < count + MAX_RESPINS) throw new Error('Not enough teams with eligible players. Has the database been seeded?');
   const { teams, reserves } = draftOrder(seed, pool, count);
-  const payload: SpinPayload = { teams, reserves, respinsUsed: 0, position: opts.position, hard: !!opts.hard, ...(gameType === '17-0' ? { format, pool: playerPool } : {}) };
+  const payload: SpinPayload = { teams, reserves, respinsUsed: 0, position: opts.position, hard: !!opts.hard, ...(gameType === '17-0' ? { format, pool: playerPool } : {}), ...(opts.challenge && !opts.daily ? { challengeId: opts.challenge.challengeId } : {}) };
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
     userId: opts.userId ?? null, gameType, seed, spinPayload: payload, token: hashToken(tok),

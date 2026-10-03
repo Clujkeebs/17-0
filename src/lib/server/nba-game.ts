@@ -32,6 +32,7 @@ export interface NbaPayload {
   /** The board on the clock. Decided server-side from the seed, never by the client. */
   current: { era: EraKey; teamId: number } | null;
   picks: { playerId: number; teamId: number; season: number; slot: NbaSlot; era: EraKey }[];
+  challengeId?: string;
 }
 
 export interface NbaBoardPlayer { id: number; name: string; position: string; season: number; seasonLabel: string; value: number; ppg: number; rpg: number; apg: number; headshot: string | null; fits: NbaSlot[] }
@@ -178,13 +179,13 @@ async function open(sessionId: string, tok: string) {
 }
 const save = (id: string, p: NbaPayload) => db.update(schema.gameSessions).set({ spinPayload: p }).where(eq(schema.gameSessions.id, id));
 
-export async function startNba(opts: { userId?: string | null; daily?: boolean; hard?: boolean; edition?: NbaEdition }) {
+export async function startNba(opts: { userId?: string | null; daily?: boolean; hard?: boolean; edition?: NbaEdition; challenge?: { seed: string; challengeId: string } }) {
   // Today is one shared Classic board; Standard is a Casual option.
   const edition: NbaEdition = opts.daily ? 'classic' : opts.edition ?? 'classic';
   if (!(await nbaReady(edition))) throw new NbaError(edition === 'standard' ? 'NBA 2K ratings are still loading. Try Classic for now.' : '82-0 is still loading its history. Try again in a few minutes.', 503);
   const date = dailyDateET();
-  const seed = opts.daily ? dailySeed(`${NBA_GAME}:`, date) : newToken(12);
-  const p: NbaPayload = { edition, hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [] };
+  const seed = opts.daily ? dailySeed(`${NBA_GAME}:`, date) : opts.challenge?.seed ?? newToken(12);
+  const p: NbaPayload = { edition, hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [], ...(opts.challenge && !opts.daily ? { challengeId: opts.challenge.challengeId } : {}) };
   p.current = await draw(seed, 0, p);
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
@@ -254,7 +255,7 @@ export async function gradeNba(ctx: { sessionId: string; token: string; userId?:
     if (!r) throw new NbaError('Unknown player.');
     return { slot: x.slot, name: r.p.fullName, position: r.p.position, teamId: x.teamId, season: x.season, value: r.ps.value };
   });
-  const seed = s.isDaily ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
+  const seed = s.isDaily || p.challengeId ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
   const result = gradeNbaRoster(seed, picks, await getNbaFloor(standard ? 'standard' : 'classic'));
   const teams = await Promise.all(p.picks.map((x) => teamInEra(x.teamId, x.era)));
   const resultData = { ...result, hard: p.hard, edition: standard ? 'standard' : 'classic', teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: teams[i]?.logoUrl ?? null, era: x.era })) };

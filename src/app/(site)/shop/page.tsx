@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 const REASON: Record<string, string> = {
   welcome: 'Welcome bonus', daily: 'Ranked game', perfect: 'Perfect result', casual: 'Casual game', streak: 'Streak milestone',
-  board: 'Daily top 10', week: 'Weekly podium', backfill: 'Launch credit for past games', buy: 'Bought', owner: 'From the owner',
+  board: 'Daily top 10', week: 'Weekly podium', backfill: 'Launch credit for past games', buy: 'Bought', owner: 'From the owner', pickem: "Pick 'em: right pick", 'pickem-week': "Pick 'em: perfect week", 'challenge-win': 'Won a challenge', 'challenge-defend': 'Defended your challenge',
 };
 
 export default async function ShopPage() {

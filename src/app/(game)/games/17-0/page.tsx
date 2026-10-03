@@ -4,6 +4,7 @@ import { SeventeenGame } from '@/components/game/SeventeenGame';
 import { getTeams } from '@/lib/server/data';
 import { auth } from '@/auth';
 import { fantasyReady, todaysResult } from '@/lib/server/games';
+import { challengeInfo } from '@/lib/server/challenges';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/games/17-0' },
 };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ daily?: string; mode?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ daily?: string; mode?: string; challenge?: string }> }) {
   const sp = await searchParams;
   const session = await auth().catch(() => null);
   const userId = session?.user?.id ?? null;
@@ -24,5 +25,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
   try { pool = (await getTeams()).map((t) => ({ id: t.id, abbreviation: t.abbreviation, city: t.city, name: t.name, color: t.primaryColor, logoUrl: t.logoUrl })); } catch { /* reel falls back */ }
   
   const fantasy = await fantasyReady().catch(() => false);
-  return <SeventeenGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={!!asked} fantasyReady={fantasy} />;
+  const challenge = await challengeInfo(sp.challenge, '17-0');
+  return <SeventeenGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={!!asked} fantasyReady={fantasy} challenge={challenge} />;
 }

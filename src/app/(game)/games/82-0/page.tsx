@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { desc } from 'drizzle-orm';
 import { auth } from '@/auth';
+import { challengeInfo } from '@/lib/server/challenges';
 import { db, schema } from '@/db';
 import type { ReelTeam } from '@/components/game/Reel';
 import { EightyTwoGame } from '@/components/game/EightyTwoGame';
@@ -23,11 +24,11 @@ async function franchises(): Promise<ReelTeam[]> {
   } catch { return []; }
 }
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ mode?: string; challenge?: string }> }) {
   const sp = await searchParams;
   const session = await auth().catch(() => null);
   const signedIn = !!session?.user?.id;
   const initialMode = sp.mode === 'today' ? 'today' : sp.mode === 'casual' ? 'casual' : signedIn ? 'today' : 'casual';
   const standardReady = await nbaReady('standard').catch(() => false);
-  return <EightyTwoGame franchises={await franchises()} signedIn={signedIn} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} standardReady={standardReady} />;
+  return <EightyTwoGame franchises={await franchises()} signedIn={signedIn} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} challenge={await challengeInfo(sp.challenge, '82-0')} standardReady={standardReady} />;
 }

@@ -6,7 +6,7 @@ import { dailyDateET } from '@/lib/game/daily';
 
 // Runtime copy of the AnalyticsEvent union. The type check below fails if the two drift.
 const EVENTS = [
-  'game_started', 'game_completed', 'game_shared', 'signup_started', 'signup_completed',
+  'game_started', 'game_completed', 'game_shared', 'challenge_created', 'signup_started', 'signup_completed',
   'newsletter_viewed', 'newsletter_submitted', 'newsletter_confirmed', 'leaderboard_viewed', 'ad_impression', 'ad_click',
 ] as const satisfies readonly AnalyticsEvent[];
 type Missing = Exclude<AnalyticsEvent, (typeof EVENTS)[number]>;

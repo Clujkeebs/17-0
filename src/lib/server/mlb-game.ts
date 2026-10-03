@@ -41,6 +41,7 @@ export interface MlbPayload {
   teamRespinsUsed: number;
   current: { era: SpinEra; teamId: number } | null;
   picks: { playerId: number; teamId: number; season: number; slot: MlbSlot; era: SpinEra }[];
+  challengeId?: string;
 }
 
 export interface MlbBoardPlayer { id: number; name: string; position: string; kind: MlbKind; season: number; value: number; line: string; headshot: string; fits: MlbSlot[] }
@@ -157,13 +158,13 @@ async function open(sessionId: string, tok: string) {
 }
 const save = (id: string, p: MlbPayload) => db.update(schema.gameSessions).set({ spinPayload: p }).where(eq(schema.gameSessions.id, id));
 
-export async function startMlb(opts: { userId?: string | null; daily?: boolean; hard?: boolean; mode?: MlbMode }) {
+export async function startMlb(opts: { userId?: string | null; daily?: boolean; hard?: boolean; mode?: MlbMode; challenge?: { seed: string; challengeId: string } }) {
   // Today is one shared Eras board; Right now is a Casual option.
   const mode: MlbMode = opts.daily ? 'eras' : opts.mode ?? 'eras';
   if (!(await mlbReady(mode))) throw new MlbError(mode === 'now' ? 'Right now needs a few more weeks of this season. Try Eras.' : '162-0 is still loading its history. Try again in a few minutes.', 503);
   const date = dailyDateET();
-  const seed = opts.daily ? dailySeed(`${MLB_GAME}:`, date) : newToken(12);
-  const p: MlbPayload = { mode, hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [] };
+  const seed = opts.daily ? dailySeed(`${MLB_GAME}:`, date) : opts.challenge?.seed ?? newToken(12);
+  const p: MlbPayload = { mode, hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [], ...(opts.challenge && !opts.daily ? { challengeId: opts.challenge.challengeId } : {}) };
   p.current = await draw(seed, 0, p);
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
@@ -230,7 +231,7 @@ export async function gradeMlb(ctx: { sessionId: string; token: string; userId?:
     return { slot: x.slot, name: r.p.fullName, position: r.ps.position, kind: r.ps.kind as MlbKind, teamId: x.teamId, season: x.season, value: r.ps.value };
   });
   for (const x of picks) if (mlbFit(x.position, x.kind, x.slot) === 0) throw new MlbError(`${x.name} cannot play ${x.slot}.`);
-  const seed = s.isDaily ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
+  const seed = s.isDaily || p.challengeId ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
   const result = gradeMlbRoster(seed, picks, await getMlbFloor(p.mode ?? 'eras'));
   const teams = await Promise.all(p.picks.map((x) => teamInEra(x.teamId, x.era)));
   const resultData = { ...result, hard: p.hard, mode: p.mode ?? 'eras', teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: mlbLogo(x.teamId), era: x.era })) };

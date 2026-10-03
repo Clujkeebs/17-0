@@ -418,3 +418,29 @@ export const nflLegends = pgTable('nfl_legends', {
 export type Player = typeof players.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Coach = typeof coaches.$inferSelect;
+
+/** A challenge: one Casual game's seed and setup, so friends draft from the exact same spins. */
+export const challenges = pgTable('challenges', {
+  id: text('id').primaryKey(),
+  gameType: text('game_type').notNull(),
+  seed: text('seed').notNull(),
+  setup: jsonb('setup').notNull(),
+  creatorId: uuid('creator_id').references(() => users.id, { onDelete: 'set null' }),
+  creatorName: text('creator_name'),
+  creatorResultId: uuid('creator_result_id').notNull().references(() => gameResults.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex('challenges_result_idx').on(t.creatorResultId)]);
+
+/** Everyone who played a challenge. Signed-in players appear once each; guests are kept for their own comparison. */
+export const challengeEntries = pgTable('challenge_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  challengeId: text('challenge_id').notNull().references(() => challenges.id, { onDelete: 'cascade' }),
+  resultId: uuid('result_id').notNull().references(() => gameResults.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  username: text('username'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('challenge_entries_challenge_idx').on(t.challengeId),
+  uniqueIndex('challenge_entries_result_idx').on(t.resultId),
+  uniqueIndex('challenge_entries_one_per_user').on(t.challengeId, t.userId).where(sql`${t.userId} is not null`),
+]);

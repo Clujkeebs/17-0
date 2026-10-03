@@ -10,7 +10,9 @@ import type { DraftState } from '@/lib/server/draft';
 import type { PublicPlayer } from '@/lib/server/games';
 import './game.css';
 
-type Draft = DraftState & { token: string; daily: boolean; date: string | null };
+type Draft = DraftState & { token: string; daily: boolean; date: string | null; challenge?: string };
+/** A challenge link: the spins are someone else's game, so the setup sheet is skipped. */
+export type ChallengeInfo = { id: string; by: string } | null;
 type SlotView = { key: string; label: string; hint: string };
 const STATE_KEY = 'gl-17-0-draft-v4';
 const SETUP_KEY = 'gl-17-0-setup';
@@ -35,7 +37,7 @@ async function post(body: object) {
 const describe = (s: { daily: boolean; format?: FormatKey; pool?: PoolKey; hard: boolean }) =>
   [s.daily ? 'Today, ranked' : 'Casual', s.format === 'fantasy' ? 'Fantasy' : s.format && s.format !== '6' ? `${s.format}-man` : null, s.pool === 'all-time' ? 'All-time' : null, s.hard ? 'Hard' : null].filter(Boolean).join(' · ');
 
-export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, modeFromLink = false, fantasyReady = false }: { reelPool: ReelTeam[]; signedIn: boolean; playedTodayId: string | null; initialMode: Mode; modeFromLink?: boolean; fantasyReady?: boolean }) {
+export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, modeFromLink = false, fantasyReady = false, challenge = null }: { reelPool: ReelTeam[]; signedIn: boolean; playedTodayId: string | null; initialMode: Mode; modeFromLink?: boolean; fantasyReady?: boolean; challenge?: ChallengeInfo }) {
   const router = useRouter();
   usePreloadLogos(reelPool);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -54,6 +56,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
 
   // Resume an in-progress draft after a refresh; otherwise open the setup sheet with the last choices.
   useEffect(() => {
+    if (challenge) return; // a challenge link starts below, once its function exists
     let saved: Partial<Setup> = {};
     try { saved = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}') as Partial<Setup>; } catch { /* storage blocked */ }
     // The last game's mode comes back too, unless the link asked for one or Today is not playable now.
@@ -73,6 +76,26 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
   const openSlots = slots.filter((s) => !filled.has(s.key));
   const team = draft?.team ?? null;
   const reelTarget: ReelTeam | null = team ? { id: team.id, abbreviation: team.abbreviation, city: team.city, name: team.name, color: team.color, logoUrl: team.logoUrl } : null;
+
+  async function startChallenge(id: string) {
+    setBusy('start'); setError(''); setDraft(null);
+    try { sessionStorage.removeItem(STATE_KEY); } catch {}
+    try {
+      const d = await post({ action: 'start', challenge: id });
+      setDraft({ ...d, challenge: id }); setLanded(false); setSpinKey((k) => k + 1);
+      track('game_started', { game: '17-0', daily: false, challenge: true });
+    } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
+  }
+
+  useEffect(() => {
+    if (!challenge) return;
+    try {
+      const d = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Draft | null;
+      if (d?.sessionId && !d.done && d.challenge === challenge.id) { setDraft(d); setLanded(true); return; }
+    } catch { /* ignore */ }
+    void startChallenge(challenge.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function start(s: Setup) {
     const daily = s.mode === 'today';
@@ -164,6 +187,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
         <header className="g-head">
           <div>
             <h1 className="g-kicker" style={{ margin: 0 }}>17-0 · {describe(draft)} · {draft.done ? 'Draft complete' : `Spin ${draft.index + 1} of ${draft.total}`}</h1>
+            {draft.challenge && challenge && <p className="g-challenge">Challenge · same spins as {challenge.by}</p>}
             <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={draft.total} aria-valuenow={draft.picks.length} aria-label="Picks made">
               {Array.from({ length: draft.total }, (_, i) => <span key={i} className={i < draft.picks.length ? 'on' : i === draft.index ? 'now' : ''} />)}
             </div>

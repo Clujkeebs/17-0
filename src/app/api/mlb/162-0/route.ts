@@ -5,6 +5,7 @@ import { db, schema } from '@/db';
 import { MLB_MODES, MLB_SLOTS } from '@/lib/game/onesixtytwo';
 import { dailyDateET } from '@/lib/game/daily';
 import { MLB_GAME, MlbError, gradeMlb, moveMlb, pickMlb, respinMlb, startMlb } from '@/lib/server/mlb-game';
+import { ChallengeError, challengeStart } from '@/lib/server/challenges';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp, rateLimit } from '@/lib/server/rate-limit';
 
@@ -13,7 +14,7 @@ export const runtime = 'nodejs';
 const Auth = { sessionId: z.string().uuid(), token: z.string().min(10).max(100) };
 const Slot = z.enum(MLB_SLOTS);
 const Body = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('start'), daily: z.boolean().optional(), hard: z.boolean().optional(), mode: z.enum(MLB_MODES as [string, ...string[]]).optional() }),
+  z.object({ action: z.literal('start'), daily: z.boolean().optional(), hard: z.boolean().optional(), mode: z.enum(MLB_MODES as [string, ...string[]]).optional(), challenge: z.string().min(6).max(24).optional() }),
   z.object({ action: z.literal('respin'), what: z.enum(['era', 'team']), ...Auth }),
   z.object({ action: z.literal('pick'), playerId: z.number().int().positive(), slot: Slot.optional(), ...Auth }),
   z.object({ action: z.literal('move'), from: Slot, to: Slot, ...Auth }),
@@ -40,6 +41,11 @@ export async function POST(req: Request) {
     }
     const limited = await limitByIp(req, 'spin');
     if (limited) return limited;
+    if (b.challenge) {
+      // A challenge fixes the seed and setup; the client's choices are ignored.
+      const c = await challengeStart(b.challenge, '162-0');
+      return json(await startMlb({ userId, hard: c.setup.hard, mode: c.setup.mode as 'eras' | 'now' | undefined, challenge: c }));
+    }
     if (b.daily) {
       if (!userId) return errorJson(401, 'Sign in to play Today. It is ranked.', { requireAccount: true });
       const [done] = await db.select({ id: schema.gameResults.id }).from(schema.gameResults)
@@ -48,7 +54,7 @@ export async function POST(req: Request) {
     }
     return json(await startMlb({ userId, daily: b.daily, hard: b.hard, mode: b.mode as 'eras' | 'now' | undefined }));
   } catch (e) {
-    if (e instanceof MlbError) return errorJson(e.status, e.message);
+    if (e instanceof MlbError || e instanceof ChallengeError) return errorJson(e.status, e.message);
     console.error('[162-0]', (e as Error).message);
     return errorJson(503, 'The reel jammed. Try again in a moment.');
   }

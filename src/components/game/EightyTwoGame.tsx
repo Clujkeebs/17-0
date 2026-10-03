@@ -10,7 +10,9 @@ import type { NbaBoardPlayer, NbaState } from '@/lib/server/nba-game';
 import './game.css';
 
 type Mode = 'today' | 'casual';
-type Game = NbaState & { token: string; daily: boolean };
+type Game = NbaState & { token: string; daily: boolean; challenge?: string };
+/** A challenge link: the spins are someone else's game, so the setup sheet is skipped. */
+export type ChallengeInfo = { id: string; by: string } | null;
 const STATE_KEY = 'gl-82-0-game-v1';
 const SETUP_KEY = 'gl-82-0-setup';
 
@@ -23,7 +25,7 @@ async function call(body: object) {
 
 const stat = (n: number) => (n >= 0 ? n.toFixed(1) : '');
 
-export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink = false, standardReady = false }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode; modeFromLink?: boolean; standardReady?: boolean }) {
+export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink = false, standardReady = false, challenge = null }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode; modeFromLink?: boolean; standardReady?: boolean; challenge?: ChallengeInfo }) {
   const router = useRouter();
   usePreloadLogos(franchises);
   const [game, setGame] = useState<Game | null>(null);
@@ -46,6 +48,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
+    if (challenge) return; // a challenge link starts below, once its function exists
     let resumeMode = initialMode;
     try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (!modeFromLink && (s.mode === 'casual' || (s.mode === 'today' && signedIn))) { resumeMode = s.mode; setMode(s.mode); } if (typeof s.hard === 'boolean') setHard(s.hard); if (s.edition === 'standard' && standardReady) setEdition('standard'); } catch { /* storage blocked */ }
     try {
@@ -58,6 +61,26 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
   useEffect(() => { try { if (game) sessionStorage.setItem(STATE_KEY, JSON.stringify(game)); } catch {} }, [game]);
 
   function spun(next: Game) { setGame(next); setEraLanded(false); setLanded(false); setQuery(''); setShowAll(false); setSpinKey((k) => k + 1); }
+
+  async function startChallenge(id: string) {
+    setBusy('start'); setError(''); setGame(null);
+    try { sessionStorage.removeItem(STATE_KEY); } catch {}
+    try {
+      const d = await call({ action: 'start', challenge: id });
+      spun({ ...d, challenge: id });
+      track('game_started', { game: '82-0', daily: false, challenge: true });
+    } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
+  }
+
+  useEffect(() => {
+    if (!challenge) return;
+    try {
+      const g = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Game | null;
+      if (g?.sessionId && g.challenge === challenge.id) { setGame(g); setEraLanded(true); setLanded(true); return; }
+    } catch { /* ignore */ }
+    void startChallenge(challenge.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function start() {
     setBusy('start'); setError(''); setSheet(false); setGame(null);
@@ -161,6 +184,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
         <header className="g-head">
           <div>
             <h1 className="g-kicker" style={{ margin: 0 }}>82-0 · {game.daily ? 'Today, ranked' : 'Casual'}{game.edition === 'standard' ? ' · 2K' : ''}{game.hard ? ' · Hard' : ''} · {game.done ? 'Draft complete' : `Spin ${game.index + 1} of ${game.total}`}</h1>
+            {game.challenge && challenge && <p className="g-challenge">Challenge · same spins as {challenge.by}</p>}
             <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={game.total} aria-valuenow={game.index} aria-label="Picks made">
               {Array.from({ length: game.total }, (_, i) => <span key={i} className={i < game.index ? 'on' : i === game.index ? 'now' : ''} />)}
             </div>
