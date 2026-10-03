@@ -78,7 +78,7 @@ export default function CookiesPage() {
 
       <h2>Cookies</h2>
       <Table rows={COOKIES} caption="Cookies used on this site" />
-      <p className="muted" style={{ fontSize: '.88rem', marginTop: 12 }}>
+      <p className="muted" style={{ fontSize: '.88rem', marginTop: 12, overflowWrap: 'anywhere' }}>
         Google may set additional cookies with similar purposes (for example __eoi or NID) depending on your region and settings. Google&apos;s current list
         is at policies.google.com/technologies/cookies. Ad cookies are only set on pages where an ad slot loads.
       </p>

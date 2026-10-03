@@ -441,7 +441,7 @@ html[data-rules=hidden] .rules-card { display: none; }
 .owner-tag { font-family: var(--font-inter), system-ui, sans-serif; font-weight: 800; font-size: .72em; letter-spacing: .06em; color: #C8102E; white-space: nowrap; }
 
 /* Header profile button and avatars */
-.hp { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 10px 4px 4px; border: 1px solid var(--steel); border-radius: 999px; text-decoration: none; color: var(--bone); font-weight: 600; font-size: .9rem; max-width: 220px; }
+.hp { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 4px 12px 4px 4px; white-space: nowrap; border: 1px solid var(--steel); border-radius: 999px; text-decoration: none; color: var(--bone); font-weight: 600; font-size: .9rem; max-width: 220px; }
 .hp-in { padding: 4px 14px; }
 .hp-wait { width: 40px; height: 40px; padding: 0; border-color: transparent; }
 .hp-name { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -871,3 +871,5 @@ a.sn-sec-h:hover { color: var(--bone); }
 .tl.is-dragging, .tl.is-dragging * { cursor: grabbing !important; }
 @media (max-width: 520px) { .tl-label { width: 56px; font-size: 1.1rem; } .tl-label.tl-edit { width: 56px; } .tl-items { padding: 6px; gap: 5px; } .tl-chip { font-size: .8rem; padding: 3px 8px 3px 3px; } .tl-pos { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tl-chip, .tl-items > li { transition: none; } .tl-ghost { transform: translate(-50%, -120%); } }
+/* Narrow phones: the Account pill drops its picture so the menu row keeps room. */
+@media (max-width: 400px) { .sh-me .hp:not(.hp-in) { padding: 4px 12px; gap: 0; } .sh-me .hp:not(.hp-in) .avatar, .sh-me .hp:not(.hp-in) .ring { display: none; } .sh-me .hp { font-size: .85rem; min-height: 36px; } }

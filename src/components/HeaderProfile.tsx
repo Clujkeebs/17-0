@@ -1,12 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { StyledName } from './StyledName';
 import type { NameStyle } from '@/lib/cosmetics';
 
 type Me = { signedIn: false } | { signedIn: true; username: string | null; name: string; image: string | null; style: NameStyle };
 
-/** Top-right profile button: picture and styled name when signed in, Sign in otherwise. Loads after the page. */
+/** Top-right profile button: picture and "Account" when signed in, Sign in otherwise. Loads after the page. */
 export function HeaderProfile() {
   const [me, setMe] = useState<Me | null>(null);
   useEffect(() => {
@@ -20,9 +19,9 @@ export function HeaderProfile() {
   if (!me) return <span className="hp hp-wait" aria-hidden="true" />;
   if (!me.signedIn) return <Link href="/login?next=/profile" className="hp hp-in">Sign in</Link>;
   return (
-    <Link href="/profile" className="hp" aria-label={`Your profile, ${me.name}`}>
-      <Avatar name={me.name} src={me.image} size={30} />
-      <span className="hp-name hide-xs" aria-hidden="true"><StyledName name={me.name} style={me.style} /></span>
+    <Link href="/profile" className="hp" title={me.name}>
+      <Avatar name={me.name} src={me.image} size={28} />
+      <span className="hp-name">Account</span>
     </Link>
   );
 }

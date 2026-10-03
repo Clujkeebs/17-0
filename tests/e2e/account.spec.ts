@@ -49,7 +49,8 @@ test('account lifecycle', async ({ page, request }, info) => {
   await page.locator('.pe-chip', { hasText: '17-0' }).click();
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('h1')).toContainText('E2E Tester');
-  await expect(page.locator('.hp')).toContainText('E2E Tester');
+  await expect(page.locator('.hp')).toContainText('Account');
+  await expect(page.locator('.hp')).toHaveAttribute('title', 'E2E Tester');
   await page.getByRole('button', { name: 'Share profile' }).first().click();
   const sms = page.getByRole('dialog', { name: 'Share' }).getByRole('link', { name: /Text message/ });
   expect(decodeURIComponent((await sms.getAttribute('href'))!)).toMatch(new RegExp(`^sms:\\?&body=https?://[^ ]+/u/${u}$`));

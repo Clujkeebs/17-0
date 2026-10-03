@@ -31,3 +31,7 @@
 @keyframes gc-in { from { transform: translateY(6px); } to { transform: none; } }
 @keyframes gc-shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 @media (prefers-reduced-motion: reduce) { .gc-slot.hit, .gc-strike.on, .gc-clue, .gc-item { animation: none; transition: none; } }
+.gc-item > * { min-width: 0; }
+@media (max-width: 360px) { .gc-item { gap: 8px; padding: 8px 10px; } }
+.gc-order { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 420px) { .gc-arrows { flex-direction: column; } .gc-arrows button { width: 40px; height: 34px; } .gc-item .gc-rank { width: auto; } }

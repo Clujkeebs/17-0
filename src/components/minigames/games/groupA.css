@@ -50,3 +50,9 @@
 .ga-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
 .ga-fact { margin: 12px 0 0; color: var(--bone-dim); }
 .ga-board { max-width: 640px; margin: 0 auto; }
+/* Narrow phones: columns may shrink below their content, long names wrap instead of pushing the board wider. */
+.ga-board { grid-template-columns: minmax(52px, .8fr) repeat(3, minmax(0, 1fr)); }
+.ga-hd, .ga-cell { min-width: 0; overflow-wrap: anywhere; }
+.ga-hero > div { min-width: 0; }
+.ga-hero .m-big { overflow-wrap: break-word; }
+@media (max-width: 360px) { .ga-cell { min-height: 0; padding: 4px; } .ga-board { gap: 4px; } .ga-hero { gap: 12px; } }
