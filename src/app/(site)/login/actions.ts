@@ -10,12 +10,12 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const password = String(formData.get('password') ?? '');
   const redirectTo = safeNext(formData.get('next'));
-  if (!email || !password) return { error: 'Enter your email and password.', email };
+  if (!email || !password) return { error: 'Enter your username (or email) and password.', email };
   try {
     await signIn('credentials', { email, password, redirectTo });
   } catch (e) {
     // signIn throws a redirect on success; only AuthError means the credentials were rejected.
-    if (e instanceof AuthError) return { error: 'That email and password do not match an account.', email };
+    if (e instanceof AuthError) return { error: 'That username or email and password do not match an account.', email };
     throw e;
   }
   return {};

@@ -14,14 +14,15 @@ import { subscribe, unsubscribeUrlForEmail } from '@/lib/server/newsletter';
 import { audit } from '@/lib/server/audit';
 
 const Body = z.object({
-  email: z.string().trim().toLowerCase().max(254).email(),
+  // Optional. Without it, sign in with the username.
+  email: z.union([z.literal(''), z.string().trim().toLowerCase().max(254).email()]).optional(),
   password: z.string().min(8).max(200),
   username: z.string().max(64),
   newsletter: z.boolean().optional(),
 });
 
 // Same response whether or not the email already has an account.
-const OK_MESSAGE = 'Done. Sign in with the email and password you just used.';
+const OK_MESSAGE = 'Done. Sign in with your username and password.';
 
 export async function POST(req: Request) {
   const limited = await limitByIp(req, 'register');
@@ -40,7 +41,8 @@ export async function POST(req: Request) {
     }
     return errorJson(400, Object.values(fields)[0] ?? 'Check the form and try again.', { fields });
   }
-  const { email, password, newsletter } = parsed.data;
+  const { password, newsletter } = parsed.data;
+  const email = parsed.data.email || null;
 
   const u = validateUsername(parsed.data.username);
   if (!u.ok) return errorJson(400, u.error, { fields: { username: u.error } });
@@ -50,8 +52,8 @@ export async function POST(req: Request) {
 
   // Hash before the existence check so both paths take the same time.
   const hashedPassword = await bcrypt.hash(password, 12);
-  const [existing] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1);
-  if (existing) {
+  const [existing] = email ? await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)).limit(1) : [];
+  if (existing && email) {
     const mail = registrationNotice(`${SITE.url}/login`, await unsubscribeUrlForEmail(email));
     void sendEmail({ to: email, ...mail }).catch(() => undefined);
     return json({ ok: true, message: OK_MESSAGE });
@@ -69,7 +71,7 @@ export async function POST(req: Request) {
     return errorJson(500, 'Something broke on our end. Try again in a minute.');
   }
 
-  if (newsletter) {
+  if (newsletter && email) {
     try {
       await subscribe({ email, source: 'register', ipHash: hashIp(clientIp(req)), referrer: req.headers.get('referer') });
     } catch (e) { console.error('[register:newsletter]', (e as Error).message); }

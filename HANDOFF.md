@@ -108,3 +108,7 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
   - Fixed: names with suffixes showed as "II" in the season story and share card ("Patrick Surtain II"). Shared `lastName()` in `src/lib/names.ts` skips Jr/Sr/II/III/IV/V.
   - Fixed: Hard mode name search now suggests after one letter (17-0, Build a Player, 82-0).
   - To do: more legends on All-time boards (22 now; needs a sourced list of legend ratings, no invented numbers); All-time "make it harder" (check All-time calibration separately, legends raise the ceiling); "the players section sucks": first pass done 2026-10-02, live search on /players from the first letter (`/api/players/search`, legends included, links to each player page). Watch for more specific feedback.
+
+## Owner brain dump plan (2026-10-03)
+Full phased plan: Phase 1 quick fixes, 2 owner inbox, 3 fantasy hub, 4 2K + NBA editions, 5 All-time from ESPN history, 6 MLB 162-0 / soccer / Retro Bowl official-embed check. Buy Me a Coffee waits on the owner's page link.
+- Phase 1 (shipped 2026-10-03): Today no longer reveals its teams anywhere (home "Today's six" section and `/api/games/[type]/daily` removed; the deal itself is unchanged). The 17-0 setup sheet shows Mode and Start, with the rest behind "More options" and a one-line summary. Sign-in takes a username or an email (`src/auth.ts`); email is optional at sign-up (migration 0007 makes `user_accounts.email` nullable), and sign-up signs you straight in. Accounts without email cannot join the newsletter until they add one.

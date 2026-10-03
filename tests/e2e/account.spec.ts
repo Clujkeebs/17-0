@@ -19,14 +19,12 @@ test('account lifecycle', async ({ page, request }, info) => {
   await page.locator('#reg-email').fill(email);
   await page.locator('main input[type=password]').first().fill('correct-horse-battery');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await page.waitForURL(/\/login/);
-  await page.locator('#login-email').fill(email);
-  await page.locator('#login-password').fill('correct-horse-battery');
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+  // Sign-up signs you straight in.
+  await page.waitForURL((url) => !url.pathname.startsWith('/register') && !url.pathname.startsWith('/login'));
 
   await page.goto('/games/17-0?mode=today');
   const sheet = page.getByRole('dialog', { name: 'Game setup' });
+  await sheet.getByRole('button', { name: /More options/ }).click();
   await sheet.getByRole('group', { name: 'Difficulty' }).locator('label', { hasText: /^Easy/ }).click();
   await sheet.getByRole('button', { name: 'Start' }).click();
   for (let i = 0; i < 6; i++) {
@@ -107,11 +105,8 @@ test('owner account gets the owner style; nobody else can', async ({ page, reque
   await page.locator('#reg-email').fill(owner);
   await page.locator('main input[type=password]').first().fill('correct-horse-battery');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await page.waitForURL(/\/login/);
-  await page.locator('#login-email').fill(owner);
-  await page.locator('#login-password').fill('correct-horse-battery');
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+  // Sign-up signs you straight in.
+  await page.waitForURL((url) => !url.pathname.startsWith('/register') && !url.pathname.startsWith('/login'));
   await page.goto('/profile');
   await expect(page.locator('h1 .owner-tag')).toHaveText('[OWNER]');
   await expect(page.locator('h1 .nm-text')).toHaveClass(/nm-f-neon/);
@@ -121,4 +116,24 @@ test('owner account gets the owner style; nobody else can', async ({ page, reque
   expect((await page.request.patch('/api/user/profile', { data: { displayName: '[OWNER]' } })).status()).toBe(400);
   await sql`delete from user_accounts where email = ${owner}`;
   void request;
+});
+
+test('sign up with just a username and password, then sign back in with the username', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  const u = `noemail_${Date.now().toString(36)}`;
+  await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
+  await page.goto('/register');
+  await page.locator('#reg-username').fill(u);
+  await page.locator('main input[type=password]').first().fill('correct-horse-battery');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith('/register') && !url.pathname.startsWith('/login'));
+  await expect(page.locator('.hp')).toBeVisible();
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.locator('#login-email').fill(u.toUpperCase());
+  await page.locator('#login-password').fill('correct-horse-battery');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'));
+  await expect(page.locator('.hp')).toBeVisible();
+  await sql`delete from user_accounts where username = ${u}`;
 });

@@ -9,8 +9,8 @@ export function LoginForm({ next }: { next: string }) {
     <form action={action} noValidate aria-describedby={state.error ? 'login-error' : undefined}>
       <input type="hidden" name="next" value={next} />
       <div className="field">
-        <label htmlFor="login-email">Email</label>
-        <input id="login-email" name="email" type="email" autoComplete="email" required defaultValue={state.email} aria-invalid={!!state.error} />
+        <label htmlFor="login-email">Username or email</label>
+        <input id="login-email" name="email" type="text" autoComplete="username" autoCapitalize="none" required defaultValue={state.email} aria-invalid={!!state.error} />
       </div>
       <div className="field">
         <label htmlFor="login-password">Password</label>

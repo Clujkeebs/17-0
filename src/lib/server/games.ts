@@ -4,7 +4,7 @@ import { db, schema } from '@/db';
 import { getTeams, getRosters, getCoachesForTeams, GROUP_RAW } from './data';
 import { token as newToken } from './request';
 import { positionGroup, type PositionGroup } from '@/lib/game/attributes';
-import { FORMATS, MAX_RESPINS, TEAMS_PER_GAME, isFantasy, slotsFor as formatSlots, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
+import { FORMATS, MAX_RESPINS, isFantasy, slotsFor as formatSlots, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
 import { fantasyValue } from '@/lib/game/fantasy';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { BUILD_CATEGORIES, BUILD_ELIGIBLE, BUILD_TEAMS, type BuildPosition } from '@/lib/game/build';
@@ -109,15 +109,6 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
     }
     return { id, name: t.name, city: t.city, abbreviation: t.abbreviation, slug: t.slug, color: t.primaryColor, logoUrl: t.logoUrl, players: list };
   });
-}
-
-/** Today's six 17-0 teams, identical to what the daily spin will deal. Public by design: it's a shared puzzle. */
-export async function dailyTeamsPreview() {
-  const date = dailyDateET();
-  const teams = await getTeams();
-  const ids = teams.map((t) => t.id).sort((a, b) => a - b);
-  const order = createRng(`spin:${dailySeed('17-0:', date)}`).shuffle(ids).slice(0, TEAMS_PER_GAME);
-  return { date, teams: order.map((id) => teams.find((t) => t.id === id)!) };
 }
 
 /** The id of this user's ranked result for today, if they already played. */

@@ -495,3 +495,10 @@ html[data-rules=hidden] .rules-card { display: none; }
 .ps-name strong, .ps-name .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ps-name .muted { font-size: .85rem; }
 .ps-ovr { font-size: 1.25rem; font-weight: 700; }
+
+/* Setup sheet: extra options fold away behind one row */
+.sheet-more { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 12px; padding: 12px 14px; border: 1px solid var(--steel-hi); border-radius: 14px; background: var(--surface); color: var(--bone); font: inherit; text-align: left; cursor: pointer; }
+.sheet-more > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sheet-more .muted { font-size: .82rem; }
+.sheet-more-i { font-size: 1.4rem; font-weight: 600; line-height: 1; }
+.sheet-more:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }

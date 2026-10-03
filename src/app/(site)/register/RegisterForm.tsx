@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { track } from '@/lib/analytics';
+import { loginAction } from '../login/actions';
 
 type Fields = Partial<Record<'email' | 'password' | 'username' | 'form', string>>;
 
@@ -26,7 +27,7 @@ export function RegisterForm({ next }: { next: string }) {
       username: String(fd.get('username') ?? ''), newsletter: fd.get('newsletter') === 'on',
     };
     const errs: Fields = {};
-    if (!/^\S+@\S+\.\S+$/.test(body.email)) errs.email = 'That does not look like an email address.';
+    if (body.email && !/^\S+@\S+\.\S+$/.test(body.email)) errs.email = 'That does not look like an email address.';
     if (body.password.length < 8) errs.password = 'Password needs at least 8 characters.';
     if (!/^[A-Za-z0-9_]{3,20}$/.test(body.username)) errs.username = body.username.length < 3 || body.username.length > 20 ? 'Three to twenty characters.' : 'Keep it to letters, numbers, and underscores.';
     setErrors(errs);
@@ -37,7 +38,11 @@ export function RegisterForm({ next }: { next: string }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErrors({ ...(data.fields ?? {}), form: data.fields ? undefined : (data.error ?? 'That did not work. Try again.') }); return; }
       track('signup_completed');
-      router.push(`/login?registered=1&next=${encodeURIComponent(next)}`);
+      // Sign straight in with what they just typed; fall back to the sign-in page if that fails.
+      const login = new FormData();
+      login.set('email', body.username); login.set('password', body.password); login.set('next', next);
+      const r = await loginAction({}, login).catch(() => null);
+      if (!r || r.error) router.push(`/login?registered=1&next=${encodeURIComponent(next)}`);
     } catch {
       setErrors({ form: 'Network error. Check your connection and try again.' });
     } finally { setPending(false); }
@@ -56,9 +61,9 @@ export function RegisterForm({ next }: { next: string }) {
         {err('username')}
       </div>
       <div className="field">
-        <label htmlFor="reg-email">Email</label>
-        <input id="reg-email" name="email" type="email" autoComplete="email" required aria-invalid={!!errors.email} aria-describedby={describedBy('email', 'reg-email-hint')} />
-        <p id="reg-email-hint" className="hint">For sign-in and account notices. Never shown publicly.</p>
+        <label htmlFor="reg-email">Email <span className="muted">(optional)</span></label>
+        <input id="reg-email" name="email" type="email" autoComplete="email" aria-invalid={!!errors.email} aria-describedby={describedBy('email', 'reg-email-hint')} />
+        <p id="reg-email-hint" className="hint">Only to reset a forgotten password or get the newsletter. Never shown publicly. You can skip it.</p>
         {err('email')}
       </div>
       <div className="field">

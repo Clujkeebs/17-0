@@ -2,7 +2,7 @@ import { games } from '@/lib/minigames/games';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { dailyLeaderboard } from '@/lib/server/leaderboard';
-import { dailyTeamsPreview } from '@/lib/server/games';
+import { dailyDateET } from '@/lib/game/daily';
 import { ArrowIcon } from '@/components/Icons';
 import { HomeBlogCards } from '@/components/HomeBlogCards';
 
@@ -16,11 +16,9 @@ const STEPS = [
 ];
 
 export default async function Home() {
-  const [top, daily] = await Promise.all([
-    dailyLeaderboard('17-0').then((r) => r.slice(0, 3)).catch(() => []),
-    dailyTeamsPreview().catch(() => null),
-  ]);
-  const dateLabel = daily ? new Date(`${daily.date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '';
+  const top = await dailyLeaderboard('17-0').then((r) => r.slice(0, 3)).catch(() => []);
+  // Today's teams stay hidden until you spin; everyone still gets the same six in the same order.
+  const dateLabel = new Date(`${dailyDateET()}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   return (
     <>
       <section className="hero">
@@ -36,27 +34,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {daily && (
-        <section className="container today" aria-labelledby="today-h">
-          <div className="sec-head">
-            <h2 id="today-h">Today&apos;s six.</h2>
-            <p>Same teams for everyone. Resets at midnight ET.</p>
-          </div>
-          <ol className="today-teams">
-            {daily.teams.map((t, i) => (
-              <li key={t.id} style={{ ['--team' as string]: t.primaryColor }}>
-                <span className="today-i num">{i + 1}</span>
-                {t.logoUrl
-                   
-                  ? <img className="today-logo" src={t.logoUrl} alt={`${t.city} ${t.name} logo`} width={72} height={72} loading="lazy" />
-                  : <span className="today-logo" aria-hidden="true" />}
-                <span className="today-abbr">{t.abbreviation}</span>
-                <span className="today-name">{t.city} {t.name}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
 
       <section className="container section" aria-labelledby="how-h">
         <div className="sec-head"><div><span className="eyebrow">How it works</span><h2 id="how-h">Three steps. Seventeen games.</h2></div></div>

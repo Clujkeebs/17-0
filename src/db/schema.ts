@@ -86,7 +86,8 @@ export const syncSnapshots = pgTable('sync_snapshots', {
 // Auth.js tables. "user_accounts" per spec; Auth.js adapter tables alongside.
 export const users = pgTable('user_accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
-  email: text('email').notNull().unique(),
+  // Optional: players can sign up with a username and password only. Email is for recovery and the newsletter.
+  email: text('email').unique(),
   name: text('display_name'),
   username: text('username').unique(),
   emailVerified: timestamp('email_verified', { withTimezone: true, mode: 'date' }),

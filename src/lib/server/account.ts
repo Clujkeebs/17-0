@@ -21,7 +21,7 @@ export async function getUserByUsername(username: string) {
 }
 
 /** How this user's name renders. Owner status comes from the account email on the server, nothing else. */
-export function nameStyleOf(u: { email: string; nameFont: string | null; nameColor: string | null }): NameStyle {
+export function nameStyleOf(u: { email: string | null; nameFont: string | null; nameColor: string | null }): NameStyle {
   return resolveStyle({ font: u.nameFont, color: u.nameColor }, isOwnerEmail(u.email));
 }
 
@@ -130,7 +130,7 @@ export async function exportAccount(userId: string) {
       email: schema.newsletterSubscribers.email, confirmed: schema.newsletterSubscribers.confirmed, source: schema.newsletterSubscribers.source,
       referrer: schema.newsletterSubscribers.referrer, subscribedAt: schema.newsletterSubscribers.subscribedAt,
       confirmedAt: schema.newsletterSubscribers.confirmedAt, unsubscribedAt: schema.newsletterSubscribers.unsubscribedAt,
-    }).from(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.email, u.email.toLowerCase())).limit(1),
+    }).from(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.email, (u.email ?? '').toLowerCase())).limit(1),
     db.select({ provider: schema.accounts.provider, type: schema.accounts.type }).from(schema.accounts).where(eq(schema.accounts.userId, userId)),
   ]);
   const { hasPassword, ...account } = publicAccount(u);
@@ -150,20 +150,20 @@ export async function deleteAccount(userId: string): Promise<boolean> {
   const u = await getUserById(userId);
   if (!u) return false;
   const label = deletedUsername(userId);
-  const email = u.email.toLowerCase();
+  const email = u.email?.toLowerCase() ?? null;
   await db.transaction(async (tx) => {
     await tx.update(schema.gameResults).set({ userId: null, username: label }).where(eq(schema.gameResults.userId, userId));
     await tx.update(schema.gameSessions).set({ userId: null }).where(eq(schema.gameSessions.userId, userId));
     await tx.update(schema.feedback).set({ userId: null }).where(eq(schema.feedback.userId, userId));
-    await tx.delete(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.email, email));
+    if (email) await tx.delete(schema.newsletterSubscribers).where(eq(schema.newsletterSubscribers.email, email));
     await tx.delete(schema.accounts).where(eq(schema.accounts.userId, userId));
     await tx.delete(schema.sessions).where(eq(schema.sessions.userId, userId));
-    await tx.delete(schema.verificationTokens).where(eq(schema.verificationTokens.identifier, email));
+    if (email) await tx.delete(schema.verificationTokens).where(eq(schema.verificationTokens.identifier, email));
     await tx.delete(schema.users).where(eq(schema.users.id, userId));
   });
   // No email or id in the audit row: only the anonymous label.
   await audit(null, 'account.deleted', 'user', label);
   const mail = accountDeleted(null);
-  void sendEmail({ to: u.email, ...mail }).catch(() => undefined);
+  if (u.email) void sendEmail({ to: u.email, ...mail }).catch(() => undefined);
   return true;
 }

@@ -50,6 +50,13 @@
       "when": 1790957263651,
       "tag": "0006_nba",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790986987308,
+      "tag": "0007_optional_email",
+      "breakpoints": true
     }
   ]
 }

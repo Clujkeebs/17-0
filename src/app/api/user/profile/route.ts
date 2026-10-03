@@ -90,7 +90,10 @@ export async function PATCH(req: Request) {
   }
 
   let newsletterMessage: string | undefined;
-  if (body.newsletterOptIn !== undefined && body.newsletterOptIn !== u.newsletterOptIn) {
+  if (body.newsletterOptIn !== undefined && body.newsletterOptIn !== u.newsletterOptIn && !u.email) {
+    return errorJson(400, 'Add an email address first to get the newsletter.');
+  }
+  if (body.newsletterOptIn !== undefined && body.newsletterOptIn !== u.newsletterOptIn && u.email) {
     if (body.newsletterOptIn) {
       await db.update(schema.users).set({ newsletterOptIn: true }).where(eq(schema.users.id, u.id));
       await subscribe({ email: u.email, source: 'settings', ipHash: hashIp(clientIp(req)), referrer: null });

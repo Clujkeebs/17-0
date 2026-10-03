@@ -3,7 +3,7 @@ import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
+import { eq, sql as dsql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/db';
 
@@ -19,9 +19,12 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) providers.
 providers.push(Credentials({
   credentials: { email: {}, password: {} },
   async authorize(raw) {
-    const parsed = z.object({ email: z.string().email(), password: z.string().min(8).max(200) }).safeParse(raw);
+    // The "email" field takes an email or a username; usernames match case-insensitively.
+    const parsed = z.object({ email: z.string().trim().min(3).max(254), password: z.string().min(8).max(200) }).safeParse(raw);
     if (!parsed.success) return null;
-    const [u] = await db.select().from(schema.users).where(eq(schema.users.email, parsed.data.email.toLowerCase())).limit(1);
+    const id = parsed.data.email.toLowerCase();
+    const [u] = await db.select().from(schema.users)
+      .where(id.includes('@') ? eq(schema.users.email, id) : dsql`lower(${schema.users.username}) = ${id}`).limit(1);
     if (!u || !u.hashedPassword || u.deletedAt) return null;
     if (!(await bcrypt.compare(parsed.data.password, u.hashedPassword))) return null;
     return { id: u.id, email: u.email, name: u.name };

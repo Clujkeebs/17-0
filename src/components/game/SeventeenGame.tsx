@@ -283,6 +283,9 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
   }, [onClose]);
   const set = (patch: Partial<Setup>) => onChange({ ...value, ...patch });
   const blocked = today && (!signedIn || !!playedId);
+  // Mode and Start come first; everything else waits behind "More options" with a one-line summary.
+  const [more, setMore] = useState(false);
+  const summary = [fantasy ? 'Fantasy' : 'Ratings', today ? '6-man' : fantasy ? '7-man lineup' : `${value.format}-man`, today || fantasy ? 'Current players' : value.pool === 'all-time' ? 'All-time' : 'Current players', value.hard ? 'Hard' : 'Easy'].join(' · ');
   return (
     <div className="sheet-scrim" onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose(); }}>
       <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="setup-h">
@@ -290,6 +293,11 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
         <h2 id="setup-h" className="sheet-h">Game setup</h2>
         <Choice label="Mode" name="mode" value={value.mode} onChange={(v) => set({ mode: v as Mode })}
           options={[{ v: 'today', t: 'Today', d: 'Ranked, one try' }, { v: 'casual', t: 'Casual', d: 'Unlimited' }]} />
+        <button type="button" className="sheet-more" aria-expanded={more} aria-controls="setup-more" onClick={() => setMore((m) => !m)}>
+          <span><strong>{more ? 'Fewer options' : 'More options'}</strong><span className="muted">{summary}</span></span>
+          <span aria-hidden="true" className="sheet-more-i">{more ? '−' : '+'}</span>
+        </button>
+        {more && <div id="setup-more">
         <Choice label="Scoring" name="scoring" value={today ? 'ratings' : value.scoring} disabled={today} onChange={(v) => set({ scoring: v as Scoring })}
           options={[{ v: 'ratings', t: 'Ratings', d: 'Madden overalls' }, { v: 'fantasy', t: 'Fantasy', d: fantasyReady ? 'Real PPR points' : 'Points loading', off: !fantasyReady }]} />
         <Choice label="Roster" name="format" value={today ? '6' : value.format} disabled={today || fantasy} onChange={(v) => set({ format: v as FormatKey })}
@@ -298,8 +306,9 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
           options={[{ v: 'current', t: 'Current', d: 'Today’s rosters' }, { v: 'all-time', t: 'All-time', d: 'Plus franchise legends' }]} />
         <Choice label="Difficulty" name="hard" value={value.hard ? 'hard' : 'easy'} onChange={(v) => set({ hard: v === 'hard' })}
           options={[{ v: 'easy', t: 'Easy', d: fantasy ? 'Points shown, 2 re-rolls' : 'Overalls shown, 2 re-rolls' }, { v: 'hard', t: 'Hard', d: fantasy ? 'Type names, no points, no re-rolls' : 'Type names, no overalls, no re-rolls' }]} />
+        </div>}
         {fantasy && <p className="hint" style={{ margin: '4px 0 0' }}>Fantasy drafts a seven-man lineup (QB, two RBs, two WRs, TE, FLEX) from current rosters. Each player counts his PPR points per game this season, blended with his projection while the sample is small. Your weekly total sets the record.</p>}
-        {today && <p className="hint" style={{ margin: '4px 0 0' }}>Today is the same board for everyone: six slots, current rosters. Roster size and legends are Casual options.</p>}
+        {today && more && <p className="hint" style={{ margin: '4px 0 0' }}>Today is the same board for everyone: six slots, current rosters. Roster size and legends are Casual options.</p>}
         {today && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/17-0">Sign in</a> or <a href="/register?next=/games/17-0">create one</a>.</p>}
         {today && playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. A new board drops at midnight ET.</p>}
         <div className="sheet-actions">

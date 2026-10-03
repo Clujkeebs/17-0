@@ -13,6 +13,7 @@ async function setup(page: import('@playwright/test').Page, s: Setup = {}) {
   await expect(sheet).toBeVisible();
   const pick = async (legend: string, label: string) => sheet.getByRole('group', { name: legend }).locator('label', { hasText: new RegExp(`^${label}`) }).click();
   await pick('Mode', s.mode ?? 'Casual');
+  await sheet.getByRole('button', { name: /More options/ }).click();
   if (s.scoring) await pick('Scoring', s.scoring);
   if (s.roster) await pick('Roster', s.roster);
   if (s.players) await pick('Players', s.players);
@@ -59,6 +60,7 @@ test('17-0: 16-man all-time roster drafts sixteen and grades', async ({ page }) 
 test('17-0 Today requires an account and locks the board to the classic six', async ({ page }) => {
   await page.goto('/games/17-0?mode=today');
   const sheet = page.getByRole('dialog', { name: 'Game setup' });
+  await sheet.getByRole('button', { name: /More options/ }).click();
   for (const g of ['Roster', 'Players']) for (const r of await sheet.getByRole('group', { name: g }).getByRole('radio').all()) await expect(r).toBeDisabled();
   await expect(sheet.getByRole('radio', { name: /^6/ })).toBeChecked();
   await expect(sheet.getByRole('link', { name: 'Sign in' })).toBeVisible();
