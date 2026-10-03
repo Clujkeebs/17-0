@@ -78,6 +78,15 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
           </Link>
         ))}
       </div>
+      <h2 style={{ marginTop: 56 }}>Elsewhere</h2>
+      <div className="hub-grid">
+        <a href="https://poki.com/en/g/retro-bowl" target="_blank" rel="noopener noreferrer" className="hub-card">
+          <span className="eyebrow">New Star Games</span>
+          <h3>Retro Bowl</h3>
+          <p>The pixel football game by New Star Games. It plays free in the browser on Poki, its official web home. Not made by us.</p>
+          <span className="hub-cta">Play on poki.com <ArrowIcon size={14} /></span>
+        </a>
+      </div>
       </>)}
       <p className="muted" style={{ marginTop: 32 }}><Link href="/leaderboard">See today&apos;s leaderboards</Link></p>
     </div>

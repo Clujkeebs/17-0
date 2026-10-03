@@ -24,6 +24,9 @@ const refreshLegends = (fetchHistory: boolean) => import('@/lib/server/nfl-histo
   .then(async (m) => { if (fetchHistory) await m.syncNflHistory(); await m.buildLegends(); await m.legendsSpotCheck('SF'); await m.legendsSpotCheck('DET'); })
   .then(() => import('@/lib/server/calibrate')).then((c) => c.tuneAllTimeFloors())
   .catch((e) => console.warn('[nfl-history] refresh failed', (e as Error).message));
+/** 162-0: MLB history backfill (only missing seasons; the latest two always refresh) and a spot check. */
+const refreshMlb = () => import('@/lib/server/mlb-sync').then(async (m) => { await m.syncMlb(); await m.mlbSpotCheck(); })
+  .catch((e) => console.warn('[mlb] refresh failed', (e as Error).message));
 const refreshFantasy = () => syncFantasy().then(() => tuneFantasyFloor()).catch((e) => console.warn('[fantasy] refresh failed', (e as Error).message));
 
 if (process.env.SENTRY_DSN) Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0 });
@@ -37,6 +40,7 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
     if (job.name === 'fantasy') return refreshFantasy();
     if (job.name === 'nba') return refreshNba(false);
     if (job.name === 'legends') return refreshLegends(true);
+    if (job.name === 'mlb') return refreshMlb();
     const summary = await runSync({ dryRun: false });
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
     await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
@@ -80,6 +84,7 @@ void (async () => {
   // 82-0: backfill NBA seasons in the background (resumes where it stopped; the newest seasons always refresh), then re-fit the win line.
   void refreshNba(false);
   void refreshLegends(true);
+  void refreshMlb();
   if (process.env.CALIBRATE === '1') {
     const { calibrate } = await import('@/lib/server/calibrate');
     for (const f of ['6', '12', '16'] as const) await calibrate(f).catch((e) => console.warn('[calibrate]', e.message));

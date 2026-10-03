@@ -298,6 +298,33 @@ export const feedback = pgTable('feedback', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('feedback_created_idx').on(t.createdAt)]);
 
+/** 162-0 (MLB): franchises by season, from MLB's Stats API. Team ids follow the franchise through moves. */
+export const mlbTeamSeasons = pgTable('mlb_team_seasons', {
+  teamId: integer('team_id').notNull(),
+  season: integer('season').notNull(),
+  name: text('name').notNull(),
+  location: text('location').notNull(),
+  abbreviation: text('abbreviation').notNull(),
+  syncedAt: timestamp('synced_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.teamId, t.season] })]);
+
+export const mlbPlayers = pgTable('mlb_players', {
+  id: integer('id').primaryKey(),
+  fullName: text('full_name').notNull(),
+  position: text('position').notNull(),
+});
+
+/** One player's season with one franchise: an everyday hitter, a starter or a reliever, with its stat line and graded value. */
+export const mlbPlayerSeasons = pgTable('mlb_player_seasons', {
+  playerId: integer('player_id').notNull(),
+  teamId: integer('team_id').notNull(),
+  season: integer('season').notNull(),
+  kind: text('kind').notNull(),
+  position: text('position').notNull(),
+  line: jsonb('line').notNull(),
+  value: real('value').notNull(),
+}, (t) => [primaryKey({ columns: [t.playerId, t.teamId, t.season] }), index('mlb_player_seasons_team_idx').on(t.teamId, t.season)]);
+
 /** NFL history for All-time legends: ESPN athletes seen in a team-season's stat leaders since 1980. */
 export const nflHistAthletes = pgTable('nfl_hist_athletes', {
   id: integer('id').primaryKey(),

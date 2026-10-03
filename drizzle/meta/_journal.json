@@ -85,6 +85,13 @@
       "when": 1790996688955,
       "tag": "0011_nfl_legends",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790998571981,
+      "tag": "0012_mlb",
+      "breakpoints": true
     }
   ]
 }
