@@ -33,3 +33,17 @@
 .cx-last.cx-long { font-size: .68rem; }
 @media (min-width: 600px) { .cx-last.cx-long { font-size: .85rem; } }
 .wd-row { display: contents; }
+
+/* Top 100 */
+.t100-bar { position: sticky; top: 64px; z-index: 3; display: flex; gap: 10px; align-items: center; background: var(--surface); padding: 6px 0; }
+.t100-bar input { flex: 1; min-width: 0; }
+.t100-count { font-weight: 800; font-size: 1.2rem; }
+.t100-time { color: var(--bone-dim); font-size: .9rem; }
+.t100-grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 8px; }
+.t100-grid li { display: grid; grid-template-columns: 24px 1fr; grid-template-rows: auto auto; column-gap: 6px; padding: 4px 6px; border-radius: 8px; background: #F4F3EF; min-height: 40px; font-size: .85rem; }
+.t100-r { grid-row: span 2; align-self: center; font-weight: 800; color: var(--bone-dim); text-align: right; }
+.t100-n { font-weight: 700; min-height: 1.2em; }
+.t100-h { font-size: .74rem; color: var(--bone-dim); }
+.t100-grid li.found { background: #DCEFD9; }
+.t100-grid li.found .t100-r { color: #166534; }
+.t100-grid li.missed { background: #F9E3E3; }

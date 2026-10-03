@@ -115,6 +115,8 @@ Plan: `/root/.claude/plans/floating-baking-platypus.md` top section (Q1 162-0 fi
 
 - Q7a (shipped): Owner tools on `/owner` (`OwnerTools.tsx`, `POST /api/owner/manage`, all audited): live numbers (playing now, games and sign-ups today, accounts, points held, most played), site banner (Redis `site:banner`, shown by `SiteBanner` on every page via `/api/banner`, dismissible per message), give/take points, give any non-exclusive item, hide/show a player on every leaderboard (`users.lb_hidden`, migration 0014; also excluded from board awards), and clear a player's ranked result for today so they can replay. Launch credit also pays 1 point per casual game before launch (max 200).
 
+- Q6a (shipped): Top 100 for every league, Now and All-time as separate lists (`top-100-{nfl,nba,mlb}-{now,all}`; `src/lib/minigames/top100/`). NFL now = Madden OVR; NFL all-time = retired players' best graded season + classic legends; NBA now = 2K; NBA all-time = best season since 1984-85; MLB now = this season's value; MLB all-time = best season since 1970. Type names (full name, or a last name unique on the list); ranked by found, then time; hints show position/team/season. On each sport tab and its leaderboard.
+
 ## Remembered setup (2026-10-03)
 - 17-0, 82-0, 162-0 and Build a Player remember the last game's choices, Mode included (localStorage `gl-17-0-setup`, `gl-82-0-setup`, `gl-162-0-setup`, `gl-bap-mode` / `gl-bap-hard`). A link with `?mode=` (or `?position=` for Build a Player) wins; a remembered Today falls back to Casual when signed out or already played today.
 

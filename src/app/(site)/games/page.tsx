@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { games } from '@/lib/minigames/games';
 import { nbaGames } from '@/lib/minigames/nba/games';
 import { puzzleGames } from '@/lib/minigames/puzzles/games';
+import { top100Games } from '@/lib/minigames/top100/games';
 import { ArrowIcon } from '@/components/Icons';
 
 export const metadata: Metadata = {
@@ -18,6 +19,25 @@ const NBA = [
 const MLB = [
   { slug: '162-0', name: '162-0', tagline: 'Spin an era since 1970, spin a franchise, eleven times. Fill a lineup, a starter and a closer, then play 162.', meta: 'Draft · 4 min' },
 ];
+
+/** Top 100 lists for one league: Now and All-time, kept apart. */
+function TopCards({ lg }: { lg: 'nfl' | 'nba' | 'mlb' }) {
+  return (
+    <>
+      <h2 style={{ marginTop: 56 }}>Top 100</h2>
+      <div className="hub-grid">
+        {top100Games.filter((g) => g.slug.startsWith(`top-100-${lg}-`)).map((g) => (
+          <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+            <span className="eyebrow">{g.slug.endsWith('-now') ? 'Now' : 'All-time'}</span>
+            <h3>{g.name.replace('Top 100: ', '')}</h3>
+            <p>{g.tagline}</p>
+            <span className="hub-cta">Play <ArrowIcon size={14} /></span>
+          </Link>
+        ))}
+      </div>
+    </>
+  );
+}
 
 const FEATURED = [
   { slug: '17-0', name: '17-0', tagline: 'Six spins, one roster, one season. Can it go unbeaten?', meta: 'Draft · 2 min' },
@@ -64,6 +84,7 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </Link>
           ))}
         </div>
+        <TopCards lg="nba" />
         <h2 style={{ marginTop: 56 }}>Elsewhere</h2>
         <div className="hub-grid">
           <div className="hub-card">
@@ -76,7 +97,7 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </span>
           </div>
         </div>
-      </>) : mlb ? null : puzzles ? (
+      </>) : mlb ? <TopCards lg="mlb" /> : puzzles ? (
         <div className="hub-grid">
           {puzzleGames.map((g) => (
             <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
@@ -109,6 +130,7 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
           </Link>
         ))}
       </div>
+      <TopCards lg="nfl" />
       <h2 style={{ marginTop: 56 }}>Elsewhere</h2>
       <div className="hub-grid">
         <a href="https://poki.com/en/g/retro-bowl" target="_blank" rel="noopener noreferrer" className="hub-card">
