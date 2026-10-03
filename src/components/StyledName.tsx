@@ -1,5 +1,5 @@
 import type { NameStyle } from '@/lib/cosmetics';
-import { titleLabel } from '@/lib/shop';
+import { titleLabel, titleRarity } from '@/lib/shop';
 import { Flair } from './Flair';
 
 /**
@@ -14,7 +14,7 @@ export function StyledName({ name, style, className, showTitle = true }: { name:
       <Flair k={s.flair} />
       <span className={`nm-text nm-f-${s.font} nm-c-${s.color}`}>{name}</span>
       {s.owner && <span className="owner-tag" aria-label="Site owner">[OWNER]</span>}
-      {title && <span className="nm-title">{title}</span>}
+      {title && <span className={`nm-title t-${titleRarity(s.title)}`}>{title}</span>}
     </span>
   );
 }

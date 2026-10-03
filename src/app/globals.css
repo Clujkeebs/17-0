@@ -604,17 +604,13 @@ html[data-rules=hidden] .rules-card { display: none; }
 /* Profile banners */
 .banner { border-radius: 18px; padding: 18px; margin: 8px 0 0; color: #fff; }
 .banner .muted { color: rgba(255,255,255,.82); }
-.banner .nm-title { color: #fff; border-color: rgba(255,255,255,.5); }
-.banner .nm-c-ink { color: #fff; }
-.banner-field { background: repeating-linear-gradient(90deg, #1B6B36 0 46px, #1F7A3E 46px 92px), #1B6B36; box-shadow: inset 0 0 0 2px rgba(255,255,255,.15); }
-.banner-court { background: repeating-linear-gradient(90deg, #9A5B13 0 22px, #A3631A 22px 44px, #94560F 44px 66px); }
-.banner-diamond { background: radial-gradient(circle at 50% 120%, #B45309 0 38%, #1B6B36 38.5%); }
-.banner-night { background: radial-gradient(circle at 15% 10%, rgba(255,255,255,.35), transparent 30%), radial-gradient(circle at 85% 10%, rgba(255,255,255,.3), transparent 28%), #0B1530; }
-.banner-sunset { background: linear-gradient(120deg, #7C2D12, #B91C1C 55%, #6B21A8); }
-.banner-launch { background: linear-gradient(120deg, #0A0A0A, #1F2937), #0A0A0A; box-shadow: inset 0 0 0 2px #E8C547; }
+.banner-field { background: linear-gradient(180deg, transparent 0 16%, rgba(255,255,255,.7) 16% calc(16% + 2px), transparent 0 84%, rgba(255,255,255,.7) 84% calc(84% + 2px), transparent 0), repeating-linear-gradient(90deg, rgba(255,255,255,.6) 0 2px, transparent 2px 48px), repeating-linear-gradient(90deg, #1B6B36 0 96px, #1F7A3E 96px 192px); box-shadow: inset 0 0 0 2px rgba(255,255,255,.2); }
+.banner-court { background: radial-gradient(circle at 100% 50%, transparent 0 58px, rgba(255,255,255,.75) 58px 60px, transparent 61px), radial-gradient(circle at 100% 50%, rgba(185,28,28,.55) 0 42px, transparent 43px), linear-gradient(90deg, transparent calc(100% - 3px), rgba(255,255,255,.75) 0), repeating-linear-gradient(90deg, #9A5B13 0 22px, #A3631A 22px 44px, #94560F 44px 66px); }
+.banner-diamond { background: radial-gradient(circle at 50% 135%, transparent 0 46%, rgba(255,255,255,.65) 46% calc(46% + 2px), transparent 0), radial-gradient(circle at 50% 120%, #B45309 0 38%, transparent 38.5%), repeating-linear-gradient(115deg, #1B6B36 0 30px, #1F7A3E 30px 60px); }
+.banner-night { background: radial-gradient(circle at 12% 0%, rgba(255,255,255,.55), transparent 24%), radial-gradient(circle at 38% 0%, rgba(255,255,255,.35), transparent 20%), radial-gradient(circle at 62% 0%, rgba(255,255,255,.35), transparent 20%), radial-gradient(circle at 88% 0%, rgba(255,255,255,.55), transparent 24%), linear-gradient(180deg, #0B1530 0 70%, #12361F 70%); }
+.banner-sunset { background: radial-gradient(circle at 78% 115%, #FDE68A 0 14%, #FB923C 22%, transparent 48%), linear-gradient(180deg, #6B21A8 0%, #B91C1C 55%, #EA580C 100%); }
+.banner-launch { background: repeating-linear-gradient(120deg, transparent 0 22px, rgba(232,197,71,.12) 22px 24px), linear-gradient(120deg, #0A0A0A, #1F2937); box-shadow: inset 0 0 0 2px #E8C547; }
 .banner-founder { background: linear-gradient(120deg, #0A0A0A 0%, #3B0A0A 60%, #0A0A0A 100%); box-shadow: inset 0 0 0 2px #E8C547, 0 0 0 1px #B91C1C; }
-.banner .owner-tag { color: #FCA5A5; }
-.banner .nm-c-rainbow { background-image: linear-gradient(90deg, #FCA5A5, #FCD34D, #86EFAC, #93C5FD, #D8B4FE, #FCA5A5); }
 .pts-pill { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px; background: var(--bone); color: #fff; font-weight: 700; font-size: .9rem; }
 .shop-grid { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .shop-card { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--steel); border-radius: 16px; background: var(--surface); }
@@ -655,3 +651,118 @@ html[data-rules=hidden] .rules-card { display: none; }
 .pk-score { margin-left: auto; font-size: 1.1rem; }
 .pk-abbr { font-size: .75rem; }
 .pk-tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-top: 40px; }
+
+/* ---------- Cosmetics, second drop ---------- */
+/* Banner nameplate: the name sits on a white plate, so every color and font reads on every banner. */
+.banner .nm { background: rgba(255,255,255,.94); color: var(--bone); padding: 4px 12px; border-radius: 12px; box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 6px 20px rgba(0,0,0,.18); }
+.banner .nm { box-sizing: border-box; max-width: 100%; }
+.profile-head.banner .nm { padding: 6px 14px; }
+.profile-head.banner h1 { font-size: clamp(1.45rem, 6.5vw, 2.6rem); }
+@media (max-width: 520px) { .profile-head.banner { gap: 12px; padding: 14px; } .profile-head.banner .avatar { width: 64px !important; height: 64px !important; } }
+
+/* Name colors */
+.nm-c-slate { color: #334155; }
+.nm-c-crimson { color: #B91C1C; }
+.nm-c-cobalt { color: #1D4ED8; }
+.nm-c-violet { color: #6D28D9; }
+.nm-c-copper, .nm-c-mint, .nm-c-platinum, .nm-c-magma, .nm-c-holo, .nm-c-galaxy, .nm-c-owner-crown { -webkit-background-clip: text; background-clip: text; color: transparent; }
+.nm-c-copper { background-image: linear-gradient(100deg, #7C2D12, #B45309 50%, #7C2D12); }
+.nm-c-mint { background-image: linear-gradient(90deg, #047857, #0E7490); }
+/* A light that sweeps across metal: highlight layer animated over a fixed base. */
+.nm-c-platinum, .nm-c-chrome, .nm-c-gold-foil { background-size: 250% 100%, 100% 100%; animation: nm-sweep 4.5s ease-in-out infinite; }
+.nm-c-platinum { background-image: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.75) 50%, transparent 60%), linear-gradient(180deg, #475569, #1E293B 55%, #64748B); }
+.nm-c-chrome { background-image: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.7) 50%, transparent 60%), linear-gradient(180deg, #52525B 0%, #18181B 55%, #71717A 100%); }
+.nm-c-gold-foil { background-image: linear-gradient(105deg, transparent 40%, rgba(255,247,214,.85) 50%, transparent 60%), linear-gradient(100deg, #8A6400 0%, #B7860B 45%, #6B4E00 100%); }
+@keyframes nm-sweep { 0%, 35% { background-position: 120% 0, 0 0; } 100% { background-position: -120% 0, 0 0; } }
+.nm-c-magma { background-image: linear-gradient(90deg, #7F1D1D, #C2410C, #B91C1C, #9A3412, #7F1D1D); background-size: 300% 100%; animation: rainbow 9s ease-in-out infinite alternate; }
+.nm-c-holo { background-image: linear-gradient(105deg, #0E7490, #6D28D9 25%, #BE185D 45%, #B45309 65%, #15803D 85%, #0E7490); background-size: 300% 100%; animation: rainbow 6s linear infinite; }
+.nm-c-galaxy { background-image: radial-gradient(circle at 20% 30%, #A78BFA 0 6%, transparent 7%), linear-gradient(90deg, #1E1B4B, #4C1D95, #1E3A8A, #312E81, #1E1B4B); background-size: 100% 100%, 300% 100%; animation: nm-galaxy 10s linear infinite; }
+@keyframes nm-galaxy { to { background-position: 0 0, 300% 0; } }
+.nm-c-owner-crown { background-image: linear-gradient(105deg, transparent 42%, rgba(254,202,202,.9) 50%, transparent 58%), linear-gradient(100deg, #8A6400, #B7860B 40%, #991B1B 50%, #B7860B 60%, #6B4E00); background-size: 250% 100%, 100% 100%; animation: nm-sweep 3s ease-in-out infinite; }
+
+/* Name fonts */
+.nm-f-headline { font-family: var(--nf-headline), Impact, sans-serif; font-weight: 400; letter-spacing: .04em; font-size: 1.12em; line-height: 1; }
+.nm-f-collegiate { font-family: var(--nf-collegiate), Georgia, serif; font-weight: 400; letter-spacing: .02em; }
+.nm-f-stencil { font-family: var(--nf-stencil), Impact, sans-serif; font-weight: 400; letter-spacing: .02em; }
+.nm-f-comic { font-family: var(--nf-comic), Impact, sans-serif; font-weight: 400; letter-spacing: .05em; font-size: 1.06em; transform: rotate(-1.5deg); display: inline-block; }
+.nm-f-western { font-family: var(--nf-western), Georgia, serif; font-weight: 400; letter-spacing: .01em; }
+.nm-f-future { font-family: var(--nf-future), system-ui, sans-serif; font-weight: 400; letter-spacing: .06em; }
+.nm-f-arcade { font-family: var(--nf-arcade), ui-monospace, monospace; font-weight: 400; font-size: .66em; letter-spacing: .02em; line-height: 1.5; }
+.nm-f-signature { font-family: var(--nf-script), cursive; font-weight: 400; letter-spacing: .01em; font-size: 1.05em; }
+
+/* Title pills by rarity */
+.nm-title.t-rare { color: #1E40AF; border-color: #93C5FD; background: #EFF6FF; }
+.nm-title.t-epic { color: #5B21B6; border-color: #C4B5FD; background: #F5F3FF; }
+.nm-title.t-legendary { color: #6B4E00; border-color: #D4A017; background: linear-gradient(180deg, #FFFBEB, #FEF3C7); }
+.nm-title.t-limited { color: #FDE68A; border-color: #B7860B; background: #0A0A0A; }
+.nm-title.t-exclusive { color: #fff; border-color: #7F1D1D; background: linear-gradient(120deg, #7F1D1D, #B91C1C); }
+
+/* Flair: a soft drop so the pins sit on the line. */
+.nm-flair svg { filter: drop-shadow(0 1px 0 rgba(0,0,0,.18)); }
+
+/* Avatar rings */
+.ring-navy { background: #1F3A8A; }
+.ring-plum { background: #7E22CE; }
+.ring-double { background: #1F3A8A; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #C8102E; }
+.ring-laces { padding: 4px; background: repeating-conic-gradient(#FAFAF9 0 5deg, #7C3F12 5deg 15deg); }
+.ring-stitches { padding: 4px; background: repeating-conic-gradient(#DC2626 0 4deg, #F5F5F4 4deg 12deg); }
+.ring-ice { background: conic-gradient(from var(--ring-a), #BAE6FD, #F0F9FF, #7DD3FC, #E0F2FE, #0EA5E9, #BAE6FD); animation: ring-spin 5s linear infinite; }
+.ring-flame { padding: 4px; background: conic-gradient(from var(--ring-a), #B91C1C, #F97316, #FACC15, #EA580C, #B91C1C); animation: ring-spin 2.2s linear infinite, ring-heat 1.4s ease-in-out infinite alternate; }
+@keyframes ring-heat { from { box-shadow: 0 0 6px rgba(234,88,12,.45); } to { box-shadow: 0 0 14px rgba(234,88,12,.75); } }
+.ring-holo { padding: 4px; background: conic-gradient(from var(--ring-a), #F472B6, #FBBF24, #34D399, #38BDF8, #A78BFA, #F472B6); animation: ring-spin 4s linear infinite; box-shadow: 0 0 10px rgba(167,139,250,.5); }
+.ring-owner-crown { padding: 4px; background: conic-gradient(from var(--ring-a), #8A6400, #FDE68A, #B91C1C, #FDE68A, #8A6400); animation: ring-spin 3.5s linear infinite; box-shadow: 0 0 12px rgba(212,160,23,.55); }
+.ring-gold { background: conic-gradient(from var(--ring-a), #8A6400, #E8C547, #FFF7D6, #E8C547, #8A6400); animation: ring-spin 8s linear infinite; }
+
+/* Banners */
+.banner-endzone { background: repeating-linear-gradient(135deg, #1F3A8A 0 26px, #fff 26px 29px, #1E40AF 29px 55px, #fff 55px 58px); }
+.banner-snow { background: radial-gradient(circle, rgba(255,255,255,.9) 0 1.5px, transparent 2px) 0 0 / 34px 34px, radial-gradient(circle, rgba(255,255,255,.6) 0 1px, transparent 1.5px) 11px 17px / 22px 22px, linear-gradient(180deg, #334155, #0F172A); animation: banner-snow 9s linear infinite; }
+@keyframes banner-snow { to { background-position: 0 340px, 11px 237px, 0 0; } }
+.banner-playbook { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120'%3E%3Cg fill='none' stroke='rgba(255,255,255,.55)' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='30' cy='86' r='7'/%3E%3Ccircle cx='60' cy='86' r='7'/%3E%3Ccircle cx='90' cy='86' r='7'/%3E%3Cpath d='M140 30l10 10m0-10l-10 10M180 74l10 10m0-10l-10 10M30 78c0-30 20-44 46-50M90 78c10-24 30-34 56-36M60 78v-30l40-14'/%3E%3Cpath d='M70 24l8 4-7 5M140 38l7 5-8 3'/%3E%3C/g%3E%3C/svg%3E") 0 50% / 220px 100% repeat-x, radial-gradient(ellipse at 30% 20%, #1F5E3A, #123F27); }
+.banner-jumbotron { background: radial-gradient(circle, rgba(250,204,21,.4) 0 1.2px, transparent 1.8px) 0 0 / 6px 6px, linear-gradient(180deg, #111827, #030712); box-shadow: inset 0 0 0 3px #27272A; }
+.banner-retro { background: linear-gradient(180deg, #1E1B4B 0 52%, #F59E0B 52% 60%, #EA580C 60% 68%, #DB2777 68% 76%, #7C3AED 76% 84%, #1E1B4B 84%); }
+.banner-marble { background: linear-gradient(115deg, transparent 30%, rgba(120,113,108,.25) 32%, transparent 36%, transparent 60%, rgba(120,113,108,.2) 62%, transparent 66%), radial-gradient(ellipse at 20% 30%, #FFFFFF, #E7E5E4 60%, #D6D3D1); box-shadow: inset 0 0 0 3px #A16207, inset 0 0 0 5px #FDE68A; }
+.banner-aurora { background: radial-gradient(ellipse at 20% 0%, rgba(52,211,153,.55), transparent 55%), radial-gradient(ellipse at 70% 10%, rgba(167,139,250,.5), transparent 55%), linear-gradient(180deg, #0B1530, #020617); background-size: 200% 100%, 200% 100%, 100% 100%; animation: banner-aurora 14s ease-in-out infinite alternate; }
+@keyframes banner-aurora { to { background-position: 100% 0, -100% 0, 0 0; } }
+.banner-confetti { background: radial-gradient(circle, #FACC15 0 2.5px, transparent 3px) 0 0 / 40px 36px, radial-gradient(circle, #F472B6 0 2px, transparent 2.5px) 14px 10px / 32px 44px, radial-gradient(circle, #38BDF8 0 2px, transparent 2.5px) 25px 22px / 46px 30px, radial-gradient(circle, #34D399 0 2px, transparent 2.5px) 6px 30px / 28px 38px, linear-gradient(135deg, #0A0A0A, #1F2937); box-shadow: inset 0 0 0 2px #E8C547; animation: banner-confetti 12s linear infinite; }
+@keyframes banner-confetti { to { background-position: 40px 360px, 46px 450px, 71px 322px, 34px 410px, 0 0; } }
+.banner-vault { background: repeating-linear-gradient(120deg, transparent 0 18px, rgba(232,197,71,.16) 18px 19px), radial-gradient(ellipse at 80% 50%, #450A0A, #0A0A0A 70%); box-shadow: inset 0 0 0 2px #E8C547, inset 0 0 0 4px #7F1D1D; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nm-c-platinum, .nm-c-chrome, .nm-c-gold-foil, .nm-c-magma, .nm-c-holo, .nm-c-galaxy, .nm-c-owner-crown,
+  .ring-ice, .ring-flame, .ring-holo, .ring-owner-crown, .ring-gold,
+  .banner-snow, .banner-aurora, .banner-confetti { animation: none; }
+}
+
+/* Shop: rarity, try-on */
+.shop-card { position: relative; transition: border-color .15s, box-shadow .15s; }
+.shop-card.r-rare { border-color: #BFDBFE; }
+.shop-card.r-epic { border-color: #DDD6FE; }
+.shop-card.r-legendary { border-color: #E8C547; box-shadow: inset 0 0 0 1px rgba(232,197,71,.4); }
+.shop-card.r-limited { border-color: #B7860B; box-shadow: inset 0 0 0 1px rgba(183,134,11,.35); }
+.shop-card.r-exclusive { border-color: #B91C1C; }
+.shop-card.trying { box-shadow: 0 0 0 2px var(--bone); }
+.shop-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.shop-tag.r-common { background: #F4F4F5; color: #3F3F46; }
+.shop-tag.r-rare { background: #DBEAFE; color: #1E3A8A; }
+.shop-tag.r-epic { background: #EDE9FE; color: #4C1D95; }
+.shop-tag.r-legendary { background: linear-gradient(90deg, #FEF3C7, #FDE68A); color: #78350F; }
+.shop-tag.r-limited { background: #0A0A0A; color: #FDE68A; }
+.shop-tag.r-exclusive { background: #FEE2E2; color: #7F1D1D; }
+.shop-tag.stock { background: #FEF3C7; color: #78350F; }
+.shop-tag.owned { background: #DCFCE7; color: #14532D; }
+.shop-prev-btn { all: unset; cursor: pointer; display: flex; align-items: center; min-height: 64px; border-radius: 10px; }
+.shop-prev-btn:focus-visible { outline: 2px solid var(--bone); outline-offset: 4px; }
+.shop-look { position: sticky; top: 64px; z-index: 5; margin: 16px 0 8px; padding: 14px 16px; border: 1px solid var(--steel); border-radius: 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+.shop-look:not(.banner) { background: var(--surface); }
+.shop-look.banner { color: inherit; border-color: transparent; }
+.shop-look-name { font-size: 1.3rem; font-weight: 700; min-width: 0; }
+.shop-look-meta { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: .8rem; }
+.shop-look.banner .shop-look-meta { color: #fff; }
+.shop-look-meta button { font-size: .8rem; }
+.shop-sort { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 4px; }
+.shop-count { font-size: .72em; opacity: .7; margin-left: 4px; }
+@media (max-width: 520px) {
+  .shop-look { top: 56px; padding: 10px 12px; gap: 8px 10px; flex-wrap: wrap; }
+  .shop-look-name { font-size: 1rem; flex: 1 1 0; }
+  .shop-look-meta { flex: 1 0 100%; flex-direction: row; justify-content: space-between; align-items: center; margin-left: 0; }
+}
