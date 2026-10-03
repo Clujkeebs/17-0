@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import Redis from 'ioredis';
 import postgres from 'postgres';
 
 // Test databases have no ESPN history. Stand-in franchises and players (ids from 9,000,000 up, names marked
@@ -20,6 +21,21 @@ test.beforeAll(async () => {
         }
       }
     }
+  }
+  // Standard (2K): stand-in overalls on 22 current rosters of six, so the edition opens.
+  const [{ r }] = await sql`select count(*)::int as r from nba_players where id >= 9000000 and rating_2k is not null`;
+  if (r === 0) {
+    for (let t = 1; t <= 22; t++) {
+      await sql`insert into nba_team_seasons (team_id, season, name, location, abbreviation, color) values (${9000 + t}, 2024, ${`Testers ${t}`}, ${'Test City'}, ${`T${t}`}, ${'#335577'}) on conflict do nothing`;
+      for (let i = 0; i < 6; i++) {
+        const id = 9500000 + t * 10 + i;
+        await sql`insert into nba_players (id, full_name, position, rating_2k, rating_2k_position, rating_2k_team_id) values (${id}, ${`Test 2K ${t}-${i}`}, ${['PG', 'SG', 'SF', 'PF', 'C', 'G'][i]}, ${72 + i * 3}, ${['PG', 'SG', 'SF', 'PF', 'C', 'G'][i]}, ${9000 + t})
+          on conflict (id) do update set rating_2k = excluded.rating_2k, rating_2k_team_id = excluded.rating_2k_team_id`;
+      }
+    }
+    const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+    await redis.del('nba:2k-teams', 'nba:era-teams');
+    redis.disconnect();
   }
   await sql.end();
 });
@@ -59,6 +75,28 @@ test('82-0: era and team spins, five picks, move a player, play the season', asy
   await expect(page.locator('.grade-table tbody tr')).toHaveCount(5);
   const og = await page.request.get(await page.locator('figure img').first().getAttribute('src') as string);
   expect(og.headers()['content-type']).toContain('image/png');
+});
+
+test('82-0 Standard: 2K overalls, no era spin, credited result', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto('/games/82-0?mode=casual');
+  const sheet = page.getByRole('dialog', { name: 'Game setup' });
+  await sheet.getByRole('group', { name: 'Edition' }).locator('label', { hasText: /^Standard/ }).click();
+  await sheet.getByRole('button', { name: 'Start' }).click();
+  await expect(page.getByText('NBA 2K · current rosters')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /New era/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /New team 2/ })).toBeVisible();
+  for (let i = 0; i < 5; i++) {
+    const btn = page.locator('.g-player:not([disabled])').first();
+    await expect(btn).toBeVisible({ timeout: 20_000 });
+    if (i === 0) await expect(btn).toContainText('2K overall');
+    await btn.click();
+    await expect(page.locator('.nba-slots li.filled')).toHaveCount(i + 1);
+  }
+  await page.getByRole('button', { name: 'Play the season' }).first().click();
+  await page.waitForURL(/\/results\//);
+  await expect(page.locator('.eyebrow').first()).toContainText('Standard (2K)');
+  await expect(page.getByRole('link', { name: 'NBA2KLab' })).toBeVisible();
 });
 
 test('82-0 hard mode hides stats and has no re-spins', async ({ page }) => {

@@ -18,7 +18,14 @@ export class NbaError extends Error { constructor(msg: string, public status = 4
 /** A player needs this many games with a franchise in a season to show up on its board. */
 const MIN_GP = 20;
 
+/** Classic grades real per-game stats across eras; Standard grades today's NBA 2K overalls on current rosters. */
+export type NbaEdition = 'classic' | 'standard';
+export const NBA_EDITIONS: NbaEdition[] = ['classic', 'standard'];
+/** Standard has no eras to re-spin, so both re-spins go to teams. */
+const STANDARD_TEAM_RESPINS = 2;
+
 export interface NbaPayload {
+  edition?: NbaEdition;
   hard: boolean;
   eraRespinsUsed: number;
   teamRespinsUsed: number;
@@ -31,7 +38,7 @@ export interface NbaBoardPlayer { id: number; name: string; position: string; se
 export interface NbaTeamView { id: number; era: EraKey; eraLabel: string; name: string; location: string; abbreviation: string; color: string; logoUrl: string | null; players: NbaBoardPlayer[] }
 export interface NbaState {
   sessionId: string; index: number; total: number; done: boolean; hard: boolean;
-  eraRespinsLeft: number; teamRespinsLeft: number;
+  eraRespinsLeft: number; teamRespinsLeft: number; edition: NbaEdition;
   team: NbaTeamView | null;
   roster: { slot: NbaSlot; pick: (NbaBoardPlayer & { teamName: string; teamColor: string; logoUrl: string | null; fit: number }) | null }[];
 }
@@ -57,10 +64,40 @@ async function eraTeams(): Promise<Record<EraKey, number[]>> {
   return out;
 }
 
-/** 82-0 opens once every era has enough franchises to spin. */
-export async function nbaReady(): Promise<boolean> {
-  try { const t = await eraTeams(); return ERAS.every((e) => t[e.key].length >= 10); } catch { return false; }
+/** Franchises with at least five 2K-rated players on their current roster, cached for an hour. */
+async function teams2k(): Promise<number[]> {
+  const r = getRedis();
+  const cached = await r.get('nba:2k-teams').catch(() => null);
+  if (cached) return JSON.parse(cached);
+  const rows = await db.select({ teamId: schema.nbaPlayers.rating2kTeamId, n: dsql<number>`count(*)::int` }).from(schema.nbaPlayers)
+    .where(dsql`${schema.nbaPlayers.rating2k} is not null and ${schema.nbaPlayers.rating2kTeamId} is not null`).groupBy(schema.nbaPlayers.rating2kTeamId);
+  const out = rows.filter((x) => x.n >= 5 && x.teamId != null).map((x) => x.teamId!).sort((a, b) => a - b);
+  if (out.length) await r.set('nba:2k-teams', JSON.stringify(out), 'EX', 3600).catch(() => {});
+  return out;
 }
+
+/** 82-0 opens once every era has enough franchises to spin; Standard once 2K ratings cover most teams. */
+export async function nbaReady(edition: NbaEdition = 'classic'): Promise<boolean> {
+  try {
+    if (edition === 'standard') return (await teams2k()).length >= 20;
+    const t = await eraTeams(); return ERAS.every((e) => t[e.key].length >= 10);
+  } catch { return false; }
+}
+
+/** A current roster graded on NBA 2K overalls, with last season's line for context. */
+async function board2k(teamId: number): Promise<NbaTeamView | null> {
+  const [t] = await db.select().from(schema.nbaTeamSeasons).where(eq(schema.nbaTeamSeasons.teamId, teamId)).orderBy(dsql`${schema.nbaTeamSeasons.season} desc`).limit(1);
+  if (!t) return null;
+  const rows = await db.select().from(schema.nbaPlayers).where(and(eq(schema.nbaPlayers.rating2kTeamId, teamId), dsql`${schema.nbaPlayers.rating2k} is not null`));
+  const lines = rows.length ? await db.select().from(schema.nbaPlayerSeasons).where(and(inArray(schema.nbaPlayerSeasons.playerId, rows.map((r) => r.id)), eq(schema.nbaPlayerSeasons.season, t.season))) : [];
+  const players = rows.sort((a, b) => b.rating2k! - a.rating2k!).map((p) => {
+    const l = lines.find((x) => x.playerId === p.id);
+    const pos = p.rating2kPosition ?? p.position;
+    return { id: p.id, name: p.fullName, position: pos, season: t.season, seasonLabel: 'NBA 2K', value: p.rating2k!, ppg: l?.ppg ?? 0, rpg: l?.rpg ?? 0, apg: l?.apg ?? 0, headshot: p.headshot, fits: naturalSlots(pos) };
+  });
+  return { id: teamId, era: '2020s', eraLabel: '2K', name: t.name, location: t.location, abbreviation: t.abbreviation, color: t.color ?? '#555555', logoUrl: t.logoUrl, players };
+}
+const boardFor = (p: NbaPayload, teamId: number, era: EraKey) => (p.edition === 'standard' ? board2k(teamId) : board(teamId, era));
 
 /** The franchise's identity in an era: its name and colors from its latest season in that span. */
 async function teamInEra(teamId: number, era: EraKey) {
@@ -95,7 +132,8 @@ async function board(teamId: number, era: EraKey): Promise<NbaTeamView | null> {
  * be refreshed into a better draw and everyone on Today sees the same first spin.
  */
 async function draw(seed: string, round: number, p: NbaPayload, keepEra?: EraKey): Promise<{ era: EraKey; teamId: number }> {
-  const teams = await eraTeams();
+  const teams = p.edition === 'standard' ? { ...Object.fromEntries(ERAS.map((e) => [e.key, [] as number[]])), '2020s': await teams2k() } as Record<EraKey, number[]> : await eraTeams();
+  if (p.edition === 'standard') keepEra = '2020s';
   const rng = createRng(`82:${seed}:${round}:${p.eraRespinsUsed}:${p.teamRespinsUsed}`);
   const used = new Set(p.picks.map((x) => x.teamId));
   const eras = ERAS.filter((e) => teams[e.key].some((t) => !used.has(t)));
@@ -109,10 +147,10 @@ async function draw(seed: string, round: number, p: NbaPayload, keepEra?: EraKey
 
 async function state(sessionId: string, p: NbaPayload): Promise<NbaState> {
   const index = p.picks.length, done = index >= NBA_ROUNDS;
-  const team = !done && p.current ? await board(p.current.teamId, p.current.era) : null;
+  const team = !done && p.current ? await boardFor(p, p.current.teamId, p.current.era) : null;
   const hide = <T extends { value: number; ppg: number; rpg: number; apg: number }>(x: T): T => (p.hard ? { ...x, value: -1, ppg: -1, rpg: -1, apg: -1 } : x);
   const view = team ? { ...team, players: (p.hard ? [...team.players].sort((a, b) => a.name.localeCompare(b.name)) : team.players).map(hide) } : null;
-  const pickedTeams = await Promise.all(p.picks.map(async (x) => ({ x, t: await board(x.teamId, x.era) })));
+  const pickedTeams = await Promise.all(p.picks.map(async (x) => ({ x, t: await boardFor(p, x.teamId, x.era) })));
   const roster = NBA_SLOTS.map((slot) => {
     const hit = pickedTeams.find(({ x }) => x.slot === slot);
     if (!hit) return { slot, pick: null };
@@ -123,7 +161,9 @@ async function state(sessionId: string, p: NbaPayload): Promise<NbaState> {
   });
   return {
     sessionId, index, total: NBA_ROUNDS, done, hard: p.hard,
-    eraRespinsLeft: p.hard ? 0 : ERA_RESPINS - p.eraRespinsUsed, teamRespinsLeft: p.hard ? 0 : TEAM_RESPINS - p.teamRespinsUsed,
+    eraRespinsLeft: p.hard || p.edition === 'standard' ? 0 : ERA_RESPINS - p.eraRespinsUsed,
+    teamRespinsLeft: p.hard ? 0 : (p.edition === 'standard' ? STANDARD_TEAM_RESPINS : TEAM_RESPINS) - p.teamRespinsUsed,
+    edition: p.edition ?? 'classic',
     team: view, roster,
   };
 }
@@ -138,11 +178,13 @@ async function open(sessionId: string, tok: string) {
 }
 const save = (id: string, p: NbaPayload) => db.update(schema.gameSessions).set({ spinPayload: p }).where(eq(schema.gameSessions.id, id));
 
-export async function startNba(opts: { userId?: string | null; daily?: boolean; hard?: boolean }) {
-  if (!(await nbaReady())) throw new NbaError('82-0 is still loading its history. Try again in a few minutes.', 503);
+export async function startNba(opts: { userId?: string | null; daily?: boolean; hard?: boolean; edition?: NbaEdition }) {
+  // Today is one shared Classic board; Standard is a Casual option.
+  const edition: NbaEdition = opts.daily ? 'classic' : opts.edition ?? 'classic';
+  if (!(await nbaReady(edition))) throw new NbaError(edition === 'standard' ? 'NBA 2K ratings are still loading. Try Classic for now.' : '82-0 is still loading its history. Try again in a few minutes.', 503);
   const date = dailyDateET();
   const seed = opts.daily ? dailySeed(`${NBA_GAME}:`, date) : newToken(12);
-  const p: NbaPayload = { hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [] };
+  const p: NbaPayload = { edition, hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [] };
   p.current = await draw(seed, 0, p);
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
@@ -157,8 +199,8 @@ export async function respinNba(sessionId: string, tok: string, what: 'era' | 't
   const p = s.spinPayload as NbaPayload;
   if (p.hard) throw new NbaError('Hard mode has no re-spins.');
   if (!p.current || p.picks.length >= NBA_ROUNDS) throw new NbaError('The draft is complete.');
-  if (what === 'era' && p.eraRespinsUsed >= ERA_RESPINS) throw new NbaError('Your era re-spin is used.');
-  if (what === 'team' && p.teamRespinsUsed >= TEAM_RESPINS) throw new NbaError('Your team re-spin is used.');
+  if (what === 'era' && (p.edition === 'standard' || p.eraRespinsUsed >= ERA_RESPINS)) throw new NbaError(p.edition === 'standard' ? 'Standard has no eras to re-spin.' : 'Your era re-spin is used.');
+  if (what === 'team' && p.teamRespinsUsed >= (p.edition === 'standard' ? STANDARD_TEAM_RESPINS : TEAM_RESPINS)) throw new NbaError('Your team re-spins are used.');
   const next: NbaPayload = { ...p, eraRespinsUsed: p.eraRespinsUsed + (what === 'era' ? 1 : 0), teamRespinsUsed: p.teamRespinsUsed + (what === 'team' ? 1 : 0) };
   next.current = await draw(s.seed, p.picks.length, next, what === 'team' ? p.current.era : undefined);
   await save(s.id, next);
@@ -169,7 +211,7 @@ export async function pickNba(sessionId: string, tok: string, playerId: number, 
   const s = await open(sessionId, tok);
   const p = s.spinPayload as NbaPayload;
   if (!p.current || p.picks.length >= NBA_ROUNDS) throw new NbaError('The draft is complete.');
-  const team = await board(p.current.teamId, p.current.era);
+  const team = await boardFor(p, p.current.teamId, p.current.era);
   const pl = team?.players.find((x) => x.id === playerId);
   if (!team || !pl) throw new NbaError('That player is not on this board.');
   const taken = new Set(p.picks.map((x) => x.slot));
@@ -198,17 +240,24 @@ export async function gradeNba(ctx: { sessionId: string; token: string; userId?:
   const p = s.spinPayload as NbaPayload;
   if (p.picks.length < NBA_ROUNDS) throw new NbaError(`Fill all ${NBA_ROUNDS} spots.`);
   const ids = p.picks.map((x) => x.playerId);
+  const standard = p.edition === 'standard';
+  const rated = standard ? await db.select().from(schema.nbaPlayers).where(inArray(schema.nbaPlayers.id, ids)) : [];
   const rows = await db.select({ ps: schema.nbaPlayerSeasons, p: schema.nbaPlayers }).from(schema.nbaPlayerSeasons)
     .innerJoin(schema.nbaPlayers, eq(schema.nbaPlayers.id, schema.nbaPlayerSeasons.playerId)).where(inArray(schema.nbaPlayerSeasons.playerId, ids));
   const picks: NbaPick[] = p.picks.map((x) => {
+    if (standard) {
+      const r = rated.find((y) => y.id === x.playerId);
+      if (!r || r.rating2k == null) throw new NbaError('Unknown player.');
+      return { slot: x.slot, name: r.fullName, position: r.rating2kPosition ?? r.position, teamId: x.teamId, season: x.season, value: r.rating2k };
+    }
     const r = rows.find((y) => y.p.id === x.playerId && y.ps.teamId === x.teamId && y.ps.season === x.season);
     if (!r) throw new NbaError('Unknown player.');
     return { slot: x.slot, name: r.p.fullName, position: r.p.position, teamId: x.teamId, season: x.season, value: r.ps.value };
   });
   const seed = s.isDaily ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
-  const result = gradeNbaRoster(seed, picks, await getNbaFloor());
+  const result = gradeNbaRoster(seed, picks, await getNbaFloor(standard ? 'standard' : 'classic'));
   const teams = await Promise.all(p.picks.map((x) => teamInEra(x.teamId, x.era)));
-  const resultData = { ...result, hard: p.hard, edition: 'classic', teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: teams[i]?.logoUrl ?? null, era: x.era })) };
+  const resultData = { ...result, hard: p.hard, edition: standard ? 'standard' : 'classic', teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: teams[i]?.logoUrl ?? null, era: x.era })) };
   const id = await saveResult(s, ctx, NBA_GAME, resultData, result.score, result.wins === 82);
   return { id, result: resultData, daily: s.isDaily };
 }

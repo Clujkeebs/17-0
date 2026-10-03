@@ -23,12 +23,13 @@ async function call(body: object) {
 
 const stat = (n: number) => (n >= 0 ? n.toFixed(1) : '');
 
-export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode }) {
+export function EightyTwoGame({ franchises, signedIn, initialMode, standardReady = false }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode; standardReady?: boolean }) {
   const router = useRouter();
   usePreloadLogos(franchises);
   const [game, setGame] = useState<Game | null>(null);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [hard, setHard] = useState(false);
+  const [edition, setEdition] = useState<'classic' | 'standard'>('classic');
   const [sheet, setSheet] = useState(false);
   const [playedId, setPlayedId] = useState<string | null>(null);
   const [spinKey, setSpinKey] = useState(0);
@@ -42,7 +43,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchise
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (typeof s.hard === 'boolean') setHard(s.hard); } catch { /* storage blocked */ }
+    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (typeof s.hard === 'boolean') setHard(s.hard); if (s.edition === 'standard' && standardReady) setEdition('standard'); } catch { /* storage blocked */ }
     try {
       const g = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Game | null;
       if (g?.sessionId && g.daily === (initialMode === 'today')) { setGame(g); setEraLanded(true); setLanded(true); return; }
@@ -56,9 +57,9 @@ export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchise
 
   async function start() {
     setBusy('start'); setError(''); setSheet(false); setGame(null);
-    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ hard })); } catch {}
+    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ hard, edition })); } catch {}
     try {
-      const d = await call({ action: 'start', daily: mode === 'today', hard });
+      const d = await call({ action: 'start', daily: mode === 'today', hard, edition: mode === 'today' ? 'classic' : edition });
       spun(d);
       track('game_started', { game: '82-0', daily: mode === 'today', hard });
     } catch (e) {
@@ -110,6 +111,8 @@ export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchise
         <div className="sheet-grip" aria-hidden="true" />
         <h2 id="nba-setup-h" className="sheet-h">Game setup</h2>
         <Choice label="Mode" name="mode" value={mode} onChange={(v) => setMode(v as Mode)} options={[{ v: 'today', t: 'Today', d: 'Ranked, one try' }, { v: 'casual', t: 'Casual', d: 'Unlimited' }]} />
+        <Choice label="Edition" name="edition" value={mode === 'today' ? 'classic' : edition} disabled={mode === 'today'} onChange={(v) => setEdition(v as 'classic' | 'standard')}
+          options={[{ v: 'classic', t: 'Classic', d: 'Real stats, every era' }, { v: 'standard', t: 'Standard', d: standardReady ? 'NBA 2K ratings, today' : '2K ratings loading', off: !standardReady }]} />
         <Choice label="Difficulty" name="hard" value={hard ? 'hard' : 'easy'} onChange={(v) => setHard(v === 'hard')}
           options={[{ v: 'easy', t: 'Easy', d: 'Stats shown, 1 era and 1 team re-spin' }, { v: 'hard', t: 'Hard', d: 'Type names, no stats, no re-spins' }]} />
         {mode === 'today' && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/82-0">Sign in</a> or <a href="/register?next=/games/82-0">create one</a>.</p>}
@@ -126,12 +129,12 @@ export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchise
     return (
       <div className="g-wrap">
         <header className="g-head">
-          <h1 className="g-kicker" style={{ margin: 0 }}>82-0 · {mode === 'today' ? 'Today, ranked' : 'Casual'}{hard ? ' · Hard' : ''}</h1>
+          <h1 className="g-kicker" style={{ margin: 0 }}>82-0 · {mode === 'today' ? 'Today, ranked' : 'Casual'}{mode !== 'today' && edition === 'standard' ? ' · 2K' : ''}{hard ? ' · Hard' : ''}</h1>
           <button type="button" className="btn btn-sm" onClick={() => setSheet(true)}>Game setup</button>
         </header>
         {error ? <section className="g-done"><p role="alert" className="field-error">{error}</p><button className="btn btn-primary" onClick={() => setSheet(true)}>Try again</button></section> : (
           <section className="g-intro" style={{ maxWidth: 'none', paddingTop: 16 }}>
-            <h2 className="g-title">Spin an era.<br />Spin a team. Go 82-0.</h2>
+            <h2 className="g-title">Spin an era.<br />Spin a team. Go <span style={{ whiteSpace: 'nowrap' }}>82-0.</span></h2>
             <p className="g-lede">Five spins, each an era and then a franchise. Take one player from each, graded on his real stats from his best season there, and move anyone between positions before the season tips off.</p>
             <button className="btn btn-primary btn-lg" onClick={() => setSheet(true)} disabled={busy === 'start'}>{busy === 'start' ? 'Spinning' : 'Set up a game'}</button>
           </section>
@@ -153,7 +156,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchise
       <div className="g-main">
         <header className="g-head">
           <div>
-            <h1 className="g-kicker" style={{ margin: 0 }}>82-0 · {game.daily ? 'Today, ranked' : 'Casual'}{game.hard ? ' · Hard' : ''} · {game.done ? 'Draft complete' : `Spin ${game.index + 1} of ${game.total}`}</h1>
+            <h1 className="g-kicker" style={{ margin: 0 }}>82-0 · {game.daily ? 'Today, ranked' : 'Casual'}{game.edition === 'standard' ? ' · 2K' : ''}{game.hard ? ' · Hard' : ''} · {game.done ? 'Draft complete' : `Spin ${game.index + 1} of ${game.total}`}</h1>
             <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={game.total} aria-valuenow={game.index} aria-label="Picks made">
               {Array.from({ length: game.total }, (_, i) => <span key={i} className={i < game.index ? 'on' : i === game.index ? 'now' : ''} />)}
             </div>
@@ -166,13 +169,13 @@ export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchise
         {team && target ? (
           <section className="g-stage" aria-labelledby="nba-clock">
             <div className="g-team">
-              <EraSpin spinKey={`${game.sessionId}-${spinKey}`} target={team.eraLabel} onLand={() => setEraLanded(true)} />
-              {eraLanded && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
+              {game.edition === 'standard' ? <p className="g-kicker" style={{ margin: 0 }}>NBA 2K · current rosters</p> : <EraSpin spinKey={`${game.sessionId}-${spinKey}`} target={team.eraLabel} onLand={() => setEraLanded(true)} />}
+              {(eraLanded || game.edition === 'standard') && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
               <div className="g-spin-status" aria-live="polite">
                 <p className="g-kicker" style={{ margin: 0 }} id="nba-clock">{landed ? `Pick one ${team.eraLabel} ${team.name} player` : 'Spinning'}</p>
                 {game.hard ? <span className="g-kicker" style={{ margin: 0 }}>No re-spins</span> : (
                   <div className="row" style={{ gap: 8 }}>
-                    <button type="button" className="btn btn-sm" disabled={!landed || !!busy || game.eraRespinsLeft <= 0} onClick={() => act({ action: 'respin', what: 'era' }, 'respin', true)}>New era <span className="num">{game.eraRespinsLeft}</span></button>
+                    {game.edition !== 'standard' && <button type="button" className="btn btn-sm" disabled={!landed || !!busy || game.eraRespinsLeft <= 0} onClick={() => act({ action: 'respin', what: 'era' }, 'respin', true)}>New era <span className="num">{game.eraRespinsLeft}</span></button>}
                     <button type="button" className="btn btn-sm" disabled={!landed || !!busy || game.teamRespinsLeft <= 0} onClick={() => act({ action: 'respin', what: 'team' }, 'respin', true)}>New team <span className="num">{game.teamRespinsLeft}</span></button>
                   </div>
                 )}
@@ -193,7 +196,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode }: { franchise
                       <button type="button" className="g-player" onClick={() => pick(p)} disabled={!!busy}
                         aria-label={`Draft ${p.name}, ${p.position}, ${p.seasonLabel}${p.value >= 0 ? `, ${stat(p.ppg)} points, ${stat(p.rpg)} rebounds, ${stat(p.apg)} assists, value ${p.value.toFixed(0)}` : ''}`}>
                         <PlayerFace name={p.name} src={p.headshot} color={team.color} size={44} />
-                        <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position} · {p.seasonLabel}{p.value >= 0 && <> · {stat(p.ppg)} / {stat(p.rpg)} / {stat(p.apg)}</>}</span></span>
+                        <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position} · {game.edition === 'standard' ? '2K overall' : p.seasonLabel}{p.value >= 0 && game.edition !== 'standard' && <> · {stat(p.ppg)} / {stat(p.rpg)} / {stat(p.apg)}</>}</span></span>
                         <span className="g-ovr num" aria-hidden="true">{p.value >= 0 ? p.value.toFixed(0) : '??'}</span>
                       </button>
                     </li>
@@ -270,14 +273,14 @@ function EraSpin({ spinKey, target, onLand }: { spinKey: string; target: string;
   );
 }
 
-function Choice({ label, name, value, options, onChange }: { label: string; name: string; value: string; options: { v: string; t: string; d: string }[]; onChange: (v: string) => void }) {
+function Choice({ label, name, value, options, onChange, disabled }: { label: string; name: string; value: string; options: { v: string; t: string; d: string; off?: boolean }[]; onChange: (v: string) => void; disabled?: boolean }) {
   return (
-    <fieldset className="sheet-row">
+    <fieldset className="sheet-row" disabled={disabled}>
       <legend className="sheet-label">{label}</legend>
       <div className="sheet-seg">
         {options.map((o) => (
-          <label key={o.v} className={`sheet-opt${value === o.v ? ' on' : ''}`}>
-            <input type="radio" name={name} value={o.v} checked={value === o.v} onChange={() => onChange(o.v)} />
+          <label key={o.v} className={`sheet-opt${value === o.v ? ' on' : ''}${o.off ? ' off' : ''}`}>
+            <input type="radio" name={name} value={o.v} checked={value === o.v} disabled={o.off} onChange={() => onChange(o.v)} />
             <strong>{o.t}</strong><span>{o.d}</span>
           </label>
         ))}

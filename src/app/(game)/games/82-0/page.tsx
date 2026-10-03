@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { db, schema } from '@/db';
 import type { ReelTeam } from '@/components/game/Reel';
 import { EightyTwoGame } from '@/components/game/EightyTwoGame';
+import { nbaReady } from '@/lib/server/nba-game';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -27,5 +28,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ m
   const session = await auth().catch(() => null);
   const signedIn = !!session?.user?.id;
   const initialMode = sp.mode === 'today' ? 'today' : sp.mode === 'casual' ? 'casual' : signedIn ? 'today' : 'casual';
-  return <EightyTwoGame franchises={await franchises()} signedIn={signedIn} initialMode={initialMode} />;
+  const standardReady = await nbaReady('standard').catch(() => false);
+  return <EightyTwoGame franchises={await franchises()} signedIn={signedIn} initialMode={initialMode} standardReady={standardReady} />;
 }

@@ -16,7 +16,8 @@ import { tuneFantasyFloor } from '@/lib/server/calibrate';
 /** 82-0 history, a spot check of a famous season, then a fresh win line. Never fails the ratings sync. */
 const refreshNba = (recentOnly: boolean) => import('@/lib/server/nba-sync')
   .then(async (m) => { await m.syncNba(recentOnly ? { from: m.latestSeason() - 1 } : {}); await m.nbaSpotCheck(); })
-  .then(() => import('@/lib/server/nba-calibrate')).then((c) => c.tuneNbaFloor())
+  .then(() => import('@/lib/server/nba2k')).then((k) => k.sync2k().catch((e) => console.warn('[2k] sync failed', (e as Error).message)))
+  .then(() => import('@/lib/server/nba-calibrate')).then(async (c) => { await c.tuneNbaFloor(); await c.tune2kFloor(); })
   .catch((e) => console.warn('[nba] refresh failed', (e as Error).message));
 const refreshFantasy = () => syncFantasy().then(() => tuneFantasyFloor()).catch((e) => console.warn('[fantasy] refresh failed', (e as Error).message));
 
@@ -70,8 +71,6 @@ void (async () => {
   await refreshFantasy();
   // 82-0: backfill NBA seasons in the background (resumes where it stopped; the newest seasons always refresh), then re-fit the win line.
   void refreshNba(false);
-  // Temporary: check the data sources for the next phases (2K, NFL history, MLB, EA FC). Remove after.
-  void import('@/lib/server/source-probe').then((m) => m.probeSources()).catch(() => {});
   if (process.env.CALIBRATE === '1') {
     const { calibrate } = await import('@/lib/server/calibrate');
     for (const f of ['6', '12', '16'] as const) await calibrate(f).catch((e) => console.warn('[calibrate]', e.message));

@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { db, schema } from '@/db';
 import { NBA_SLOTS } from '@/lib/game/eightytwo';
 import { dailyDateET } from '@/lib/game/daily';
-import { NBA_GAME, NbaError, gradeNba, moveNba, pickNba, respinNba, startNba } from '@/lib/server/nba-game';
+import { NBA_EDITIONS, NBA_GAME, NbaError, gradeNba, moveNba, pickNba, respinNba, startNba } from '@/lib/server/nba-game';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp, rateLimit } from '@/lib/server/rate-limit';
 
@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
 const Auth = { sessionId: z.string().uuid(), token: z.string().min(10).max(100) };
 const Slot = z.enum(NBA_SLOTS);
 const Body = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('start'), daily: z.boolean().optional(), hard: z.boolean().optional() }),
+  z.object({ action: z.literal('start'), daily: z.boolean().optional(), hard: z.boolean().optional(), edition: z.enum(NBA_EDITIONS as [string, ...string[]]).optional() }),
   z.object({ action: z.literal('respin'), what: z.enum(['era', 'team']), ...Auth }),
   z.object({ action: z.literal('pick'), playerId: z.number().int().positive(), slot: Slot.optional(), ...Auth }),
   z.object({ action: z.literal('move'), from: Slot, to: Slot, ...Auth }),
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
         .where(and(eq(schema.gameResults.userId, userId), eq(schema.gameResults.gameType, NBA_GAME), eq(schema.gameResults.isDaily, true), eq(schema.gameResults.dailyDate, dailyDateET()))).limit(1);
       if (done) return errorJson(409, 'You already played Today. Casual is unlimited.', { resultId: done.id });
     }
-    return json(await startNba({ userId, daily: b.daily, hard: b.hard }));
+    return json(await startNba({ userId, daily: b.daily, hard: b.hard, edition: b.edition as 'classic' | 'standard' | undefined }));
   } catch (e) {
     if (e instanceof NbaError) return errorJson(e.status, e.message);
     console.error('[82-0]', (e as Error).message);

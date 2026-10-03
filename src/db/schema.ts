@@ -255,6 +255,8 @@ export const nbaPlayers = pgTable('nba_players', {
   /** NBA 2K overall rating (source: nba2klab.com), current players only; null when not in 2K. */
   rating2k: integer('rating_2k'),
   rating2kPosition: text('rating_2k_position'),
+  /** ESPN franchise id of the player's team in 2K's current rosters. */
+  rating2kTeamId: integer('rating_2k_team_id'),
   rating2kUpdatedAt: timestamp('rating_2k_updated_at', { withTimezone: true }),
 });
 

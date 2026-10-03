@@ -1,9 +1,9 @@
-import { eq, gte } from 'drizzle-orm';
+import { eq, gte, isNotNull } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { ERAS, NBA_SLOTS, fitMultiplier, gradeNbaRoster, type EraKey, type NbaPick, type NbaSlot } from '@/lib/game/eightytwo';
 import { createRng } from '@/lib/game/prng';
 import { getRedis } from './redis';
-import { NBA_FLOOR_KEY } from './nba-floor';
+import { NBA_FLOOR_KEY, NBA_FLOOR_KEY_2K } from './nba-floor';
 
 type Cand = { name: string; position: string; teamId: number; season: number; value: number };
 const TARGET_P17 = 0.06;
@@ -68,6 +68,31 @@ function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respi
     n++; if (r.wins === 82) perfect++;
   }
   return perfect / n;
+}
+
+/** Standard boards: each franchise's current roster on NBA 2K overalls, as one era. */
+async function boards2k() {
+  const rows = await db.select().from(schema.nbaPlayers).where(isNotNull(schema.nbaPlayers.rating2k));
+  const byTeam = new Map<number, Cand[]>();
+  for (const p of rows) {
+    if (p.rating2kTeamId == null) continue;
+    byTeam.set(p.rating2kTeamId, [...(byTeam.get(p.rating2kTeamId) ?? []), { name: p.fullName, position: p.rating2kPosition ?? p.position, teamId: p.rating2kTeamId, season: 0, value: p.rating2k! }]);
+  }
+  const era = new Map([...byTeam].filter(([, l]) => l.length >= 5).map(([t, l]) => [t, l.sort((a, b) => b.value - a.value)]));
+  return new Map<EraKey, Map<number, Cand[]>>(ERAS.map((e) => [e.key, e.key === '2020s' ? era : new Map()]));
+}
+
+/** The same fit for Standard: 2K overalls, current rosters, two team re-spins. */
+export async function tune2kFloor(games = 1500): Promise<number | null> {
+  const b = await boards2k();
+  if ((b.get('2020s')?.size ?? 0) < 20) { console.warn('[nba] not enough 2K ratings to calibrate yet'); return null; }
+  let lo = 50, hi = 99;
+  for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; if (simulate(b, 'respin', games, mid) > TARGET_P17) lo = mid; else hi = mid; }
+  const floor = Math.ceil(hi * 10) / 10;
+  const check = { respin: simulate(b, 'respin', games, floor), greedy: simulate(b, 'greedy', games, floor), random: simulate(b, 'random', games, floor) };
+  await getRedis().set(NBA_FLOOR_KEY_2K, String(floor));
+  console.log('[nba] 2K win floor', floor, 'P82', Object.entries(check).map(([k, v]) => `${k} ${(v * 100).toFixed(1)}%`).join(' '));
+  return floor;
 }
 
 /** Fits the 82-0 win line to the stored history: about 6 percent perfect for a drafter who uses both re-spins well. */

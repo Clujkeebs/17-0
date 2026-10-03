@@ -1,5 +1,5 @@
 {
-  "id": "6e4037ab-af06-4ceb-bc5c-44989a6bf965",
+  "id": "10f75651-841c-4b4d-9839-30c2aac20586",
   "prevId": "b8943c6c-62c2-4f02-ad05-5f0de6174305",
   "version": "7",
   "dialect": "postgresql",
@@ -1081,6 +1081,12 @@
         "rating_2k_position": {
           "name": "rating_2k_position",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rating_2k_team_id": {
+          "name": "rating_2k_team_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },

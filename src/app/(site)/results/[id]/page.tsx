@@ -194,12 +194,12 @@ function MiniResultPage({ r, name, slug, tagline }: { r: { id: string; isDaily: 
 }
 
 function NbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: string | null; resultData: unknown } }) {
-  const d = r.resultData as { wins: number; losses: number; teamStrength: number; hard?: boolean; narrative: string[]; slots: NbaSlotResult[]; teams?: { slot: string; team: string; logoUrl: string | null }[] };
+  const d = r.resultData as { wins: number; losses: number; teamStrength: number; hard?: boolean; edition?: string; narrative: string[]; slots: NbaSlotResult[]; teams?: { slot: string; team: string; logoUrl: string | null }[] };
   const text = d.wins === 82 ? 'I went 82-0. Perfect season on Unbeaten. Your turn.' : `My lineup went ${d.wins}-${d.losses} in 82-0.${d.hard ? ' Hard mode, no stats.' : ''}`;
   return (
     <div className="container section">
       <div style={{ maxWidth: 880 }}>
-        <span className="eyebrow">82-0 · Classic{d.hard ? ' · Hard mode' : ''}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
+        <span className="eyebrow">82-0 · {d.edition === 'standard' ? 'Standard (2K)' : 'Classic'}{d.hard ? ' · Hard mode' : ''}{r.isDaily ? ` · Daily ${r.dailyDate}` : ''}</span>
         <figure style={{ margin: '0 0 24px' }}>
           <img src={`/api/og/game-result?id=${r.id}`} alt={`Share card: ${text}`} width={1200} height={630} style={{ width: '100%', height: 'auto', aspectRatio: '1200 / 630', border: '1px solid var(--steel)', borderRadius: 18, boxShadow: 'var(--shadow)' }} />
         </figure>
@@ -225,7 +225,7 @@ function NbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
                 return (
                   <tr key={x.slot}>
                     <td className="mono">{x.slot}</td>
-                    <td><span className="pick">{x.name}</span><span className="pick-team mono">{t?.team ?? ''} · {seasonLabel(x.season)}{x.fit < 1 ? ` · out of position (${Math.round((1 - x.fit) * 100)}% off)` : ''}</span></td>
+                    <td><span className="pick">{x.name}</span><span className="pick-team mono">{t?.team ?? ''} · {d.edition === 'standard' ? '2K' : seasonLabel(x.season)}{x.fit < 1 ? ` · out of position (${Math.round((1 - x.fit) * 100)}% off)` : ''}</span></td>
                     <td className="num"><span className="letter">{x.letter}</span><span className="grade-sub">{x.grade.toFixed(1)}</span></td>
                   </tr>
                 );
@@ -233,7 +233,7 @@ function NbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
             </tbody>
           </table>
         </div>
-        <p className="hint" style={{ marginTop: 16 }}>Grades come from each player&apos;s real per-game stats (ESPN) in his best season with that franchise in that era.</p>
+        <p className="hint" style={{ marginTop: 16 }}>{d.edition === 'standard' ? <>Grades are each player&apos;s current NBA 2K overall (ratings via <a href="https://www.nba2klab.com/nba2k-player-ratings" rel="noopener noreferrer" target="_blank">NBA2KLab</a>).</> : <>Grades come from each player&apos;s real per-game stats (ESPN) in his best season with that franchise in that era.</>}</p>
       </div>
     </div>
   );
