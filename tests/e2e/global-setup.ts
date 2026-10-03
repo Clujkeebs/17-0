@@ -85,7 +85,31 @@ async function seedFantasy() {
   await sql.end();
 }
 
+/** Soccer: two stand-in leagues of eight clubs, five players each, all on the leader lists for two seasons. */
+async function seedSoccer() {
+  const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
+  const [{ n }] = await sql`select count(*)::int as n from soccer_players where id >= 9900000`;
+  if (n === 0) {
+    const now = new Date(), cur = now.getUTCMonth() >= 6 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+    const nations = ['England', 'Spain', 'France', 'Brazil', 'Argentina', 'Germany', 'Portugal', 'Netherlands'];
+    const pos = ['G', 'D', 'M', 'F', 'F'];
+    for (const [li, league] of ['eng.1', 'esp.1'].entries()) {
+      for (let c = 1; c <= 8; c++) {
+        const club = 990000 + li * 100 + c;
+        await sql`insert into soccer_clubs (id, league, name, abbreviation, color) values (${club}, ${league}, ${`Test FC ${li}-${c}`}, ${`T${li}${c}`}, '#225588') on conflict do nothing`;
+        for (let k = 0; k < 5; k++) {
+          const id = 9900000 + li * 10000 + c * 100 + k;
+          await sql`insert into soccer_players (id, name, club_id, league, position, age, nationality) values (${id}, ${`Test Striker ${li}-${c}-${k}`}, ${club}, ${league}, ${pos[k]}, ${20 + k}, ${nations[(c + k) % nations.length]}) on conflict do nothing`;
+          for (const season of [cur - 1, cur]) await sql`insert into soccer_leaders (season, league, player_id, name, club_id, goals, assists, matches) values (${season}, ${league}, ${id}, ${`Test Striker ${li}-${c}-${k}`}, ${club}, ${4 + ((c * 7 + k * 3 + season) % 20)}, ${2 + ((c + k * 5) % 11)}, 30) on conflict do nothing`;
+        }
+      }
+    }
+  }
+  await sql.end();
+}
+
 export default async function globalSetup() {
+  await seedSoccer();
   await seedNba();
   await seedMlb();
   await seedFantasy();

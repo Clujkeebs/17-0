@@ -136,6 +136,8 @@ Plan: `/root/.claude/plans/floating-baking-platypus.md` top section (Q1 162-0 fi
 
 - Tier list rebuilt (shipped): an Unranked pool at the bottom starts with the top 60 fantasy players (position filter All/QB/RB/WR/TE); type to add any player or anyone else as a custom entry ("c:" ids, kept in the share link). Drag lights up the target row and shows a marker for the exact slot (reorder within a tier); the page auto-scrolls near the screen edges while dragging; tap-to-move still works; tap a tier label to rename it. Saves on the device (`gl-tier-list-v2`); share code is tiers by "~", entries by ".".
 
+- Soccer (shipped): worker syncs ESPN soccer daily and at boot (`src/lib/server/soccer-sync.ts`; tables `soccer_clubs`, `soccer_players`, `soccer_leaders`, migration 0017): clubs and current rosters for the Premier League, La Liga, Serie A, Bundesliga, Ligue 1 and MLS (position G/D/M/F, age, citizenship, jersey), plus each league's goal and assist leaders for last season and this one (parsed from ESPN's "M: 35, G: 27: A: 8" lines). Logs `[soccer] synced` and a spot check. Four games on the Soccer tab and leaderboards: Whose Club?, Where's He From? Soccer, Higher or Lower: Goals, Top Scorer (`src/lib/minigames/soccer/`). Only players on a recent leader list are used, so they are names fans know. The temporary probe is removed. Not yet: a soccer draft game (no ratings source; would need one).
+
 ## Remembered setup (2026-10-03)
 - 17-0, 82-0, 162-0 and Build a Player remember the last game's choices, Mode included (localStorage `gl-17-0-setup`, `gl-82-0-setup`, `gl-162-0-setup`, `gl-bap-mode` / `gl-bap-hard`). A link with `?mode=` (or `?position=` for Build a Player) wins; a remembered Today falls back to Casual when signed out or already played today.
 

@@ -23,7 +23,7 @@ export interface ScoreResult {
 export interface MiniGame<Puzzle = unknown, Answer = unknown, Data = GameData> {
   slug: string;
   /** Basketball games draw on the NBA season tables instead of the Madden player list. */
-  sport?: 'nba' | 'puzzles' | 'top100';
+  sport?: 'nba' | 'puzzles' | 'top100' | 'soccer';
   name: string;
   tagline: string;
   howTo: string[];

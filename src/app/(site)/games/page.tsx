@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { games } from '@/lib/minigames/games';
 import { nbaGames } from '@/lib/minigames/nba/games';
+import { soccerGames } from '@/lib/minigames/soccer/games';
 import { puzzleGames } from '@/lib/minigames/puzzles/games';
 import { top100Games } from '@/lib/minigames/top100/games';
 import { ArrowIcon } from '@/components/Icons';
@@ -46,15 +47,16 @@ const FEATURED = [
 
 export default async function GamesHub({ searchParams }: { searchParams: Promise<{ sport?: string }> }) {
   const sport = (await searchParams).sport;
-  const nba = sport === 'nba', mlb = sport === 'mlb', puzzles = sport === 'puzzles';
+  const nba = sport === 'nba', mlb = sport === 'mlb', puzzles = sport === 'puzzles', soccer = sport === 'soccer';
   return (
     <div className="container section">
       <p className="eyebrow">Free · New puzzles at midnight ET</p>
       <h1 style={{ maxWidth: '16ch' }}>Every game, every day.</h1>
       <nav className="sport-tabs" aria-label="Sport">
-        <Link href="/games" aria-current={!nba && !mlb && !puzzles ? 'page' : undefined}>Football</Link>
+        <Link href="/games" aria-current={!nba && !mlb && !puzzles && !soccer ? 'page' : undefined}>Football</Link>
         <Link href="/games?sport=nba" aria-current={nba ? 'page' : undefined}>Basketball</Link>
         <Link href="/games?sport=mlb" aria-current={mlb ? 'page' : undefined}>Baseball</Link>
+        <Link href="/games?sport=soccer" aria-current={soccer ? 'page' : undefined}>Soccer</Link>
         <Link href="/games?sport=puzzles" aria-current={puzzles ? 'page' : undefined}>Puzzles</Link>
       </nav>
       <p className="muted" style={{ maxWidth: '58ch', fontSize: '1.1rem' }}>
@@ -97,7 +99,19 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </span>
           </div>
         </div>
-      </>) : mlb ? <TopCards lg="mlb" /> : puzzles ? (
+      </>) : mlb ? <TopCards lg="mlb" /> : soccer ? (<>
+        <p className="muted" style={{ maxWidth: '58ch' }}>Premier League, La Liga, Serie A, Bundesliga, Ligue 1 and MLS. Rosters and scoring lists from ESPN, updated daily.</p>
+        <div className="hub-grid">
+          {soccerGames.map((g) => (
+            <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+              <span className="eyebrow">New</span>
+              <h3>{g.name}</h3>
+              <p>{g.tagline}</p>
+              <span className="hub-cta">Play <ArrowIcon size={14} /></span>
+            </Link>
+          ))}
+        </div>
+      </>) : puzzles ? (
         <div className="hub-grid">
           {puzzleGames.map((g) => (
             <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">

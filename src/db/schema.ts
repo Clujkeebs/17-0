@@ -444,3 +444,42 @@ export const challengeEntries = pgTable('challenge_entries', {
   uniqueIndex('challenge_entries_result_idx').on(t.resultId),
   uniqueIndex('challenge_entries_one_per_user').on(t.challengeId, t.userId).where(sql`${t.userId} is not null`),
 ]);
+
+/* ---------------------------------------------------------------- soccer (ESPN public API, synced by the worker) */
+
+/** A club in one of the synced leagues (Premier League, La Liga, Serie A, Bundesliga, Ligue 1, MLS). */
+export const soccerClubs = pgTable('soccer_clubs', {
+  id: integer('id').primaryKey(),
+  league: text('league').notNull(),
+  name: text('name').notNull(),
+  shortName: text('short_name'),
+  abbreviation: text('abbreviation').notNull(),
+  color: text('color'),
+  logoUrl: text('logo_url'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('soccer_clubs_league_idx').on(t.league)]);
+
+/** A player on a current club roster. Nationality is ESPN's citizenship field. */
+export const soccerPlayers = pgTable('soccer_players', {
+  id: integer('id').primaryKey(),
+  name: text('name').notNull(),
+  clubId: integer('club_id').notNull().references(() => soccerClubs.id, { onDelete: 'cascade' }),
+  league: text('league').notNull(),
+  position: text('position').notNull(),
+  age: integer('age'),
+  nationality: text('nationality'),
+  jersey: text('jersey'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('soccer_players_club_idx').on(t.clubId)]);
+
+/** League goal and assist leaders for a season (ESPN's season leader lists), with matches played. */
+export const soccerLeaders = pgTable('soccer_leaders', {
+  season: integer('season').notNull(),
+  league: text('league').notNull(),
+  playerId: integer('player_id').notNull(),
+  name: text('name').notNull(),
+  clubId: integer('club_id'),
+  goals: integer('goals').notNull(),
+  assists: integer('assists').notNull(),
+  matches: integer('matches').notNull(),
+}, (t) => [primaryKey({ columns: [t.season, t.league, t.playerId] })]);

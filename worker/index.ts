@@ -87,8 +87,10 @@ void (async () => {
   void refreshNba(false);
   void refreshLegends(true);
   void refreshMlb();
-  // Temporary: soccer data probe (see soccer-probe.ts).
-  void import('@/lib/server/soccer-probe').then((m) => m.soccerProbe()).catch((e) => console.warn('[soccer-probe] failed', (e as Error).message));
+  // Soccer: clubs, rosters and season leaders from ESPN, at boot and daily.
+  const soccer = () => import('@/lib/server/soccer-sync').then(async (m) => { await m.syncSoccer(); await m.soccerSpotCheck(); }).catch((e) => console.warn('[soccer] sync failed', (e as Error).message));
+  void soccer();
+  setInterval(() => void soccer(), 24 * 3600_000);
   // Pick 'em: this week's NFL games and results, every 20 minutes (finished games pay out on each run).
   const pickem = () => import('@/lib/server/pickem').then((m) => m.syncPickem()).catch((e) => console.warn('[pickem] sync failed', (e as Error).message));
   void pickem();
