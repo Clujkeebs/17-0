@@ -9,7 +9,8 @@ export interface SClub { id: number; league: string; name: string; abbr: string;
 export interface SoccerGameData { stars: SStar[]; leaders: SLeader[]; clubs: SClub[] }
 
 const POS: Record<string, string> = { G: 'Goalkeeper', D: 'Defender', M: 'Midfielder', F: 'Forward' };
-const headshot = (id: number) => `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png`;
+/** ESPN headshot; stand-in test players (ids from 9,000,000) have none, so they get initials instead of a 404. */
+const headshot = (id: number) => (id < 9_000_000 ? `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png` : '');
 
 let cache: { at: number; data: SoccerGameData } | null = null;
 
