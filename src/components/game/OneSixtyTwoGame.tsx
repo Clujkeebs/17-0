@@ -5,7 +5,7 @@ import { Reel, usePreloadLogos, type ReelTeam } from './Reel';
 import { SoundToggle } from './SoundToggle';
 import { PlayerFace } from './PlayerFace';
 import { track } from '@/lib/analytics';
-import { MLB_ERAS, MLB_SLOT_NAMES, isPitchSlot, type MlbSlot } from '@/lib/game/onesixtytwo';
+import { MLB_ERAS, MLB_GROUPS, MLB_SLOT_NAMES, isPitchSlot, mlbGroupOf, type MlbMode, type MlbSlot } from '@/lib/game/onesixtytwo';
 import type { MlbBoardPlayer, MlbState } from '@/lib/server/mlb-game';
 import './game.css';
 
@@ -21,12 +21,13 @@ async function call(body: object) {
   return data;
 }
 
-export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLink = false }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode; modeFromLink?: boolean }) {
+export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLink = false, nowReady = false }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode; modeFromLink?: boolean; nowReady?: boolean }) {
   const router = useRouter();
   usePreloadLogos(franchises);
   const [game, setGame] = useState<Game | null>(null);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [hard, setHard] = useState(false);
+  const [spinMode, setSpinMode] = useState<MlbMode>('eras');
   const [sheet, setSheet] = useState(false);
   const [playedId, setPlayedId] = useState<string | null>(null);
   const [spinKey, setSpinKey] = useState(0);
@@ -37,11 +38,11 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
   const [announce, setAnnounce] = useState('');
   const [selected, setSelected] = useState<MlbSlot | null>(null);
   const [query, setQuery] = useState('');
-  const [showAll, setShowAll] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let resumeMode = initialMode;
-    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (!modeFromLink && (s.mode === 'casual' || (s.mode === 'today' && signedIn))) { resumeMode = s.mode; setMode(s.mode); } if (typeof s.hard === 'boolean') setHard(s.hard); } catch { /* storage blocked */ }
+    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (!modeFromLink && (s.mode === 'casual' || (s.mode === 'today' && signedIn))) { resumeMode = s.mode; setMode(s.mode); } if (typeof s.hard === 'boolean') setHard(s.hard); if (s.spin === 'now' && nowReady) setSpinMode('now'); } catch { /* storage blocked */ }
     try {
       const g = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Game | null;
       if (g?.sessionId && g.daily === (resumeMode === 'today')) { setGame(g); setEraLanded(true); setLanded(true); return; }
@@ -51,13 +52,13 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
   }, []);
   useEffect(() => { try { if (game) sessionStorage.setItem(STATE_KEY, JSON.stringify(game)); } catch {} }, [game]);
 
-  function spun(next: Game) { setGame(next); setEraLanded(false); setLanded(false); setQuery(''); setShowAll(false); setSpinKey((k) => k + 1); }
+  function spun(next: Game) { setGame(next); setEraLanded(false); setLanded(false); setQuery(''); setExpanded(new Set()); setSpinKey((k) => k + 1); }
 
   async function start() {
     setBusy('start'); setError(''); setSheet(false); setGame(null);
-    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ mode, hard })); } catch {}
+    try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ mode, hard, spin: spinMode })); } catch {}
     try {
-      const d = await call({ action: 'start', daily: mode === 'today', hard });
+      const d = await call({ action: 'start', daily: mode === 'today', hard, mode: mode === 'today' ? 'eras' : spinMode });
       spun(d);
       track('game_started', { game: '162-0', daily: mode === 'today', hard });
     } catch (e) {
@@ -110,6 +111,8 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
         <div className="sheet-grip" aria-hidden="true" />
         <h2 id="mlb-setup-h" className="sheet-h">Game setup</h2>
         <Choice label="Mode" name="mode" value={mode} onChange={(v) => setMode(v as Mode)} options={[{ v: 'today', t: 'Today', d: 'Ranked, one try' }, { v: 'casual', t: 'Casual', d: 'Unlimited' }]} />
+        <Choice label="Spin" name="spin" value={mode === 'today' ? 'eras' : spinMode} disabled={mode === 'today'} onChange={(v) => setSpinMode(v as MlbMode)}
+          options={[{ v: 'eras', t: 'Eras', d: 'An era since 1970, then a team' }, { v: 'now', t: 'Right now', d: nowReady ? 'This season, just the team' : 'Opens a few weeks into the season', off: !nowReady }]} />
         <Choice label="Difficulty" name="hard" value={hard ? 'hard' : 'easy'} onChange={(v) => setHard(v === 'hard')}
           options={[{ v: 'easy', t: 'Easy', d: 'Stats shown, 2 era and 2 team re-spins' }, { v: 'hard', t: 'Hard', d: 'Type names, no stats, no re-spins' }]} />
         {mode === 'today' && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/162-0">Sign in</a> or <a href="/register?next=/games/162-0">create one</a>.</p>}
@@ -126,7 +129,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
     return (
       <div className="g-wrap">
         <header className="g-head">
-          <h1 className="g-kicker" style={{ margin: 0 }}>162-0 · {mode === 'today' ? 'Today, ranked' : 'Casual'}{hard ? ' · Hard' : ''}</h1>
+          <h1 className="g-kicker" style={{ margin: 0 }}>162-0 · {mode === 'today' ? 'Today, ranked' : 'Casual'}{mode !== 'today' && spinMode === 'now' ? ' · Right now' : ''}{hard ? ' · Hard' : ''}</h1>
           <button type="button" className="btn btn-sm" onClick={() => setSheet(true)}>Game setup</button>
         </header>
         {error ? <section className="g-done"><p role="alert" className="field-error">{error}</p><button className="btn btn-primary" onClick={() => setSheet(true)}>Try again</button></section> : (
@@ -147,7 +150,29 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
   const q = norm(query).trim();
   const openBat = game.roster.some((r) => !r.pick && !isPitchSlot(r.slot));
   const openPitch = game.roster.some((r) => !r.pick && isPitchSlot(r.slot));
-  const list = team ? (game.hard ? (q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 6) : []) : showAll ? team.players : team.players.slice(0, 8)) : [];
+  const taken = new Set(game.roster.filter((r) => r.pick).map((r) => r.slot));
+  // Same rule as the server: his own spot or DH. If nobody here fits an open spot, anyone may play out of position.
+  const stuck = !!team && !team.players.some((x) => x.fits.some((f) => !taken.has(f)));
+  const canTake = (p: MlbBoardPlayer) => (stuck ? (p.kind === 'bat' ? openBat : openPitch) : p.fits.some((f) => !taken.has(f)));
+  const hardList = team && game.hard && q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 6) : [];
+  const groups = team && !game.hard ? MLB_GROUPS.map((g) => {
+    const all = team.players.filter((p) => mlbGroupOf(p.position, p.kind) === g.key).sort((a, b) => Number(canTake(b)) - Number(canTake(a)) || b.value - a.value);
+    return { ...g, all, open: all.some(canTake) };
+  }).filter((g) => g.all.length).sort((a, b) => Number(b.open) - Number(a.open)) : [];
+  const row = (p: MlbBoardPlayer) => {
+    const ok = canTake(p);
+    const why = ok ? '' : `${p.fits.join(' and ')} filled`;
+    return (
+      <li key={p.id}>
+        <button type="button" className="g-player" onClick={() => pick(p)} disabled={!!busy || !ok} title={why || undefined}
+          aria-label={`Draft ${p.name}, ${p.position}, ${p.season}${p.value >= 0 ? `, ${p.line}, value ${p.value.toFixed(0)}` : ''}${why ? `, ${why}` : ''}`}>
+          <PlayerFace name={p.name} src={p.headshot} color={team!.color} size={44} />
+          <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position} · {p.season}{p.value >= 0 && <> · {p.line}</>}{why && <span className="g-filled"> · {why}</span>}</span></span>
+          <span className="g-ovr num" aria-hidden="true">{p.value >= 0 ? p.value.toFixed(0) : '??'}</span>
+        </button>
+      </li>
+    );
+  };
 
   return (
     <div className="g-wrap g-board">
@@ -155,7 +180,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
       <div className="g-main">
         <header className="g-head">
           <div>
-            <h1 className="g-kicker" style={{ margin: 0 }}>162-0 · {game.daily ? 'Today, ranked' : 'Casual'}{game.hard ? ' · Hard' : ''} · {game.done ? 'Draft complete' : `Spin ${game.index + 1} of ${game.total}`}</h1>
+            <h1 className="g-kicker" style={{ margin: 0 }}>162-0 · {game.daily ? 'Today, ranked' : 'Casual'}{game.mode === 'now' ? ' · Right now' : ''}{game.hard ? ' · Hard' : ''} · {game.done ? 'Draft complete' : `Spin ${game.index + 1} of ${game.total}`}</h1>
             <div className="g-progress" role="progressbar" aria-valuemin={0} aria-valuemax={game.total} aria-valuenow={game.index} aria-label="Picks made">
               {Array.from({ length: game.total }, (_, i) => <span key={i} className={i < game.index ? 'on' : i === game.index ? 'now' : ''} />)}
             </div>
@@ -168,13 +193,13 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
         {team && target ? (
           <section className="g-stage" aria-labelledby="mlb-clock">
             <div className="g-team">
-              <EraSpin spinKey={`${game.sessionId}-${spinKey}`} target={team.eraLabel} onLand={() => setEraLanded(true)} />
-              {eraLanded && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
+              {game.mode === 'now' ? <p className="g-kicker" style={{ margin: 0 }}>Right now · {team.eraLabel} season</p> : <EraSpin spinKey={`${game.sessionId}-${spinKey}`} target={team.eraLabel} onLand={() => setEraLanded(true)} />}
+              {(eraLanded || game.mode === 'now') && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
               <div className="g-spin-status" aria-live="polite">
                 <p className="g-kicker" style={{ margin: 0 }} id="mlb-clock">{landed ? `Pick one ${team.eraLabel} ${team.name} player` : 'Spinning'}</p>
                 {game.hard ? <span className="g-kicker" style={{ margin: 0 }}>No re-spins</span> : (
                   <div className="row" style={{ gap: 8 }}>
-                    <button type="button" className="btn btn-sm" disabled={!landed || !!busy || game.eraRespinsLeft <= 0} onClick={() => act({ action: 'respin', what: 'era' }, 'respin', true)}>New era <span className="num">{game.eraRespinsLeft}</span></button>
+                    {game.mode !== 'now' && <button type="button" className="btn btn-sm" disabled={!landed || !!busy || game.eraRespinsLeft <= 0} onClick={() => act({ action: 'respin', what: 'era' }, 'respin', true)}>New era <span className="num">{game.eraRespinsLeft}</span></button>}
                     <button type="button" className="btn btn-sm" disabled={!landed || !!busy || game.teamRespinsLeft <= 0} onClick={() => act({ action: 'respin', what: 'team' }, 'respin', true)}>New team <span className="num">{game.teamRespinsLeft}</span></button>
                   </div>
                 )}
@@ -186,25 +211,20 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
                   <>
                     <label htmlFor="mlb-q" className="g-group-h" style={{ display: 'block' }}>Name a {team.eraLabel} {team.name} player</label>
                     <input id="mlb-q" type="search" autoComplete="off" autoFocus placeholder={`Type a ${team.name} player's name`} value={query} onChange={(e) => setQuery(e.target.value)} />
-                    <p className="hint" aria-live="polite">{q.length < 1 ? 'Type a letter to start. Stats stay hidden until the season is played.' : list.length ? `${list.length} match${list.length === 1 ? '' : 'es'}` : `No ${team.name} player by that name in this era.`}</p>
+                    <p className="hint" aria-live="polite">{q.length < 1 ? 'Type a letter to start. Stats stay hidden until the season is played.' : hardList.length ? `${hardList.length} match${hardList.length === 1 ? '' : 'es'}` : `No ${team.name} player by that name in this era.`}</p>
                   </>
                 )}
-                <ul className="g-list">
-                  {list.map((p) => {
-                    const noRoom = p.kind === 'bat' ? !openBat : !openPitch;
-                    return (
-                    <li key={p.id}>
-                      <button type="button" className="g-player" onClick={() => pick(p)} disabled={!!busy || noRoom} title={noRoom ? (p.kind === 'bat' ? 'Your lineup is full' : 'Your pitching spots are full') : undefined}
-                        aria-label={`Draft ${p.name}, ${p.position}, ${p.season}${p.value >= 0 ? `, ${p.line}, value ${p.value.toFixed(0)}` : ''}${noRoom ? ', no open spot' : ''}`}>
-                        <PlayerFace name={p.name} src={p.headshot} color={team.color} size={44} />
-                        <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position} · {p.season}{p.value >= 0 && <> · {p.line}</>}</span></span>
-                        <span className="g-ovr num" aria-hidden="true">{p.value >= 0 ? p.value.toFixed(0) : '??'}</span>
-                      </button>
-                    </li>
-                    );
-                  })}
-                </ul>
-                {!game.hard && team.players.length > 8 && <button type="button" className="btn-link g-more" onClick={() => setShowAll((s) => !s)}>{showAll ? 'Show fewer' : `Show all ${team.players.length}`}</button>}
+                {stuck && <p className="hint">Nobody here fits an open spot, so anyone can play out of position this round.</p>}
+                {game.hard ? <ul className="g-list">{hardList.map(row)}</ul> : groups.map((g) => {
+                  const more = expanded.has(g.key);
+                  return (
+                    <div key={g.key} className={`g-group${g.open ? '' : ' g-group-done'}`}>
+                      <h3 className="g-group-h">{g.label}{!g.open && <span className="g-filled"> · filled</span>}</h3>
+                      <ul className="g-list">{(more ? g.all : g.all.slice(0, g.open ? 3 : 1)).map(row)}</ul>
+                      {g.all.length > (g.open ? 3 : 1) && <button type="button" className="btn-link g-more" onClick={() => setExpanded((e) => { const n = new Set(e); if (n.has(g.key)) n.delete(g.key); else n.add(g.key); return n; })}>{more ? 'Show fewer' : `Show all ${g.all.length}`}</button>}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </section>

@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { db, schema } from '@/db';
 import type { ReelTeam } from '@/components/game/Reel';
 import { OneSixtyTwoGame } from '@/components/game/OneSixtyTwoGame';
-import { MLB_COLORS, mlbLogo } from '@/lib/server/mlb-game';
+import { MLB_COLORS, mlbLogo, mlbReady } from '@/lib/server/mlb-game';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -28,5 +28,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ m
   const session = await auth().catch(() => null);
   const signedIn = !!session?.user?.id;
   const initialMode = sp.mode === 'today' ? 'today' : sp.mode === 'casual' ? 'casual' : signedIn ? 'today' : 'casual';
-  return <OneSixtyTwoGame franchises={await franchises()} signedIn={signedIn} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} />;
+  const nowReady = await mlbReady('now').catch(() => false);
+  return <OneSixtyTwoGame nowReady={nowReady} franchises={await franchises()} signedIn={signedIn} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} />;
 }

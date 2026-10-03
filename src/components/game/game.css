@@ -170,3 +170,6 @@
 .nba-slots li.sel .nba-slot { box-shadow: inset 0 0 0 2px var(--orange); }
 .nba-slot:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 .nba-oop { font-size: .72rem; font-weight: 700; color: var(--danger); white-space: nowrap; }
+.g-group + .g-group { margin-top: 14px; }
+.g-group-done { opacity: .62; }
+.g-filled { font-weight: 400; color: var(--bone-dim); }

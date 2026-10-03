@@ -102,6 +102,11 @@ NFL ratings game site built on Next.js 16 (App Router, standalone output), React
 - NBA mini games (`src/lib/minigames/nba/`, sport 'nba', data from `loadNbaGameData`: rotation players with 40+ games and 15+ minutes): Higher or Lower: Hoops, Blind Résumé: Hoops, Who Led?, Whose Team?. They reuse the football HigherLower and PickRounds screens and the same /api/mini route (`dataFor(game)` picks the data set). They are on the Basketball tab and the leaderboard. Football games built on Madden attributes (speed, OVR, archetype) have no NBA equivalent in box-score data, so they were not copied.
 - Standard (2K) edition: see Phase 4 below.
 
+## Brain dump 2 (2026-10-03)
+Plan: `/root/.claude/plans/floating-baking-platypus.md` top section (Q1 162-0 fixes, Q2 leaderboards, Q3 points and shop, Q4 Pick 'em, Q5 puzzles, Q6 more games, Q7 owner commands).
+- Not doing: Retro Bowl / Hoop Land embeds. GitHub copies of Retro Bowl are ripped files without New Star Games' permission; Hoop Land has no web build. Both are link cards to official pages (Poki; Steam and App Store).
+- Q1 (shipped): 162-0 board grouped by position (Catchers, Infielders, Outfielders, DH, Starters, Relievers). A player can be drafted only at his own spot or DH (`draftSlots` in `onesixtytwo.ts`, enforced in `pickMlb`); greyed rows say what is filled. If nobody on a board fits an open spot, anyone may play out of position that round. Spin option "Right now" (Casual): this season only, team spin only, values from this season's stats as they update; own win line (Redis `mlb:win-floor:now`). Today stays Eras. 82-0 has no separate Right now: Standard already covers current rosters and the NBA season has not started.
+
 ## Remembered setup (2026-10-03)
 - 17-0, 82-0, 162-0 and Build a Player remember the last game's choices, Mode included (localStorage `gl-17-0-setup`, `gl-82-0-setup`, `gl-162-0-setup`, `gl-bap-mode` / `gl-bap-hard`). A link with `?mode=` (or `?position=` for Build a Player) wins; a remembered Today falls back to Casual when signed out or already played today.
 

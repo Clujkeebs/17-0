@@ -62,6 +62,18 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </Link>
           ))}
         </div>
+        <h2 style={{ marginTop: 56 }}>Elsewhere</h2>
+        <div className="hub-grid">
+          <div className="hub-card">
+            <span className="eyebrow">Not made by us</span>
+            <h3>Hoop Land</h3>
+            <p>The retro basketball sim with college and pro leagues. It is an app, not a web game, so it cannot run here. Get it from its official stores.</p>
+            <span className="row" style={{ gap: 16 }}>
+              <a className="hub-cta" href="https://store.steampowered.com/app/3857620" target="_blank" rel="noopener noreferrer">Steam <ArrowIcon size={14} /></a>
+              <a className="hub-cta" href="https://apps.apple.com/app/id1605197976" target="_blank" rel="noopener noreferrer">App Store <ArrowIcon size={14} /></a>
+            </span>
+          </div>
+        </div>
       </>) : mlb ? null : (<>
       <div className="hub-featured">
         {FEATURED.map((g, i) => (

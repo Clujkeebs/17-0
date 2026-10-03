@@ -5,11 +5,12 @@ import { token as newToken } from './request';
 import { getRedis } from './redis';
 import { saveResult } from './grading';
 import { getMlbFloor } from './mlb-floor';
+import { latestMlbSeason } from './mlb-sync';
 import { createRng } from '@/lib/game/prng';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
 import {
-  MLB_ERAS, MLB_ERA_RESPINS, MLB_ROUNDS, MLB_SLOTS, MLB_TEAM_RESPINS, gradeMlbRoster, isPitchSlot, mlbEraOf, mlbFit, mlbNaturalSlots,
-  type MlbEraKey, type MlbKind, type MlbPick, type MlbSlot,
+  MLB_ERAS, MLB_ERA_RESPINS, MLB_ROUNDS, MLB_SLOTS, MLB_TEAM_RESPINS, draftSlots, gradeMlbRoster, isPitchSlot, mlbEraOf, mlbFit,
+  type MlbEraKey, type MlbKind, type MlbMode, type MlbPick, type MlbSlot,
 } from '@/lib/game/onesixtytwo';
 
 export const MLB_GAME = '162-0';
@@ -25,18 +26,27 @@ export const MLB_COLORS: Record<number, string> = {
 export const mlbLogo = (teamId: number) => `https://www.mlbstatic.com/team-logos/${teamId}.svg`;
 export const mlbHeadshot = (playerId: number) => `https://img.mlbstatic.com/mlb-photos/image/upload/w_120,q_auto:best/v1/people/${playerId}/headshot/67/current`;
 
+/** A spin lands on an era, or on 'now' (this season only) in Right now mode. */
+export type SpinEra = MlbEraKey | 'now';
+/** Years and label for a spin era. */
+export function span(era: SpinEra) {
+  if (era === 'now') { const y = latestMlbSeason(); return { key: 'now' as const, label: String(y), from: y, to: y }; }
+  return mlbEraOf(era)!;
+}
+
 export interface MlbPayload {
+  mode?: MlbMode;
   hard: boolean;
   eraRespinsUsed: number;
   teamRespinsUsed: number;
-  current: { era: MlbEraKey; teamId: number } | null;
-  picks: { playerId: number; teamId: number; season: number; slot: MlbSlot; era: MlbEraKey }[];
+  current: { era: SpinEra; teamId: number } | null;
+  picks: { playerId: number; teamId: number; season: number; slot: MlbSlot; era: SpinEra }[];
 }
 
 export interface MlbBoardPlayer { id: number; name: string; position: string; kind: MlbKind; season: number; value: number; line: string; headshot: string; fits: MlbSlot[] }
-export interface MlbTeamView { id: number; era: MlbEraKey; eraLabel: string; name: string; location: string; abbreviation: string; color: string; logoUrl: string; players: MlbBoardPlayer[] }
+export interface MlbTeamView { id: number; era: SpinEra; eraLabel: string; name: string; location: string; abbreviation: string; color: string; logoUrl: string; players: MlbBoardPlayer[] }
 export interface MlbState {
-  sessionId: string; index: number; total: number; done: boolean; hard: boolean;
+  sessionId: string; index: number; total: number; done: boolean; hard: boolean; mode: MlbMode;
   eraRespinsLeft: number; teamRespinsLeft: number;
   team: MlbTeamView | null;
   roster: { slot: MlbSlot; pick: (MlbBoardPlayer & { teamName: string; teamColor: string; logoUrl: string; fit: number }) | null }[];
@@ -55,12 +65,12 @@ export function lineText(kind: MlbKind, l: Record<string, number>): string {
 /* ------------------------------------------------------------------ data */
 
 /** Franchises with a real board in each era (eleven qualifying players, at least two pitchers), cached for an hour. */
-async function eraTeams(): Promise<Record<MlbEraKey, number[]>> {
+async function eraTeams(): Promise<Record<SpinEra, number[]>> {
   const r = getRedis();
   const cached = await r.get('mlb:era-teams').catch(() => null);
   if (cached) return JSON.parse(cached);
-  const out = {} as Record<MlbEraKey, number[]>;
-  for (const e of MLB_ERAS) {
+  const out = {} as Record<SpinEra, number[]>;
+  for (const e of [...MLB_ERAS, span('now')]) {
     const rows = await db.select({ teamId: schema.mlbPlayerSeasons.teamId, n: dsql<number>`count(distinct ${schema.mlbPlayerSeasons.playerId})::int`, pit: dsql<number>`count(distinct ${schema.mlbPlayerSeasons.playerId}) filter (where ${schema.mlbPlayerSeasons.kind} <> 'bat')::int` })
       .from(schema.mlbPlayerSeasons)
       .where(and(gte(schema.mlbPlayerSeasons.season, e.from), lte(schema.mlbPlayerSeasons.season, e.to)))
@@ -72,12 +82,12 @@ async function eraTeams(): Promise<Record<MlbEraKey, number[]>> {
 }
 
 /** 162-0 opens once every era has enough franchises to spin. */
-export async function mlbReady(): Promise<boolean> {
-  try { const t = await eraTeams(); return MLB_ERAS.every((e) => t[e.key].length >= 12); } catch { return false; }
+export async function mlbReady(mode: MlbMode = 'eras'): Promise<boolean> {
+  try { const t = await eraTeams(); return mode === 'now' ? t.now.length >= 20 : MLB_ERAS.every((e) => t[e.key].length >= 12); } catch { return false; }
 }
 
-async function teamInEra(teamId: number, era: MlbEraKey) {
-  const e = mlbEraOf(era)!;
+async function teamInEra(teamId: number, era: SpinEra) {
+  const e = span(era);
   const [t] = await db.select().from(schema.mlbTeamSeasons)
     .where(and(eq(schema.mlbTeamSeasons.teamId, teamId), gte(schema.mlbTeamSeasons.season, e.from), lte(schema.mlbTeamSeasons.season, e.to)))
     .orderBy(dsql`${schema.mlbTeamSeasons.season} desc`).limit(1);
@@ -85,8 +95,8 @@ async function teamInEra(teamId: number, era: MlbEraKey) {
 }
 
 /** Every qualifying player for a franchise in an era, at his best season there. */
-async function board(teamId: number, era: MlbEraKey): Promise<MlbTeamView | null> {
-  const e = mlbEraOf(era)!;
+async function board(teamId: number, era: SpinEra): Promise<MlbTeamView | null> {
+  const e = span(era);
   const t = await teamInEra(teamId, era);
   if (!t) return null;
   const rows = await db.select({ ps: schema.mlbPlayerSeasons, p: schema.mlbPlayers }).from(schema.mlbPlayerSeasons)
@@ -96,19 +106,20 @@ async function board(teamId: number, era: MlbEraKey): Promise<MlbTeamView | null
   for (const r of rows) { const b = best.get(r.p.id); if (!b || r.ps.value > b.ps.value) best.set(r.p.id, r); }
   const players = [...best.values()].sort((a, b) => b.ps.value - a.ps.value).map(({ ps, p }) => {
     const kind = ps.kind as MlbKind;
-    return { id: p.id, name: p.fullName, position: ps.position, kind, season: ps.season, value: ps.value, line: lineText(kind, ps.line as Record<string, number>), headshot: mlbHeadshot(p.id), fits: mlbNaturalSlots(ps.position, kind) };
+    return { id: p.id, name: p.fullName, position: ps.position, kind, season: ps.season, value: ps.value, line: lineText(kind, ps.line as Record<string, number>), headshot: mlbHeadshot(p.id), fits: draftSlots(ps.position, kind) };
   });
   return { id: teamId, era, eraLabel: e.label, name: t.name, location: t.location, abbreviation: t.abbreviation, color: MLB_COLORS[teamId] ?? '#1F2A44', logoUrl: mlbLogo(teamId), players };
 }
 
 /* ------------------------------------------------------------------ spins */
 
-async function draw(seed: string, round: number, p: MlbPayload, keepEra?: MlbEraKey): Promise<{ era: MlbEraKey; teamId: number }> {
+async function draw(seed: string, round: number, p: MlbPayload, keepEra?: SpinEra): Promise<{ era: SpinEra; teamId: number }> {
   const teams = await eraTeams();
+  if (p.mode === 'now') keepEra = 'now';
   const rng = createRng(`162:${seed}:${round}:${p.eraRespinsUsed}:${p.teamRespinsUsed}`);
   const used = new Set(p.picks.map((x) => x.teamId));
   const eras = MLB_ERAS.filter((e) => teams[e.key].some((t) => !used.has(t)));
-  const era = keepEra ?? rng.pick(eras.map((e) => e.key));
+  const era: SpinEra = keepEra ?? rng.pick(eras.map((e) => e.key));
   const open = teams[era].filter((t) => !used.has(t) && t !== (keepEra ? p.current?.teamId : -1));
   if (!open.length) throw new MlbError('No franchises left to spin. Start a new game.', 409);
   return { era, teamId: rng.pick(open) };
@@ -129,8 +140,8 @@ async function state(sessionId: string, p: MlbPayload): Promise<MlbState> {
     return { slot, pick: { ...hide(pl), teamName: `${hit.t.location} ${hit.t.name}`.trim(), teamColor: hit.t.color, logoUrl: hit.t.logoUrl, fit: mlbFit(pl.position, pl.kind, slot) } };
   });
   return {
-    sessionId, index, total: MLB_ROUNDS, done, hard: p.hard,
-    eraRespinsLeft: p.hard ? 0 : MLB_ERA_RESPINS - p.eraRespinsUsed,
+    sessionId, index, total: MLB_ROUNDS, done, hard: p.hard, mode: p.mode ?? 'eras',
+    eraRespinsLeft: p.hard || p.mode === 'now' ? 0 : MLB_ERA_RESPINS - p.eraRespinsUsed,
     teamRespinsLeft: p.hard ? 0 : MLB_TEAM_RESPINS - p.teamRespinsUsed,
     team: view, roster,
   };
@@ -146,11 +157,13 @@ async function open(sessionId: string, tok: string) {
 }
 const save = (id: string, p: MlbPayload) => db.update(schema.gameSessions).set({ spinPayload: p }).where(eq(schema.gameSessions.id, id));
 
-export async function startMlb(opts: { userId?: string | null; daily?: boolean; hard?: boolean }) {
-  if (!(await mlbReady())) throw new MlbError('162-0 is still loading its history. Try again in a few minutes.', 503);
+export async function startMlb(opts: { userId?: string | null; daily?: boolean; hard?: boolean; mode?: MlbMode }) {
+  // Today is one shared Eras board; Right now is a Casual option.
+  const mode: MlbMode = opts.daily ? 'eras' : opts.mode ?? 'eras';
+  if (!(await mlbReady(mode))) throw new MlbError(mode === 'now' ? 'Right now needs a few more weeks of this season. Try Eras.' : '162-0 is still loading its history. Try again in a few minutes.', 503);
   const date = dailyDateET();
   const seed = opts.daily ? dailySeed(`${MLB_GAME}:`, date) : newToken(12);
-  const p: MlbPayload = { hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [] };
+  const p: MlbPayload = { mode, hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [] };
   p.current = await draw(seed, 0, p);
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
@@ -165,7 +178,7 @@ export async function respinMlb(sessionId: string, tok: string, what: 'era' | 't
   const p = s.spinPayload as MlbPayload;
   if (p.hard) throw new MlbError('Hard mode has no re-spins.');
   if (!p.current || p.picks.length >= MLB_ROUNDS) throw new MlbError('The draft is complete.');
-  if (what === 'era' && p.eraRespinsUsed >= MLB_ERA_RESPINS) throw new MlbError('Your era re-spins are used.');
+  if (what === 'era' && (p.mode === 'now' || p.eraRespinsUsed >= MLB_ERA_RESPINS)) throw new MlbError(p.mode === 'now' ? 'Right now has no eras to re-spin.' : 'Your era re-spins are used.');
   if (what === 'team' && p.teamRespinsUsed >= MLB_TEAM_RESPINS) throw new MlbError('Your team re-spins are used.');
   const next: MlbPayload = { ...p, eraRespinsUsed: p.eraRespinsUsed + (what === 'era' ? 1 : 0), teamRespinsUsed: p.teamRespinsUsed + (what === 'team' ? 1 : 0) };
   next.current = await draw(s.seed, p.picks.length, next, what === 'team' ? p.current.era : undefined);
@@ -181,9 +194,11 @@ export async function pickMlb(sessionId: string, tok: string, playerId: number, 
   const pl = team?.players.find((x) => x.id === playerId);
   if (!team || !pl) throw new MlbError('That player is not on this board.');
   const taken = new Set(p.picks.map((x) => x.slot));
-  // Only spots he can play at all: hitters hit, pitchers pitch.
-  const openSlots = MLB_SLOTS.filter((x) => !taken.has(x) && mlbFit(pl.position, pl.kind, x) > 0);
-  if (!openSlots.length) throw new MlbError(pl.kind === 'bat' ? 'Your lineup is full. Take a pitcher.' : 'Your pitching spots are full. Take a hitter.');
+  // His own position, or DH for a hitter. Pitchers keep their role. If nobody on this board fits an open
+  // spot, anyone may play out of position (at the fit cost) so a draft can never get stuck.
+  const stuck = !team.players.some((x) => x.fits.some((f) => !taken.has(f)));
+  const openSlots = stuck ? MLB_SLOTS.filter((x) => !taken.has(x) && mlbFit(pl.position, pl.kind, x) > 0) : pl.fits.filter((x) => !taken.has(x));
+  if (!openSlots.length) throw new MlbError(`${pl.fits.join(' and ')} ${pl.fits.length > 1 ? 'are' : 'is'} filled. Take someone at an open spot.`);
   const best = [...openSlots].sort((a, b) => mlbFit(pl.position, pl.kind, b) - mlbFit(pl.position, pl.kind, a))[0];
   const chosen = slot && openSlots.includes(slot) ? slot : best;
   const next: MlbPayload = { ...p, picks: [...p.picks, { playerId, teamId: team.id, season: pl.season, slot: chosen, era: p.current.era }] };
@@ -216,9 +231,9 @@ export async function gradeMlb(ctx: { sessionId: string; token: string; userId?:
   });
   for (const x of picks) if (mlbFit(x.position, x.kind, x.slot) === 0) throw new MlbError(`${x.name} cannot play ${x.slot}.`);
   const seed = s.isDaily ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
-  const result = gradeMlbRoster(seed, picks, await getMlbFloor());
+  const result = gradeMlbRoster(seed, picks, await getMlbFloor(p.mode ?? 'eras'));
   const teams = await Promise.all(p.picks.map((x) => teamInEra(x.teamId, x.era)));
-  const resultData = { ...result, hard: p.hard, teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: mlbLogo(x.teamId), era: x.era })) };
+  const resultData = { ...result, hard: p.hard, mode: p.mode ?? 'eras', teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: mlbLogo(x.teamId), era: x.era })) };
   const id = await saveResult(s, ctx, MLB_GAME, resultData, result.score, result.wins === 162);
   return { id, result: resultData, daily: s.isDaily };
 }

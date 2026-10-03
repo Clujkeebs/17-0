@@ -46,6 +46,33 @@ export function mlbNaturalSlots(position: string, kind: MlbKind): MlbSlot[] {
   return map[p] ?? ['DH'];
 }
 
+/**
+ * Spots a player can be drafted into: his own position, or DH for any hitter. Pitchers keep their role.
+ * (After the draft, hitters can still be moved around the field at a fit cost.)
+ */
+export function draftSlots(position: string, kind: MlbKind): MlbSlot[] {
+  const own = mlbNaturalSlots(position, kind);
+  return kind === 'bat' && !own.includes('DH') ? [...own, 'DH'] : own;
+}
+
+/** Board sections, in lineup order. */
+export const MLB_GROUPS: { key: string; label: string; slots: MlbSlot[] }[] = [
+  { key: 'C', label: 'Catchers', slots: ['C'] },
+  { key: 'IF', label: 'Infielders', slots: ['1B', '2B', '3B', 'SS'] },
+  { key: 'OF', label: 'Outfielders', slots: ['LF', 'CF', 'RF'] },
+  { key: 'DH', label: 'Designated hitters', slots: ['DH'] },
+  { key: 'SP', label: 'Starting pitchers', slots: ['SP'] },
+  { key: 'RP', label: 'Relievers', slots: ['RP'] },
+];
+export const mlbGroupOf = (position: string, kind: MlbKind) => {
+  const first = mlbNaturalSlots(position, kind)[0];
+  return MLB_GROUPS.find((g) => g.slots.includes(first))!.key;
+};
+
+/** 162-0 modes: spin an era then a team, or this season only and just the team. */
+export type MlbMode = 'eras' | 'now';
+export const MLB_MODES: MlbMode[] = ['eras', 'now'];
+
 const INFIELD = new Set(['2B', '3B', 'SS']);
 const OUTFIELD = new Set(['LF', 'CF', 'RF']);
 
