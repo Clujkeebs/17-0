@@ -358,6 +358,33 @@ export const mlbPlayerSeasons = pgTable('mlb_player_seasons', {
   value: real('value').notNull(),
 }, (t) => [primaryKey({ columns: [t.playerId, t.teamId, t.season] }), index('mlb_player_seasons_team_idx').on(t.teamId, t.season)]);
 
+/** Pick 'em: NFL games from ESPN's scoreboard, synced by the worker. Winner is set once the game is final. */
+export const pickemGames = pgTable('pickem_games', {
+  id: text('id').primaryKey(),
+  season: integer('season').notNull(),
+  week: integer('week').notNull(),
+  kickoff: timestamp('kickoff', { withTimezone: true }).notNull(),
+  homeAbbr: text('home_abbr').notNull(),
+  awayAbbr: text('away_abbr').notNull(),
+  homeName: text('home_name').notNull(),
+  awayName: text('away_name').notNull(),
+  homeLogo: text('home_logo'),
+  awayLogo: text('away_logo'),
+  homeScore: integer('home_score'),
+  awayScore: integer('away_score'),
+  winner: text('winner'),
+  status: text('status').notNull().default('pre'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('pickem_games_week_idx').on(t.season, t.week)]);
+
+/** One pick per player per game, locked at kickoff (checked on the server). */
+export const pickemPicks = pgTable('pickem_picks', {
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  gameId: text('game_id').notNull().references(() => pickemGames.id, { onDelete: 'cascade' }),
+  pick: text('pick').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.userId, t.gameId] }), index('pickem_picks_game_idx').on(t.gameId)]);
+
 /** NFL history for All-time legends: ESPN athletes seen in a team-season's stat leaders since 1980. */
 export const nflHistAthletes = pgTable('nfl_hist_athletes', {
   id: integer('id').primaryKey(),
