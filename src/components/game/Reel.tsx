@@ -83,3 +83,62 @@ export function SpinningReel({ pool }: { pool: ReelTeam[] }) {
     </div>
   );
 }
+
+const ERA_CELL = 96;
+/** Era colors on the reel: each decade gets its own swatch so the spin reads at a glance. */
+const ERA_TINT: Record<string, string> = { '1970s': '#B45309', '1980s': '#BE185D', '1990s': '#6D28D9', '2000s': '#1D4ED8', '2010s': '#0F766E', '2020s': '#C8102E' };
+
+/**
+ * The era spins like the team does: a short slot reel of decades that lands on the one the server drew.
+ * It only spins when the era actually changes (a team re-spin keeps the era still).
+ */
+export function EraReel({ eras, target, targetLabel, spinKey, onLand }: { eras: { key: string; label: string }[]; target: string; targetLabel: string; spinKey: string | number; onLand?: () => void }) {
+  const strip = useMemo(() => {
+    const out: { key: string; label: string }[] = [];
+    // eslint-disable-next-line react-hooks/purity
+    for (let i = 0; i < 18; i++) out.push(eras[Math.floor(Math.random() * eras.length)]);
+    out.push({ key: target, label: targetLabel });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spinKey]);
+  const [y, setY] = useState(0);
+  const [landed, setLanded] = useState(false);
+  const [ms, setMs] = useState(1600);
+  const landRef = useRef(onLand);
+  landRef.current = onLand;
+  useEffect(() => {
+    setLanded(false); setY(0);
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const dur = reduce ? 900 : 1600;
+    setMs(dur);
+    const end = -(strip.length - 1) * ERA_CELL;
+    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setY(end)));
+    const ticks = reduce ? [] : [0, 120, 250, 400, 580, 800, 1080, 1400].map((t) => setTimeout(click, t));
+    const done = setTimeout(() => { setLanded(true); thud(); landRef.current?.(); }, dur + 50);
+    return () => { cancelAnimationFrame(raf); ticks.forEach(clearTimeout); clearTimeout(done); };
+  }, [strip]);
+  return (
+    <div className={`reel2 era-reel ${landed ? 'is-landed' : ''}`} aria-hidden="true" style={{ ['--tc' as string]: ERA_TINT[target] ?? 'var(--bone)' }}>
+      <div className="reel2-strip" style={{ transform: `translateY(${y}px)`, transition: y === 0 ? 'none' : `transform ${ms}ms cubic-bezier(.1,.7,.1,1)` }}>
+        {strip.map((e, i) => (
+          <div key={i} className="reel2-cell era-cell">
+            <span className="era-chip" style={{ background: ERA_TINT[e.key] ?? '#0A0A0A' }}>{e.label}</span>
+            <span className="reel2-name"><span className="reel2-city">Era</span><strong>{e.key}</strong></span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** A still era card, for when the team re-spins and the era stays. */
+export function EraCard({ era, label }: { era: string; label: string }) {
+  return (
+    <div className="reel2 era-reel is-still" aria-hidden="true" style={{ ['--tc' as string]: ERA_TINT[era] ?? 'var(--bone)' }}>
+      <div className="reel2-cell era-cell">
+        <span className="era-chip" style={{ background: ERA_TINT[era] ?? '#0A0A0A' }}>{label}</span>
+        <span className="reel2-name"><span className="reel2-city">Era</span><strong>{era}</strong></span>
+      </div>
+    </div>
+  );
+}

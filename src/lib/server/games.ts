@@ -135,7 +135,7 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
 }
 
 /** The id of this user's ranked result for today, if they already played. */
-export async function todaysResult(userId: string, gameType: GameType): Promise<string | null> {
+export async function todaysResult(userId: string, gameType: string): Promise<string | null> {
   const [r] = await db.select({ id: schema.gameResults.id }).from(schema.gameResults)
     .where(and(eq(schema.gameResults.userId, userId), eq(schema.gameResults.gameType, gameType), eq(schema.gameResults.isDaily, true), eq(schema.gameResults.dailyDate, dailyDateET()))).limit(1);
   return r?.id ?? null;

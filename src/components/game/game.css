@@ -173,3 +173,14 @@
 .g-group + .g-group { margin-top: 14px; }
 .g-group-done { opacity: .62; }
 .g-filled { font-weight: 400; color: var(--bone-dim); }
+/* Era reel: same slot as the team reel, shorter */
+.era-reel { height: 96px; margin-bottom: 10px; }
+.era-reel .reel2-cell { height: 96px; }
+.era-reel.is-still { box-shadow: inset 0 -4px 0 var(--tc, var(--bone)); }
+.era-chip { flex: none; width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.02em; }
+.era-reel .reel2-name strong { font-size: clamp(1.6rem, 4.4vw, 2.4rem); }
+@media (max-width: 600px) { .era-chip { width: 52px; height: 52px; font-size: 1.1rem; } }
+/* Find a player: in every mode, above the board */
+.g-find { margin: 0 0 12px; }
+.g-find input { width: 100%; }
+.g-find .hint { margin: 6px 0 0; }

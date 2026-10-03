@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Reel, usePreloadLogos, type ReelTeam } from './Reel';
+import { EraReel, Reel, usePreloadLogos, type ReelTeam } from './Reel';
 import { SoundToggle } from './SoundToggle';
 import { PlayerFace } from './PlayerFace';
 import { track } from '@/lib/analytics';
@@ -23,7 +23,7 @@ async function call(body: object) {
   return data;
 }
 
-export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLink = false, nowReady = false, challenge = null }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode; modeFromLink?: boolean; nowReady?: boolean; challenge?: ChallengeInfo }) {
+export function OneSixtyTwoGame({ franchises, signedIn, playedTodayId = null, initialMode, modeFromLink = false, nowReady = false, challenge = null }: { franchises: ReelTeam[]; signedIn: boolean; playedTodayId?: string | null; initialMode: Mode; modeFromLink?: boolean; nowReady?: boolean; challenge?: ChallengeInfo }) {
   const router = useRouter();
   usePreloadLogos(franchises);
   const [game, setGame] = useState<Game | null>(null);
@@ -31,12 +31,16 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
   const [hard, setHard] = useState(false);
   const [spinMode, setSpinMode] = useState<MlbMode>('eras');
   const [sheet, setSheet] = useState(false);
-  const [playedId, setPlayedId] = useState<string | null>(null);
+  const [playedId, setPlayedId] = useState<string | null>(playedTodayId);
   const [spinKey, setSpinKey] = useState(0);
   // A new spin swaps the board for a short placeholder; bring the stage back into view instead of leaving you at the bottom.
   const stageRef = useRef<HTMLElement>(null);
   useEffect(() => { if (spinKey > 1) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [spinKey]);
   const [eraLanded, setEraLanded] = useState(false);
+  // The era and the team animate only when they change: a team re-spin leaves the era still, and the other way round.
+  const [eraKey, setEraKey] = useState(0);
+  const [teamKey, setTeamKey] = useState(0);
+  const [teamMoved, setTeamMoved] = useState(true);
   const [landed, setLanded] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -48,7 +52,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
   useEffect(() => {
     if (challenge) return; // a challenge link starts below, once its function exists
     let resumeMode = initialMode;
-    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (!modeFromLink && (s.mode === 'casual' || (s.mode === 'today' && signedIn))) { resumeMode = s.mode; setMode(s.mode); } if (typeof s.hard === 'boolean') setHard(s.hard); if (s.spin === 'now' && nowReady) setSpinMode('now'); } catch { /* storage blocked */ }
+    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (!modeFromLink && (s.mode === 'casual' || (s.mode === 'today' && signedIn && !playedTodayId))) { resumeMode = s.mode; setMode(s.mode); } if (typeof s.hard === 'boolean') setHard(s.hard); if (s.spin === 'now' && nowReady) setSpinMode('now'); } catch { /* storage blocked */ }
     try {
       const g = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Game | null;
       if (g?.sessionId && g.daily === (resumeMode === 'today')) { setGame(g); setEraLanded(true); setLanded(true); return; }
@@ -58,7 +62,14 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
   }, []);
   useEffect(() => { try { if (game) sessionStorage.setItem(STATE_KEY, JSON.stringify(game)); } catch {} }, [game]);
 
-  function spun(next: Game) { setGame(next); setEraLanded(false); setLanded(false); setQuery(''); setExpanded(new Set()); setSpinKey((k) => k + 1); }
+  function spun(next: Game, prev: Game | null = null) {
+    const eraMoved = !prev?.team || !next.team || prev.team.era !== next.team.era;
+    const moved = !prev?.team || !next.team || prev.team.id !== next.team.id;
+    setGame(next); setLanded(false); setQuery(''); setExpanded(new Set()); setSpinKey((k) => k + 1);
+    setTeamMoved(moved);
+    if (moved) setTeamKey((k) => k + 1);
+    if (eraMoved) { setEraLanded(false); setEraKey((k) => k + 1); }
+  }
 
   async function startChallenge(id: string) {
     setBusy('start'); setError(''); setGame(null);
@@ -89,7 +100,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
       track('game_started', { game: '162-0', daily: mode === 'today', hard });
     } catch (e) {
       const err = e as Error & { status?: number; data?: { resultId?: string } };
-      if (err.status === 409 && err.data?.resultId) { setPlayedId(err.data.resultId); setSheet(true); } else setError(err.message);
+      if (err.status === 409 && err.data?.resultId) { setPlayedId(err.data.resultId); setMode('casual'); setSheet(true); } else setError(err.message);
     } finally { setBusy(null); }
   }
 
@@ -99,7 +110,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
     try {
       const d = await call({ ...body, sessionId: game.sessionId, token: game.token });
       const next = { ...game, ...d } as Game;
-      if (respin || (d.index !== game.index && !d.done)) spun(next); else setGame(next);
+      if (respin || (d.index !== game.index && !d.done)) spun(next, respin ? game : null); else setGame(next);
       return next;
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
@@ -142,7 +153,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
         <Choice label="Difficulty" name="hard" value={hard ? 'hard' : 'easy'} onChange={(v) => setHard(v === 'hard')}
           options={[{ v: 'easy', t: 'Easy', d: 'Stats shown, 2 era and 2 team re-spins' }, { v: 'hard', t: 'Hard', d: 'Type names, no stats, no re-spins' }]} />
         {mode === 'today' && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/162-0">Sign in</a> or <a href="/register?next=/games/162-0">create one</a>.</p>}
-        {mode === 'today' && playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. A new board drops at midnight ET.</p>}
+        {playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. {mode === 'today' ? 'A new board drops at midnight ET. Casual is unlimited.' : 'Casual is unlimited: press Start.'}</p>}
         <div className="sheet-actions">
           {game && <button type="button" className="btn btn-lg" onClick={() => setSheet(false)}>Cancel</button>}
           <button type="button" className="btn btn-primary btn-lg" disabled={!!busy || (mode === 'today' && (!signedIn || !!playedId))} onClick={start}>Start</button>
@@ -180,7 +191,9 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
   // Same rule as the server: his own spot or DH. If nobody here fits an open spot, anyone may play out of position.
   const stuck = !!team && !team.players.some((x) => x.fits.some((f) => !taken.has(f)));
   const canTake = (p: MlbBoardPlayer) => (stuck ? (p.kind === 'bat' ? openBat : openPitch) : p.fits.some((f) => !taken.has(f)));
-  const hardList = team && game.hard && q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 6) : [];
+  // Type a name in any mode. Hard shows only matches; the other modes show matches in place of the grouped board.
+  const found = team && q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).sort((a, b) => Number(canTake(b)) - Number(canTake(a))) : null;
+  const hardList = game.hard && found ? found.slice(0, 6) : [];
   const groups = team && !game.hard ? MLB_GROUPS.map((g) => {
     const all = team.players.filter((p) => mlbGroupOf(p.position, p.kind) === g.key).sort((a, b) => Number(canTake(b)) - Number(canTake(a)) || b.value - a.value);
     return { ...g, all, open: all.some(canTake) };
@@ -220,8 +233,8 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
         {team && target ? (
           <section ref={stageRef} className="g-stage" aria-labelledby="mlb-clock">
             <div className="g-team">
-              {game.mode === 'now' ? <p className="g-kicker" style={{ margin: 0 }}>Right now · {team.eraLabel} season</p> : <EraSpin spinKey={`${game.sessionId}-${spinKey}`} target={team.eraLabel} onLand={() => setEraLanded(true)} />}
-              {(eraLanded || game.mode === 'now') && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
+              {game.mode === 'now' ? <p className="g-kicker" style={{ margin: 0 }}>Right now · {team.eraLabel} season</p> : <EraReel eras={MLB_ERAS.map((e) => ({ key: e.key, label: e.label }))} target={team.era} targetLabel={MLB_ERAS.find((e) => e.key === team.era)?.label ?? team.eraLabel} spinKey={`${game.sessionId}-${eraKey}`} onLand={() => { setEraLanded(true); if (!teamMoved) setLanded(true); }} />}
+              {(eraLanded || game.mode === 'now' || !teamMoved) && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${teamKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
               <div className="g-spin-status" aria-live="polite">
                 <p className="g-kicker" style={{ margin: 0 }} id="mlb-clock">{landed ? `Pick one ${team.eraLabel} ${team.name} player` : 'Spinning'}</p>
                 {game.hard ? <span className="g-kicker" style={{ margin: 0 }}>No re-spins</span> : (
@@ -241,8 +254,15 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
                     <p className="hint" aria-live="polite">{q.length < 1 ? 'Type a letter to start. Stats stay hidden until the season is played.' : hardList.length ? `${hardList.length} match${hardList.length === 1 ? '' : 'es'}` : `No ${team.name} player by that name in this era.`}</p>
                   </>
                 )}
+                {!game.hard && (
+                  <div className="g-find">
+                    <label htmlFor="mlb-find" className="sr-only">Find a {team.eraLabel} {team.name} player</label>
+                    <input id="mlb-find" type="search" autoComplete="off" placeholder={`Find a ${team.name} player`} value={query} onChange={(e) => setQuery(e.target.value)} />
+                    {found && <p className="hint" aria-live="polite">{found.length ? `${found.length} match${found.length === 1 ? '' : 'es'}` : `No ${team.name} player by that name in this era.`}</p>}
+                  </div>
+                )}
                 {stuck && <p className="hint">Nobody here fits an open spot, so anyone can play out of position this round.</p>}
-                {game.hard ? <ul className="g-list">{hardList.map(row)}</ul> : groups.map((g) => {
+                {game.hard ? <ul className="g-list">{hardList.map(row)}</ul> : found ? <ul className="g-list">{found.slice(0, 40).map(row)}</ul> : groups.map((g) => {
                   const more = expanded.has(g.key);
                   return (
                     <div key={g.key} className={`g-group${g.open ? '' : ' g-group-done'}`}>
@@ -292,32 +312,6 @@ export function OneSixtyTwoGame({ franchises, signedIn, initialMode, modeFromLin
         </div>
       </aside>
       {setupSheet}
-    </div>
-  );
-}
-
-/** Flicks through the eras and lands on the one the server drew, then hands over to the team reel. */
-function EraSpin({ spinKey, target, onLand }: { spinKey: string; target: string; onLand: () => void }) {
-  const [shown, setShown] = useState(target);
-  const [done, setDone] = useState(false);
-  const landRef = useRef(onLand);
-  landRef.current = onLand;
-  useEffect(() => {
-    setDone(false);
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const steps = reduce ? 3 : 12;
-    let i = 0;
-    const id = setInterval(() => {
-      i++;
-      if (i >= steps) { clearInterval(id); setShown(target); setDone(true); landRef.current(); return; }
-      setShown(MLB_ERAS[i % MLB_ERAS.length].label);
-    }, reduce ? 120 : 70);
-    return () => clearInterval(id);
-  }, [spinKey, target]);
-  return (
-    <div className={`nba-era${done ? ' in' : ''}`} aria-hidden="true">
-      <span className="nba-era-k">Era</span>
-      <span className="nba-era-v num">{shown}</span>
     </div>
   );
 }

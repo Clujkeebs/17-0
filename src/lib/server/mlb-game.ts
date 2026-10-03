@@ -23,7 +23,8 @@ export const MLB_COLORS: Record<number, string> = {
   135: '#2F241D', 136: '#0C2C56', 137: '#FD5A1E', 138: '#C41E3A', 139: '#092C5C', 140: '#003278', 141: '#134A8E', 142: '#002B5C',
   143: '#E81828', 144: '#CE1141', 145: '#27251F', 146: '#00A3E0', 147: '#0C2340', 158: '#12284B',
 };
-export const mlbLogo = (teamId: number) => `https://www.mlbstatic.com/team-logos/${teamId}.svg`;
+/** MLB's own club logo; only real club ids (108 to 160) have one. */
+export const mlbLogo = (teamId: number) => (teamId >= 108 && teamId <= 160 ? `https://www.mlbstatic.com/team-logos/${teamId}.svg` : '');
 export const mlbHeadshot = (playerId: number) => `https://img.mlbstatic.com/mlb-photos/image/upload/w_120,q_auto:best/v1/people/${playerId}/headshot/67/current`;
 
 /** A spin lands on an era, or on 'now' (this season only) in Right now mode. */
@@ -114,12 +115,19 @@ async function board(teamId: number, era: SpinEra): Promise<MlbTeamView | null> 
 
 /* ------------------------------------------------------------------ spins */
 
-async function draw(seed: string, round: number, p: MlbPayload, keepEra?: SpinEra): Promise<{ era: SpinEra; teamId: number }> {
+async function draw(seed: string, round: number, p: MlbPayload, keepEra?: SpinEra, keepTeam?: number): Promise<{ era: SpinEra; teamId: number }> {
   const teams = await eraTeams();
   if (p.mode === 'now') keepEra = 'now';
   const rng = createRng(`162:${seed}:${round}:${p.eraRespinsUsed}:${p.teamRespinsUsed}`);
   const used = new Set(p.picks.map((x) => x.teamId));
   const eras = MLB_ERAS.filter((e) => teams[e.key].some((t) => !used.has(t)));
+  // Era re-spin: a different era, keeping the franchise when it played in one (only the era changes).
+  if (keepTeam !== undefined && !keepEra) {
+    const others = eras.filter((e) => e.key !== p.current?.era);
+    const withTeam = others.filter((e) => teams[e.key].includes(keepTeam));
+    if (withTeam.length) return { era: rng.pick(withTeam.map((e) => e.key)) as SpinEra, teamId: keepTeam };
+    if (others.length) { const e = rng.pick(others.map((x) => x.key)) as SpinEra; const pool = teams[e].filter((t) => !used.has(t)); if (pool.length) return { era: e, teamId: rng.pick(pool) }; }
+  }
   const era: SpinEra = keepEra ?? rng.pick(eras.map((e) => e.key));
   const open = teams[era].filter((t) => !used.has(t) && t !== (keepEra ? p.current?.teamId : -1));
   if (!open.length) throw new MlbError('No franchises left to spin. Start a new game.', 409);
@@ -182,7 +190,7 @@ export async function respinMlb(sessionId: string, tok: string, what: 'era' | 't
   if (what === 'era' && (p.mode === 'now' || p.eraRespinsUsed >= MLB_ERA_RESPINS)) throw new MlbError(p.mode === 'now' ? 'Right now has no eras to re-spin.' : 'Your era re-spins are used.');
   if (what === 'team' && p.teamRespinsUsed >= MLB_TEAM_RESPINS) throw new MlbError('Your team re-spins are used.');
   const next: MlbPayload = { ...p, eraRespinsUsed: p.eraRespinsUsed + (what === 'era' ? 1 : 0), teamRespinsUsed: p.teamRespinsUsed + (what === 'team' ? 1 : 0) };
-  next.current = await draw(s.seed, p.picks.length, next, what === 'team' ? p.current.era : undefined);
+  next.current = await draw(s.seed, p.picks.length, next, what === 'team' ? p.current.era : undefined, what === 'era' ? p.current.teamId : undefined);
   await save(s.id, next);
   return state(s.id, next);
 }

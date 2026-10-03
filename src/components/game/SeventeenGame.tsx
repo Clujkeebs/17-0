@@ -104,7 +104,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
     try {
       const res = await fetch('/api/games/17-0/spin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'start', daily, hard: s.hard, format: formatFor(s), pool: s.pool }) });
       const d = await res.json().catch(() => ({}));
-      if (res.status === 409 && d.resultId) { setPlayedId(d.resultId); setSheetOpen(true); return; }
+      if (res.status === 409 && d.resultId) { setPlayedId(d.resultId); setSetup((x) => ({ ...x, mode: 'casual' })); setSheetOpen(true); return; }
       if (!res.ok) throw new Error(d.error ?? 'Something went wrong. Try again.');
       setDraft(d); setLanded(false); setSpinKey((k) => k + 1);
       track('game_started', { game: '17-0', daily, hard: s.hard, format: formatFor(s), pool: s.pool });
@@ -224,7 +224,8 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
             {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : draft.hard ? (
               <HardSearch team={team} openSlots={openSlots} query={query} setQuery={setQuery} busy={!!busy} onPick={(p) => pick(p)} />
             ) : <div className="g-roster in">
-              {groups.map(({ hint, slots: gs }) => {
+              <HardSearch reveal team={team} openSlots={openSlots} query={query} setQuery={setQuery} busy={!!busy} onPick={(p) => pick(p)} />
+              {!query.trim() && groups.map(({ hint, slots: gs }) => {
                 const keys = gs.map((s) => s.key);
                 const all = team.players.filter((p) => p.slots?.some((k) => keys.includes(k))).sort((a, b) => worth(b) - worth(a));
                 if (!all.length) return null;
@@ -336,7 +337,7 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
         {fantasy && <p className="hint" style={{ margin: '4px 0 0' }}>Fantasy drafts a seven-man lineup (QB, two RBs, two WRs, TE, FLEX) from current rosters. Each player counts his PPR points per game this season, blended with his projection while the sample is small. Your weekly total sets the record.</p>}
         {today && more && <p className="hint" style={{ margin: '4px 0 0' }}>Today is the same board for everyone: six slots, current rosters. Roster size and legends are Casual options.</p>}
         {today && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/17-0">Sign in</a> or <a href="/register?next=/games/17-0">create one</a>.</p>}
-        {today && playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. A new board drops at midnight ET.</p>}
+        {playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. {today ? 'A new board drops at midnight ET. Casual is unlimited.' : 'Casual is unlimited: press Start.'}</p>}
         <div className="sheet-actions">
           {onClose && <button type="button" className="btn btn-lg" onClick={onClose}>Cancel</button>}
           <button ref={startRef} type="button" className="btn btn-primary btn-lg" disabled={busy || blocked} onClick={onStart}>Start</button>
@@ -364,31 +365,42 @@ function Choice({ label, name, value, options, onChange, disabled }: {
   );
 }
 
-/** Hard mode picker: type a name from the team on the clock. No list to browse, no overalls. */
-function HardSearch({ team, openSlots, query, setQuery, busy, onPick }: {
-  team: NonNullable<DraftState['team']>; openSlots: SlotView[]; query: string; setQuery: (q: string) => void; busy: boolean; onPick: (p: PublicPlayer) => void;
+/** Typing "coach", "head coach" or "hc" finds the head coach: many players know every roster but not the coaches. */
+const COACH_WORDS = ['coach', 'head coach', 'hc'];
+const asksForCoach = (q: string) => q.length >= 2 && COACH_WORDS.some((w) => w.startsWith(q) || q.startsWith(w));
+
+/**
+ * Find a player by name on the team on the clock. Hard mode's only picker (no list, no overalls); in the other
+ * modes it sits above the list so you can jump straight to someone.
+ */
+function HardSearch({ team, openSlots, query, setQuery, busy, onPick, reveal = false }: {
+  team: NonNullable<DraftState['team']>; openSlots: SlotView[]; query: string; setQuery: (q: string) => void; busy: boolean; onPick: (p: PublicPlayer) => void; reveal?: boolean;
 }) {
   const norm = (x: string) => x.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '');
   const q = norm(query).trim();
   const openKeys = openSlots.map((s) => s.key);
   const label = (key: string) => openSlots.find((s) => s.key === key)?.label ?? key;
   const eligible = team.players.filter((p) => p.slots?.some((s) => openKeys.includes(s)));
-  const hits = q.length >= 1 ? eligible.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 6) : [];
+  const byName = q.length >= 1 ? eligible.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)) : [];
+  const coaches = asksForCoach(q) ? eligible.filter((p) => p.position === 'HC' && !byName.includes(p)) : [];
+  const hits = [...coaches, ...byName].slice(0, reveal ? 12 : 6);
   const miss = q.length >= 3 && hits.length === 0;
   const openLabels = [...new Set(openSlots.map((s) => s.label.replace(/\d+$/, '')))].join(', ');
+  const hasCoachSlot = eligible.some((p) => p.position === 'HC');
+  const id = reveal ? 'find-q' : 'hard-q';
   return (
-    <div className="g-roster in g-hardsearch">
-      <label htmlFor="hard-q" className="g-group-h" style={{ display: 'block' }}>Name a {team.name} player for an open slot ({openLabels})</label>
-      <input id="hard-q" type="search" autoComplete="off" autoFocus placeholder={`Type a ${team.name} player's name`} value={query} onChange={(e) => setQuery(e.target.value)}
+    <div className={reveal ? 'g-find' : 'g-roster in g-hardsearch'}>
+      <label htmlFor={id} className={reveal ? 'sr-only' : 'g-group-h'} style={reveal ? undefined : { display: 'block' }}>{reveal ? `Find a ${team.name} player` : `Name a ${team.name} player for an open slot (${openLabels})`}</label>
+      <input id={id} type="search" autoComplete="off" autoFocus={!reveal} placeholder={reveal ? `Find a ${team.name} player${hasCoachSlot ? ' or type coach' : ''}` : `Type a ${team.name} player's name`} value={query} onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && hits.length === 1) onPick(hits[0]); }} />
-      <p className="hint" aria-live="polite">{miss ? `No ${team.name} player by that name fits an open slot.` : q.length < 1 ? 'Type a letter to start. Overalls stay hidden until the season is played.' : `${hits.length} match${hits.length === 1 ? '' : 'es'}`}</p>
+      {(!reveal || q.length >= 1) && <p className="hint" aria-live="polite">{miss ? `No ${team.name} player by that name fits an open slot.` : q.length < 1 ? `Type a letter to start.${hasCoachSlot ? ' Type coach for the head coach.' : ''} Overalls stay hidden until the season is played.` : `${hits.length} match${hits.length === 1 ? '' : 'es'}`}</p>}
       <ul className="g-list" style={{ marginTop: 8 }}>
         {hits.map((p) => (
           <li key={p.id}>
-            <button type="button" className="g-player" onClick={() => onPick(p)} disabled={busy} aria-label={`Draft ${p.name}, ${p.position === 'HC' ? 'head coach' : p.position}${p.legend ? ', all-time legend' : ''}`}>
+            <button type="button" className="g-player" onClick={() => onPick(p)} disabled={busy} aria-label={`Draft ${p.name}, ${p.position === 'HC' ? 'head coach' : p.position}${reveal ? `, ${p.fpts !== undefined ? `${showWorth(p)} fantasy points per game` : `${p.group === 'HC' ? 'coach impact' : 'overall'} ${p.ovr}`}` : ''}${p.legend ? ', all-time legend' : ''}`}>
               <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
               <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position} · {label(p.slots!.find((s) => openKeys.includes(s))!)}{p.legend && <span className="tag-legend">Legend</span>}</span></span>
-              <span className="g-ovr num" aria-hidden="true">??</span>
+              <span className={`g-ovr num${reveal && p.fpts !== undefined ? ' g-fpts' : ''}`} aria-hidden="true">{reveal ? showWorth(p) : '??'}</span>
             </button>
           </li>
         ))}

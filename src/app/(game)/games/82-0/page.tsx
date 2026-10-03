@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { desc } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { challengeInfo } from '@/lib/server/challenges';
+import { todaysResult } from '@/lib/server/games';
 import { db, schema } from '@/db';
 import type { ReelTeam } from '@/components/game/Reel';
 import { EightyTwoGame } from '@/components/game/EightyTwoGame';
@@ -28,7 +29,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ m
   const sp = await searchParams;
   const session = await auth().catch(() => null);
   const signedIn = !!session?.user?.id;
-  const initialMode = sp.mode === 'today' ? 'today' : sp.mode === 'casual' ? 'casual' : signedIn ? 'today' : 'casual';
+  // Already played Today? Open on Casual instead of a board you cannot play again.
+  const playedTodayId = session?.user?.id ? await todaysResult(session.user.id, '82-0').catch(() => null) : null;
+  const initialMode = sp.mode === 'today' ? 'today' : sp.mode === 'casual' ? 'casual' : signedIn && !playedTodayId ? 'today' : 'casual';
   const standardReady = await nbaReady('standard').catch(() => false);
-  return <EightyTwoGame franchises={await franchises()} signedIn={signedIn} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} challenge={await challengeInfo(sp.challenge, '82-0')} standardReady={standardReady} />;
+  return <EightyTwoGame franchises={await franchises()} signedIn={signedIn} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} challenge={await challengeInfo(sp.challenge, '82-0')} standardReady={standardReady} />;
 }

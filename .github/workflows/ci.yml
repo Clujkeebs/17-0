@@ -12,7 +12,7 @@ jobs:
         image: postgres:16
         env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: gridiron }
         ports: ['5432:5432']
-        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
       redis:
         image: redis:7
         ports: ['6379:6379']

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Reel, usePreloadLogos, type ReelTeam } from './Reel';
+import { EraReel, Reel, usePreloadLogos, type ReelTeam } from './Reel';
 import { SoundToggle } from './SoundToggle';
 import { PlayerFace } from './PlayerFace';
 import { track } from '@/lib/analytics';
@@ -25,7 +25,7 @@ async function call(body: object) {
 
 const stat = (n: number) => (n >= 0 ? n.toFixed(1) : '');
 
-export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink = false, standardReady = false, challenge = null }: { franchises: ReelTeam[]; signedIn: boolean; initialMode: Mode; modeFromLink?: boolean; standardReady?: boolean; challenge?: ChallengeInfo }) {
+export function EightyTwoGame({ franchises, signedIn, playedTodayId = null, initialMode, modeFromLink = false, standardReady = false, challenge = null }: { franchises: ReelTeam[]; signedIn: boolean; playedTodayId?: string | null; initialMode: Mode; modeFromLink?: boolean; standardReady?: boolean; challenge?: ChallengeInfo }) {
   const router = useRouter();
   usePreloadLogos(franchises);
   const [game, setGame] = useState<Game | null>(null);
@@ -33,12 +33,16 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
   const [hard, setHard] = useState(false);
   const [edition, setEdition] = useState<'classic' | 'standard'>('classic');
   const [sheet, setSheet] = useState(false);
-  const [playedId, setPlayedId] = useState<string | null>(null);
+  const [playedId, setPlayedId] = useState<string | null>(playedTodayId);
   const [spinKey, setSpinKey] = useState(0);
   // A new spin swaps the board for a short placeholder; bring the stage back into view instead of leaving you at the bottom.
   const stageRef = useRef<HTMLElement>(null);
   useEffect(() => { if (spinKey > 1) stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [spinKey]);
   const [eraLanded, setEraLanded] = useState(false);
+  // The era and the team animate only when they change: a team re-spin leaves the era still, and the other way round.
+  const [eraKey, setEraKey] = useState(0);
+  const [teamKey, setTeamKey] = useState(0);
+  const [teamMoved, setTeamMoved] = useState(true);
   const [landed, setLanded] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -50,7 +54,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
   useEffect(() => {
     if (challenge) return; // a challenge link starts below, once its function exists
     let resumeMode = initialMode;
-    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (!modeFromLink && (s.mode === 'casual' || (s.mode === 'today' && signedIn))) { resumeMode = s.mode; setMode(s.mode); } if (typeof s.hard === 'boolean') setHard(s.hard); if (s.edition === 'standard' && standardReady) setEdition('standard'); } catch { /* storage blocked */ }
+    try { const s = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}'); if (!modeFromLink && (s.mode === 'casual' || (s.mode === 'today' && signedIn && !playedTodayId))) { resumeMode = s.mode; setMode(s.mode); } if (typeof s.hard === 'boolean') setHard(s.hard); if (s.edition === 'standard' && standardReady) setEdition('standard'); } catch { /* storage blocked */ }
     try {
       const g = JSON.parse(sessionStorage.getItem(STATE_KEY) ?? 'null') as Game | null;
       if (g?.sessionId && g.daily === (resumeMode === 'today')) { setGame(g); setEraLanded(true); setLanded(true); return; }
@@ -60,7 +64,14 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
   }, []);
   useEffect(() => { try { if (game) sessionStorage.setItem(STATE_KEY, JSON.stringify(game)); } catch {} }, [game]);
 
-  function spun(next: Game) { setGame(next); setEraLanded(false); setLanded(false); setQuery(''); setShowAll(false); setSpinKey((k) => k + 1); }
+  function spun(next: Game, prev: Game | null = null) {
+    const eraMoved = !prev?.team || !next.team || prev.team.era !== next.team.era;
+    const moved = !prev?.team || !next.team || prev.team.id !== next.team.id;
+    setGame(next); setLanded(false); setQuery(''); setShowAll(false); setSpinKey((k) => k + 1);
+    setTeamMoved(moved);
+    if (moved) setTeamKey((k) => k + 1);
+    if (eraMoved) { setEraLanded(false); setEraKey((k) => k + 1); }
+  }
 
   async function startChallenge(id: string) {
     setBusy('start'); setError(''); setGame(null);
@@ -91,7 +102,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
       track('game_started', { game: '82-0', daily: mode === 'today', hard });
     } catch (e) {
       const err = e as Error & { status?: number; data?: { resultId?: string } };
-      if (err.status === 409 && err.data?.resultId) { setPlayedId(err.data.resultId); setSheet(true); } else setError(err.message);
+      if (err.status === 409 && err.data?.resultId) { setPlayedId(err.data.resultId); setMode('casual'); setSheet(true); } else setError(err.message);
     } finally { setBusy(null); }
   }
 
@@ -101,7 +112,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
     try {
       const d = await call({ ...body, sessionId: game.sessionId, token: game.token });
       const next = { ...game, ...d } as Game;
-      if (respin || (d.index !== game.index && !d.done)) spun(next); else setGame(next);
+      if (respin || (d.index !== game.index && !d.done)) spun(next, respin ? game : null); else setGame(next);
       return next;
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   }
@@ -143,7 +154,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
         <Choice label="Difficulty" name="hard" value={hard ? 'hard' : 'easy'} onChange={(v) => setHard(v === 'hard')}
           options={[{ v: 'easy', t: 'Easy', d: 'Stats shown, 1 era and 1 team re-spin' }, { v: 'hard', t: 'Hard', d: 'Type names, no stats, no re-spins' }]} />
         {mode === 'today' && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/82-0">Sign in</a> or <a href="/register?next=/games/82-0">create one</a>.</p>}
-        {mode === 'today' && playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. A new board drops at midnight ET.</p>}
+        {playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. {mode === 'today' ? 'A new board drops at midnight ET. Casual is unlimited.' : 'Casual is unlimited: press Start.'}</p>}
         <div className="sheet-actions">
           {game && <button type="button" className="btn btn-lg" onClick={() => setSheet(false)}>Cancel</button>}
           <button type="button" className="btn btn-primary btn-lg" disabled={!!busy || (mode === 'today' && (!signedIn || !!playedId))} onClick={start}>Start</button>
@@ -175,7 +186,9 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
   const target: ReelTeam | null = team ? { id: team.id, abbreviation: team.abbreviation, city: team.location, name: team.name, color: team.color, logoUrl: team.logoUrl } : null;
   const norm = (x: string) => x.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '');
   const q = norm(query).trim();
-  const list = team ? (game.hard ? (q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).slice(0, 6) : []) : showAll ? team.players : team.players.slice(0, 8)) : [];
+  // Type a name in any mode; without a query, Hard shows nothing and the other modes show the top 12 (or everyone).
+  const found = team && q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)) : null;
+  const list = team ? (found ? found.slice(0, game.hard ? 6 : 40) : game.hard ? [] : showAll ? team.players : team.players.slice(0, 12)) : [];
 
   return (
     <div className="g-wrap g-board">
@@ -197,8 +210,8 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
         {team && target ? (
           <section ref={stageRef} className="g-stage" aria-labelledby="nba-clock">
             <div className="g-team">
-              {game.edition === 'standard' ? <p className="g-kicker" style={{ margin: 0 }}>NBA 2K · current rosters</p> : <EraSpin spinKey={`${game.sessionId}-${spinKey}`} target={team.eraLabel} onLand={() => setEraLanded(true)} />}
-              {(eraLanded || game.edition === 'standard') && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
+              {game.edition === 'standard' ? <p className="g-kicker" style={{ margin: 0 }}>NBA 2K · current rosters</p> : <EraReel eras={ERAS.map((e) => ({ key: e.key, label: e.label }))} target={team.era} targetLabel={ERAS.find((e) => e.key === team.era)?.label ?? team.eraLabel} spinKey={`${game.sessionId}-${eraKey}`} onLand={() => { setEraLanded(true); if (!teamMoved) setLanded(true); }} />}
+              {(eraLanded || game.edition === 'standard' || !teamMoved) && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${teamKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
               <div className="g-spin-status" aria-live="polite">
                 <p className="g-kicker" style={{ margin: 0 }} id="nba-clock">{landed ? `Pick one ${team.eraLabel} ${team.name} player` : 'Spinning'}</p>
                 {game.hard ? <span className="g-kicker" style={{ margin: 0 }}>No re-spins</span> : (
@@ -211,12 +224,18 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
             </div>
             {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : (
               <div className="g-roster in">
-                {game.hard && (
+                {game.hard ? (
                   <>
                     <label htmlFor="nba-q" className="g-group-h" style={{ display: 'block' }}>Name a {team.eraLabel} {team.name} player</label>
                     <input id="nba-q" type="search" autoComplete="off" autoFocus placeholder={`Type a ${team.name} player's name`} value={query} onChange={(e) => setQuery(e.target.value)} />
                     <p className="hint" aria-live="polite">{q.length < 1 ? 'Type a letter to start. Stats stay hidden until the season is played.' : list.length ? `${list.length} match${list.length === 1 ? '' : 'es'}` : `No ${team.name} player by that name in this era.`}</p>
                   </>
+                ) : (
+                  <div className="g-find">
+                    <label htmlFor="nba-find" className="sr-only">Find a {team.eraLabel} {team.name} player</label>
+                    <input id="nba-find" type="search" autoComplete="off" placeholder={`Find a ${team.name} player`} value={query} onChange={(e) => setQuery(e.target.value)} />
+                    {q.length >= 1 && <p className="hint" aria-live="polite">{list.length ? `${list.length} match${list.length === 1 ? '' : 'es'}` : `No ${team.name} player by that name in this era.`}</p>}
+                  </div>
                 )}
                 <ul className="g-list">
                   {list.map((p) => (
@@ -230,7 +249,7 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
                     </li>
                   ))}
                 </ul>
-                {!game.hard && team.players.length > 8 && <button type="button" className="btn-link g-more" onClick={() => setShowAll((s) => !s)}>{showAll ? 'Show fewer' : `Show all ${team.players.length}`}</button>}
+                {!game.hard && !found && team.players.length > 12 && <button type="button" className="btn-link g-more" onClick={() => setShowAll((s) => !s)}>{showAll ? 'Show fewer' : `Show all ${team.players.length}`}</button>}
               </div>
             )}
           </section>
@@ -271,32 +290,6 @@ export function EightyTwoGame({ franchises, signedIn, initialMode, modeFromLink 
         </div>
       </aside>
       {setupSheet}
-    </div>
-  );
-}
-
-/** Flicks through the eras and lands on the one the server drew, then hands over to the team reel. */
-function EraSpin({ spinKey, target, onLand }: { spinKey: string; target: string; onLand: () => void }) {
-  const [shown, setShown] = useState(target);
-  const [done, setDone] = useState(false);
-  const landRef = useRef(onLand);
-  landRef.current = onLand;
-  useEffect(() => {
-    setDone(false);
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const steps = reduce ? 3 : 12;
-    let i = 0;
-    const id = setInterval(() => {
-      i++;
-      if (i >= steps) { clearInterval(id); setShown(target); setDone(true); landRef.current(); return; }
-      setShown(ERAS[i % ERAS.length].label);
-    }, reduce ? 120 : 70);
-    return () => clearInterval(id);
-  }, [spinKey, target]);
-  return (
-    <div className={`nba-era${done ? ' in' : ''}`} aria-hidden="true">
-      <span className="nba-era-k">Era</span>
-      <span className="nba-era-v num">{shown}</span>
     </div>
   );
 }

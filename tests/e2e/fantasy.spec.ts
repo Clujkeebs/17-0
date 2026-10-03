@@ -2,12 +2,6 @@ import { expect, test } from '@playwright/test';
 import postgres from 'postgres';
 
 // Test databases have no Sleeper data; give skill players a stand-in projection so the tools have players.
-test.beforeAll(async () => {
-  const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
-  await sql`update players set fantasy_proj_ppg = round((overall_rating / 5.0)::numeric, 1), fantasy_games = 0
-    where fantasy_proj_ppg is null and fantasy_ppg is null and is_active and position in ('QB','HB','FB','WR','TE')`;
-  await sql.end();
-});
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('gl-cookie-ack', '1')); });
 
 test('fantasy hub links to every tool and rankings filter by position', async ({ page }) => {

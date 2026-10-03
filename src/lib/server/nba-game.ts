@@ -132,12 +132,19 @@ async function board(teamId: number, era: EraKey): Promise<NbaTeamView | null> {
  * The board for a round is a pure function of the seed, the round and the re-spins used, so a session cannot
  * be refreshed into a better draw and everyone on Today sees the same first spin.
  */
-async function draw(seed: string, round: number, p: NbaPayload, keepEra?: EraKey): Promise<{ era: EraKey; teamId: number }> {
+async function draw(seed: string, round: number, p: NbaPayload, keepEra?: EraKey, keepTeam?: number): Promise<{ era: EraKey; teamId: number }> {
   const teams = p.edition === 'standard' ? { ...Object.fromEntries(ERAS.map((e) => [e.key, [] as number[]])), '2020s': await teams2k() } as Record<EraKey, number[]> : await eraTeams();
   if (p.edition === 'standard') keepEra = '2020s';
   const rng = createRng(`82:${seed}:${round}:${p.eraRespinsUsed}:${p.teamRespinsUsed}`);
   const used = new Set(p.picks.map((x) => x.teamId));
   const eras = ERAS.filter((e) => teams[e.key].some((t) => !used.has(t)));
+  // Era re-spin: a different era, keeping the franchise when it played in one (only the era changes).
+  if (keepTeam !== undefined && !keepEra) {
+    const others = eras.filter((e) => e.key !== p.current?.era);
+    const withTeam = others.filter((e) => teams[e.key].includes(keepTeam));
+    if (withTeam.length) return { era: rng.pick(withTeam.map((e) => e.key)) as EraKey, teamId: keepTeam };
+    if (others.length) { const e = rng.pick(others.map((x) => x.key)) as EraKey; const pool = teams[e].filter((t) => !used.has(t)); if (pool.length) return { era: e, teamId: rng.pick(pool) }; }
+  }
   const era = keepEra ?? rng.pick(eras.map((e) => e.key));
   const open = teams[era].filter((t) => !used.has(t) && t !== (keepEra ? p.current?.teamId : -1));
   if (!open.length) throw new NbaError('No franchises left to spin. Start a new game.', 409);
@@ -203,7 +210,7 @@ export async function respinNba(sessionId: string, tok: string, what: 'era' | 't
   if (what === 'era' && (p.edition === 'standard' || p.eraRespinsUsed >= ERA_RESPINS)) throw new NbaError(p.edition === 'standard' ? 'Standard has no eras to re-spin.' : 'Your era re-spin is used.');
   if (what === 'team' && p.teamRespinsUsed >= (p.edition === 'standard' ? STANDARD_TEAM_RESPINS : TEAM_RESPINS)) throw new NbaError('Your team re-spins are used.');
   const next: NbaPayload = { ...p, eraRespinsUsed: p.eraRespinsUsed + (what === 'era' ? 1 : 0), teamRespinsUsed: p.teamRespinsUsed + (what === 'team' ? 1 : 0) };
-  next.current = await draw(s.seed, p.picks.length, next, what === 'team' ? p.current.era : undefined);
+  next.current = await draw(s.seed, p.picks.length, next, what === 'team' ? p.current.era : undefined, what === 'era' ? p.current.teamId : undefined);
   await save(s.id, next);
   return state(s.id, next);
 }
