@@ -10,6 +10,7 @@ const COMMANDS = [
   { cmd: 'nba', label: 'Refresh NBA', hint: 'ESPN history and 82-0 win line' },
   { cmd: 'legends', label: 'Rebuild legends', hint: 'All-time legends and win lines' },
   { cmd: 'mlb', label: 'Refresh MLB', hint: 'Stats API history for 162-0' },
+  { cmd: 'pickem', label: "Sync Pick 'em", hint: 'ESPN scoreboard, then pay right picks' },
   { cmd: 'cache', label: 'Clear caches', hint: 'Leaderboards show changes now' },
 ] as const;
 

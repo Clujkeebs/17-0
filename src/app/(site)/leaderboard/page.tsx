@@ -55,6 +55,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
             {gamesFor(sport).map((g) => (
               <Link key={g.slug} className={`lb-chip${g.slug === entry.slug ? ' on' : ''}`} href={href({ game: g.slug, hard: false })} aria-current={g.slug === entry.slug ? 'page' : undefined}>{g.name}</Link>
             ))}
+            {sport === 'nfl' && <Link className="lb-chip" href="/pickem#standings">Pick &apos;em</Link>}
           </nav>
           <div className="row lb-filters">
             <nav aria-label="Period" className="seg">

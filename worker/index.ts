@@ -42,6 +42,7 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
     if (job.name === 'nba') return refreshNba(false);
     if (job.name === 'legends') return refreshLegends(true);
     if (job.name === 'mlb') return refreshMlb();
+    if (job.name === 'pickem') return import('@/lib/server/pickem').then((m) => m.syncPickem());
     const summary = await runSync({ dryRun: false });
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
     await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
@@ -86,6 +87,10 @@ void (async () => {
   void refreshNba(false);
   void refreshLegends(true);
   void refreshMlb();
+  // Pick 'em: this week's NFL games and results, every 20 minutes (finished games pay out on each run).
+  const pickem = () => import('@/lib/server/pickem').then((m) => m.syncPickem()).catch((e) => console.warn('[pickem] sync failed', (e as Error).message));
+  void pickem();
+  setInterval(() => void pickem(), 20 * 60_000);
   // Shop launch: points for every ranked game played before the shop existed (once; idempotent).
   void import('@/lib/server/points').then((p) => p.backfillPoints()).then((n) => console.log('[points] launch backfill paid', n)).catch((e) => console.warn('[points] backfill failed', (e as Error).message));
   if (process.env.CALIBRATE === '1') {

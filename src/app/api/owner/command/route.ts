@@ -7,8 +7,8 @@ import { requireOwner } from '@/lib/server/owner';
 
 export const runtime = 'nodejs';
 
-const Body = z.object({ cmd: z.enum(['sync', 'fantasy', 'nba', 'legends', 'mlb', 'cache']) });
-const LABEL = { sync: 'Ratings sync started.', fantasy: 'Fantasy points refresh started.', nba: 'NBA history refresh started.', legends: 'All-time legends rebuild started.', mlb: 'MLB history refresh started.', cache: 'Caches cleared.' } as const;
+const Body = z.object({ cmd: z.enum(['sync', 'fantasy', 'nba', 'legends', 'mlb', 'pickem', 'cache']) });
+const LABEL = { sync: 'Ratings sync started.', fantasy: 'Fantasy points refresh started.', nba: 'NBA history refresh started.', legends: 'All-time legends rebuild started.', mlb: 'MLB history refresh started.', pickem: "Pick 'em sync and payouts started.", cache: 'Caches cleared.' } as const;
 
 /** Owner buttons: run a worker job now, or clear the caches so changes show up immediately. */
 export async function POST(req: Request) {

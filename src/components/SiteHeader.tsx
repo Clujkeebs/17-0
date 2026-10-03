@@ -15,6 +15,7 @@ export function SiteHeader({ minimal = false }: { minimal?: boolean }) {
             <ul className="nav">
               <li className="hide-xxs"><Link href="/games">Games</Link></li>
               <li className="hide-xs"><Link href="/fantasy">Fantasy</Link></li>
+              <li className="hide-sm"><Link href="/pickem">Pick &apos;em</Link></li>
               <li className="hide-sm"><Link href="/leaderboard">Leaders</Link></li>
               <li className="hide-sm"><Link href="/shop">Shop</Link></li>
               <li className="hide-sm"><Link href="/players">Players</Link></li>
