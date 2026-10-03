@@ -41,6 +41,21 @@ export function rankPlayers(players: FPlayer[], teams = 12, superflex = false): 
   return ranked;
 }
 
+/**
+ * Tier numbers (1 = best) for a list already sorted by value, best first. A new tier starts wherever the drop to the
+ * next player is clearly bigger than the usual drop in that list (more than 1.6 times the median, and at least 0.4
+ * points per game), so tiers follow real cliffs in the values rather than fixed sizes.
+ */
+export function tiers(values: number[]): number[] {
+  if (!values.length) return [];
+  const gaps = values.slice(1).map((v, i) => values[i] - v);
+  const sorted = [...gaps].sort((a, b) => a - b);
+  const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+  const cut = Math.max(0.4, median * 1.6);
+  let t = 1;
+  return values.map((_, i) => (i > 0 && gaps[i - 1] > cut ? ++t : t));
+}
+
 /** Overall pick numbers for one draft slot in a snake draft. */
 export function snakePicks(slot: number, teams: number, rounds: number): number[] {
   return Array.from({ length: rounds }, (_, r) => r * teams + (r % 2 === 0 ? slot : teams - slot + 1));

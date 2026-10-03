@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { balancers, evaluateTrade, EXTRA_WEIGHT, rankPlayers, replacementLevels, snakePicks, tradeVerdict, waiverTargets, type FPlayer } from '@/lib/fantasy/rank';
+import { balancers, evaluateTrade, EXTRA_WEIGHT, rankPlayers, tiers, replacementLevels, snakePicks, tradeVerdict, waiverTargets, type FPlayer } from '@/lib/fantasy/rank';
 
 const mk = (id: string, pos: FPlayer['pos'], value: number, extra: Partial<FPlayer> = {}): FPlayer => ({ id, slug: id, name: id, pos, team: 'T', teamColor: '#000', logoUrl: null, img: null, value, recent: null, ppg: null, proj: null, games: 4, popularity: 10, trend: 0, ...extra });
 const pool: FPlayer[] = [
@@ -71,5 +71,13 @@ describe('trade calculator engine', () => {
     const after = evaluateTrade(give, [...get, fix.players[0]], repl);
     expect(Math.abs(after.diff)).toBeLessThan(Math.abs(before.diff));
     expect(balancers(pool, give, give, repl)).toBeNull();
+  });
+});
+
+describe('cheat sheet tiers', () => {
+  it('breaks only at clear drops', () => {
+    expect(tiers([20, 19.8, 19.6, 17, 16.9, 16.8, 14, 13.9])).toEqual([1, 1, 1, 2, 2, 2, 3, 3]);
+    expect(tiers([10, 9.9, 9.8, 9.7])).toEqual([1, 1, 1, 1]);
+    expect(tiers([])).toEqual([]);
   });
 });

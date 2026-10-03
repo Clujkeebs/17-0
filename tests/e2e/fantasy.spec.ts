@@ -45,6 +45,16 @@ test('cheat sheet shows targets for each pick', async ({ page }) => {
   await expect(page.locator('.cs-rounds > li').first()).toContainText('Pick 12');
   await expect(page.locator('.cs-rounds > li').nth(1)).toContainText('Pick 13');
   await expect(page.locator('.cs-targets li').first()).toBeVisible();
+  // The printable sheet: hidden on screen, shown (and the rest hidden) when printing from the button.
+  await expect(page.locator('.cs-print')).toBeHidden();
+  await page.evaluate(() => { (window as unknown as { printed: boolean }).printed = false; window.print = () => { (window as unknown as { printed: boolean }).printed = true; }; });
+  await page.getByRole('button', { name: 'Print or save as PDF' }).click();
+  expect(await page.evaluate(() => (window as unknown as { printed: boolean }).printed)).toBe(true);
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('.cs-print')).toBeVisible();
+  await expect(page.locator('.cs-print')).toContainText('Pick 12');
+  await expect(page.locator('.csp-col')).toHaveCount(4);
+  await expect(page.locator('.cs-rounds')).toBeHidden();
 });
 
 test('draft order randomizer orders every team', async ({ page }) => {
