@@ -14,9 +14,9 @@ export function SiteHeader({ minimal = false }: { minimal?: boolean }) {
           <nav aria-label="Primary">
             <ul className="nav">
               <li className="hide-xxs"><Link href="/games">Games</Link></li>
-              <li className="hide-xs"><Link href="/leaderboard">Leaders</Link></li>
+              <li className="hide-xs"><Link href="/fantasy">Fantasy</Link></li>
+              <li className="hide-sm"><Link href="/leaderboard">Leaders</Link></li>
               <li className="hide-sm"><Link href="/players">Players</Link></li>
-              <li className="hide-sm"><Link href="/blog">Blog</Link></li>
               <li className="nav-cta"><Link href="/games/17-0">Play 17-0</Link></li>
               <li className="nav-me"><HeaderProfile /></li>
             </ul>

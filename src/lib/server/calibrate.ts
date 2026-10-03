@@ -21,7 +21,7 @@ async function boards(format: FormatKey) {
   for (const t of teams) {
     const list: Pick[] = players.filter((p) => p.teamId === t).map((p) => ({
       slot: 'QB', teamId: t, name: p.fullName, group: positionGroup(p.position), attributes: p.attributes as never,
-      ...(fantasy ? { fantasy: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg) } : {}),
+      ...(fantasy ? { fantasy: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : {}),
     }));
     for (const c of coaches.filter((c) => c.teamId === t)) list.push({ slot: 'HC', teamId: t, name: c.fullName, group: 'HC', coachImpact: c.coachImpactScore });
     byTeam.set(t, list);

@@ -19,6 +19,7 @@ export function SiteFooter() {
             <ul className="footer-links">
               <li><Link href="/games/17-0">17-0</Link></li>
               <li><Link href="/games/build-a-player">Build a Player</Link></li>
+              <li><Link href="/fantasy">Fantasy tools</Link></li>
               <li><Link href="/leaderboard">Leaderboard</Link></li>
               <li><Link href="/players">Players</Link></li>
               <li><Link href="/teams">Teams</Link></li>

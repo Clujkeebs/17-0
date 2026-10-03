@@ -87,7 +87,7 @@ export async function gradeSeventeen(ctx: Ctx) {
     }
     if (teamId === null) throw new GradeError('Unknown player.');
     return { slot: p.slot, teamId, name: pl.fullName, group: positionGroup(pl.position), attributes: pl.attributes as Attributes, overall: pl.overallRating,
-      ...(isFantasy(format) ? { fantasy: fantasyValue(pl.fantasyPpg, pl.fantasyGames, pl.fantasyProjPpg) } : {}) };
+      ...(isFantasy(format) ? { fantasy: fantasyValue(pl.fantasyPpg, pl.fantasyGames, pl.fantasyProjPpg, pl.fantasyRecent) } : {}) };
   });
   for (const p of full) {
     if (!payload.teams.includes(p.teamId)) throw new GradeError(`${p.name} is not on one of your spun teams.`);

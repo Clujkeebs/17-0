@@ -100,7 +100,7 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
     const list: PublicPlayer[] = [...(legends.get(id) ?? []), ...players.filter((p) => p.teamId === id)].map((p) => {
       const group = positionGroup(p.position);
       const attrs = position ? Object.fromEntries(BUILD_CATEGORIES[position].map((k) => [k, (p.attributes as Record<string, number>)[k] ?? 50])) : undefined;
-      return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}), ...(fantasy ? { fpts: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg) } : {}) };
+      return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}), ...(fantasy ? { fpts: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : {}) };
     }).filter((p) => (allowed ? allowed.has(p.group) : p.slots!.length > 0));
     // Fantasy boards list by points, best first.
     if (fantasy) list.sort((a, b) => (b.fpts ?? 0) - (a.fpts ?? 0));

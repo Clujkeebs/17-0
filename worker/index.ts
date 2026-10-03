@@ -33,7 +33,7 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
     const summary = await runSync({ dryRun: false });
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
     await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
-    await refreshFantasy();
+    // Fantasy points refresh on their own schedule (after game days), not with the daily ratings sync.
     await refreshNba(true);
     console.log('[sync] done', JSON.stringify(summary).slice(0, 600));
     // Fresh ratings: purge the web service's ISR pages so player pages update now, not in a day.

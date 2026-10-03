@@ -46,6 +46,13 @@ export const players = pgTable('players', {
   fantasyGames: integer('fantasy_games'),
   fantasyProjPpg: real('fantasy_proj_ppg'),
   fantasyUpdatedAt: timestamp('fantasy_updated_at', { withTimezone: true }),
+  /** Recent form: PPR points per game over the last four games played, newest weighted most (4-3-2-1). */
+  fantasyRecent: real('fantasy_recent'),
+  sleeperId: text('sleeper_id'),
+  /** Sleeper's popularity rank (lower is more drafted and rostered); used to find waiver-wire players. */
+  sleeperRank: integer('sleeper_rank'),
+  /** Adds across Sleeper leagues in the last 48 hours. */
+  fantasyTrend: integer('fantasy_trend'),
 }, (t) => [index('players_team_idx').on(t.teamId), index('players_pos_idx').on(t.position)]);
 
 export const coaches = pgTable('coaches', {

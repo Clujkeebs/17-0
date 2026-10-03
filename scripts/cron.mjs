@@ -1,5 +1,6 @@
 // Railway cron entry. Runs every 15 minutes, dispatches the jobs that are due, then exits.
-// Schedules (UTC): madden-sync 10:00 daily (6 AM ET), coach-recompute Mondays 11:00, maintenance 08:00 daily, queue-health every run.
+// Schedules (UTC): madden-sync 10:00 daily (6 AM ET), coach-recompute Mondays 11:00, maintenance 08:00 daily, queue-health every run,
+// fantasy-sync 13:00 Mon, Tue and Fri (9 AM ET, after Sunday, Monday night and Thursday night games).
 const base = process.env.INTERNAL_WEB_URL ?? 'http://localhost:3000';
 const secret = process.env.CRON_SECRET;
 if (!secret) { console.error('CRON_SECRET missing'); process.exit(1); }
@@ -11,6 +12,7 @@ const jobs = ['queue-health'];
 if (h === 10 && first) jobs.push('madden-sync');
 if (dow === 1 && h === 11 && first) jobs.push('coach-recompute');
 if (h === 8 && first) jobs.push('maintenance');
+if ((dow === 1 || dow === 2 || dow === 5) && h === 13 && first) jobs.push('fantasy-sync');
 const forced = process.argv[2];
 if (forced) jobs.splice(0, jobs.length, forced);
 
