@@ -15,7 +15,8 @@ export type SoccerLeague = (typeof SOCCER_LEAGUES)[number]['key'];
 export const leagueName = (k: string) => SOCCER_LEAGUES.find((l) => l.key === k)?.name ?? k;
 
 type J = Record<string, any>;
-const UA = { headers: { 'user-agent': 'Mozilla/5.0 (compatible; UnbeatenBot/1.0; +https://playunbeaten.com)' } };
+// ESPN's site API rejects bot-style user agents (the probe used this one and got every team).
+const UA = { headers: { 'user-agent': 'Mozilla/5.0' } };
 async function get(url: string): Promise<J | null> {
   for (let i = 0; i < 3; i++) {
     try { const r = await fetch(url, UA); if (r.ok) return (await r.json()) as J; if (r.status === 404) return null; } catch { /* retry */ }
