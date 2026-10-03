@@ -1,5 +1,6 @@
 import { games } from '@/lib/minigames/games';
 import { nbaGames } from '@/lib/minigames/nba/games';
+import { puzzleGames } from '@/lib/minigames/puzzles/games';
 
 /**
  * Every ranked game on the site, grouped by sport, in the order the hub and leaderboards show them.
@@ -19,6 +20,7 @@ export const GAMES: GameEntry[] = [
   { slug: '82-0', name: '82-0', sport: 'nba', hard: true },
   ...nbaGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nba' as const })),
   { slug: '162-0', name: '162-0', sport: 'mlb', hard: true },
+  ...puzzleGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'puzzles' as const })),
 ];
 
 export const gameEntry = (slug: string) => GAMES.find((g) => g.slug === slug);

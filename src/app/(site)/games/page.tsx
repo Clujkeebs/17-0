@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { games } from '@/lib/minigames/games';
 import { nbaGames } from '@/lib/minigames/nba/games';
+import { puzzleGames } from '@/lib/minigames/puzzles/games';
 import { ArrowIcon } from '@/components/Icons';
 
 export const metadata: Metadata = {
@@ -25,15 +26,16 @@ const FEATURED = [
 
 export default async function GamesHub({ searchParams }: { searchParams: Promise<{ sport?: string }> }) {
   const sport = (await searchParams).sport;
-  const nba = sport === 'nba', mlb = sport === 'mlb';
+  const nba = sport === 'nba', mlb = sport === 'mlb', puzzles = sport === 'puzzles';
   return (
     <div className="container section">
       <p className="eyebrow">Free · New puzzles at midnight ET</p>
       <h1 style={{ maxWidth: '16ch' }}>Every game, every day.</h1>
       <nav className="sport-tabs" aria-label="Sport">
-        <Link href="/games" aria-current={!nba && !mlb ? 'page' : undefined}>Football</Link>
+        <Link href="/games" aria-current={!nba && !mlb && !puzzles ? 'page' : undefined}>Football</Link>
         <Link href="/games?sport=nba" aria-current={nba ? 'page' : undefined}>Basketball</Link>
         <Link href="/games?sport=mlb" aria-current={mlb ? 'page' : undefined}>Baseball</Link>
+        <Link href="/games?sport=puzzles" aria-current={puzzles ? 'page' : undefined}>Puzzles</Link>
       </nav>
       <p className="muted" style={{ maxWidth: '58ch', fontSize: '1.1rem' }}>
         Each game has two modes. <strong>Today</strong> is the same puzzle for everyone, one attempt, ranked on the leaderboard (free account needed). <strong>Casual</strong> is unlimited and open to anyone.
@@ -74,7 +76,18 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </span>
           </div>
         </div>
-      </>) : mlb ? null : (<>
+      </>) : mlb ? null : puzzles ? (
+        <div className="hub-grid">
+          {puzzleGames.map((g) => (
+            <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+              <span className="eyebrow">New daily</span>
+              <h3>{g.name}</h3>
+              <p>{g.tagline}</p>
+              <span className="hub-cta">Play <ArrowIcon size={14} /></span>
+            </Link>
+          ))}
+        </div>
+      ) : (<>
       <div className="hub-featured">
         {FEATURED.map((g, i) => (
           <Link key={g.slug} href={`/games/${g.slug}`} className={`hub-card hub-feature ${i === 0 ? 'hub-dark' : ''}`}>

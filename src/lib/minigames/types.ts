@@ -23,7 +23,7 @@ export interface ScoreResult {
 export interface MiniGame<Puzzle = unknown, Answer = unknown, Data = GameData> {
   slug: string;
   /** Basketball games draw on the NBA season tables instead of the Madden player list. */
-  sport?: 'nba';
+  sport?: 'nba' | 'puzzles';
   name: string;
   tagline: string;
   howTo: string[];
@@ -31,7 +31,8 @@ export interface MiniGame<Puzzle = unknown, Answer = unknown, Data = GameData> {
   generate(seed: string, data: Data): Puzzle;
   /** What the client is allowed to see before answering. */
   publicView(p: Puzzle): unknown;
-  score(p: Puzzle, answer: Answer): ScoreResult;
+  /** ctx.elapsedMs: server-measured time from loading the puzzle to submitting (timed games). */
+  score(p: Puzzle, answer: Answer, ctx?: { elapsedMs?: number }): ScoreResult;
   /**
    * Optional per-step feedback for guess games (e.g. "right team, older, higher OVR").
    * Must not reveal the full answer. Not saved; the final score is recomputed from the submitted answer.

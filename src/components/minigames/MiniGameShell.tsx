@@ -16,6 +16,8 @@ export interface RenderArgs<P> {
   /** Submit the final answer. Resolves with the scored result. */
   submit: (answer: unknown) => Promise<MiniResult | null>;
   busy: boolean;
+  /** The puzzle's seed, for games that check guesses one at a time on the server. */
+  seed: string;
 }
 
 /**
@@ -92,7 +94,7 @@ export function MiniGameShell<P>({ slug, name, tagline, howTo, signedIn, render,
       {!needsAccount && !data && !error && <div className="m-card"><div className="skeleton" style={{ height: 240 }} /></div>}
 
       {data && !result && data.puzzle != null && (
-        <section className="m-card">{render({ puzzle: data.puzzle as P, mode, submit, busy })}</section>
+        <section className="m-card">{render({ puzzle: data.puzzle as P, mode, submit, busy, seed: data.seed ?? '' })}</section>
       )}
 
       {result && (
@@ -106,7 +108,7 @@ export function MiniGameShell<P>({ slug, name, tagline, howTo, signedIn, render,
           </div>
           <div className="row" style={{ marginTop: 20 }}>
             <button className="btn btn-primary" onClick={() => { setMode('casual'); setRound((r) => r + 1); }}>{mode === 'casual' ? 'Play again' : 'Play Casual'}</button>
-            {mode === 'today' && <Link className="btn" href={`/leaderboard?tab=daily&game=${slug}`}>Leaderboard</Link>}
+            {mode === 'today' && <Link className="btn" href={`/leaderboard?game=${slug}&period=today`}>Leaderboard</Link>}
             <Link className="btn" href="/games">More games</Link>
           </div>
         </section>

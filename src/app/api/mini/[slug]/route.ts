@@ -8,12 +8,14 @@ import { dailyDateET } from '@/lib/game/daily';
 import { errorJson, json } from '@/lib/server/request';
 import { limitByIp } from '@/lib/server/rate-limit';
 import { earnForResult } from '@/lib/server/points';
-import { invalidatePrefix } from '@/lib/server/redis';
+import { getRedis, invalidatePrefix } from '@/lib/server/redis';
 import { readChecks } from '@/lib/minigames/checks';
 
 export const runtime = 'nodejs';
 
 const todaySeed = (slug: string, date: string) => `mini:${slug}:${date}`;
+/** Server clock for timed games: set when the puzzle is first served (never reset by a reload), read at submit. */
+const clockKey = (slug: string, seed: string, userId: string | null) => `mini:t0:${slug}:${userId ?? 'anon'}:${seed}`;
 
 async function existingToday(userId: string, slug: string, date: string) {
   const [r] = await db.select().from(schema.gameResults)
@@ -43,6 +45,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   }
   try {
     const puzzle = game.generate(seed, await dataFor(game));
+    const uid = mode === 'today' ? (await auth().catch(() => null))?.user?.id ?? null : null;
+    await getRedis().set(clockKey(slug, seed, uid), String(Date.now()), 'EX', 2 * 86400, 'NX').catch(() => {});
     return json({ mode, date, seed, puzzle: game.publicView(puzzle) });
   } catch (e) {
     console.error(`[mini:${slug}]`, (e as Error).message);
@@ -72,7 +76,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   let result;
   let finalAnswer = answer;
   if (mode === 'today' && userId && game.applyChecks) finalAnswer = game.applyChecks(answer, await readChecks(slug, date, userId));
-  try { result = game.score(game.generate(seed, await dataFor(game)), finalAnswer); }
+  const t0 = Number(await getRedis().get(clockKey(slug, seed, mode === 'today' ? userId : null)).catch(() => null));
+  const elapsedMs = t0 > 0 ? Date.now() - t0 : undefined;
+  try { result = game.score(game.generate(seed, await dataFor(game)), finalAnswer, { elapsedMs }); }
   catch (e) { return errorJson(400, (e as Error).message || 'Invalid answer.'); }
   const resultData = { summary: result.summary, detail: result.detail, perfect: !!result.perfect };
   try {

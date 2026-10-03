@@ -1,0 +1,35 @@
+/* Sports Connections */
+.cx-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cx-tile { min-height: 68px; padding: 6px 4px; border: 0; border-radius: 10px; background: #EEECE6; color: var(--bone); font: inherit; line-height: 1.1; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; min-width: 0; }
+.cx-first { font-size: .68rem; font-weight: 500; }
+.cx-last { font-size: .8rem; font-weight: 800; letter-spacing: -0.01em; max-width: 100%; }
+.cx-tile.on { background: #2B2B2B; color: #fff; }
+.cx-tile:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+.cx-solved { display: grid; gap: 8px; margin-bottom: 8px; }
+.cx-group { border-radius: 10px; padding: 12px; text-align: center; display: grid; gap: 2px; color: #1A1A1A; }
+.cx-group strong { text-transform: uppercase; letter-spacing: .04em; font-size: .85rem; }
+.cx-group span { font-size: .85rem; }
+.cx-l0 { background: #F2DD7C; } .cx-l1 { background: #A9D39E; } .cx-l2 { background: #AEC6EE; } .cx-l3 { background: #C9A9E3; }
+.cx-missed { opacity: .55; }
+.cx-mistakes { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 14px 0 0; font-size: .9rem; }
+.cx-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--steel); }
+.cx-dot.on { background: #2B2B2B; }
+@media (min-width: 600px) { .cx-tile { min-height: 76px; } .cx-first { font-size: .8rem; } .cx-last { font-size: .95rem; } }
+
+/* Sports Wordle */
+.wd-grid { display: grid; gap: 6px; max-width: 330px; margin: 8px auto 0; }
+.wd-cell { aspect-ratio: 1; display: grid; place-items: center; border: 2px solid var(--steel); border-radius: 6px; font-size: 1.6rem; font-weight: 800; text-transform: uppercase; }
+.wd-typed { border-color: #6B7280; }
+.wd-hit { background: #15803D; border-color: #15803D; color: #fff; }
+.wd-near { background: #A16207; border-color: #A16207; color: #fff; }
+.wd-miss { background: #6B7280; border-color: #6B7280; color: #fff; }
+.wd-kb { display: grid; gap: 6px; margin-top: 8px; }
+.wd-kr { display: flex; gap: 5px; justify-content: center; }
+.wd-key { flex: 1 1 0; max-width: 42px; min-height: 52px; padding: 0; border: 0; border-radius: 6px; background: #E5E3DC; color: var(--bone); font: inherit; font-weight: 700; cursor: pointer; }
+.wd-key.wd-wide { max-width: 64px; flex-grow: 1.6; font-size: .78rem; }
+.wd-key.wd-hit { background: #15803D; color: #fff; }
+.wd-key.wd-near { background: #A16207; color: #fff; }
+.wd-key.wd-miss { background: #6B7280; color: #fff; }
+.cx-last.cx-long { font-size: .68rem; }
+@media (min-width: 600px) { .cx-last.cx-long { font-size: .85rem; } }
+.wd-row { display: contents; }
