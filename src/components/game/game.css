@@ -1,5 +1,6 @@
 /* Game UI. Light, calm, premium. Uses the global tokens only. */
-.g-wrap { max-width: 1200px; margin: 0 auto; padding: 32px 16px 96px; }
+.g-wrap { max-width: calc(1200px + 2 * var(--gutter)); margin: 0 auto; padding: 32px var(--gutter) 64px; }
+@media (min-width: 900px) { .g-wrap { padding-top: 48px; } }
 .g-kicker { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--bone-dim); margin: 0 0 8px; }
 .g-title { font-size: clamp(2.4rem, 6vw, 4.5rem); line-height: 1.02; letter-spacing: -0.04em; font-weight: 700; margin: 0 0 20px; }
 .g-title-sm { font-size: clamp(1.8rem, 4vw, 2.8rem); }
@@ -94,8 +95,8 @@
 .b-rating { font-size: 3rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
 
 @media (max-width: 900px) {
-  .g-side { position: sticky; top: var(--header-h); z-index: 5; margin: 0 -16px 16px; }
-  .g-side-inner { border-radius: 0; border-left: 0; border-right: 0; padding: 10px 16px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); }
+  .g-side { position: sticky; top: var(--header-h); z-index: 5; margin: 0 calc(-1 * var(--gutter)) 16px; }
+  .g-side-inner { border-radius: 0; border-left: 0; border-right: 0; padding: 10px var(--gutter); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); }
   .g-side .g-kicker, .g-reset { display: none; }
   .g-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .g-slots li { border: 1px solid var(--steel) !important; border-radius: 10px; padding: 4px 8px; min-height: 0; grid-template-columns: 1fr; gap: 0; }

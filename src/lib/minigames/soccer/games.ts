@@ -2,6 +2,7 @@ import { createRng, type Rng } from '@/lib/game/prng';
 import type { MiniGame } from '../types';
 import { clubCard, lcard, scard, type SLeader, type SoccerGameData, type SStar } from './data';
 import { leagueName } from '@/lib/server/soccer-sync';
+import { topBy } from '../prominent';
 
 /**
  * Soccer mini games on ESPN data: current club rosters (Premier League, La Liga, Serie A, Bundesliga, Ligue 1,
@@ -22,6 +23,22 @@ const stars = (d: SoccerGameData) => { if (d.stars.length < 30) throw new Error(
 
 /* ------------------------------------------------------------------ Higher or Lower: Goals */
 
+/**
+ * Known names only: each league season's top 12 scorers and top 8 assist men (top 5 and 4 in MLS),
+ * not the whole 50-deep leader list.
+ */
+export function topOfLists(leaders: SLeader[]): SLeader[] {
+  const groups = new Map<string, SLeader[]>();
+  for (const l of leaders) { const k = `${l.league}:${l.season}`; groups.set(k, [...(groups.get(k) ?? []), l]); }
+  const keep = new Set<string>();
+  for (const [k, ls] of groups) {
+    const mls = k.startsWith('usa.1');
+    topBy(ls, (l) => l.goals, mls ? 5 : 12).forEach((l) => keep.add(l.key));
+    topBy(ls, (l) => l.assists, mls ? 4 : 8).forEach((l) => keep.add(l.key));
+  }
+  return leaders.filter((l) => keep.has(l.key));
+}
+
 type HLRound = { a: SLeader; b: SLeader; stat: 'goals' | 'assists'; label: string };
 export const soccerHigherLower: MiniGame<{ rounds: HLRound[] }, ('a' | 'b')[], SoccerGameData> = {
   slug: 'soccer-higher-lower', sport: 'soccer',
@@ -31,13 +48,18 @@ export const soccerHigherLower: MiniGame<{ rounds: HLRound[] }, ('a' | 'b')[], S
   generate(seed, data) {
     const rng = createRng(seed);
     if (data.leaders.length < 40) throw new Error('Soccer data is still loading. Try again in a few minutes.');
+    const pool = topOfLists(data.leaders);
+    const used = new Set<number>();
     return { rounds: tries(10, () => {
-      const a = rng.pick(data.leaders);
+      const a = rng.pick(pool);
+      if (used.has(a.playerId)) return null;
       const stat = rng.next() < 0.75 ? 'goals' : 'assists';
       const av = a[stat];
       if (av < (stat === 'goals' ? 5 : 4)) return null;
-      const near = data.leaders.filter((b) => b.playerId !== a.playerId && b.league === a.league && b.season === a.season && b[stat] !== av && Math.abs(b[stat] - av) <= Math.max(2, Math.round(av * 0.3)));
-      return near.length ? { a, b: rng.pick(near), stat, label: `${leagueName(a.league)} ${stat} in ${a.seasonLabel.split(' ').pop()}` } : null;
+      const near = pool.filter((b) => b.playerId !== a.playerId && !used.has(b.playerId) && b.league === a.league && b.season === a.season && b[stat] !== av && Math.abs(b[stat] - av) <= Math.max(2, Math.round(av * 0.3)));
+      if (!near.length) return null;
+      const b = rng.pick(near); used.add(a.playerId); used.add(b.playerId);
+      return { a, b, stat, label: `${leagueName(a.league)} ${stat} in ${a.seasonLabel.split(' ').pop()}` };
     }) };
   },
   publicView: (p) => ({ rounds: p.rounds.map((r) => ({ a: lcard(r.a), b: lcard(r.b), label: r.label })) }),

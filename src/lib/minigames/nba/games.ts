@@ -1,6 +1,7 @@
 import { createRng, type Rng } from '@/lib/game/prng';
 import type { MiniGame } from '../types';
 import { ncard, rcard, type NbaGameData, type NRated, type NSeason } from './data';
+import { starIds, topBy } from '../prominent';
 
 /**
  * Basketball mini games, built on real per-game stats (ESPN) since 1984-85. Each one reuses a football game's
@@ -34,14 +35,20 @@ export const nbaHigherLower: MiniGame<{ rounds: HLRound[] }, ('a' | 'b')[], NbaG
   howTo: ['Each round shows two players, each in one season, and one per-game stat.', 'Tap the player who averaged more. Ties count either way.', 'Ten rounds. The reveal shows every number.'],
   generate(seed, data) {
     const rng = createRng(seed);
-    const pool = data.seasons.filter((s) => s.value >= 72);
+    // Known names only: the 150 best players since 1985 (by their best season), in their good seasons.
+    const stars = starIds(data.seasons, (s) => s.playerId, (s) => s.value, 150);
+    const pool = data.seasons.filter((s) => s.value >= 72 && stars.has(s.playerId));
+    const used = new Set<number>();
     return { rounds: tries(10, () => {
       const a = rng.pick(pool), st = rng.pick(STATS);
+      if (used.has(a.playerId)) return null;
       const av = r1(a[st.key]);
       if (av < (st.key === 'ppg' ? 8 : st.key === 'rpg' || st.key === 'apg' ? 3 : 0.8)) return null;
       // Close calls from roughly the same era make it a game.
-      const near = pool.filter((b) => b.playerId !== a.playerId && Math.abs(b.season - a.season) <= 8 && r1(b[st.key]) !== av && Math.abs(b[st.key] - a[st.key]) <= Math.max(0.3, av * 0.15));
-      return near.length ? { a, b: rng.pick(near), stat: st.key, label: st.label } : null;
+      const near = pool.filter((b) => b.playerId !== a.playerId && !used.has(b.playerId) && Math.abs(b.season - a.season) <= 8 && r1(b[st.key]) !== av && Math.abs(b[st.key] - a[st.key]) <= Math.max(0.3, av * 0.15));
+      if (!near.length) return null;
+      const b = rng.pick(near); used.add(a.playerId); used.add(b.playerId);
+      return { a, b, stat: st.key, label: st.label };
     }) };
   },
   publicView: (p) => ({ rounds: p.rounds.map((r) => ({ a: ncard(r.a), b: ncard(r.b), label: r.label })) }),
@@ -139,7 +146,8 @@ export const nba2kHigherLower: MiniGame<{ rounds: HL2kRound[] }, ('a' | 'b')[], 
   howTo: ['Each round shows two current players.', 'Tap the one with the higher NBA 2K overall. Ties count either way.', `Ten rounds. The reveal shows every rating. ${SOURCE_NOTE}`],
   generate(seed, data) {
     const rng = createRng(seed);
-    const pool = ratedPool(data, 74);
+    // Known names only: the top 70 overalls in the game.
+    const pool = topBy(ratedPool(data, 74), (r) => r.ovr, 70);
     const used = new Set<number>();
     return { rounds: tries(10, () => {
       const a = rng.pick(pool);

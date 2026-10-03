@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { LogoMark } from './Icons';
 import { SITE } from '@/lib/site';
 import { HeaderProfile } from './HeaderProfile';
-import { SiteNav, type NavItem } from './SiteNav';
+import { SiteNav, type NavItem, type NavSection } from './SiteNav';
 import { SPORTS, gamesFor } from '@/lib/game-registry';
 
 /** The big draft games lead each sport; the rest of the list follows in hub order. */
@@ -18,19 +18,21 @@ function menus(): NavItem[] {
       return { title: s.label, href: `/games?sport=${s.key}`, links: [...lead, ...rest].map((g) => ({ label: g.name, href: `/games/${g.slug}`, strong: lead.includes(g) })), more: list.length > lead.length + rest.length ? `All ${list.length}` : undefined };
     }),
   };
-  const fantasy: NavItem = {
-    label: 'Fantasy', href: '/fantasy',
-    sections: [{ title: 'Fantasy football', href: '/fantasy', links: [
+  const fantasySection: NavSection = { title: 'Fantasy football', href: '/fantasy', links: [
       { label: 'Rankings', href: '/fantasy/rankings' }, { label: 'Waiver wire', href: '/fantasy/waivers' }, { label: 'Trade calculator', href: '/fantasy/trade' },
       { label: 'Draft cheat sheet', href: '/fantasy/cheat-sheet' }, { label: 'Tier list maker', href: '/fantasy/tier-list' }, { label: 'Draft order', href: '/fantasy/draft-order' },
-    ] }],
-  };
+  ] };
+  const fantasy: NavItem = { label: 'Fantasy', href: '/fantasy', sections: [fantasySection], hideOn: 'narrow' };
   const more: NavItem = {
-    label: 'More', sections: [{ title: 'Browse', links: [
+    label: 'More', sections: [
+      // Phones keep only Games, Fantasy and More in the top row, so these fold in here.
+      { title: 'Play', only: 'phone', links: [{ label: "Pick 'em", href: '/pickem' }, { label: 'Leaderboards', href: '/leaderboard' }, { label: 'Shop', href: '/shop' }, { label: 'Play 17-0', href: '/games/17-0', strong: true }] },
+      { ...fantasySection, only: 'narrow' },
+      { title: 'Browse', links: [
       { label: 'Players', href: '/players' }, { label: 'Teams', href: '/teams' }, { label: 'Coaches', href: '/coaches' }, { label: 'Positions', href: '/positions' }, { label: 'Blog', href: '/blog' },
     ] }],
   };
-  return [games, fantasy, { label: "Pick 'em", href: '/pickem' }, { label: 'Leaders', href: '/leaderboard' }, { label: 'Shop', href: '/shop' }, more];
+  return [games, fantasy, { label: "Pick 'em", href: '/pickem', hideOn: 'phone' }, { label: 'Leaders', href: '/leaderboard', hideOn: 'phone' }, { label: 'Shop', href: '/shop', hideOn: 'phone' }, more];
 }
 
 /** One header on every page, games included: always there, menus open on hover (desktop) or tap (phone). */

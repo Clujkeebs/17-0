@@ -2,6 +2,7 @@ import { createRng } from '@/lib/game/prng';
 import { ATTRIBUTE_LABELS, type AttributeKey } from '@/lib/game/attributes';
 import { card } from '../data';
 import type { GPlayer, MiniGame } from '../types';
+import { FOOTBALL_STARS, topBy } from '../prominent';
 
 const ROUNDS = 10;
 const STATS: { key: 'ovr' | AttributeKey; label: string }[] = [
@@ -21,16 +22,22 @@ export const higherLower: MiniGame<Puzzle, Answer> = {
   howTo: ['Each round shows two players and one Madden rating.', 'Tap the player you think rates higher. Ties count either way.', 'Ten rounds. The reveal shows every number.'],
   generate(seed, data) {
     const rng = createRng(seed);
-    const pool = data.players.filter((p) => p.ovr >= 72);
+    // Known names only: the top starters at each skill and defensive group (no linemen or kickers).
+    const pool = Object.entries(FOOTBALL_STARS).flatMap(([g, n]) => topBy(data.players.filter((p) => p.group === g), (p) => p.ovr, n));
     const rounds: Round[] = [];
-    while (rounds.length < ROUNDS) {
+    const used = new Set<string>();
+    for (let i = 0; rounds.length < ROUNDS && i < 4000; i++) {
       const a = rng.pick(pool);
       const s = rng.pick(STATS);
+      if (used.has(a.id)) continue;
       // Close matchups make it a game: same position group, within a few points.
-      const near = pool.filter((b) => b.id !== a.id && b.group === a.group && Math.abs(val(b, s.key) - val(a, s.key)) <= 4 && val(b, s.key) !== val(a, s.key));
+      const near = pool.filter((b) => b.id !== a.id && !used.has(b.id) && b.group === a.group && Math.abs(val(b, s.key) - val(a, s.key)) <= 4 && val(b, s.key) !== val(a, s.key));
       if (!near.length) continue;
-      rounds.push({ a, b: rng.pick(near), stat: s.key, label: s.key === 'ovr' ? 'Overall' : ATTRIBUTE_LABELS[s.key as AttributeKey] ?? s.label });
+      const b = rng.pick(near);
+      used.add(a.id); used.add(b.id);
+      rounds.push({ a, b, stat: s.key, label: s.key === 'ovr' ? 'Overall' : ATTRIBUTE_LABELS[s.key as AttributeKey] ?? s.label });
     }
+    if (rounds.length < ROUNDS) throw new Error('Ratings are still loading. Try again in a few minutes.');
     return { rounds };
   },
   publicView: (p) => ({ rounds: p.rounds.map((r) => ({ a: card(r.a), b: card(r.b), label: r.label })) }),
