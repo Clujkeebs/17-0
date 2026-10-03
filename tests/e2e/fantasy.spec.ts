@@ -38,18 +38,43 @@ test('draft order randomizer orders every team', async ({ page }) => {
   await expect(page.locator('.do-order li')).toHaveCount(4);
 });
 
-test('tier list: add a player, tap to move him into S, share link keeps him there', async ({ page }) => {
+test('tier list: the pool starts full, tap or drag into tiers, add a custom entry, share keeps it all', async ({ page }) => {
   await page.goto('/fantasy/tier-list', { waitUntil: 'networkidle' });
-  await page.getByLabel('Add a player').fill('a');
-  await page.locator('.ps-list button').first().click();
-  const chip = page.locator('[data-tier="pool"] .tl-chip').first();
-  await expect(chip).toBeVisible();
-  await chip.click();
-  await page.getByRole('button', { name: 'Move to tier S' }).click();
-  await expect(page.locator('[data-tier="S"] .tl-chip')).toHaveCount(1);
+  await page.evaluate(() => localStorage.removeItem('gl-tier-list-v2'));
+  await page.reload({ waitUntil: 'networkidle' });
+  const pool = page.locator('[data-row="pool"] .tl-chip');
+  expect(await pool.count()).toBeGreaterThan(20);
+  // Tap a player, then a tier.
+  await pool.first().click();
+  await page.getByRole('button', { name: 'Move to S' }).click();
+  await expect(page.locator('[data-row="S"] .tl-chip')).toHaveCount(1);
+  // Drag the S player down into A (both rows on screen).
+  await page.locator('[data-row="S"]').scrollIntoViewIfNeeded();
+  const src = page.locator('[data-row="S"] .tl-chip').first(), dst = page.locator('[data-row="A"] .tl-items');
+  const a = await src.boundingBox(), b = await dst.boundingBox();
+  await page.mouse.move(a!.x + a!.width / 2, a!.y + a!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b!.x + 40, b!.y + b!.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await expect(page.locator('[data-row="A"] .tl-chip')).toHaveCount(1);
+  await expect(page.locator('[data-row="S"] .tl-chip')).toHaveCount(0);
+  await pool.first().click();
+  await page.getByRole('button', { name: 'Move to S' }).click();
+  // Position filter and a custom entry.
+  await page.getByRole('button', { name: 'QB', exact: true }).click();
+  for (const pos of await page.locator('[data-row="pool"] .tl-pos').allTextContents()) expect(pos).toBe('QB');
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await page.getByLabel('Add a player or anyone else').fill('My cousin Ray');
+  await page.getByRole('button', { name: /as a custom entry/ }).click();
+  const ray = page.locator('[data-row="pool"] .tl-chip', { hasText: 'My cousin Ray' });
+  await ray.click();
+  await page.getByRole('button', { name: 'Move to F' }).click();
+  await expect(page.locator('[data-row="F"] .tl-chip', { hasText: 'My cousin Ray' })).toBeVisible();
   await page.getByRole('button', { name: 'Share tier list' }).click();
   const link = await page.getByRole('dialog', { name: 'Share' }).getByRole('link', { name: /Text message/ }).getAttribute('href');
   const url = new URL(decodeURIComponent(link!.replace('sms:?&body=', '')));
   await page.goto(url.pathname + url.search);
-  await expect(page.locator('[data-tier="S"] .tl-chip')).toHaveCount(1);
+  await expect(page.locator('[data-row="S"] .tl-chip')).toHaveCount(1);
+  await expect(page.locator('[data-row="A"] .tl-chip')).toHaveCount(1);
+  await expect(page.locator('[data-row="F"] .tl-chip', { hasText: 'My cousin Ray' })).toBeVisible();
 });
