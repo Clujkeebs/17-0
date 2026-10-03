@@ -252,6 +252,10 @@ export const nbaPlayers = pgTable('nba_players', {
   fullName: text('full_name').notNull(),
   position: text('position').notNull(),
   headshot: text('headshot'),
+  /** NBA 2K overall rating (source: nba2klab.com), current players only; null when not in 2K. */
+  rating2k: integer('rating_2k'),
+  rating2kPosition: text('rating_2k_position'),
+  rating2kUpdatedAt: timestamp('rating_2k_updated_at', { withTimezone: true }),
 });
 
 /** One row per player, team and season, with per-game regular season stats and the 82-0 value. */
