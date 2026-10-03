@@ -43,6 +43,7 @@ export default async function ProfilePage() {
       <div className="row" style={{ gap: 8, margin: '16px 0 8px' }}>
         <ProfileEditor displayName={user.name ?? ''} fallbackName={user.username ?? 'Player'} image={user.image} favoriteGames={user.favoriteGames ?? []}
           nameFont={user.nameFont ?? 'classic'} nameColor={user.nameColor ?? 'ink'} longest={stats.longest} owner={style.owner} allGames={ALL_GAMES} />
+        {style.owner && <a className="btn" href="/owner">Notes to Claude</a>}
         {user.username && <ShareButton label="Share profile" text={`${name} on Unbeaten.`} url={`/u/${user.username}`} />}
       </div>
       {favs.length > 0 && (

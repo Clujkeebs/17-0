@@ -57,6 +57,13 @@
       "when": 1790986987308,
       "tag": "0007_optional_email",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790987527120,
+      "tag": "0008_owner_notes",
+      "breakpoints": true
     }
   ]
 }

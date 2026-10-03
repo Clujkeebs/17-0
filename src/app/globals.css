@@ -502,3 +502,10 @@ html[data-rules=hidden] .rules-card { display: none; }
 .sheet-more .muted { font-size: .82rem; }
 .sheet-more-i { font-size: 1.4rem; font-weight: 600; line-height: 1; }
 .sheet-more:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+
+/* Owner page */
+.owner-cmds { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.owner-notes { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.owner-reply { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--green); font-size: .92rem; }
+.owner-reply.done strong { color: #0B6B3A; }
+.owner-reply.needs-you strong { color: var(--orange); }

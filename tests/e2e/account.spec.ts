@@ -137,3 +137,29 @@ test('sign up with just a username and password, then sign back in with the user
   await expect(page.locator('.hp')).toBeVisible();
   await sql`delete from user_accounts where username = ${u}`;
 });
+
+test('owner page: only the owner sees it, notes save and log', async ({ page, request }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  // Signed out: the 404 page (Next streams it with a 200), never the notes.
+  expect(await (await request.get('/owner')).text()).not.toContain('What should change?');
+  expect((await request.post('/api/owner/notes', { data: { body: 'x' } })).status()).toBe(404);
+  const owner = 'clujkeebs@aol.com';
+  await sql`delete from user_accounts where email = ${owner}`;
+  await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
+  await page.goto('/register');
+  await page.locator('#reg-username').fill(`own2_${Date.now().toString(36)}`);
+  await page.locator('#reg-email').fill(owner);
+  await page.locator('main input[type=password]').first().fill('correct-horse-battery');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith('/register') && !url.pathname.startsWith('/login'));
+  await page.goto('/profile');
+  await page.getByRole('link', { name: 'Notes to Claude' }).click();
+  await page.getByLabel('What should change?').fill('e2e: the reel is slow on school laptops');
+  await page.getByRole('button', { name: 'Send note' }).click();
+  await expect(page.getByRole('status')).toContainText('Sent');
+  await expect(page.locator('.owner-notes')).toContainText('the reel is slow');
+  await page.getByRole('button', { name: /Clear caches/ }).click();
+  await expect(page.getByRole('status')).toContainText('Caches cleared');
+  await sql`delete from owner_notes where body like 'e2e:%'`;
+  await sql`delete from user_accounts where email = ${owner}`;
+});

@@ -26,7 +26,10 @@ const connection = getRedis();
 const concurrency = { [QUEUE_NAMES.sync]: 1, [QUEUE_NAMES.newsletter]: 5, [QUEUE_NAMES.og]: 2 };
 
 const handlers: Record<string, (job: Job) => Promise<unknown>> = {
-  [QUEUE_NAMES.sync]: async () => {
+  [QUEUE_NAMES.sync]: async (job) => {
+    // Owner buttons on /owner queue single refreshes by name; anything else is the full ratings sync.
+    if (job.name === 'fantasy') return refreshFantasy();
+    if (job.name === 'nba') return refreshNba(false);
     const summary = await runSync({ dryRun: false });
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
     await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));

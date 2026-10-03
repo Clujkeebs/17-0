@@ -266,6 +266,14 @@ export const nbaPlayerSeasons = pgTable('nba_player_seasons', {
   value: real('value').notNull(),
 }, (t) => [primaryKey({ columns: [t.playerId, t.teamId, t.season] }), index('nba_ps_team_season_idx').on(t.teamId, t.season)]);
 
+/** The owner's notes to the agent that maintains the site, sent from /owner (school computers block AI chat). */
+export const ownerNotes = pgTable('owner_notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  body: text('body').notNull(),
+  page: text('page'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('owner_notes_created_idx').on(t.createdAt)]);
+
 /** Footer questionnaire: a 1-5 rating and an optional note. Anonymous unless the sender is signed in. */
 export const feedback = pgTable('feedback', {
   id: uuid('id').primaryKey().defaultRandom(),
