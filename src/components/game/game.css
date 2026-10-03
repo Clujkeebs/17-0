@@ -63,7 +63,7 @@
 
 .g-done { border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); padding: 48px 32px; }
 
-.g-side { position: sticky; top: 80px; }
+.g-side { position: sticky; top: calc(var(--header-h) + 16px); }
 .g-side-inner { border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); padding: 20px; }
 @media (max-width: 900px) { .g-side { position: static; margin-bottom: 20px; } .g-side-inner { padding: 14px 16px; } }
 .g-slots { list-style: none; margin: 0; padding: 0; }
@@ -94,7 +94,7 @@
 .b-rating { font-size: 3rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
 
 @media (max-width: 900px) {
-  .g-side { position: sticky; top: 56px; z-index: 5; margin: 0 -16px 16px; }
+  .g-side { position: sticky; top: var(--header-h); z-index: 5; margin: 0 -16px 16px; }
   .g-side-inner { border-radius: 0; border-left: 0; border-right: 0; padding: 10px 16px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); }
   .g-side .g-kicker, .g-reset { display: none; }
   .g-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -126,7 +126,7 @@
 @media (hover: hover) and (pointer: fine) { .b-trait:hover:not(:disabled) { background: var(--bone); color: var(--navy); border-color: var(--bone); } }
 .b-trait:disabled { opacity: .5; cursor: default; }
 .g-board .g-slots li { grid-template-columns: minmax(56px, auto) 1fr; column-gap: 12px; }
-.g-roster-wait { padding: 20px 24px 24px; display: grid; gap: 8px; } .g-stage { scroll-margin-top: 150px; } @media (min-width: 901px) { .g-stage { scroll-margin-top: 80px; } }
+.g-roster-wait { padding: 20px 24px 24px; display: grid; gap: 8px; } .g-stage { scroll-margin-top: calc(var(--header-h) + 94px); } @media (min-width: 901px) { .g-stage { scroll-margin-top: calc(var(--header-h) + 16px); } }
 .g-modes { display: inline-flex; padding: 4px; border: 1px solid var(--steel); border-radius: 999px; background: var(--green); }
 .g-modes button { border: 0; background: transparent; padding: 8px 18px; border-radius: 999px; font: 600 .9rem var(--font-ui); color: var(--bone-dim); cursor: pointer; min-height: 40px; }
 .g-modes button.on { background: var(--bone); color: var(--navy); }

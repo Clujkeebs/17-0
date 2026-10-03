@@ -129,6 +129,8 @@ Plan: `/root/.claude/plans/floating-baking-platypus.md` top section (Q1 162-0 fi
   - 82-0 and 162-0: the era spins on its own slot reel (`EraReel` in `Reel.tsx`), and only what you re-spin moves. Team re-spin keeps the era (no era animation). Era re-spin now keeps your franchise, choosing among eras it played in (`draw(..., keepTeam)`), and only falls back to a new team when the franchise has no other era.
   - Type a player in every mode: a find box above the board in 17-0, 82-0 and 162-0 normal mode (with values), Hard mode unchanged. 82-0 shows 12 players by default (was 8). In 17-0, typing "coach" (or "hc") lists the head coach, in Hard mode too.
 
+- Header (shipped): one header on every page including games (`SiteHeader` + client `SiteNav`). Games, Fantasy and More open menus on hover (mouse) or click/tap; Escape, outside click or navigation closes them. Games menu is built from `game-registry` (big draft game first, then up to 6 per sport, "All N" link). Phones: logo, a sideways-scrolling menu row and the profile button; menus open as a full-width panel under the header. `--header-h` (64px, 56px on phones) drives sticky offsets (`.g-side`, `.shop-look`, `.g-stage` scroll margin). Admin pages keep the minimal header.
+
 ## Remembered setup (2026-10-03)
 - 17-0, 82-0, 162-0 and Build a Player remember the last game's choices, Mode included (localStorage `gl-17-0-setup`, `gl-82-0-setup`, `gl-162-0-setup`, `gl-bap-mode` / `gl-bap-hard`). A link with `?mode=` (or `?position=` for Build a Player) wins; a remembered Today falls back to Casual when signed out or already played today.
 
