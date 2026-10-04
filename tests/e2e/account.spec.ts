@@ -115,6 +115,19 @@ test('owner account gets the owner style; nobody else can', async ({ page, reque
   // Even the owner cannot "equip" the owner keys through the API, and nobody can name themselves [OWNER].
   expect((await page.request.patch('/api/user/profile', { data: { nameFont: 'neon' } })).status()).toBe(403);
   expect((await page.request.patch('/api/user/profile', { data: { displayName: '[OWNER]' } })).status()).toBe(400);
+  // Own profile lists every badge, the unearned ones greyed out.
+  await expect(page.locator('.badges h2')).toContainText('of 17');
+  await page.locator('.badges-more summary').click();
+  await expect(page.locator('.badges .badge')).toHaveCount(17);
+  // Daily Double: the owner moves it to today, the shop says so; then switches it off and the note goes away.
+  const todayIdx = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })).getDay();
+  expect((await page.request.post('/api/owner/manage', { data: { action: 'double', day: todayIdx } })).ok()).toBe(true);
+  await page.goto('/shop');
+  await expect(page.locator('.double-note.on')).toContainText('Daily Double today');
+  expect((await page.request.post('/api/owner/manage', { data: { action: 'double', day: null } })).ok()).toBe(true);
+  await page.goto('/shop');
+  await expect(page.locator('.double-note')).toHaveCount(0);
+  await page.request.post('/api/owner/manage', { data: { action: 'double', day: 6 } });
   await sql`delete from user_accounts where email = ${owner}`;
   void request;
 });

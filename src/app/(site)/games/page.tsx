@@ -1,3 +1,4 @@
+import { DoubleNote } from '@/components/DoubleNote';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { games } from '@/lib/minigames/games';
@@ -63,6 +64,7 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
       <p className="muted" style={{ maxWidth: '58ch', fontSize: '1.1rem' }}>
         Each game has two modes. <strong>Today</strong> is the same puzzle for everyone, one attempt, ranked on the leaderboard (free account needed). <strong>Casual</strong> is unlimited and open to anyone.
       </p>
+      <DoubleNote />
 
       {nba || mlb ? (
         <div className="hub-featured">

@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getUserById, getUserStats, nameStyleOf } from '@/lib/server/account';
+import { badgesFor } from '@/lib/server/badges';
+import { Badges } from '@/components/Badges';
 import { StyledName } from '@/components/StyledName';
 import { Avatar } from '@/components/HeaderProfile';
 import { ShareButton } from '@/components/game/ShareButton';
@@ -25,7 +27,7 @@ export default async function ProfilePage() {
   if (!session?.user?.id) redirect('/login?next=/profile');
   const user = await getUserById(session.user.id);
   if (!user) redirect('/login?next=/profile');
-  const stats = await getUserStats(user.id);
+  const [stats, badges] = await Promise.all([getUserStats(user.id), badgesFor(user.id).catch(() => [])]);
   const name = user.name || user.username || 'Unnamed';
   const style = nameStyleOf(user);
   const favs = (user.favoriteGames ?? []).map((slug) => ALL_GAMES.find((g) => g.slug === slug)).filter((g): g is { slug: string; name: string } => !!g);
@@ -84,6 +86,7 @@ export default async function ProfilePage() {
         <div className="stat"><span className="v" style={stats.perfectSeasons > 0 ? { color: 'var(--orange)' } : undefined}>{stats.perfectSeasons}</span><span className="l">Perfect seasons</span></div>
       </div>
 
+      <Badges earned={badges} showLocked />
       {stats.byType.length > 0 && (
         <section aria-labelledby="bytype-h" style={{ marginBottom: 32 }}>
           <h2 id="bytype-h">By game</h2>

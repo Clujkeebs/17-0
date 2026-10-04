@@ -4,6 +4,8 @@ import { computeStreak, dailyDateET } from '@/lib/game/daily';
 import { GAMES } from '@/lib/game-registry';
 import { SHOP_ITEMS, shopItem, type ItemKind } from '@/lib/shop';
 import { isOwnerEmail } from '@/lib/cosmetics';
+import { DOUBLE_DEFAULT_DAY, weekdayOf } from '@/lib/badges';
+import { getRedis } from './redis';
 
 /**
  * Points: earned by playing, spent in the shop. Every change is a row in point_events with a unique
@@ -39,12 +41,25 @@ export async function grant(userId: string, amount: number, reason: string, ref:
   return tx ? run(tx) : db.transaction(run);
 }
 
+/**
+ * Daily Double: the weekday when ranked games pay double (owner can move it or switch it off on /owner).
+ * Redis `points:double-day` holds 0-6 or "off"; unset means the default day.
+ */
+export async function doubleDay(): Promise<number | null> {
+  const v = await getRedis().get('points:double-day').catch(() => null);
+  if (v === 'off') return null;
+  const n = Number(v);
+  return v !== null && Number.isInteger(n) && n >= 0 && n <= 6 ? n : DOUBLE_DEFAULT_DAY;
+}
+export const isDoubleToday = async (date = dailyDateET()) => (await doubleDay()) === weekdayOf(date);
+
 /** Points for one graded game. Ranked (Today) results earn the most; casual play earns a little, capped per day. */
 export async function earnForResult(userId: string, gameType: string, isDaily: boolean, perfect: boolean, resultId: string) {
   const today = dailyDateET();
   if (isDaily) {
-    await grant(userId, EARN.daily, 'daily', `${gameType}:${today}`);
-    if (perfect) await grant(userId, EARN.perfect, 'perfect', `${gameType}:${today}`);
+    const x = (await isDoubleToday(today)) ? 2 : 1;
+    await grant(userId, EARN.daily * x, 'daily', `${gameType}:${today}`);
+    if (perfect) await grant(userId, EARN.perfect * x, 'perfect', `${gameType}:${today}`);
     // Streak milestones: the streak is days in a row with at least one ranked game.
     const rows = await db.selectDistinct({ d: schema.gameResults.dailyDate }).from(schema.gameResults)
       .where(and(eq(schema.gameResults.userId, userId), eq(schema.gameResults.isDaily, true)));

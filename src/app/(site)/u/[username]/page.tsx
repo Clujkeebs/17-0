@@ -6,6 +6,8 @@ import { StyledName } from '@/components/StyledName';
 import { Avatar } from '@/components/HeaderProfile';
 import { ShareButton } from '@/components/game/ShareButton';
 import { games } from '@/lib/minigames/games';
+import { badgesFor } from '@/lib/server/badges';
+import { Badges } from '@/components/Badges';
 
 export const dynamic = 'force-dynamic';
 type Props = { params: Promise<{ username: string }> };
@@ -26,7 +28,7 @@ export default async function PublicProfile({ params }: Props) {
   if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) notFound();
   const u = await getUserByUsername(username).catch(() => null);
   if (!u?.username) notFound();
-  const stats = await getUserStats(u.id);
+  const [stats, badges] = await Promise.all([getUserStats(u.id), badgesFor(u.id).catch(() => [])]);
   const name = u.name || u.username;
   const favs = (u.favoriteGames ?? []).map((slug) => ALL_GAMES.find((g) => g.slug === slug)).filter((g): g is { slug: string; name: string } => !!g);
   return (
@@ -46,6 +48,7 @@ export default async function PublicProfile({ params }: Props) {
         <div className="stat"><span className="v">{stats.bestRecord ?? '--'}</span><span className="l">Best 17-0 record</span></div>
         <div className="stat"><span className="v" style={stats.perfectSeasons > 0 ? { color: 'var(--orange)' } : undefined}>{stats.perfectSeasons}</span><span className="l">Perfect seasons</span></div>
       </div>
+      <Badges earned={badges} />
       {favs.length > 0 && (
         <section aria-labelledby="fav-h" style={{ marginBottom: 28 }}>
           <h2 id="fav-h">Favorite games</h2>

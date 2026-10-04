@@ -1,4 +1,5 @@
 'use client';
+import { DOUBLE_DEFAULT_DAY, WEEKDAYS } from '@/lib/badges';
 import { useEffect, useState } from 'react';
 import { SHOP_ITEMS } from '@/lib/shop';
 
@@ -14,6 +15,7 @@ export function OwnerTools({ games }: { games: { slug: string; name: string }[] 
   const [item, setItem] = useState(SHOP_ITEMS.find((i) => !i.ownerOnly)!.key);
   const [game, setGame] = useState(games[0]?.slug ?? '17-0');
   const [banner, setBanner] = useState('');
+  const [double, setDouble] = useState(String(DOUBLE_DEFAULT_DAY));
 
   async function call(body: object, label: string) {
     setBusy(label); setMsg(null);
@@ -55,6 +57,18 @@ export function OwnerTools({ games }: { games: { slug: string; name: string }[] 
         <div className="row" style={{ marginTop: 10, gap: 8 }}>
           <button type="button" className="btn btn-primary btn-sm" disabled={!!busy || !banner.trim()} onClick={() => call({ action: 'banner', text: banner }, 'banner')}>Put it up</button>
           <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => call({ action: 'banner', text: null }, 'banner')}>Take it down</button>
+        </div>
+      </div>
+
+      <h2 style={{ marginTop: 32 }}>Daily Double</h2>
+      <div className="card owner-tools">
+        <label htmlFor="ot-double">Ranked games pay double points on</label>
+        <div className="ot-row">
+          <select id="ot-double" value={double} onChange={(e) => setDouble(e.target.value)}>
+            {WEEKDAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
+            <option value="off">Off</option>
+          </select>
+          <button type="button" className="btn btn-sm btn-primary" disabled={!!busy} onClick={() => call({ action: 'double', day: double === 'off' ? null : Number(double) }, 'double')}>Save</button>
         </div>
       </div>
 

@@ -932,3 +932,19 @@ a.sn-sec-h:hover { color: var(--bone); }
   .csp-meta { flex: none; color: #555; font-size: 7pt; font-variant-numeric: tabular-nums; }
   .csp-foot { margin-top: 8px; font-size: 7pt; color: #555; }
 }
+
+/* ---------- Badges and Daily Double ---------- */
+.badges { margin: 8px 0 32px; }
+.badges h2 .muted { font-size: .95rem; font-weight: 500; margin-left: 6px; }
+.badges ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.badge { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--steel); border-radius: 14px; background: var(--surface); }
+.badge > span:last-child { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.badge-mark { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: var(--bone-dim); font-size: 1.1rem; }
+.badge.on .badge-mark { background: var(--bone); color: #FDE047; }
+.badge:not(.on) { opacity: .6; }
+.badge-desc { font-size: .82rem; color: var(--bone-dim); }
+.double-note { display: inline-block; margin: 0 0 16px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--steel); font-size: .9rem; color: var(--bone-dim); }
+.double-note.on { background: #FEF9C3; border-color: #CA8A04; color: var(--bone); }
+.badges-more { margin-top: 12px; }
+.badges-more summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
+@media (max-width: 560px) { .badges ul { grid-template-columns: 1fr 1fr; } .badge { padding: 8px; gap: 8px; } .badge-mark { width: 28px; height: 28px; font-size: .95rem; } .badge strong { font-size: .9rem; } .badge-desc { font-size: .75rem; } }

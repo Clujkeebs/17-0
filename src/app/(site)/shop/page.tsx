@@ -1,3 +1,4 @@
+import { DoubleNote } from '@/components/DoubleNote';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { auth } from '@/auth';
@@ -31,6 +32,7 @@ export default async function ShopPage() {
     <div className="container section shop">
       <span className="eyebrow">Shop</span>
       <h1>Spend your points.</h1>
+      <DoubleNote />
       <p className="muted" style={{ maxWidth: '62ch' }}>Points come from playing. Spend them on how your name looks on leaderboards and your profile. Points have no cash value and cannot be bought.</p>
       {user ? (
         <p className="row" style={{ gap: 10 }}><span className="pts-pill num" data-testid="balance">{user.points.toLocaleString('en-US')} pts</span><span className="muted">{user.pointsEarned.toLocaleString('en-US')} earned all time</span></p>

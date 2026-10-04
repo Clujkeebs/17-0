@@ -8,6 +8,7 @@ import { dailyDateET } from '@/lib/game/daily';
 import { grant } from '@/lib/server/points';
 import { shopItem } from '@/lib/shop';
 import { GAMES } from '@/lib/game-registry';
+import { WEEKDAYS } from '@/lib/badges';
 import { errorJson, json } from '@/lib/server/request';
 import { getRedis, invalidatePrefix } from '@/lib/server/redis';
 
@@ -21,6 +22,7 @@ const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('reset-today'), username: User, game: z.string().max(40) }),
   z.object({ action: z.literal('banner'), text: z.string().max(160).nullable() }),
   z.object({ action: z.literal('stats') }),
+  z.object({ action: z.literal('double'), day: z.number().int().min(0).max(6).nullable() }),
 ]);
 
 async function userByName(username: string) {
@@ -56,6 +58,12 @@ export async function POST(req: Request) {
     if (b.text?.trim()) await r.set('site:banner', b.text.trim()); else await r.del('site:banner');
     await audit(s.user.id, 'owner.banner', 'site', 'banner', { text: b.text });
     return json({ ok: true, message: b.text?.trim() ? 'Banner is up.' : 'Banner removed.' });
+  }
+
+  if (b.action === 'double') {
+    await getRedis().set('points:double-day', b.day === null ? 'off' : String(b.day));
+    await audit(s.user.id, 'owner.double', 'site', 'double', { day: b.day });
+    return json({ ok: true, message: b.day === null ? 'Daily Double is off.' : `Daily Double is now every ${WEEKDAYS[b.day]}.` });
   }
 
   const u = await userByName(b.username);
