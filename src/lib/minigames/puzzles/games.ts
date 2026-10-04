@@ -2,6 +2,7 @@ import { createRng, type Rng } from '@/lib/game/prng';
 import type { MiniGame } from '../types';
 import { WORDS, type PName, type PuzzleData } from './data';
 import { BANK, tileKey, tileKeys } from './connections-bank';
+import { buildCrossword, solutionRows, type Crossword } from './crossword';
 
 /**
  * Word and logic puzzles. Both are scored on the server from the guesses you made (ranked play records every
@@ -151,4 +152,64 @@ export const sportsWordle: MiniGame<WordlePuzzle, WordleAnswer, PuzzleData> = {
   },
 };
 
-export const puzzleGames = [sportsConnections, sportsWordle];
+/* ------------------------------------------------------------------ Sports Crossword */
+
+type XwPuzzle = Crossword;
+interface XwAnswer { rows: string[]; checks?: string[][]; wrongChecks?: number }
+const XW_CHECK_PENALTY_MS = 10_000;
+const xwClean = (rows: unknown, x: Crossword): string[] => {
+  const r = Array.isArray(rows) ? rows : [];
+  return Array.from({ length: x.rows }, (_, i) => Array.from({ length: x.cols }, (_, j) => {
+    const ch = String(r[i] ?? '')[j] ?? '';
+    return /^[A-Za-z]$/.test(ch) ? ch.toUpperCase() : ' ';
+  }).join(''));
+};
+/** Letters right, letters wrong (filled but not right), and empty squares, against the solution. */
+function xwCount(x: Crossword, rows: string[]) {
+  const sol = solutionRows(x);
+  let right = 0, wrong = 0, empty = 0;
+  sol.forEach((line, i) => line.split('').forEach((ch, j) => {
+    if (ch === '.') return;
+    const g = rows[i]?.[j] ?? ' ';
+    if (g === ch) right++; else if (g === ' ') empty++; else wrong++;
+  }));
+  return { right, wrong, empty, total: right + wrong + empty };
+}
+
+export const sportsCrossword: MiniGame<XwPuzzle, XwAnswer, PuzzleData> = {
+  slug: 'sports-crossword', sport: 'puzzles',
+  name: 'Sports Crossword',
+  tagline: 'A daily mini crossword of sports words: teams, legends, rules and slang.',
+  howTo: [
+    'Tap a square to type. Tap it again to switch between across and down. Tap a clue to jump to it.',
+    'Check tells you how many letters are wrong, not which ones. Each check that finds a mistake adds 10 seconds to your time.',
+    'Ranked by solving it, then fastest time.',
+  ],
+  generate: (seed) => buildCrossword(seed),
+  publicView: (x) => ({ rows: x.rows, cols: x.cols, words: x.words.map((w) => ({ num: w.num, dir: w.dir, row: w.row, col: w.col, len: w.word.length, clue: w.clue })) }),
+  check(x, guess) {
+    const rows = xwClean((guess as { rows?: unknown })?.rows, x);
+    const c = xwCount(x, rows);
+    return { wrong: c.wrong, empty: c.empty, solved: c.right === c.total };
+  },
+  maxChecks: 30,
+  // Ranked: the checks this player actually made decide the time penalty.
+  applyChecks: (a, checks) => ({ ...a, checks: checks.map((c) => (c as { rows?: string[] })?.rows ?? []) }),
+  score(x, answer, ctx) {
+    const rows = xwClean(answer?.rows, x);
+    const c = xwCount(x, rows);
+    const solved = c.right === c.total;
+    const wrongChecks = Array.isArray(answer?.checks)
+      ? answer.checks.filter((r) => xwCount(x, xwClean(r, x)).right !== c.total).length
+      : Math.max(0, Math.min(99, Number(answer?.wrongChecks) || 0));
+    const ms = (ctx?.elapsedMs ?? 0) + wrongChecks * XW_CHECK_PENALTY_MS;
+    return {
+      score: solved ? 100_000 + timeBonus(ms) : c.right * 10,
+      perfect: solved && wrongChecks === 0,
+      summary: solved ? clock(ms) : `${c.right}/${c.total} letters`,
+      detail: { solved, ms, wrongChecks, right: c.right, total: c.total, solution: solutionRows(x), words: x.words.map((w) => ({ num: w.num, dir: w.dir, word: w.word, clue: w.clue })) },
+    };
+  },
+};
+
+export const puzzleGames = [sportsConnections, sportsWordle, sportsCrossword];

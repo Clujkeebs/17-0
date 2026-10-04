@@ -30,3 +30,34 @@ test('Sports Connections casual: guesses are checked until the board ends', asyn
   await expect(page.locator('.m-score')).toHaveText(/groups|Solved/, { timeout: 20_000 });
   await expect(page.locator('.m-result .cx-group')).toHaveCount(4);
 });
+
+test('Sports Crossword casual: checks count mistakes, a full solve scores a time', async ({ page }) => {
+  await page.goto('/games/sports-crossword');
+  // The page may load more than one casual puzzle; the answer key is the one whose layout is on screen.
+  const seeds: string[] = [];
+  page.on('response', async (r) => { if (r.url().includes('/api/mini/sports-crossword?mode=casual')) seeds.push((await r.json().catch(() => ({}))).seed); });
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  await expect(page.locator('.xw-grid')).toBeVisible({ timeout: 20_000 });
+  const { buildCrossword, solutionRows } = await import('../../src/lib/minigames/puzzles/crossword');
+  const open = await page.getByRole('gridcell').evaluateAll((els) => els.map((e) => (e.getAttribute('aria-label') ?? '').replace(/, (empty|[A-Z])$/, '')).sort());
+  const sol = seeds.filter(Boolean).map((sd) => solutionRows(buildCrossword(sd))).find((rows) => {
+    const cells = rows.flatMap((line, r) => [...line].flatMap((ch, c) => (ch === '.' ? [] : [`Row ${r + 1}, column ${c + 1}`]))).sort();
+    return JSON.stringify(cells) === JSON.stringify(open);
+  })!;
+  expect(sol).toBeTruthy();
+  const fill = async (pick: (ch: string) => string) => {
+    for (const [r, line] of sol.entries()) for (const [c, ch] of [...line].entries()) {
+      if (ch === '.') continue;
+      await page.getByRole('gridcell', { name: new RegExp(`^Row ${r + 1}, column ${c + 1},`) }).click();
+      await page.keyboard.press(pick(ch));
+    }
+  };
+  // Wrong letters everywhere: the board checks itself when full and says how many are wrong.
+  await fill((ch) => (ch === 'Q' ? 'Z' : 'Q'));
+  await expect(page.locator('.xw .hint')).toHaveText(/letters? (are|is) wrong/, { timeout: 10_000 });
+  // Then the real answers: solved, scored as a time with one 10-second penalty.
+  await fill((ch) => ch);
+  await page.getByRole('button', { name: 'Check' }).click().catch(() => {});
+  await expect(page.locator('.m-score')).toHaveText(/^\d+:\d\d/, { timeout: 20_000 });
+  await expect(page.locator('.m-result .xw-grid')).toBeVisible();
+});
