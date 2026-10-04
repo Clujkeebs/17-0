@@ -134,13 +134,13 @@ function Play({ puzzle, submit, busy, seed, slug }: RenderArgs<P> & { slug: stri
         </span>
       </div>
       <p className="xw-bar" aria-live="polite">{active ? <><b>{active.num} {active.dir === 'across' ? 'Across' : 'Down'}</b> {active.clue}</> : ''}</p>
-      <div className="xw-grid" role="grid" aria-label="Crossword" style={{ gridTemplateColumns: `repeat(${cols}, var(--xw-cell))` }}>
+      <div className="xw-grid" role="group" aria-label="Crossword" style={{ gridTemplateColumns: `repeat(${cols}, var(--xw-cell))` }}>
         {Array.from({ length: rows }, (_, r) => Array.from({ length: cols }, (_, c) => {
           const k = `${r},${c}`;
           if (!open.has(k)) return <div key={k} className="xw-cell xw-block" aria-hidden="true" />;
           const on = r === cur.r && c === cur.c;
           return (
-            <button key={k} type="button" role="gridcell" className={`xw-cell${on ? ' xw-on' : inActive.has(k) ? ' xw-word' : ''}`} onClick={() => tap(r, c)}
+            <button key={k} type="button" className={`xw-cell${on ? ' xw-on' : inActive.has(k) ? ' xw-word' : ''}`} onClick={() => tap(r, c)}
               aria-label={`Row ${r + 1}, column ${c + 1}${grid[r][c] ? `, ${grid[r][c]}` : ', empty'}`}>
               {numAt.has(k) && <span className="xw-num">{numAt.get(k)}</span>}
               {grid[r][c]}

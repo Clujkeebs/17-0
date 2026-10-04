@@ -39,7 +39,7 @@ test('Sports Crossword casual: checks count mistakes, a full solve scores a time
   await page.getByRole('tab', { name: 'Casual' }).click();
   await expect(page.locator('.xw-grid')).toBeVisible({ timeout: 20_000 });
   const { buildCrossword, solutionRows } = await import('../../src/lib/minigames/puzzles/crossword');
-  const open = await page.getByRole('gridcell').evaluateAll((els) => els.map((e) => (e.getAttribute('aria-label') ?? '').replace(/, (empty|[A-Z])$/, '')).sort());
+  const open = await page.locator('.xw-grid button').evaluateAll((els) => els.map((e) => (e.getAttribute('aria-label') ?? '').replace(/, (empty|[A-Z])$/, '')).sort());
   const sol = seeds.filter(Boolean).map((sd) => solutionRows(buildCrossword(sd))).find((rows) => {
     const cells = rows.flatMap((line, r) => [...line].flatMap((ch, c) => (ch === '.' ? [] : [`Row ${r + 1}, column ${c + 1}`]))).sort();
     return JSON.stringify(cells) === JSON.stringify(open);
@@ -48,7 +48,7 @@ test('Sports Crossword casual: checks count mistakes, a full solve scores a time
   const fill = async (pick: (ch: string) => string) => {
     for (const [r, line] of sol.entries()) for (const [c, ch] of [...line].entries()) {
       if (ch === '.') continue;
-      await page.getByRole('gridcell', { name: new RegExp(`^Row ${r + 1}, column ${c + 1},`) }).click();
+      await page.getByRole('button', { name: new RegExp(`^Row ${r + 1}, column ${c + 1},`) }).click();
       await page.keyboard.press(pick(ch));
     }
   };
