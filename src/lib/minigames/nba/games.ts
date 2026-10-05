@@ -187,7 +187,7 @@ export const nba2kRankEm: MiniGame<Rank2k, string[], NbaGameData> = {
       const src = rng.shuffle(pool.filter((r) => (guards ? GUARDS : BIGS).has(r.position)));
       const picked: NRated[] = [];
       for (const r of src) { if (!picked.some((x) => x.ovr === r.ovr)) picked.push(r); if (picked.length === RANK_N) break; }
-      if (picked.length === RANK_N) return { groupName: guards ? 'Guards' : 'Forwards and centers', players: picked };
+      if (picked.length === RANK_N) return { groupName: guards ? 'Guard' : 'Frontcourt player', players: picked };
     }
     throw new Error('Not enough rated players to build this puzzle.');
   },

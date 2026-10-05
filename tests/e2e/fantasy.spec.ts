@@ -114,3 +114,11 @@ test("Start 'Em: ten fantasy calls, scored against the rankings values", async (
   }
   await expect(page.locator('.m-score')).toContainText('/10');
 });
+
+test("Rank 'Em: Fantasy orders five players and shows the true order", async ({ page }) => {
+  await page.goto('/games/fantasy-rank-em');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  await expect(page.locator('.gc-item')).toHaveCount(5, { timeout: 20_000 });
+  await page.getByRole('button', { name: 'Lock it in' }).click();
+  await expect(page.getByText(/pairs in order/)).toBeVisible();
+});

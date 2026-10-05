@@ -16,6 +16,7 @@ const TOOLS = [
   { href: '/fantasy/draft-order', name: 'Draft order randomizer', p: 'Paste the team names. Get a fair, shareable draft order.' },
   { href: '/fantasy/tier-list', name: 'Tier list maker', p: 'Type names, drag them into S through F, share your list.' },
   { href: '/games/fantasy-start-em', name: "Start 'Em (game)", p: 'Two players at the same spot. Who is scoring more per game? Ten calls, daily leaderboard.' },
+  { href: '/games/fantasy-rank-em', name: "Rank 'Em (game)", p: 'Five players at one position. Put them in points per game order.' },
 ];
 
 export default function FantasyHub() {
