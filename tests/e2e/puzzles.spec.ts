@@ -40,11 +40,13 @@ test('Sports Crossword casual: checks count mistakes, a full solve scores a time
   await expect(page.locator('.xw-grid')).toBeVisible({ timeout: 20_000 });
   const { buildCrossword, solutionRows } = await import('../../src/lib/minigames/puzzles/crossword');
   const open = await page.locator('.xw-grid button').evaluateAll((els) => els.map((e) => (e.getAttribute('aria-label') ?? '').replace(/, (empty|[A-Z])$/, '')).sort());
-  const sol = seeds.filter(Boolean).map((sd) => solutionRows(buildCrossword(sd))).find((rows) => {
+  const match = () => seeds.filter(Boolean).map((sd) => solutionRows(buildCrossword(sd))).find((rows) => {
     const cells = rows.flatMap((line, r) => [...line].flatMap((ch, c) => (ch === '.' ? [] : [`Row ${r + 1}, column ${c + 1}`]))).sort();
     return JSON.stringify(cells) === JSON.stringify(open);
-  })!;
-  expect(sol).toBeTruthy();
+  });
+  // The response body is read asynchronously; wait until the seed for the board on screen has arrived.
+  await expect.poll(() => !!match(), { timeout: 10_000 }).toBe(true);
+  const sol = match()!;
   const fill = async (pick: (ch: string) => string) => {
     for (const [r, line] of sol.entries()) for (const [c, ch] of [...line].entries()) {
       if (ch === '.') continue;
