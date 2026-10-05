@@ -23,7 +23,7 @@ function menus(): NavItem[] {
   };
   const fantasySection: NavSection = { title: 'Fantasy football', href: '/fantasy', links: [
       { label: 'Rankings', href: '/fantasy/rankings' }, { label: 'Waiver wire', href: '/fantasy/waivers' }, { label: 'Trade calculator', href: '/fantasy/trade' },
-      { label: 'Draft cheat sheet', href: '/fantasy/cheat-sheet' }, { label: 'Tier list maker', href: '/fantasy/tier-list' }, { label: 'Draft order', href: '/fantasy/draft-order' },
+      { label: 'Draft cheat sheet', href: '/fantasy/cheat-sheet' }, { label: 'Tier list maker', href: '/fantasy/tier-list' }, { label: 'Draft order', href: '/fantasy/draft-order' }, { label: "Start 'Em game", href: '/games/fantasy-start-em' },
   ] };
   const fantasy: NavItem = { label: 'Fantasy', href: '/fantasy', sections: [fantasySection], hideOn: 'narrow' };
   const more: NavItem = {

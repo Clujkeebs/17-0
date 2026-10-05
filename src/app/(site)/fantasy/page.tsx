@@ -15,6 +15,7 @@ const TOOLS = [
   { href: '/fantasy/cheat-sheet', name: 'Draft cheat sheet', p: 'Your league size and pick. Who to target at each of your picks.' },
   { href: '/fantasy/draft-order', name: 'Draft order randomizer', p: 'Paste the team names. Get a fair, shareable draft order.' },
   { href: '/fantasy/tier-list', name: 'Tier list maker', p: 'Type names, drag them into S through F, share your list.' },
+  { href: '/games/fantasy-start-em', name: "Start 'Em (game)", p: 'Two players at the same spot. Who is scoring more per game? Ten calls, daily leaderboard.' },
 ];
 
 export default function FantasyHub() {

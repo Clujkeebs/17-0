@@ -104,3 +104,13 @@ test('tier list: the pool starts full, tap or drag into tiers, add a custom entr
   await expect(page.locator('[data-row="A"] .tl-chip')).toHaveCount(1);
   await expect(page.locator('[data-row="F"] .tl-chip', { hasText: 'My cousin Ray' })).toBeVisible();
 });
+
+test("Start 'Em: ten fantasy calls, scored against the rankings values", async ({ page }) => {
+  await page.goto('/games/fantasy-start-em');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  for (let i = 0; i < 10; i++) {
+    await expect(page.getByText(`Round ${i + 1} of 10`)).toBeVisible({ timeout: 20_000 });
+    await page.locator('button.m-opt').first().click();
+  }
+  await expect(page.locator('.m-score')).toContainText('/10');
+});

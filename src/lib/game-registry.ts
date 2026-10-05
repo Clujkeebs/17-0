@@ -4,6 +4,7 @@ import { puzzleGames } from '@/lib/minigames/puzzles/games';
 import { top100Games } from '@/lib/minigames/top100/games';
 import { soccerGames } from '@/lib/minigames/soccer/games';
 import { mlbGames } from '@/lib/minigames/mlb/games';
+import { fantasyGames } from '@/lib/minigames/fantasy/games';
 
 /**
  * Every ranked game on the site, grouped by sport, in the order the hub and leaderboards show them.
@@ -20,6 +21,7 @@ export const GAMES: GameEntry[] = [
   { slug: '17-0', name: '17-0', sport: 'nfl', hard: true },
   { slug: 'build-a-player', name: 'Build a Player', sport: 'nfl', hard: true },
   ...games.map((g) => ({ slug: g.slug, name: g.name, sport: 'nfl' as const })),
+  ...fantasyGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nfl' as const })),
   { slug: '82-0', name: '82-0', sport: 'nba', hard: true },
   ...nbaGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nba' as const })),
   { slug: '162-0', name: '162-0', sport: 'mlb', hard: true },
