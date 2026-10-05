@@ -24,7 +24,10 @@ describe('Baseball mini games', () => {
       expect(view).not.toContain('"correct"');
       expect(view).not.toContain('"hr"');
       const rounds = (a as { rounds: { correct?: number }[] }).rounds;
-      if (g.slug === 'mlb-higher-lower') {
+      if (g.slug === 'mlb-rank-em') {
+        const r = g.score(a as never, (a as { players: { key: string }[] }).players.map((x) => x.key) as never) as { detail: { truth: { id: string }[] } };
+        expect(g.score(a as never, r.detail.truth.map((x) => x.id) as never).perfect).toBe(true);
+      } else if (g.slug === 'mlb-higher-lower') {
         const d = g.score(a as never, rounds.map(() => 'a') as never) as { detail: { av: number | string; bv: number | string }[] };
         const best = d.detail.map((x) => (Number(x.av) >= Number(x.bv) ? 'a' : 'b'));
         expect(g.score(a as never, best as never).perfect).toBe(true);
@@ -33,6 +36,16 @@ describe('Baseball mini games', () => {
       }
     });
   }
+  it("mlb-rank-em: five different players, five different numbers, one stat", () => {
+    const g = mlbGames.find((x) => x.slug === 'mlb-rank-em')!;
+    for (const seed of ['a', 'b', 'c', 'd']) {
+      const p = g.generate(seed, data) as { stat: string; players: BSeason[] };
+      expect(new Set(p.players.map((x) => x.playerId)).size).toBe(5);
+      const get = (x: BSeason) => ({ hr: x.bat?.hr, rbi: x.bat?.rbi, sb: x.bat?.sb, so: x.pitch?.so, sv: x.pitch?.sv } as Record<string, number | undefined>)[p.stat];
+      expect(p.players.every((x) => get(x) !== undefined)).toBe(true);
+      expect(new Set(p.players.map(get)).size).toBe(5);
+    }
+  });
   it('only well-known players: no season below the cutoff, lines read cleanly', () => {
     const known = knownSeasons(data);
     expect(known.every((s) => s.value >= 70)).toBe(true);

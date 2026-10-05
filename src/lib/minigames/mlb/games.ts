@@ -147,4 +147,45 @@ export const mlbWhoseTeam = pickGame({
   return { prompt: `Which team did ${t.name} play for in ${t.season}?`, options: list.map(asTeam), notes: list.map((s) => (s === t ? bLine(t) : '')), correct };
 });
 
-export const mlbGames = [mlbHigherLower, mlbBlindResume, mlbWhoLed, mlbWhoseTeam];
+/* ------------------------------------------------------------------ Rank 'Em */
+
+const RANK_N = 5;
+/** Counting stats only, so the reveal reads cleanly. */
+const RANK_STATS = ['hr', 'rbi', 'sb', 'so', 'sv'];
+const GROUP: Record<BSeason['kind'], string> = { bat: 'Hitter', sp: 'Starting pitcher', rp: 'Reliever' };
+type RankB = { stat: string; players: BSeason[] };
+export const mlbRankEm: MiniGame<RankB, string[], MlbGameData> = {
+  slug: 'mlb-rank-em', sport: 'mlb',
+  name: "Rank 'Em: Baseball",
+  tagline: 'Five real MLB seasons, one stat. Put them in order.',
+  howTo: ['Each puzzle shows five well-known players, each in one season, and one stat: home runs, RBI, steals, strikeouts or saves.', 'Order them from most to fewest. Use the up and down buttons, or drag on desktop.', 'Each of the 10 pairs you order correctly is worth 10. Each exact slot adds 4.'],
+  generate(seed, data) {
+    const rng = createRng(seed);
+    const pool = knownSeasons(data, 72);
+    for (let i = 0; i < 200; i++) {
+      const st = statOf(rng.pick(RANK_STATS));
+      const picked: BSeason[] = [];
+      for (const x of rng.shuffle(pool.filter((x) => st.kinds.includes(x.kind) && st.get(x) >= st.min))) {
+        if (!picked.some((y) => y.playerId === x.playerId || st.get(y) === st.get(x))) picked.push(x);
+        if (picked.length === RANK_N) return { stat: st.key, players: picked };
+      }
+    }
+    throw new Error('Not enough seasons to build this puzzle.');
+  },
+  publicView: (p) => { const st = statOf(p.stat); return { label: st.label, groupName: GROUP[st.kinds[0]], players: p.players.map(bcard) }; },
+  score(p, answer) {
+    const st = statOf(p.stat);
+    const ids = p.players.map((x) => x.key);
+    if (!Array.isArray(answer) || answer.length !== ids.length || new Set(answer).size !== ids.length || !answer.every((a) => ids.includes(a))) throw new Error('Order all five players.');
+    const v = new Map(p.players.map((x) => [x.key, st.get(x)]));
+    let pairs = 0, total = 0;
+    for (let i = 0; i < answer.length; i++) for (let j = i + 1; j < answer.length; j++) { total++; if (v.get(answer[i])! >= v.get(answer[j])!) pairs++; }
+    const truth = [...p.players].sort((a, b) => st.get(b) - st.get(a));
+    let exact = 0;
+    answer.forEach((id, i) => { if (v.get(id) === st.get(truth[i])) exact++; });
+    const detail = { label: st.label, pairs, total, exact, truth: truth.map((x, i) => ({ id: x.key, name: `${x.name} (${x.season})`, team: x.team, teamColor: x.teamColor, logoUrl: x.logoUrl, img: x.img, v: st.get(x), yourSlot: answer.indexOf(x.key) + 1, ok: v.get(answer[i]) === st.get(x) })) };
+    return { score: pairs * 10 + exact * 4, summary: `${pairs}/${total} pairs`, detail, perfect: pairs === total };
+  },
+};
+
+export const mlbGames = [mlbHigherLower, mlbBlindResume, mlbWhoLed, mlbWhoseTeam, mlbRankEm];

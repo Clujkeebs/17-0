@@ -76,3 +76,11 @@ for (const [slug, rounds] of [['mlb-higher-lower', 10], ['mlb-blind-resume', 6],
     await expect(page.locator('.m-score')).toContainText(`/${rounds}`);
   });
 }
+
+test("mlb-rank-em: order five seasons, lock in, see the true order", async ({ page }) => {
+  await page.goto('/games/mlb-rank-em');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  await expect(page.locator('.gc-item')).toHaveCount(5, { timeout: 20_000 });
+  await page.getByRole('button', { name: 'Lock it in' }).click();
+  await expect(page.getByText(/pairs in order/)).toBeVisible();
+});
