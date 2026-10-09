@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { RegisterForm } from './RegisterForm';
-import { googleAction } from '../login/actions';
+import { GoogleButton } from '../login/LoginForm';
 import { safeNext } from '../login/safe-next';
 
 export const metadata: Metadata = {
@@ -30,10 +30,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         {google && (
           <>
             <p className="muted" style={{ textAlign: 'center', margin: '16px 0' }}>or</p>
-            <form action={googleAction}>
-              <input type="hidden" name="next" value="/settings" />
-              <button className="btn" type="submit" style={{ width: '100%' }}>Continue with Google</button>
-            </form>
+            <GoogleButton next="/settings" />
           </>
         )}
       </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { track } from '@/lib/analytics';
-import { loginAction } from '../login/actions';
+import { signInWithPassword } from '@/lib/client-auth';
 
 type Fields = Partial<Record<'email' | 'password' | 'username' | 'form', string>>;
 
@@ -39,10 +39,8 @@ export function RegisterForm({ next }: { next: string }) {
       if (!res.ok) { setErrors({ ...(data.fields ?? {}), form: data.fields ? undefined : (data.error ?? 'That did not work. Try again.') }); return; }
       track('signup_completed');
       // Sign straight in with what they just typed; fall back to the sign-in page if that fails.
-      const login = new FormData();
-      login.set('email', body.username); login.set('password', body.password); login.set('next', next);
-      const r = await loginAction({}, login).catch(() => null);
-      if (!r || r.error) router.push(`/login?registered=1&next=${encodeURIComponent(next)}`);
+      const r = await signInWithPassword(body.username, body.password);
+      if (r === 'ok') window.location.assign(next); else router.push(`/login?registered=1&next=${encodeURIComponent(next)}`);
     } catch {
       setErrors({ form: 'Network error. Check your connection and try again.' });
     } finally { setPending(false); }

@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { GoogleButton } from './LoginForm';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { LoginForm } from './LoginForm';
-import { googleAction } from './actions';
 import { safeNext } from './safe-next';
 
 export const metadata: Metadata = {
@@ -39,10 +39,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         {google && (
           <>
             <p className="muted" style={{ textAlign: 'center', margin: '16px 0' }}>or</p>
-            <form action={googleAction}>
-              <input type="hidden" name="next" value={next} />
-              <button className="btn" type="submit" style={{ width: '100%' }}>Continue with Google</button>
-            </form>
+            <GoogleButton next={next} />
           </>
         )}
       </div>
