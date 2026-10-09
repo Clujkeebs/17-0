@@ -148,6 +148,7 @@ Plan: `/root/.claude/plans/floating-baking-platypus.md` top section (Q1 162-0 fi
   - Era caps: 82-0 Classic, each era once (`ERA_PICKS_MAX = 1`, `fullEras`); 162-0 Eras, two picks per era max (`MLB_ERA_PICKS_MAX = 2`, `fullMlbEras`). The draw skips full eras, the era re-spin is disabled when no other era is open, the reel only shows open eras. State carries `usedEras`. Standard (2K) and Right now are single-era, so no cap.
   - Calibration: both simulators follow the caps, and the perfect-season target dropped from 6 to 3 percent for a careful drafter using the re-spins (`TARGET_P17`, `TARGET_PERFECT`). The win floors refit at worker boot after the rescore.
   - Challenges created before this deploy replay with the new draw rules, so the boards can differ from the creator's.
+- Cheat sheet print date is now set on the client (it was prerendered at build and broke hydration the next day).
 - Season playback (shipped 2026-10-09): 82-0 and 162-0 result pages play the record out game by game, one dot per game (`src/components/game/SeasonPlayback.tsx`, `.sp-dots` in globals.css). Win/loss order is drawn from the result id (same every replay); the record is the graded one, and the page says the order is simulated. Skip button; reduced motion shows it complete.
 - School block: we do not work around school filters. `docs/school-unblock-request.md` is an honest request the owner can send to school IT.
 

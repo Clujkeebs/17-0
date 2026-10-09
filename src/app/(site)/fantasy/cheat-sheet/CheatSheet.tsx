@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { F_POS, snakePicks, tiers, type FPos } from '@/lib/fantasy/rank';
 import type { Slim } from '@/lib/fantasy/slim';
@@ -55,12 +55,14 @@ export function CheatSheet({ players }: { players: Slim[] }) {
 
 /** The printed version: your picks on top, then every position by tier with a box to cross players off. */
 function PrintSheet({ players, teams, slot, picks, around }: { players: Slim[]; teams: number; slot: number; picks: number[]; around: (pick: number) => Slim[] }) {
-  const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  // The page is prerendered, so today's date is filled in on the client (a build-time date would mismatch the next day).
+  const [date, setDate] = useState('');
+  useEffect(() => setDate(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })), []);
   return (
     <section className="cs-print" aria-hidden="true">
       <header className="csp-head">
         <strong>Unbeaten draft cheat sheet</strong>
-        <span>{teams} teams · Pick {slot} · PPR · {date} · playunbeaten.com</span>
+        <span>{teams} teams · Pick {slot} · PPR · {date ? `${date} · ` : ''}playunbeaten.com</span>
       </header>
       <h2 className="csp-h">Your picks</h2>
       <ol className="csp-picks">
