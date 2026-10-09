@@ -83,6 +83,8 @@ void (async () => {
   await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
   await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
   await refreshFantasy();
+  // One worker runs at a time, so a sync lock that exists at boot was left by the container this one replaced.
+  await connection.del('nba:sync-lock', 'mlb:sync-lock').catch(() => 0);
   // 82-0: backfill NBA seasons in the background (resumes where it stopped; the newest seasons always refresh), then re-fit the win line.
   void refreshNba(false);
   void refreshLegends(true);
