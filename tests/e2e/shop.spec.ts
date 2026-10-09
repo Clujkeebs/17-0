@@ -24,7 +24,7 @@ test('shop: welcome points, buy a title, equip it, it shows on the profile', asy
   await page.getByRole('button', { name: 'Titles' }).click();
   const rookie = page.locator('.shop-card', { hasText: 'Rookie' });
   await rookie.getByRole('button', { name: '50 pts' }).click();
-  await expect(page.getByRole('status')).toContainText('Rookie is yours');
+  await expect(page.getByRole('status').and(page.locator(':not(.banner)')).and(page.locator(':not(.banner)'))).toContainText('Rookie is yours');
   await expect(page.getByTestId('balance')).toHaveText('0 pts');
   // Too expensive now.
   await expect(page.locator('.shop-card', { hasText: 'Grinder' }).getByRole('button', { name: '200 pts' })).toBeDisabled();
