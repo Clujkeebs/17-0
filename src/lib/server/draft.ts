@@ -1,8 +1,34 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { loadSession, publicTeams, type GameType, type PublicTeam, type SpinPayload } from './games';
-import { FORMATS, MAX_RESPINS, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
+import { FORMATS, MAX_RESPINS, respinsFor, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
 import { TRAITS, traitValue } from '@/lib/game/build';
+import { getTeams } from './data';
+
+/**
+ * The 53 runs long enough that a team can come up with nobody left for your open spots (its only punter is
+ * already yours). Such a board is swapped, deterministically, for the next franchise that has someone eligible.
+ */
+async function ensurePlayable(gameType: GameType, p: SpinPayload): Promise<SpinPayload> {
+  const format = p.format ?? '6';
+  if (gameType !== '17-0' || !FORMATS[format].repeatTeams) return p;
+  const picks = p.picks ?? [], index = picks.length;
+  if (index >= p.teams.length) return p;
+  const open = FORMATS[format].slots.map((d) => d.key).filter((k) => !picks.some((x) => x.slot === k));
+  const taken = new Set(picks.map((x) => x.id));
+  const ids = (await getTeams()).map((t) => t.id).sort((a, b) => a - b);
+  const start = Math.max(0, ids.indexOf(p.teams[index]));
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[(start + i) % ids.length];
+    const [t] = await publicTeams([id], gameType, p.position, teamOpts(p));
+    if (t?.players.some((x) => !taken.has(x.id) && x.slots?.some((k) => open.includes(k)))) {
+      if (id === p.teams[index]) return p;
+      const teams = [...p.teams]; teams[index] = id;
+      return { ...p, teams };
+    }
+  }
+  return p;
+}
 
 export class DraftError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
 
@@ -22,7 +48,7 @@ export interface DraftState {
 }
 
 /** Hard mode has no re-rolls. */
-const respinsLeft = (p: SpinPayload) => (p.hard ? 0 : Math.max(0, MAX_RESPINS - p.respinsUsed));
+const respinsLeft = (p: SpinPayload) => (p.hard ? 0 : Math.max(0, (p.format ? respinsFor(p.format) : MAX_RESPINS) - p.respinsUsed));
 const teamOpts = (p: SpinPayload) => ({ format: p.format ?? '6', pool: p.pool ?? 'current' }) as const;
 
 /** Builds the client view. Only the team currently on the clock is revealed; future teams stay server-side. */
@@ -37,7 +63,9 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
   // alphabetical so its order cannot leak the ranking.
   const hide = <T extends { ovr: number; attrs?: unknown; fpts?: number; line?: string }>(x: T): T => (p.hard ? { ...x, ovr: -1, attrs: undefined, line: undefined, ...(x.fpts !== undefined ? { fpts: -1 } : {}) } : x);
   const order = <T extends { name: string }>(list: T[]) => (p.hard ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : list);
-  const team = done ? null : current ? { ...current, players: order(current.players.map(hide)) } : null;
+  // When teams come around again (the 53), players already on your roster are off the board.
+  const taken = new Set(picks.map((x) => x.id));
+  const team = done ? null : current ? { ...current, players: order(current.players.filter((x) => !taken.has(x.id)).map(hide)) } : null;
   return {
     sessionId, index, total: p.teams.length, done, hard: !!p.hard,
     team,
@@ -67,10 +95,14 @@ export async function respinCurrent(sessionId: string, token: string, gameType: 
   if (index >= p.teams.length) throw new DraftError('The draft is complete.');
   if (p.hard) throw new DraftError('Hard mode has no re-rolls.');
   if (respinsLeft(p) <= 0) throw new DraftError('No re-spins left.');
-  const next: SpinPayload = { ...p, teams: [...p.teams], respinsUsed: p.respinsUsed + 1 };
-  next.teams[index] = p.reserves[p.respinsUsed];
-  await db.update(schema.gameSessions).set({ spinPayload: next }).where(eq(schema.gameSessions.id, s.id));
-  return draftState(s.id, gameType, next);
+  const next: SpinPayload = { ...p, teams: [...p.teams], reserves: [...p.reserves], respinsUsed: p.respinsUsed + 1 };
+  // When teams repeat (the 53), a reserve can be the team already on the clock; trade it for a later one.
+  const later = next.reserves.findIndex((t, i) => i > p.respinsUsed && t !== p.teams[index]);
+  if (next.reserves[p.respinsUsed] === p.teams[index] && later > 0) [next.reserves[p.respinsUsed], next.reserves[later]] = [next.reserves[later], next.reserves[p.respinsUsed]];
+  next.teams[index] = next.reserves[p.respinsUsed];
+  const ready = await ensurePlayable(gameType, next);
+  await db.update(schema.gameSessions).set({ spinPayload: ready }).where(eq(schema.gameSessions.id, s.id));
+  return draftState(s.id, gameType, ready);
 }
 
 export async function pickPlayer(sessionId: string, token: string, gameType: GameType, playerId: string, slot?: string, trait?: string) {
@@ -82,6 +114,7 @@ export async function pickPlayer(sessionId: string, token: string, gameType: Gam
   const [team] = await publicTeams([p.teams[index]], gameType, p.position, teamOpts(p));
   const player = team.players.find((x) => x.id === playerId);
   if (!player) throw new DraftError(`That player is not on the ${team.name}.`);
+  if (picks.some((x) => x.id === playerId)) throw new DraftError(`${player.name} is already on your roster.`);
   let chosenSlot: string | undefined;
   if (gameType === '17-0') {
     const open = FORMATS[teamOpts(p).format].slots.map((d) => d.key).filter((x) => !picks.some((y) => y.slot === x));
@@ -96,7 +129,7 @@ export async function pickPlayer(sessionId: string, token: string, gameType: Gam
     if (!t) throw new DraftError('Pick an open trait for this player.');
     chosenTrait = t.key;
   }
-  const next: SpinPayload = { ...p, picks: [...picks, { teamId: team.id, id: player.id, slot: chosenSlot, trait: chosenTrait }] };
+  const next = await ensurePlayable(gameType, { ...p, picks: [...picks, { teamId: team.id, id: player.id, slot: chosenSlot, trait: chosenTrait }] });
   await db.update(schema.gameSessions).set({ spinPayload: next }).where(eq(schema.gameSessions.id, s.id));
   return draftState(s.id, gameType, next);
 }

@@ -5,7 +5,7 @@ import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { ratePlayer } from '@/lib/game/formulas';
 
 const flat = (v: number): Attributes => Object.fromEntries(ATTRIBUTE_KEYS.map((k) => [k, v]));
-const GROUP_FOR: Record<string, string> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', EDGE: 'EDGE', DL: 'DL', LB: 'LB', CB: 'CB', S: 'S', DEF: 'CB', HC: 'HC' };
+const GROUP_FOR: Record<string, string> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', EDGE: 'EDGE', DL: 'DL', LB: 'LB', CB: 'CB', S: 'S', DEF: 'CB', HC: 'HC', DT: 'DL', K: 'K', P: 'K' };
 // Fantasy scores on points, not weighted ratings; it has its own tests in fantasy.test.ts.
 const FORMAT_KEYS = ALL_FORMATS.filter((f) => f !== 'fantasy');
 const rosterFor = (format: (typeof ALL_FORMATS)[number], v: number): Pick[] => FORMATS[format].slots.map((d, i) => {
@@ -15,7 +15,7 @@ const rosterFor = (format: (typeof ALL_FORMATS)[number], v: number): Pick[] => F
 
 describe('roster formats', () => {
   it('have the advertised sizes, unique slots, and weights that sum to 1', () => {
-    expect(FORMAT_KEYS.map((f) => FORMATS[f].slots.length)).toEqual([6, 12, 16]);
+    expect(FORMAT_KEYS.map((f) => FORMATS[f].slots.length)).toEqual([6, 12, 16, 54]);
     for (const f of FORMAT_KEYS) {
       const keys = FORMATS[f].slots.map((d) => d.key);
       expect(new Set(keys).size).toBe(keys.length);
@@ -24,9 +24,11 @@ describe('roster formats', () => {
   });
   it('keep the quarterback heaviest and the tight end light in every format', () => {
     for (const f of FORMAT_KEYS) {
-      const w = (k: string) => FORMATS[f].slots.find((d) => d.key === k)!.weight;
-      const others = FORMATS[f].slots.filter((d) => d.key !== 'QB');
-      expect(others.every((d) => d.weight < w('QB'))).toBe(true);
+      // The 53 numbers its depth chart (QB1, TE1); the starter is the first slot of each.
+      const w = (k: string) => FORMATS[f].slots.find((d) => d.key === k || d.key === `${k}1`)!.weight;
+      const qb = FORMATS[f].slots.find((d) => d.accepts.includes('QB'))!;
+      const others = FORMATS[f].slots.filter((d) => d !== qb);
+      expect(others.every((d) => d.weight < qb.weight)).toBe(true);
       expect(w('TE')).toBeLessThan(w('RB'));
     }
   });

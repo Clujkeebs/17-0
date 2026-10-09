@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
 });
 
-type Setup = { mode?: 'Today' | 'Casual'; scoring?: 'Ratings' | 'Fantasy'; roster?: '6' | '12' | '16'; players?: 'Current' | 'All-time'; difficulty?: 'Easy' | 'Hard' };
+type Setup = { mode?: 'Today' | 'Casual'; scoring?: 'Ratings' | 'Fantasy'; roster?: '6' | '12' | '16' | '53'; players?: 'Current' | 'All-time'; difficulty?: 'Easy' | 'Hard' };
 /** Fill in the 17-0 setup sheet and press Start. */
 async function setup(page: import('@playwright/test').Page, s: Setup = {}) {
   const sheet = page.getByRole('dialog', { name: 'Game setup' });
@@ -67,6 +67,21 @@ test('17-0: 16-man all-time roster drafts sixteen and grades', async ({ page }) 
   await page.waitForURL(/\/results\//);
   await expect(page.locator('.eyebrow').first()).toContainText('16-man roster');
   await expect(page.locator('.grade-table tbody tr')).toHaveCount(16);
+});
+
+test('17-0: 53-man roster, teams repeat, five re-rolls, every spot filled', async ({ page }) => {
+  test.setTimeout(300_000);
+  await page.goto('/games/17-0');
+  await setup(page, { mode: 'Casual', roster: '53', players: 'Current', difficulty: 'Easy' });
+  await expect(page.locator('.g-slots li')).toHaveCount(54);
+  await expect(page.locator('.g-respin .num')).toHaveText('5');
+  await page.locator('.g-respin').click();
+  await expect(page.locator('.g-respin .num')).toHaveText('4');
+  await draftAll(page, 54);
+  await page.getByRole('button', { name: 'Simulate the season' }).first().click();
+  await page.waitForURL(/\/results\//);
+  await expect(page.locator('.eyebrow').first()).toContainText('53-man roster');
+  await expect(page.locator('.grade-table tbody tr')).toHaveCount(54);
 });
 
 test('17-0 Today requires an account and locks the board to the classic six', async ({ page }) => {

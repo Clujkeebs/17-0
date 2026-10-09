@@ -1,6 +1,6 @@
 import { db, schema } from '@/db';
 import { positionGroup } from '@/lib/game/attributes';
-import { FORMATS, MAX_RESPINS, gradePick, gradeRoster, isFantasy, slotAccepts, type FormatKey, type Pick, type PoolKey } from '@/lib/game/seventeen';
+import { FORMATS, MAX_RESPINS, boardOrder, gradePick, gradeRoster, isFantasy, slotAccepts, type FormatKey, type Pick, type PoolKey } from '@/lib/game/seventeen';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { fantasyValue } from '@/lib/game/fantasy';
 import { createRng } from '@/lib/game/prng';
@@ -138,4 +138,54 @@ export async function getAllTimeFloor(format: FormatKey): Promise<number> {
   const fallback = FORMATS[format].winFloor + ALL_TIME_DEFAULT_BUMP;
   try { const v = Number(await getRedis().get(ALL_TIME_FLOOR_KEY(format))); return Number.isFinite(v) && v > 0 ? v : fallback; }
   catch { return fallback; }
+}
+
+export const FLOOR_53_KEY = (pool: PoolKey) => `seventeen:win-floor:53:${pool}`;
+const TARGET_P17_53 = 0.06;
+
+/**
+ * The 53 is too big for the slot-by-slot simulator, but a pick's grade does not depend on its slot, so each
+ * player is graded once and a board's best pick is the best player whose position still has an open spot (the
+ * deepest-weight spot first). Re-rolls go on boards whose best pick for a starting spot grades under 80.
+ */
+export async function tune53Floors(games = 1200): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  const fmt = FORMATS['53'];
+  for (const pool of ['current', 'all-time'] as const) {
+    const b = await boards('53', pool);
+    if (b.teams.length < 20) { console.warn('[53] not enough teams to calibrate'); continue; }
+    const graded = new Map([...b.byTeam].map(([t, list]) => [t, list.map((p, i) => ({ p, key: `${t}:${i}:${p.name}`, g: gradePick(p) })).sort((x, y) => y.g - x.g)]));
+    const rosters: Pick[][] = [];
+    for (let g = 0; g < games; g++) {
+      const { teams, reserves } = boardOrder(`c53${g}`, b.teams, '53');
+      const queue = [...reserves];
+      const open = [...fmt.slots].sort((a, c) => c.weight - a.weight).map((d) => d.key);
+      const taken = new Set<string>(); const picks: Pick[] = [];
+      const best = (t: number) => (graded.get(t) ?? []).find((x) => !taken.has(x.key) && open.some((k) => slotAccepts(k, x.p.group, '53')));
+      for (let i = 0; i < teams.length; i++) {
+        let t = teams[i]; let c = best(t);
+        const starter = (x: typeof c) => !!x && fmt.slots.find((d) => d.key === open.find((k) => slotAccepts(k, x.p.group, '53')))!.weight >= 0.02;
+        while (queue.length && (!c || (starter(c) && c.g < 80))) { t = queue.shift()!; c = best(t) ?? c; }
+        // Mirrors the game: a board with nobody eligible moves to the next team that has someone.
+        for (let j = 0; !c && j < b.teams.length; j++) c = best(b.teams[j]);
+        if (!c) break;
+        const slot = open.find((k) => slotAccepts(k, c!.p.group, '53'))!;
+        picks.push({ ...c.p, slot }); taken.add(c.key); open.splice(open.indexOf(slot), 1);
+      }
+      if (picks.length === fmt.slots.length) rosters.push(picks);
+    }
+    const p17 = (floor: number) => rosters.filter((r, i) => gradeRoster(`s${i}`, r, undefined, undefined, [], '53', floor).wins === 17).length / (rosters.length || 1);
+    let lo = 40, hi = 99;
+    for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; if (p17(mid) > TARGET_P17_53) lo = mid; else hi = mid; }
+    const floor = Math.ceil(hi * 100) / 100;
+    await getRedis().set(FLOOR_53_KEY(pool), String(floor));
+    console.log('[53] win floor', pool, floor, 'P17', `${(p17(floor) * 100).toFixed(1)}%`, `n=${rosters.length}`);
+    out[pool] = floor;
+  }
+  return out;
+}
+
+export async function get53Floor(pool: PoolKey): Promise<number> {
+  try { const v = Number(await getRedis().get(FLOOR_53_KEY(pool))); return Number.isFinite(v) && v > 0 ? v : FORMATS['53'].winFloor; }
+  catch { return FORMATS['53'].winFloor; }
 }

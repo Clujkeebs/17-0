@@ -22,7 +22,7 @@ const refreshNba = (recentOnly: boolean) => import('@/lib/server/nba-sync')
 /** All-time: NFL history backfill (only missing seasons are fetched), legends rebuilt against today's grades, then fresh All-time win lines. */
 const refreshLegends = (fetchHistory: boolean) => import('@/lib/server/nfl-history')
   .then(async (m) => { if (fetchHistory) await m.syncNflHistory(); await m.buildLegends(); await m.legendsSpotCheck('SF'); await m.legendsSpotCheck('DET'); })
-  .then(() => import('@/lib/server/calibrate')).then((c) => c.tuneAllTimeFloors())
+  .then(() => import('@/lib/server/calibrate')).then(async (c) => { await c.tuneAllTimeFloors(); await c.tune53Floors(); })
   .catch((e) => console.warn('[nfl-history] refresh failed', (e as Error).message));
 /** 162-0: MLB history backfill (only missing seasons; the latest two always refresh) and a spot check. */
 const refreshMlb = () => import('@/lib/server/mlb-sync').then(async (m) => { await m.syncMlb(); await m.mlbSpotCheck(); })

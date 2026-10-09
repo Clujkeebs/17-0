@@ -200,7 +200,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
         {team && reelTarget ? (
           <section ref={stageRef} className="g-stage" aria-labelledby="clock-h">
             <div className="g-team">
-              <Reel pool={reelPool} target={reelTarget} spinKey={`${draft.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.city} ${team.name} on the clock`); }} />
+              <Reel fast={draft.format === '53'} pool={reelPool} target={reelTarget} spinKey={`${draft.sessionId}-${spinKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.city} ${team.name} on the clock`); }} />
               <div className="g-spin-status" aria-live="polite">
                 <p className="g-kicker" style={{ margin: 0 }} id="clock-h">{landed ? `Pick one ${team.name} player for an open slot` : 'Spinning'}</p>
                 <div className="row" style={{ gap: 10 }}>
@@ -328,11 +328,11 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
         <Choice label="Scoring" name="scoring" value={today ? 'ratings' : value.scoring} disabled={today} onChange={(v) => set({ scoring: v as Scoring })}
           options={[{ v: 'ratings', t: 'Ratings', d: 'Madden overalls' }, { v: 'fantasy', t: 'Fantasy', d: fantasyReady ? 'Real PPR points' : 'Points loading', off: !fantasyReady }]} />
         <Choice label="Roster" name="format" value={today ? '6' : value.format} disabled={today || fantasy} onChange={(v) => set({ format: v as FormatKey })}
-          options={[{ v: '6', t: '6', d: 'Classic' }, { v: '12', t: '12', d: 'Adds OL and defense' }, { v: '16', t: '16', d: 'Full lineup' }]} />
+          options={[{ v: '6', t: '6', d: 'Classic' }, { v: '12', t: '12', d: 'Adds OL and defense' }, { v: '16', t: '16', d: 'Full lineup' }, { v: '53', t: '53', d: 'Whole roster, backups too' }]} />
         <Choice label="Players" name="pool" value={today || fantasy ? 'current' : value.pool} disabled={today || fantasy} onChange={(v) => set({ pool: v as PoolKey })}
           options={[{ v: 'current', t: 'Current', d: 'Today’s rosters' }, { v: 'all-time', t: 'All-time', d: 'Plus every franchise’s legends' }]} />
         <Choice label="Difficulty" name="hard" value={value.hard ? 'hard' : 'easy'} onChange={(v) => set({ hard: v === 'hard' })}
-          options={[{ v: 'easy', t: 'Easy', d: fantasy ? 'Points shown, 2 re-rolls' : 'Overalls shown, 2 re-rolls' }, { v: 'hard', t: 'Hard', d: fantasy ? 'Type names, no points, no re-rolls' : 'Type names, no overalls, no re-rolls' }]} />
+          options={[{ v: 'easy', t: 'Easy', d: fantasy ? 'Points shown, 2 re-rolls' : `Overalls shown, ${!today && value.format === '53' ? 5 : 2} re-rolls` }, { v: 'hard', t: 'Hard', d: fantasy ? 'Type names, no points, no re-rolls' : 'Type names, no overalls, no re-rolls' }]} />
         </div>}
         {fantasy && <p className="hint" style={{ margin: '4px 0 0' }}>Fantasy drafts a seven-man lineup (QB, two RBs, two WRs, TE, FLEX) from current rosters. Each player counts his PPR points per game this season, blended with his projection while the sample is small. Your weekly total sets the record.</p>}
         {today && more && <p className="hint" style={{ margin: '4px 0 0' }}>Today is the same board for everyone: six slots, current rosters. Roster size and legends are Casual options.</p>}

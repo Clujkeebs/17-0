@@ -22,17 +22,49 @@ export const WIN_SPAN = 26;
  * Roster size: the classic six, or a fuller 12 or 16 man roster. One spin per slot, one pick per team.
  * 'fantasy' is the Fantasy edition: a seven-man fantasy lineup scored on real PPR points, not ratings.
  */
-export type FormatKey = '6' | '12' | '16' | 'fantasy';
-export const FORMAT_KEYS: FormatKey[] = ['6', '12', '16', 'fantasy'];
+export type FormatKey = '6' | '12' | '16' | '53' | 'fantasy';
+export const FORMAT_KEYS: FormatKey[] = ['6', '12', '16', '53', 'fantasy'];
 /** Player pool: today's rosters, or today's rosters plus each franchise's all-time greats. */
 export type PoolKey = 'current' | 'all-time';
 export const POOL_KEYS: PoolKey[] = ['current', 'all-time'];
 
 type Group = PositionGroup | 'HC';
 export interface SlotDef { key: string; label: string; hint: string; accepts: readonly Group[]; weight: number }
-export interface FormatDef { name: string; slots: readonly SlotDef[]; winFloor: number; winSpan: number; scoring?: 'ratings' | 'fantasy' }
+export interface FormatDef {
+  name: string; slots: readonly SlotDef[]; winFloor: number; winSpan: number; scoring?: 'ratings' | 'fantasy';
+  /** Re-rolls for this roster size (default MAX_RESPINS). */
+  respins?: number;
+  /** More spins than franchises: teams come around again (each player still only once). */
+  repeatTeams?: boolean;
+}
 const DEFENDERS = ['DL', 'EDGE', 'LB', 'CB', 'S'] as const;
 const s = (key: string, label: string, hint: string, accepts: readonly Group[], weight: number): SlotDef => ({ key, label, hint, accepts, weight });
+
+/**
+ * The full 53: three quarterbacks down to the punter, plus a head coach. Each position's depth
+ * chart weighs the starters and gives the backups a sliver, so a bad QB3 costs a little and a bad QB1 a lot.
+ * Weights are normalized to sum to 1.
+ */
+const DEPTH_53: [Group, string, string, number[]][] = [
+  ['QB', 'QB', 'Quarterback', [0.15, 0.02, 0.006]],
+  ['RB', 'RB', 'Running back', [0.045, 0.018, 0.008, 0.005]],
+  ['WR', 'WR', 'Wide receiver', [0.05, 0.04, 0.03, 0.012, 0.006, 0.004]],
+  ['TE', 'TE', 'Tight end', [0.03, 0.01, 0.004]],
+  ['OL', 'OL', 'Offensive lineman', [0.027, 0.027, 0.025, 0.025, 0.023, 0.008, 0.006, 0.004, 0.004]],
+  ['DL', 'DT', 'Defensive tackle', [0.03, 0.025, 0.008, 0.005]],
+  ['EDGE', 'EDGE', 'Edge rusher', [0.045, 0.035, 0.01, 0.006, 0.004]],
+  ['LB', 'LB', 'Linebacker', [0.03, 0.025, 0.01, 0.006, 0.004, 0.004]],
+  ['CB', 'CB', 'Cornerback', [0.04, 0.03, 0.015, 0.008, 0.005, 0.004]],
+  ['S', 'S', 'Safety', [0.03, 0.025, 0.008, 0.005, 0.004]],
+  ['K', 'K', 'Kicker', [0.008]],
+  ['K', 'P', 'Punter', [0.005]],
+];
+const SLOTS_53: SlotDef[] = (() => {
+  const raw = [...DEPTH_53.flatMap(([g, key, hint, ws]) => ws.map((w, i) => s(ws.length > 1 ? `${key}${i + 1}` : key, ws.length > 1 ? `${key}${i + 1}` : key, i === 0 ? hint : `${hint} (backup)`, [g], w))),
+    s('HC', 'HC', 'Head coach', ['HC'], 0.04)];
+  const total = raw.reduce((a, d) => a + d.weight, 0);
+  return raw.map((d) => ({ ...d, weight: d.weight / total }));
+})();
 
 /**
  * Weights follow positional value: quarterback first, then the players who touch the ball and the ones who
@@ -72,6 +104,8 @@ export const FORMATS: Record<FormatKey, FormatDef> = {
       s('HC', 'HC', 'Head coach', ['HC'], 0.07),
     ],
   },
+  // The full 53 (plus a coach): 54 spins, teams repeat, five re-rolls. The floor is refit by the worker.
+  '53': { name: '53-man roster', winFloor: 66, winSpan: WIN_SPAN, slots: SLOTS_53, respins: 5, repeatTeams: true },
   // Fantasy: team strength is total points per week, so weights are not used. The floor is recalibrated
   // by the worker after every points sync and passed in at grading time.
   fantasy: {
@@ -83,6 +117,28 @@ export const FORMATS: Record<FormatKey, FormatDef> = {
     ],
   },
 };
+export const respinsFor = (format: FormatKey = '6') => FORMATS[format].respins ?? MAX_RESPINS;
+
+/**
+ * The teams on the clock for a game, plus the re-roll reserves. Small formats use each franchise once; the 53
+ * walks through fresh shuffles of the league so every team comes up about equally often and never twice in a row.
+ */
+export function boardOrder(seed: string, pool: readonly number[], format: FormatKey = '6'): { teams: number[]; reserves: number[] } {
+  const rng = createRng(`spin:${seed}`);
+  const sorted = [...pool].sort((a, b) => a - b);
+  const count = FORMATS[format].slots.length, extra = respinsFor(format);
+  if (!FORMATS[format].repeatTeams) {
+    const order = rng.shuffle(sorted);
+    return { teams: order.slice(0, count), reserves: order.slice(count, count + extra) };
+  }
+  const seq: number[] = [];
+  while (seq.length < count + extra) {
+    const next = rng.shuffle(sorted);
+    if (seq.length && next[0] === seq[seq.length - 1]) next.push(next.shift()!);
+    seq.push(...next);
+  }
+  return { teams: seq.slice(0, count), reserves: seq.slice(count, count + extra) };
+}
 export const isFantasy = (format: FormatKey) => FORMATS[format].scoring === 'fantasy';
 export const isFormat = (x: unknown): x is FormatKey => typeof x === 'string' && (FORMAT_KEYS as string[]).includes(x);
 export const formatOf = (x: unknown): FormatKey => (isFormat(x) ? x : '6');

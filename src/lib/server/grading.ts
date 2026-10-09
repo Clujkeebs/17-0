@@ -8,7 +8,7 @@ import { loadSession, type SpinPayload } from './games';
 import { positionGroup, type Attributes, type PositionGroup } from '@/lib/game/attributes';
 import { FORMATS, gradeRoster, isFantasy, slotAccepts, type Pick } from '@/lib/game/seventeen';
 import { fantasyValue } from '@/lib/game/fantasy';
-import { getAllTimeFloor, getFantasyFloor } from './calibrate';
+import { get53Floor, getAllTimeFloor, getFantasyFloor } from './calibrate';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { BUILD_ELIGIBLE, TRAITS, bestPossible, gradeTraitBuild, traitValue } from '@/lib/game/build';
 
@@ -77,6 +77,8 @@ export async function gradeSeventeen(ctx: Ctx) {
     getFormulas(), getSlotWeights(),
     playerIds.length && pool === 'all-time' ? db.select().from(schema.nflLegends).where(inArray(schema.nflLegends.id, playerIds)) : [],
   ]);
+  if (new Set(picks.map((p) => p.id)).size !== picks.length) throw new GradeError('Each player can only be drafted once.');
+  const repeat = !!FORMATS[format].repeatTeams;
   const usedTeams = new Set<number>();
   const full: Pick[] = picks.map((p) => {
     if (p.id.startsWith('coach:')) {
@@ -105,14 +107,15 @@ export async function gradeSeventeen(ctx: Ctx) {
   });
   for (const p of full) {
     if (!payload.teams.includes(p.teamId)) throw new GradeError(`${p.name} is not on one of your spun teams.`);
-    if (usedTeams.has(p.teamId)) throw new GradeError('One pick per team.');
+    if (usedTeams.has(p.teamId) && !repeat) throw new GradeError('One pick per team.');
     usedTeams.add(p.teamId);
     if (!slotAccepts(p.slot, p.group, format)) throw new GradeError(`${p.name} cannot play ${p.slot}.`);
   }
   // Daily results must be identical for identical rosters, so seed from the date plus the roster.
   const seed = s.isDaily || payload.challengeId ? `${s.seed}:${[...playerIds, ...coachIds].sort().join(',')}` : s.id;
-  const opponents = teamRows.filter((t) => !usedTeams.has(t.id)).map((t) => t.abbr);
-  const floor = isFantasy(format) ? await getFantasyFloor() : pool === 'all-time' ? await getAllTimeFloor(format) : undefined;
+  // The 53 drafts from most of the league, so its schedule draws from every team.
+  const opponents = teamRows.filter((t) => repeat || !usedTeams.has(t.id)).map((t) => t.abbr);
+  const floor = isFantasy(format) ? await getFantasyFloor() : format === '53' ? await get53Floor(pool) : pool === 'all-time' ? await getAllTimeFloor(format) : undefined;
   const result = gradeRoster(seed, full, formulas, weights, opponents, format, floor);
   const resultData = { ...result, hard: !!payload.hard, format, pool, picks: full.map(({ slot, name, teamId, group, overall, fantasy }) => ({ slot, name, teamId, group, overall, ...(fantasy !== undefined ? { fantasy } : {}) })) };
   const id = await saveResult(s, ctx, '17-0', resultData, result.score, result.wins === 17);

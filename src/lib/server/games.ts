@@ -5,7 +5,7 @@ import { getTeams, getRosters, getCoachesForTeams, GROUP_RAW } from './data';
 import { token as newToken } from './request';
 import { getRedis } from './redis';
 import { positionGroup, type PositionGroup } from '@/lib/game/attributes';
-import { FORMATS, MAX_RESPINS, isFantasy, slotsFor as formatSlots, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
+import { FORMATS, MAX_RESPINS, boardOrder, isFantasy, respinsFor, slotsFor as formatSlots, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
 import { fantasyValue } from '@/lib/game/fantasy';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { BUILD_CATEGORIES, BUILD_ELIGIBLE, BUILD_TEAMS, type BuildPosition } from '@/lib/game/build';
@@ -61,8 +61,9 @@ export async function createGameSession(opts: { gameType: GameType; userId?: str
   // Fantasy points exist only for current players.
   const playerPool: PoolKey = gameType === '17-0' && !opts.daily && !isFantasy(format) ? opts.pool ?? 'current' : 'current';
   const count = gameType === '17-0' ? FORMATS[format].slots.length : BUILD_TEAMS;
-  if (pool.length < count + MAX_RESPINS) throw new Error('Not enough teams with eligible players. Has the database been seeded?');
-  const { teams, reserves } = draftOrder(seed, pool, count);
+  const repeat = gameType === '17-0' && FORMATS[format].repeatTeams;
+  if (repeat ? pool.length < 8 : pool.length < count + (gameType === '17-0' ? respinsFor(format) : MAX_RESPINS)) throw new Error('Not enough teams with eligible players. Has the database been seeded?');
+  const { teams, reserves } = gameType === '17-0' ? boardOrder(seed, pool, format) : draftOrder(seed, pool, count);
   const payload: SpinPayload = { teams, reserves, respinsUsed: 0, position: opts.position, hard: !!opts.hard, ...(gameType === '17-0' ? { format, pool: playerPool } : {}), ...(opts.challenge && !opts.daily ? { challengeId: opts.challenge.challengeId } : {}) };
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
