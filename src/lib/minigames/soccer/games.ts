@@ -135,5 +135,77 @@ export const soccerWhoScored = pickGame({
   return { prompt: `Who scored the most goals in the ${a.seasonLabel}?`, options: list.map(lcard), notes: list.map((l) => `${l.goals} goals in ${l.matches} matches`), correct };
 });
 
-export const soccerGames = [soccerWhoseClub, soccerWhereFrom, soccerHigherLower, soccerWhoScored];
+/* ------------------------------------------------------------------ Build a Soccer Player */
+
+export const BUILD_TRAITS = [
+  { key: 'finishing', label: 'Finishing', hint: 'his goals per match' },
+  { key: 'playmaking', label: 'Playmaking', hint: 'his assists per match' },
+  { key: 'fitness', label: 'Fitness', hint: 'his matches played' },
+] as const;
+export type BuildTrait = (typeof BUILD_TRAITS)[number]['key'];
+type BuildRound = { club: SLeader; options: SLeader[] };
+export type BuildAnswer = { pick: number; trait: BuildTrait }[];
+
+/** The season a set of choices adds up to: the finisher's and playmaker's per-match rates over the fit man's matches. */
+export function builtLine(rounds: BuildRound[], answer: BuildAnswer) {
+  const at = (t: BuildTrait) => { const i = answer.findIndex((a) => a.trait === t); return rounds[i].options[answer[i].pick]; };
+  const fin = at('finishing'), play = at('playmaking'), fit = at('fitness');
+  const matches = fit.matches;
+  const goals = Math.round((fin.goals / Math.max(1, fin.matches)) * matches);
+  const assists = Math.round((play.assists / Math.max(1, play.matches)) * matches);
+  return { goals, assists, matches, total: goals + assists, fin, play, fit };
+}
+/** The best line the board allows: every pick and every way to hand out the three traits. */
+export function bestLine(rounds: BuildRound[]) {
+  const orders: BuildTrait[][] = [['finishing', 'playmaking', 'fitness'], ['finishing', 'fitness', 'playmaking'], ['playmaking', 'finishing', 'fitness'], ['playmaking', 'fitness', 'finishing'], ['fitness', 'finishing', 'playmaking'], ['fitness', 'playmaking', 'finishing']];
+  let best: ReturnType<typeof builtLine> | null = null;
+  for (const o of orders) for (let a = 0; a < rounds[0].options.length; a++) for (let b = 0; b < rounds[1].options.length; b++) for (let c = 0; c < rounds[2].options.length; c++) {
+    const r = builtLine(rounds, [{ pick: a, trait: o[0] }, { pick: b, trait: o[1] }, { pick: c, trait: o[2] }]);
+    if (!best || r.total > best.total) best = r;
+  }
+  return best!;
+}
+
+export const soccerBuildPlayer: MiniGame<{ rounds: BuildRound[] }, BuildAnswer, SoccerGameData> = {
+  slug: 'build-a-soccer-player', sport: 'soccer',
+  name: 'Build a Soccer Player',
+  tagline: 'Three clubs, three real seasons. Take finishing from one, playmaking from another, fitness from the third.',
+  howTo: [
+    'Each club shows its players\' seasons on a league goal or assist leader list.',
+    'Take one season from each club and give it a trait: Finishing uses his goals per match, Playmaking his assists per match, Fitness his matches played.',
+    'Your player\'s season is those rates over those matches. The score is goals plus assists; the reveal shows the best build the board allowed.',
+  ],
+  generate(seed, data) {
+    const rng = createRng(seed);
+    const pool = topOfLists(data.leaders).filter((l) => l.clubAbbr && l.matches >= 10);
+    const byClub = new Map<string, SLeader[]>();
+    for (const l of pool) byClub.set(l.clubAbbr, [...(byClub.get(l.clubAbbr) ?? []), l]);
+    const clubs = rng.shuffle([...byClub.keys()].filter((k) => byClub.get(k)!.length >= 3));
+    if (clubs.length < 3) throw new Error('Soccer data is still loading. Try again in a few minutes.');
+    const rounds = clubs.slice(0, 3).map((k) => {
+      const seen = new Set<number>();
+      const options = rng.shuffle(byClub.get(k)!).filter((l) => (seen.has(l.playerId) ? false : (seen.add(l.playerId), true))).slice(0, 6);
+      return { club: options[0], options };
+    });
+    return { rounds };
+  },
+  publicView: (p) => ({
+    traits: BUILD_TRAITS,
+    rounds: p.rounds.map((r) => ({ club: { name: r.club.club, abbr: r.club.clubAbbr, color: r.club.clubColor, logo: r.club.clubLogo },
+      options: r.options.map((o) => ({ ...lcard(o), goals: o.goals, assists: o.assists, matches: o.matches })) })),
+  }),
+  score(p, answer) {
+    if (!Array.isArray(answer) || answer.length !== p.rounds.length) throw new Error('Make a pick from every club.');
+    const traits = new Set(answer.map((a) => a?.trait));
+    if (traits.size !== 3 || !BUILD_TRAITS.every((t) => traits.has(t.key))) throw new Error('Use each trait once.');
+    answer.forEach((a, i) => { if (!Number.isInteger(a.pick) || a.pick < 0 || a.pick >= p.rounds[i].options.length) throw new Error('Pick a player from every club.'); });
+    const mine = builtLine(p.rounds, answer), best = bestLine(p.rounds);
+    const who = (l: SLeader) => `${l.name} (${l.seasonLabel})`;
+    const detail = { goals: mine.goals, assists: mine.assists, matches: mine.matches, from: { finishing: who(mine.fin), playmaking: who(mine.play), fitness: who(mine.fit) },
+      best: { goals: best.goals, assists: best.assists, matches: best.matches, from: { finishing: who(best.fin), playmaking: who(best.play), fitness: who(best.fit) } } };
+    return { score: mine.total, summary: `${mine.goals} G, ${mine.assists} A`, detail, perfect: mine.total >= best.total };
+  },
+};
+
+export const soccerGames = [soccerWhoseClub, soccerWhereFrom, soccerHigherLower, soccerWhoScored, soccerBuildPlayer];
 export type { SStar };

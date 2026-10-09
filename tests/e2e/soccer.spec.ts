@@ -24,3 +24,25 @@ test('Games page has a Soccer tab and the leaderboards list soccer games', async
   await page.goto('/leaderboard?game=soccer-whose-club');
   await expect(page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'Soccer' })).toHaveAttribute('aria-current', 'page');
 });
+
+test('Build a Soccer Player: one season and one trait per club', async ({ page }) => {
+  await page.goto('/games/build-a-soccer-player');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  const build = page.getByRole('button', { name: 'Build my player' });
+  await expect(build).toBeDisabled();
+  const clubs = page.locator('section.sb-club');
+  await expect(clubs).toHaveCount(3);
+  const traits = ['Finishing', 'Playmaking', 'Fitness'];
+  for (let i = 0; i < 3; i++) {
+    const c = clubs.nth(i);
+    await c.getByRole('radio').first().click();
+    await c.getByRole('radio', { name: traits[i] }).click();
+  }
+  // Giving a trait to a second club takes it from the first.
+  await clubs.nth(2).getByRole('radio', { name: 'Finishing' }).click();
+  await expect(build).toBeDisabled();
+  await clubs.nth(0).getByRole('radio', { name: 'Fitness' }).click();
+  await build.click();
+  await expect(page.getByText('Your player', { exact: true })).toBeVisible();
+  await expect(page.getByText('Best build on this board')).toBeVisible();
+});
