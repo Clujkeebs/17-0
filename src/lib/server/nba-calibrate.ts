@@ -1,6 +1,6 @@
 import { eq, gte, isNotNull } from 'drizzle-orm';
 import { db, schema } from '@/db';
-import { ERAS, ERA_PICKS_MAX, NBA_SLOTS, fitMultiplier, gradeNbaRoster, type EraKey, type NbaPick, type NbaSlot } from '@/lib/game/eightytwo';
+import { ERAS, ERA_PICKS_MAX, ERA_RESPINS, NBA_SLOTS, TEAM_RESPINS, fitMultiplier, gradeNbaRoster, type EraKey, type NbaPick, type NbaSlot } from '@/lib/game/eightytwo';
 import { createRng } from '@/lib/game/prng';
 import { getRedis } from './redis';
 import { NBA_FLOOR_KEY, NBA_FLOOR_KEY_2K } from './nba-floor';
@@ -47,7 +47,7 @@ function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respi
   let perfect = 0, n = 0;
   for (let g = 0; g < games; g++) {
     const rng = createRng(`nbacal:${mode}:${g}`);
-    let eraLeft = mode === 'respin' ? 1 : 0, teamLeft = mode === 'respin' ? 1 : 0;
+    let eraLeft = mode === 'respin' && eras.length > 1 ? ERA_RESPINS : 0, teamLeft = mode === 'respin' ? TEAM_RESPINS : 0;
     const used = new Set<number>(), picks: Cand[] = [], perEra = new Map<EraKey, number>();
     // Same rule as the game: each era gives one pick (Standard has one era, so the rule does not apply there).
     const live = () => (eras.length === 1 ? eras : eras.filter((x) => (perEra.get(x) ?? 0) < ERA_PICKS_MAX));
@@ -60,8 +60,9 @@ function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respi
       let { e, t } = spin();
       if (mode === 'respin') {
         const top = () => b.get(e)!.get(t)![0].value;
-        if (top() < RESPIN_BELOW && teamLeft) { teamLeft--; ({ e, t } = spin(e)); }
-        if (top() < RESPIN_BELOW && eraLeft && live().length > 1) { eraLeft--; const cur = e; ({ e, t } = spin(rng.pick(live().filter((x) => x !== cur)))); }
+        while (top() < RESPIN_BELOW && (teamLeft || (eraLeft && live().length > 1))) {
+          if (teamLeft) { teamLeft--; ({ e, t } = spin(e)); } else { eraLeft--; const cur = e; ({ e, t } = spin(rng.pick(live().filter((x) => x !== cur)))); }
+        }
       }
       const list = b.get(e)!.get(t)!;
       picks.push(mode === 'random' ? rng.pick(list) : list[0]);

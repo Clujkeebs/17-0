@@ -1,5 +1,7 @@
 import type { ReelTeam } from '@/components/game/Reel';
 import type { Metadata } from 'next';
+import { GameFaq } from '@/components/seo/GameFaq';
+import { GAME_FAQ } from '@/content/game-faq';
 import { SeventeenGame } from '@/components/game/SeventeenGame';
 import { getTeams } from '@/lib/server/data';
 import { auth } from '@/auth';
@@ -26,5 +28,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
   
   const fantasy = await fantasyReady().catch(() => false);
   const challenge = await challengeInfo(sp.challenge, '17-0');
-  return <SeventeenGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={!!asked} fantasyReady={fantasy} challenge={challenge} />;
+  return (
+    <>
+      <SeventeenGame reelPool={pool} signedIn={!!userId} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={!!asked} fantasyReady={fantasy} challenge={challenge} />
+      <GameFaq faq={GAME_FAQ['17-0']} />
+    </>
+  );
 }

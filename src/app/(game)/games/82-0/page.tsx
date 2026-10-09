@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { GameFaq } from '@/components/seo/GameFaq';
+import { GAME_FAQ } from '@/content/game-faq';
 import { desc } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { challengeInfo } from '@/lib/server/challenges';
@@ -33,5 +35,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ m
   const playedTodayId = session?.user?.id ? await todaysResult(session.user.id, '82-0').catch(() => null) : null;
   const initialMode = sp.mode === 'today' ? 'today' : sp.mode === 'casual' ? 'casual' : signedIn && !playedTodayId ? 'today' : 'casual';
   const standardReady = await nbaReady('standard').catch(() => false);
-  return <EightyTwoGame franchises={await franchises()} signedIn={signedIn} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} challenge={await challengeInfo(sp.challenge, '82-0')} standardReady={standardReady} />;
+  return (
+    <>
+      <EightyTwoGame franchises={await franchises()} signedIn={signedIn} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} challenge={await challengeInfo(sp.challenge, '82-0')} standardReady={standardReady} />
+      <GameFaq faq={GAME_FAQ['82-0']} />
+    </>
+  );
 }

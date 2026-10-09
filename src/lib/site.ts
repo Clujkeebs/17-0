@@ -2,7 +2,7 @@ export const SITE = {
   name: 'Unbeaten',
   tagline: 'Six picks. Seventeen games. One perfect season.',
   url: (process.env.SITE_URL ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000').replace(/\/$/, ''),
-  description: 'Draft one player from each spun NFL team and try to go 17-0. Plus Build a Player and 16 daily NFL games, built on EA Sports Madden NFL ratings.',
+  description: 'Free sports draft games: spin teams and eras, draft a roster and chase a perfect season in 17-0 (NFL), 82-0 (NBA) and 162-0 (MLB). Plus daily sports trivia, crosswords, Connections, Wordle, fantasy tools and Pick \'em.',
   /** Set CONTACT_EMAIL / LEGAL_EMAIL once the domain mailboxes exist. Until then the site routes people to /contact. */
   contactEmail: process.env.CONTACT_EMAIL ?? null as string | null,
   legalEmail: process.env.LEGAL_EMAIL ?? process.env.CONTACT_EMAIL ?? null as string | null,

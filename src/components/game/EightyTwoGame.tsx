@@ -152,7 +152,7 @@ export function EightyTwoGame({ franchises, signedIn, playedTodayId = null, init
         <Choice label="Edition" name="edition" value={mode === 'today' ? 'classic' : edition} disabled={mode === 'today'} onChange={(v) => setEdition(v as 'classic' | 'standard')}
           options={[{ v: 'classic', t: 'Classic', d: 'Real stats, every era' }, { v: 'standard', t: 'Standard', d: standardReady ? 'NBA 2K ratings, today' : '2K ratings loading', off: !standardReady }]} />
         <Choice label="Difficulty" name="hard" value={hard ? 'hard' : 'easy'} onChange={(v) => setHard(v === 'hard')}
-          options={[{ v: 'easy', t: 'Easy', d: 'Stats shown, 1 era and 1 team re-spin' }, { v: 'hard', t: 'Hard', d: 'Type names, no stats, no re-spins' }]} />
+          options={[{ v: 'easy', t: 'Easy', d: 'Stats shown, 2 era and 2 team re-spins' }, { v: 'hard', t: 'Hard', d: 'Type names, no stats, no re-spins' }]} />
         {mode === 'today' && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/82-0">Sign in</a> or <a href="/register?next=/games/82-0">create one</a>.</p>}
         {playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. {mode === 'today' ? 'A new board drops at midnight ET. Casual is unlimited.' : 'Casual is unlimited: press Start.'}</p>}
         <div className="sheet-actions">

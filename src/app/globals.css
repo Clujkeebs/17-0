@@ -959,3 +959,11 @@ a.sn-sec-h:hover { color: var(--bone); }
 .sp-dots li.l { background: var(--danger); box-shadow: none; opacity: .8; }
 .sp-dots.sp-small { grid-template-columns: repeat(auto-fill, 9px); gap: 3px; }
 .sp-dots.sp-small li { width: 9px; height: 9px; }
+
+/* How-it-works answers under the draft games (search and answer engines read these). */
+.g-faq { max-width: calc(880px + 2 * var(--gutter)); margin: 0 auto; padding: 8px var(--gutter) 64px; border-top: 1px solid var(--steel); }
+.g-faq h2 { font-size: 1.4rem; letter-spacing: -0.02em; margin: 32px 0 8px; }
+.g-faq-lede { color: var(--bone-dim); margin: 0 0 20px; }
+.g-faq dl { margin: 0; display: grid; gap: 18px; }
+.g-faq dt { font-weight: 600; margin: 0 0 4px; }
+.g-faq dd { margin: 0; color: var(--bone-dim); line-height: 1.55; }

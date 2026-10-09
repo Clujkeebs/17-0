@@ -29,9 +29,9 @@ export const seasonLabel = (season: number) => `${season - 1}-${String(season % 
 export const NBA_ROUNDS = NBA_SLOTS.length;
 /** Like the original 82-0: each era can be drafted from once, so five picks cover all five eras. */
 export const ERA_PICKS_MAX = 1;
-/** One re-spin for the era and one for the team, per game. Hard mode has none. */
-export const ERA_RESPINS = 1;
-export const TEAM_RESPINS = 1;
+/** Two re-spins for the era and two for the team, per game (one each felt too tight once every era can only be used once). Hard mode has none. */
+export const ERA_RESPINS = 2;
+export const TEAM_RESPINS = 2;
 
 /** Slots a listed position plays naturally. Combo listings cover both. */
 export function naturalSlots(position: string): NbaSlot[] {

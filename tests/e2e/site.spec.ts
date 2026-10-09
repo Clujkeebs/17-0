@@ -63,3 +63,11 @@ test('players page searches as you type and links to the player', async ({ page 
   await page.locator('.ps-list a', { hasText: first }).first().click();
   await expect(page).toHaveURL(/\/players\/[a-z0-9-]+$/);
 });
+
+test('llms.txt and the IndexNow key are served', async ({ request }) => {
+  const r = await request.get('/llms.txt');
+  expect(r.status()).toBe(200);
+  const body = await r.text();
+  for (const g of ['/games/17-0', '/games/82-0', '/games/162-0']) expect(body).toContain(g);
+  expect((await request.get('/6b4158a0c2e8d8bf572858230b641949.txt')).status()).toBe(200);
+});

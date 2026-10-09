@@ -75,6 +75,16 @@ async function pool<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) await fn(items[i++]); }));
 }
 
+/** Some older athlete records carry only a display name, or first and last names. */
+const nameOf = (a: Json | null): string | null => {
+  if (!a) return null;
+  const full = a.fullName ?? a.displayName ?? [a.firstName, a.lastName].filter(Boolean).join(' ');
+  return typeof full === 'string' && full.trim() ? full.trim() : null;
+};
+
+/** Bumped to re-read every past season once without a wipe (v2: players whose record had no fullName were skipped). */
+const ROSTER_VERSION = 2;
+
 /** Bumped when seasonValue changes: stored values are recomputed from the stored stat lines, no refetch. */
 const VALUE_VERSION = 2;
 
@@ -112,7 +122,11 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
   }
   const known = new Set((await db.select({ id: schema.nbaPlayers.id }).from(schema.nbaPlayers)).map((r) => r.id));
   // A team-season is done only when it has a real roster stored, so a pass that came back empty is retried.
-  const done = new Set((await db.select({ t: schema.nbaPlayerSeasons.teamId, s: schema.nbaPlayerSeasons.season, n: dsql<number>`count(*)::int` })
+  const [rv] = await db.select().from(schema.gameConfigs).where(and(eq(schema.gameConfigs.gameType, '82-0'), eq(schema.gameConfigs.configKey, 'roster_version'))).limit(1);
+  const repair = Number(rv?.configValue ?? 1) < ROSTER_VERSION && from === FIRST_SEASON;
+  if (repair) console.log('[nba] re-reading every season once, roster version', ROSTER_VERSION);
+  const missed: string[] = [];
+  const done = repair ? new Set<string>() : new Set((await db.select({ t: schema.nbaPlayerSeasons.teamId, s: schema.nbaPlayerSeasons.season, n: dsql<number>`count(*)::int` })
     .from(schema.nbaPlayerSeasons).groupBy(schema.nbaPlayerSeasons.teamId, schema.nbaPlayerSeasons.season)).filter((r) => r.n >= 5).map((r) => `${r.t}:${r.s}`));
   let rows = 0, seasonsDone = 0, misses = 0, noStats = 0;
   try {
@@ -129,12 +143,13 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
           if (!known.has(pid)) {
             // The league-wide record can be thin for retired players; the season record always names them.
             let a = await get(`${CORE}/seasons/${season}/athletes/${pid}`, fetchImpl);
-            if (!a?.fullName) a = await get(`${CORE}/athletes/${pid}`, fetchImpl);
-            if (!a?.fullName) { misses++; return; }
-            const pos = (a.position as { abbreviation?: string } | undefined)?.abbreviation ?? 'F';
-            const headshot = (a.headshot as { href?: string } | undefined)?.href ?? null;
-            await db.insert(schema.nbaPlayers).values({ id: pid, fullName: String(a.fullName), position: pos, headshot })
-              .onConflictDoUpdate({ target: schema.nbaPlayers.id, set: { fullName: String(a.fullName), position: pos, headshot } });
+            if (!nameOf(a)) a = await get(`${CORE}/athletes/${pid}`, fetchImpl);
+            const name = nameOf(a);
+            if (!name) { misses++; if (missed.length < 25) missed.push(`${pid}@${teamId}:${season}`); return; }
+            const pos = (a!.position as { abbreviation?: string } | undefined)?.abbreviation ?? 'F';
+            const headshot = (a!.headshot as { href?: string } | undefined)?.href ?? null;
+            await db.insert(schema.nbaPlayers).values({ id: pid, fullName: name, position: pos, headshot })
+              .onConflictDoUpdate({ target: schema.nbaPlayers.id, set: { fullName: name, position: pos, headshot } });
             known.add(pid);
           }
           if (!stats.has(pid)) stats.set(pid, lineFrom(readStats(await get(`${CORE}/seasons/${season}/types/2/athletes/${pid}/statistics`, fetchImpl))));
@@ -152,9 +167,16 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
       seasonsDone++;
       console.log(`[nba] season ${season} synced: ${todo.length} teams, ${rows} player-seasons so far, ${misses} unnamed, ${noStats} without stats`);
     }
+    if (repair) {
+      if (rv) await db.update(schema.gameConfigs).set({ configValue: ROSTER_VERSION, updatedAt: new Date() }).where(eq(schema.gameConfigs.id, rv.id));
+      else await db.insert(schema.gameConfigs).values({ gameType: '82-0', configKey: 'roster_version', configValue: ROSTER_VERSION, updatedBy: 'nba-sync' });
+      await getRedis().del('nba:era-teams').catch(() => {});
+      console.log('[nba] roster repair done, version', ROSTER_VERSION);
+    }
   } finally {
     await getRedis().del('nba:sync-lock').catch(() => {});
   }
+  if (missed.length) console.log('[nba] athletes with no name on ESPN (first 25)', missed.join(' '));
   const [c] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.nbaPlayerSeasons);
   const [p] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.nbaPlayers);
   const summary = { from, to, seasonsDone, rowsWritten: rows, unnamed: misses, withoutStats: noStats, totalPlayerSeasons: c.n, players: p.n };
@@ -168,4 +190,23 @@ export async function nbaSpotCheck() {
     .from(schema.nbaPlayerSeasons).innerJoin(schema.nbaPlayers, eq(schema.nbaPlayers.id, schema.nbaPlayerSeasons.playerId))
     .where(and(eq(schema.nbaPlayerSeasons.teamId, 4), eq(schema.nbaPlayerSeasons.season, 1996))).orderBy(dsql`value desc`).limit(6);
   console.log('[nba] spot check 1995-96 Bulls', rows.map((r) => `${r.name} ${r.ppg.toFixed(1)}ppg v${r.value}`).join('; '));
+}
+
+/** Stars that must be on their team's board in that era; logged after every sync so a gap shows up in the logs. */
+const MUST_HAVE: [string, string, number, number][] = [
+  ['Larry Bird', 'BOS', 1985, 1989], ['Magic Johnson', 'LAL', 1985, 1989], ['Michael Jordan', 'CHI', 1985, 1998], ['Hakeem Olajuwon', 'HOU', 1990, 1999],
+  ['Shaquille O\'Neal', 'LAL', 2000, 2004], ['Tim Duncan', 'SA', 2000, 2009], ['Kobe Bryant', 'LAL', 2000, 2009], ['LeBron James', 'CLE', 2004, 2010],
+  ['Dirk Nowitzki', 'DAL', 2000, 2009], ['Stephen Curry', 'GS', 2010, 2019], ['Nikola Jokic', 'DEN', 2020, 2029], ['Giannis Antetokounmpo', 'MIL', 2020, 2029],
+];
+export async function nbaStarCheck() {
+  const out: string[] = [];
+  for (const [name, abbr, from, to] of MUST_HAVE) {
+    const [r] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.nbaPlayerSeasons)
+      .innerJoin(schema.nbaPlayers, eq(schema.nbaPlayers.id, schema.nbaPlayerSeasons.playerId))
+      .innerJoin(schema.nbaTeamSeasons, and(eq(schema.nbaTeamSeasons.teamId, schema.nbaPlayerSeasons.teamId), eq(schema.nbaTeamSeasons.season, schema.nbaPlayerSeasons.season)))
+      .where(and(dsql`${schema.nbaPlayers.fullName} ilike ${name.replace(/[^a-z' ]/gi, '%')}`, eq(schema.nbaTeamSeasons.abbreviation, abbr),
+        dsql`${schema.nbaPlayerSeasons.season} between ${from} and ${to}`, dsql`${schema.nbaPlayerSeasons.gp} >= 20`));
+    out.push(`${name} ${abbr} ${from}-${to}: ${r?.n ? `${r.n} seasons` : 'MISSING'}`);
+  }
+  console.log('[nba] star check', out.join('; '));
 }
