@@ -75,6 +75,27 @@ async function pool<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) await fn(items[i++]); }));
 }
 
+/** Bumped when seasonValue changes: stored values are recomputed from the stored stat lines, no refetch. */
+const VALUE_VERSION = 2;
+
+/** Recomputes every stored season's value with today's formula (v2: bent top, so only all-time years sit near 99). */
+export async function rescoreNba() {
+  const [ver] = await db.select().from(schema.gameConfigs).where(and(eq(schema.gameConfigs.gameType, '82-0'), eq(schema.gameConfigs.configKey, 'value_version'))).limit(1);
+  if (Number(ver?.configValue ?? 1) >= VALUE_VERSION) return 0;
+  const rows = await db.select().from(schema.nbaPlayerSeasons);
+  const changed = rows.map((r) => ({ r, v: seasonValue(r) })).filter(({ r, v }) => v !== r.value);
+  for (let i = 0; i < changed.length; i += 500) {
+    const chunk = changed.slice(i, i + 500);
+    const vals = dsql.join(chunk.map(({ r, v }) => dsql`(${r.playerId}::int, ${r.teamId}::int, ${r.season}::int, ${v}::real)`), dsql`, `);
+    await db.execute(dsql`update nba_player_seasons s set value = v.value from (values ${vals}) as v(pid, tid, season, value)
+      where s.player_id = v.pid and s.team_id = v.tid and s.season = v.season`);
+  }
+  if (ver) await db.update(schema.gameConfigs).set({ configValue: VALUE_VERSION, updatedAt: new Date() }).where(eq(schema.gameConfigs.id, ver.id));
+  else await db.insert(schema.gameConfigs).values({ gameType: '82-0', configKey: 'value_version', configValue: VALUE_VERSION, updatedBy: 'nba-sync' });
+  console.log(`[nba] rescored ${changed.length} of ${rows.length} seasons, value version ${VALUE_VERSION}`);
+  return changed.length;
+}
+
 export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: typeof fetch } = {}) {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const latest = latestSeason();

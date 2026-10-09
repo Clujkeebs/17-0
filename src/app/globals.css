@@ -948,3 +948,11 @@ a.sn-sec-h:hover { color: var(--bone); }
 .badges-more { margin-top: 12px; }
 .badges-more summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
 @media (max-width: 560px) { .badges ul { grid-template-columns: 1fr 1fr; } .badge { padding: 8px; gap: 8px; } .badge-mark { width: 28px; height: 28px; font-size: .95rem; } .badge strong { font-size: .9rem; } .badge-desc { font-size: .75rem; } }
+
+/* Season playback on 82-0 and 162-0 results: one dot per game. */
+.sp-dots { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fill, 12px); gap: 4px; max-width: 640px; }
+.sp-dots li { width: 12px; height: 12px; border-radius: 50%; background: var(--surface); box-shadow: inset 0 0 0 1px var(--steel); transition: background .15s; }
+.sp-dots li.w { background: var(--green); box-shadow: none; }
+.sp-dots li.l { background: var(--danger); box-shadow: none; opacity: .8; }
+.sp-dots.sp-small { grid-template-columns: repeat(auto-fill, 9px); gap: 3px; }
+.sp-dots.sp-small li { width: 9px; height: 9px; }

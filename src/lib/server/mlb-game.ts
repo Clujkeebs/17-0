@@ -9,7 +9,7 @@ import { latestMlbSeason } from './mlb-sync';
 import { createRng } from '@/lib/game/prng';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
 import {
-  MLB_ERAS, MLB_ERA_RESPINS, MLB_ROUNDS, MLB_SLOTS, MLB_TEAM_RESPINS, draftSlots, gradeMlbRoster, isPitchSlot, mlbEraOf, mlbFit,
+  MLB_ERAS, MLB_ERA_PICKS_MAX, MLB_ERA_RESPINS, MLB_ROUNDS, MLB_SLOTS, MLB_TEAM_RESPINS, draftSlots, gradeMlbRoster, isPitchSlot, mlbEraOf, mlbFit,
   type MlbEraKey, type MlbKind, type MlbMode, type MlbPick, type MlbSlot,
 } from '@/lib/game/onesixtytwo';
 
@@ -49,6 +49,8 @@ export interface MlbBoardPlayer { id: number; name: string; position: string; ki
 export interface MlbTeamView { id: number; era: SpinEra; eraLabel: string; name: string; location: string; abbreviation: string; color: string; logoUrl: string; players: MlbBoardPlayer[] }
 export interface MlbState {
   sessionId: string; index: number; total: number; done: boolean; hard: boolean; mode: MlbMode;
+  /** Eras that are full (two picks each): the reel skips them. */
+  usedEras: SpinEra[];
   eraRespinsLeft: number; teamRespinsLeft: number;
   team: MlbTeamView | null;
   roster: { slot: MlbSlot; pick: (MlbBoardPlayer & { teamName: string; teamColor: string; logoUrl: string; fit: number }) | null }[];
@@ -115,12 +117,21 @@ async function board(teamId: number, era: SpinEra): Promise<MlbTeamView | null> 
 
 /* ------------------------------------------------------------------ spins */
 
+/** Eras that have given all the picks they can (two each in Eras mode). */
+export function fullMlbEras(p: Pick<MlbPayload, 'picks' | 'mode'>): Set<SpinEra> {
+  if (p.mode === 'now') return new Set();
+  const n = new Map<SpinEra, number>();
+  for (const x of p.picks) n.set(x.era, (n.get(x.era) ?? 0) + 1);
+  return new Set([...n].filter(([, c]) => c >= MLB_ERA_PICKS_MAX).map(([e]) => e));
+}
+
 async function draw(seed: string, round: number, p: MlbPayload, keepEra?: SpinEra, keepTeam?: number): Promise<{ era: SpinEra; teamId: number }> {
   const teams = await eraTeams();
   if (p.mode === 'now') keepEra = 'now';
   const rng = createRng(`162:${seed}:${round}:${p.eraRespinsUsed}:${p.teamRespinsUsed}`);
   const used = new Set(p.picks.map((x) => x.teamId));
-  const eras = MLB_ERAS.filter((e) => teams[e.key].some((t) => !used.has(t)));
+  const full = fullMlbEras(p);
+  const eras = MLB_ERAS.filter((e) => !full.has(e.key) && teams[e.key].some((t) => !used.has(t)));
   // Era re-spin: a different era, keeping the franchise when it played in one (only the era changes).
   if (keepTeam !== undefined && !keepEra) {
     const others = eras.filter((e) => e.key !== p.current?.era);
@@ -150,7 +161,8 @@ async function state(sessionId: string, p: MlbPayload): Promise<MlbState> {
   });
   return {
     sessionId, index, total: MLB_ROUNDS, done, hard: p.hard, mode: p.mode ?? 'eras',
-    eraRespinsLeft: p.hard || p.mode === 'now' ? 0 : MLB_ERA_RESPINS - p.eraRespinsUsed,
+    usedEras: [...fullMlbEras(p)],
+    eraRespinsLeft: p.hard || p.mode === 'now' || !MLB_ERAS.some((e) => e.key !== p.current?.era && !fullMlbEras(p).has(e.key)) ? 0 : MLB_ERA_RESPINS - p.eraRespinsUsed,
     teamRespinsLeft: p.hard ? 0 : MLB_TEAM_RESPINS - p.teamRespinsUsed,
     team: view, roster,
   };
@@ -188,6 +200,7 @@ export async function respinMlb(sessionId: string, tok: string, what: 'era' | 't
   if (p.hard) throw new MlbError('Hard mode has no re-spins.');
   if (!p.current || p.picks.length >= MLB_ROUNDS) throw new MlbError('The draft is complete.');
   if (what === 'era' && (p.mode === 'now' || p.eraRespinsUsed >= MLB_ERA_RESPINS)) throw new MlbError(p.mode === 'now' ? 'Right now has no eras to re-spin.' : 'Your era re-spins are used.');
+  if (what === 'era' && !MLB_ERAS.some((e) => e.key !== p.current!.era && !fullMlbEras(p).has(e.key))) throw new MlbError('Every other era is already full.');
   if (what === 'team' && p.teamRespinsUsed >= MLB_TEAM_RESPINS) throw new MlbError('Your team re-spins are used.');
   const next: MlbPayload = { ...p, eraRespinsUsed: p.eraRespinsUsed + (what === 'era' ? 1 : 0), teamRespinsUsed: p.teamRespinsUsed + (what === 'team' ? 1 : 0) };
   next.current = await draw(s.seed, p.picks.length, next, what === 'team' ? p.current.era : undefined, what === 'era' ? p.current.teamId : undefined);

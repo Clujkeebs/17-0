@@ -15,7 +15,7 @@ import { tuneFantasyFloor } from '@/lib/server/calibrate';
 /** Fantasy points, then a fresh fantasy win line fitted to them. Never fails the ratings sync. */
 /** 82-0 history, a spot check of a famous season, then a fresh win line. Never fails the ratings sync. */
 const refreshNba = (recentOnly: boolean) => import('@/lib/server/nba-sync')
-  .then(async (m) => { await m.syncNba(recentOnly ? { from: m.latestSeason() - 1 } : {}); await m.nbaSpotCheck(); })
+  .then(async (m) => { await m.rescoreNba(); await m.syncNba(recentOnly ? { from: m.latestSeason() - 1 } : {}); await m.nbaSpotCheck(); })
   .then(() => import('@/lib/server/nba2k')).then((k) => k.sync2k().catch((e) => console.warn('[2k] sync failed', (e as Error).message)))
   .then(() => import('@/lib/server/nba-calibrate')).then(async (c) => { await c.tuneNbaFloor(); await c.tune2kFloor(); })
   .catch((e) => console.warn('[nba] refresh failed', (e as Error).message));

@@ -1,14 +1,14 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
-import { MLB_ERAS, MLB_ERA_RESPINS, MLB_SLOTS, MLB_TEAM_RESPINS, draftSlots, gradeMlbRoster, mlbFit, type MlbKind, type MlbMode, type MlbPick, type MlbSlot } from '@/lib/game/onesixtytwo';
+import { MLB_ERAS, MLB_ERA_PICKS_MAX, MLB_ERA_RESPINS, MLB_SLOTS, MLB_TEAM_RESPINS, draftSlots, gradeMlbRoster, mlbFit, type MlbKind, type MlbMode, type MlbPick, type MlbSlot } from '@/lib/game/onesixtytwo';
 import { createRng } from '@/lib/game/prng';
 import { getRedis } from './redis';
 import { mlbFloorKey } from './mlb-floor';
 import { latestMlbSeason } from './mlb-sync';
 
 type Cand = { name: string; position: string; kind: MlbKind; teamId: number; season: number; value: number };
-/** A careful drafter using the re-spins goes 162-0 about this often. */
-const TARGET_PERFECT = 0.06;
+/** A careful drafter using the re-spins goes 162-0 about this often (was 6 percent; owners asked for harder). */
+const TARGET_PERFECT = 0.03;
 const RESPIN_BELOW = 85;
 
 async function boards(mode: MlbMode) {
@@ -45,20 +45,22 @@ function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respi
   for (let g = 0; g < games; g++) {
     const rng = createRng(`mlbcal:${mode}:${g}`);
     let eraLeft = mode === 'respin' && !oneEra ? MLB_ERA_RESPINS : 0, teamLeft = mode === 'respin' ? MLB_TEAM_RESPINS : 0;
-    const used = new Set<number>(), open = new Set<MlbSlot>(MLB_SLOTS), picks: MlbPick[] = [];
-    const spin = (era?: string) => { const e = era ?? rng.pick(eras); const teams = [...b.get(e)!.keys()].filter((t) => !used.has(t)); return { e, t: rng.pick(teams) }; };
+    const used = new Set<number>(), open = new Set<MlbSlot>(MLB_SLOTS), picks: MlbPick[] = [], perEra = new Map<string, number>();
+    // Same rule as the game: an era that has given two picks is off the reel (Right now has a single era).
+    const live = () => (oneEra ? eras : eras.filter((x) => (perEra.get(x) ?? 0) < MLB_ERA_PICKS_MAX));
+    const spin = (era?: string) => { const e = era ?? rng.pick(live()); const teams = [...b.get(e)!.keys()].filter((t) => !used.has(t)); return { e, t: rng.pick(teams) }; };
     for (let round = 0; round < MLB_SLOTS.length; round++) {
       let { e, t } = spin();
       if (mode === 'respin') {
         const top = () => bestFor(b.get(e)!.get(t)!, open)?.v ?? 0;
         if (top() < RESPIN_BELOW && teamLeft) { teamLeft--; ({ e, t } = spin(e)); }
-        if (top() < RESPIN_BELOW && eraLeft) { eraLeft--; ({ e, t } = spin()); }
+        if (top() < RESPIN_BELOW && eraLeft && live().length > 1) { eraLeft--; const cur = e; ({ e, t } = spin(rng.pick(live().filter((x) => x !== cur)))); }
       }
       const list = b.get(e)!.get(t)!;
       let pick = bestFor(list, open);
       if (mode === 'random') { const ok = list.filter((c) => draftSlots(c.position, c.kind).some((s) => open.has(s))); const c = ok.length ? rng.pick(ok) : null; pick = c ? bestFor([c], open) : null; }
       if (!pick) break;
-      picks.push({ ...pick.c, slot: pick.slot }); open.delete(pick.slot); used.add(t);
+      picks.push({ ...pick.c, slot: pick.slot }); open.delete(pick.slot); used.add(t); perEra.set(e, (perEra.get(e) ?? 0) + 1);
     }
     if (picks.length < MLB_SLOTS.length) continue;
     n++; if (gradeMlbRoster(`c${g}`, picks, floor).wins === 162) perfect++;

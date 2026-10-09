@@ -172,7 +172,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, playedTodayId = null, in
         {error ? <section className="g-done"><p role="alert" className="field-error">{error}</p><button className="btn btn-primary" onClick={() => setSheet(true)}>Try again</button></section> : (
           <section className="g-intro" style={{ maxWidth: 'none', paddingTop: 16 }}>
             <h2 className="g-title">Spin an era.<br />Spin a team. Go <span style={{ whiteSpace: 'nowrap' }}>162-0.</span></h2>
-            <p className="g-lede">Eleven spins, each an era since 1970 and then a franchise. Fill a lineup, a starter and a closer, each graded on his real season against that year&apos;s league, and move hitters around the field before Opening Day.</p>
+            <p className="g-lede">Eleven spins, each an era since 1970 and then a franchise, with no more than two picks from any era. Fill a lineup, a starter and a closer, each graded on his real season against that year&apos;s league, and move hitters around the field before Opening Day.</p>
             <button className="btn btn-primary btn-lg" onClick={() => setSheet(true)} disabled={busy === 'start'}>{busy === 'start' ? 'Spinning' : 'Set up a game'}</button>
           </section>
         )}
@@ -233,7 +233,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, playedTodayId = null, in
         {team && target ? (
           <section ref={stageRef} className="g-stage" aria-labelledby="mlb-clock">
             <div className="g-team">
-              {game.mode === 'now' ? <p className="g-kicker" style={{ margin: 0 }}>Right now · {team.eraLabel} season</p> : <EraReel eras={MLB_ERAS.map((e) => ({ key: e.key, label: e.label }))} target={team.era} targetLabel={MLB_ERAS.find((e) => e.key === team.era)?.label ?? team.eraLabel} spinKey={`${game.sessionId}-${eraKey}`} onLand={() => { setEraLanded(true); if (!teamMoved) setLanded(true); }} />}
+              {game.mode === 'now' ? <p className="g-kicker" style={{ margin: 0 }}>Right now · {team.eraLabel} season</p> : <EraReel eras={MLB_ERAS.filter((e) => e.key === team.era || !(game.usedEras ?? []).includes(e.key)).map((e) => ({ key: e.key, label: e.label }))} target={team.era} targetLabel={MLB_ERAS.find((e) => e.key === team.era)?.label ?? team.eraLabel} spinKey={`${game.sessionId}-${eraKey}`} onLand={() => { setEraLanded(true); if (!teamMoved) setLanded(true); }} />}
               {(eraLanded || game.mode === 'now' || !teamMoved) && <Reel pool={franchises.length ? franchises : [target]} target={target} spinKey={`${game.sessionId}-${teamKey}`} onLand={() => { setLanded(true); setAnnounce(`${team.eraLabel} ${team.location} ${team.name} on the clock`); }} />}
               <div className="g-spin-status" aria-live="polite">
                 <p className="g-kicker" style={{ margin: 0 }} id="mlb-clock">{landed ? `Pick one ${team.eraLabel} ${team.name} player` : 'Spinning'}</p>

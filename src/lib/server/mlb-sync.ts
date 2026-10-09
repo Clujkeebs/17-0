@@ -12,6 +12,8 @@ import { getRedis } from './redis';
 const API = 'https://statsapi.mlb.com/api/v1';
 /** Bump when the value formulas change: stored seasons are cleared and rebuilt. */
 const DATA_VERSION = 2;
+/** Bumped when batValue or pitchValue change: one full pass re-reads every season and overwrites values in place (no wipe, so 162-0 stays playable). */
+const VALUE_VERSION = 2;
 
 /** The latest season with games: the current year from late March on. */
 export function latestMlbSeason(now = new Date()): number {
@@ -80,7 +82,10 @@ export async function syncMlb(opts: { from?: number; to?: number; fetchImpl?: ty
     await getRedis().del('mlb:era-teams').catch(() => {});
     console.log('[mlb] cleared stored seasons for a rebuild, data version', DATA_VERSION);
   }
-  const done = new Set((await db.select({ s: schema.mlbPlayerSeasons.season, n: dsql<number>`count(distinct ${schema.mlbPlayerSeasons.teamId})::int` })
+  const [vv] = await db.select().from(schema.gameConfigs).where(and(eq(schema.gameConfigs.gameType, '162-0'), eq(schema.gameConfigs.configKey, 'value_version'))).limit(1);
+  const rescore = Number(vv?.configValue ?? 1) < VALUE_VERSION && from === MLB_FIRST_SEASON;
+  if (rescore) console.log('[mlb] rescoring every season, value version', VALUE_VERSION);
+  const done = rescore ? new Set<number>() : new Set((await db.select({ s: schema.mlbPlayerSeasons.season, n: dsql<number>`count(distinct ${schema.mlbPlayerSeasons.teamId})::int` })
     .from(schema.mlbPlayerSeasons).groupBy(schema.mlbPlayerSeasons.season)).filter((r) => r.n >= 24).map((r) => r.s));
   let rows = 0, seasons = 0;
   try {
@@ -116,6 +121,11 @@ export async function syncMlb(opts: { from?: number; to?: number; fetchImpl?: ty
       }
       seasons++;
       console.log(`[mlb] season ${season}: ${teams.length} teams, league OPS ${lg.ops.toFixed(3)} ERA ${lg.era.toFixed(2)}, ${rows} rows so far`);
+    }
+    if (rescore) {
+      if (vv) await db.update(schema.gameConfigs).set({ configValue: VALUE_VERSION, updatedAt: new Date() }).where(eq(schema.gameConfigs.id, vv.id));
+      else await db.insert(schema.gameConfigs).values({ gameType: '162-0', configKey: 'value_version', configValue: VALUE_VERSION, updatedBy: 'mlb-sync' });
+      console.log('[mlb] rescore done, value version', VALUE_VERSION);
     }
   } finally {
     await getRedis().del('mlb:sync-lock').catch(() => {});

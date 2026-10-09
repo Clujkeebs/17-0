@@ -1,12 +1,13 @@
 import { eq, gte, isNotNull } from 'drizzle-orm';
 import { db, schema } from '@/db';
-import { ERAS, NBA_SLOTS, fitMultiplier, gradeNbaRoster, type EraKey, type NbaPick, type NbaSlot } from '@/lib/game/eightytwo';
+import { ERAS, ERA_PICKS_MAX, NBA_SLOTS, fitMultiplier, gradeNbaRoster, type EraKey, type NbaPick, type NbaSlot } from '@/lib/game/eightytwo';
 import { createRng } from '@/lib/game/prng';
 import { getRedis } from './redis';
 import { NBA_FLOOR_KEY, NBA_FLOOR_KEY_2K } from './nba-floor';
 
 type Cand = { name: string; position: string; teamId: number; season: number; value: number };
-const TARGET_P17 = 0.06;
+/** A careful drafter using both re-spins goes 82-0 about this often (was 6 percent; owners asked for harder). */
+const TARGET_P17 = 0.03;
 const RESPIN_BELOW = 85;
 
 /** Every 120 slot assignments of five players; the best one is what a careful player would set. */
@@ -47,9 +48,11 @@ function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respi
   for (let g = 0; g < games; g++) {
     const rng = createRng(`nbacal:${mode}:${g}`);
     let eraLeft = mode === 'respin' ? 1 : 0, teamLeft = mode === 'respin' ? 1 : 0;
-    const used = new Set<number>(), picks: Cand[] = [];
+    const used = new Set<number>(), picks: Cand[] = [], perEra = new Map<EraKey, number>();
+    // Same rule as the game: each era gives one pick (Standard has one era, so the rule does not apply there).
+    const live = () => (eras.length === 1 ? eras : eras.filter((x) => (perEra.get(x) ?? 0) < ERA_PICKS_MAX));
     const spin = (era?: EraKey) => {
-      const e = era ?? rng.pick(eras);
+      const e = era ?? rng.pick(live());
       const teams = [...b.get(e)!.keys()].filter((t) => !used.has(t));
       return { e, t: rng.pick(teams) };
     };
@@ -58,11 +61,11 @@ function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respi
       if (mode === 'respin') {
         const top = () => b.get(e)!.get(t)![0].value;
         if (top() < RESPIN_BELOW && teamLeft) { teamLeft--; ({ e, t } = spin(e)); }
-        if (top() < RESPIN_BELOW && eraLeft) { eraLeft--; ({ e, t } = spin()); }
+        if (top() < RESPIN_BELOW && eraLeft && live().length > 1) { eraLeft--; const cur = e; ({ e, t } = spin(rng.pick(live().filter((x) => x !== cur)))); }
       }
       const list = b.get(e)!.get(t)!;
       picks.push(mode === 'random' ? rng.pick(list) : list[0]);
-      used.add(t);
+      used.add(t); perEra.set(e, (perEra.get(e) ?? 0) + 1);
     }
     const r = gradeNbaRoster(`c${g}`, mode === 'random' ? picks.map((c, i) => ({ ...c, slot: NBA_SLOTS[i] })) : bestLineup(picks), floor);
     n++; if (r.wins === 82) perfect++;

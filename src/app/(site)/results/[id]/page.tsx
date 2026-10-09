@@ -9,6 +9,7 @@ import { getResult } from '@/lib/server/leaderboard';
 import { getTeams } from '@/lib/server/data';
 import { SideAd } from '@/components/AdSlot';
 import { ShareButton } from '@/components/game/ShareButton';
+import { SeasonPlayback } from '@/components/game/SeasonPlayback';
 import { ChallengeButton } from '@/components/game/ChallengeButton';
 import { getChallenge, challengeOfResult } from '@/lib/server/challenges';
 import { ATTRIBUTE_LABELS, type AttributeKey } from '@/lib/game/attributes';
@@ -208,10 +209,8 @@ function NbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
         <figure style={{ margin: '0 0 24px' }}>
           <img src={`/api/og/game-result?id=${r.id}`} alt={`Share card: ${text}`} width={1200} height={630} style={{ width: '100%', height: 'auto', aspectRatio: '1200 / 630', border: '1px solid var(--steel)', borderRadius: 18, boxShadow: 'var(--shadow)' }} />
         </figure>
-        <div className="row" style={{ alignItems: 'flex-end', gap: 24 }}>
-          <p className="big-num" style={{ margin: 0, color: d.wins === 82 ? 'var(--orange)' : undefined }}>{d.wins}-{d.losses}</p>
-          <span className="stat" style={{ paddingBottom: 8 }}><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">Lineup strength</span></span>
-        </div>
+        <SeasonPlayback seed={r.id} wins={d.wins} games={82} />
+        <span className="stat" style={{ marginTop: 16, display: 'inline-flex' }}><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">Lineup strength</span></span>
         <div className="row" style={{ margin: '20px 0' }}>
           <ShareButton text={text} url={`/results/${r.id}`} imageUrl={`/api/og/game-result?id=${r.id}`} fileName="unbeaten-82-0.png" />
           <Link className="btn btn-primary" href="/games/82-0">Play again</Link>
@@ -255,10 +254,8 @@ function MlbResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
         <figure style={{ margin: '0 0 24px' }}>
           <img src={`/api/og/game-result?id=${r.id}`} alt={`Share card: ${text}`} width={1200} height={630} style={{ width: '100%', height: 'auto', aspectRatio: '1200 / 630', border: '1px solid var(--steel)', borderRadius: 18, boxShadow: 'var(--shadow)' }} />
         </figure>
-        <div className="row" style={{ alignItems: 'flex-end', gap: 24 }}>
-          <p className="big-num" style={{ margin: 0, color: d.wins === 162 ? 'var(--orange)' : undefined }}>{d.wins}-{d.losses}</p>
-          <span className="stat" style={{ paddingBottom: 8 }}><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">Roster strength</span></span>
-        </div>
+        <SeasonPlayback seed={r.id} wins={d.wins} games={162} />
+        <span className="stat" style={{ marginTop: 16, display: 'inline-flex' }}><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">Roster strength</span></span>
         <div className="row" style={{ margin: '20px 0' }}>
           <ShareButton text={text} url={`/results/${r.id}`} imageUrl={`/api/og/game-result?id=${r.id}`} fileName="unbeaten-162-0.png" />
           <Link className="btn btn-primary" href="/games/162-0">Play again</Link>

@@ -53,3 +53,12 @@ export function createRng(seed: string): Rng {
 }
 
 export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/**
+ * Bends the top of a 40-99 scale so it only creeps toward 99: values up to the knee are unchanged, and above it
+ * each extra point counts for less. Without it every great season piles up at the 99 cap and a superstar's
+ * ordinary year reads the same as his best one.
+ */
+export function softTop(v: number, knee = 82, k = 12): number {
+  return v <= knee ? v : knee + (99 - knee) * (1 - Math.exp(-(v - knee) / k));
+}

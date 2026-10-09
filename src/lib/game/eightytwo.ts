@@ -1,4 +1,4 @@
-import { clamp, createRng } from './prng';
+import { clamp, createRng, softTop } from './prng';
 import { letterGrade } from './formulas';
 import { lastName } from '@/lib/names';
 
@@ -27,6 +27,8 @@ export const isEra = (x: unknown): x is EraKey => typeof x === 'string' && ERAS.
 export const seasonLabel = (season: number) => `${season - 1}-${String(season % 100).padStart(2, '0')}`;
 
 export const NBA_ROUNDS = NBA_SLOTS.length;
+/** Like the original 82-0: each era can be drafted from once, so five picks cover all five eras. */
+export const ERA_PICKS_MAX = 1;
 /** One re-spin for the era and one for the team, per game. Hard mode has none. */
 export const ERA_RESPINS = 1;
 export const TEAM_RESPINS = 1;
@@ -57,14 +59,15 @@ export interface SeasonLine { gp: number; mpg: number; ppg: number; rpg: number;
 /**
  * One number per player-season, on a 40-99 scale. It is a box-score composite in the spirit of Hollinger's
  * game score: scoring, boards, assists and stocks count, turnovers subtract, efficiency above league norms
- * adds. Tiny samples are pulled toward replacement level.
+ * adds. Tiny samples are pulled toward replacement level. The top of the scale is bent (softTop) so only the
+ * greatest seasons ever land near 99: a star's good year and his best year read differently.
  */
 export function seasonValue(s: SeasonLine): number {
   const tov = s.tov ?? 0.12 * (s.ppg + s.apg);
   const eff = s.fgPct != null && s.ppg >= 5 ? (s.fgPct - 0.46) * 40 : 0;
   const raw = s.ppg + 1.2 * s.rpg + 1.5 * s.apg + 2.5 * s.spg + 2 * s.bpg - 1.5 * tov + eff;
   const sample = clamp(s.gp / 40, 0, 1);
-  return Math.round(clamp(50 + raw * 1.02, 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
+  return Math.round(clamp(softTop(50 + raw * 1.02), 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
 }
 
 export interface NbaPick { slot: NbaSlot; name: string; position: string; teamId: number; season: number; value: number }

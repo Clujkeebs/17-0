@@ -1,4 +1,4 @@
-import { clamp, createRng } from './prng';
+import { clamp, createRng, softTop } from './prng';
 import { letterGrade } from './formulas';
 import { lastName } from '@/lib/names';
 
@@ -31,6 +31,8 @@ export const mlbEraOf = (key: string) => MLB_ERAS.find((e) => e.key === key);
 export const MLB_FIRST_SEASON = 1970;
 
 export const MLB_ROUNDS = MLB_SLOTS.length;
+/** No era can be drafted from more than twice, so eleven picks spread across at least six eras' worth of history. */
+export const MLB_ERA_PICKS_MAX = 2;
 export const MLB_ERA_RESPINS = 2;
 export const MLB_TEAM_RESPINS = 2;
 
@@ -106,7 +108,7 @@ export function batValue(s: BatLine, lg: LeagueNorms, position: string): number 
   const opsPlus = (s.ops / (lg.ops || 0.72) - 1) * 100;
   const raw = opsPlus + (s.pa - 450) / 25 + s.sb / 5 + (pos[position.toUpperCase()] ?? 0);
   const sample = clamp(s.pa / 400, 0, 1);
-  return Math.round(clamp(70 + raw * 0.6, 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
+  return Math.round(clamp(softTop(70 + raw * 0.6), 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
 }
 
 /** Value of a pitcher's season on a 40-99 scale: ERA against the league that year, innings (starters) or saves (relievers), strikeouts. */
@@ -116,12 +118,12 @@ export function pitchValue(s: PitchLine, lg: LeagueNorms, kind: 'sp' | 'rp'): nu
   if (kind === 'sp') {
     const raw = Math.min(eraPlus, 120) + (s.ip - 150) / 6 + (kRate - 0.8) * 20;
     const sample = clamp(s.ip / 140, 0, 1);
-    return Math.round(clamp(70 + raw * 0.5, 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
+    return Math.round(clamp(softTop(70 + raw * 0.5), 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
   }
   // Relief innings are few and ERA swings on them, so the ERA credit is capped and short seasons pulled down hard.
   const raw = Math.min(eraPlus, 120) * 0.8 + s.sv * 0.5 + (kRate - 0.9) * 20 + (s.ip - 60) / 8;
   const sample = clamp(s.ip / 60, 0, 1);
-  return Math.round(clamp(66 + raw * 0.3, 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
+  return Math.round(clamp(softTop(66 + raw * 0.3), 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
 }
 
 /** A season only counts as a draftable line with real playing time. */
