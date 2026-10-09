@@ -1,3 +1,4 @@
+import { firstAllowed, spinKey } from '@/lib/game/spin-order';
 import { createHash } from 'node:crypto';
 import { and, eq, gte, inArray, lte, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
@@ -40,6 +41,9 @@ export interface MlbPayload {
   hard: boolean;
   eraRespinsUsed: number;
   teamRespinsUsed: number;
+  /** Re-spins used in the current round; with the seed and round they fix the next draw (see spin-order.ts). */
+  roundEra?: number;
+  roundTeam?: number;
   current: { era: SpinEra; teamId: number } | null;
   picks: { playerId: number; teamId: number; season: number; slot: MlbSlot; era: SpinEra }[];
   challengeId?: string;
@@ -126,23 +130,29 @@ export function fullMlbEras(p: Pick<MlbPayload, 'picks' | 'mode'>): Set<SpinEra>
 }
 
 async function draw(seed: string, round: number, p: MlbPayload, keepEra?: SpinEra, keepTeam?: number): Promise<{ era: SpinEra; teamId: number }> {
+  const asked = keepEra;
   const teams = await eraTeams();
   if (p.mode === 'now') keepEra = 'now';
-  const rng = createRng(`162:${seed}:${round}:${p.eraRespinsUsed}:${p.teamRespinsUsed}`);
   const used = new Set(p.picks.map((x) => x.teamId));
   const full = fullMlbEras(p);
-  const eras = MLB_ERAS.filter((e) => !full.has(e.key) && teams[e.key].some((t) => !used.has(t)));
+  const canUse = (e: SpinEra) => !full.has(e) && teams[e].some((t) => !used.has(t));
+  const allEras = MLB_ERAS.map((e) => e.key) as SpinEra[];
+  const kind = keepTeam !== undefined && !asked ? 'era' : asked ? 'team' : 'spin';
+  const key = spinKey('162', seed, round, kind, kind === 'era' ? p.roundEra ?? 0 : kind === 'team' ? p.roundTeam ?? 0 : 0);
+  const teamIn = (e: SpinEra, not?: number) => firstAllowed(`${key}:${e}`, teams[e], (t) => !used.has(t) && t !== not);
   // Era re-spin: a different era, keeping the franchise when it played in one (only the era changes).
-  if (keepTeam !== undefined && !keepEra) {
-    const others = eras.filter((e) => e.key !== p.current?.era);
-    const withTeam = others.filter((e) => teams[e.key].includes(keepTeam));
-    if (withTeam.length) return { era: rng.pick(withTeam.map((e) => e.key)) as SpinEra, teamId: keepTeam };
-    if (others.length) { const e = rng.pick(others.map((x) => x.key)) as SpinEra; const pool = teams[e].filter((t) => !used.has(t)); if (pool.length) return { era: e, teamId: rng.pick(pool) }; }
+  if (kind === 'era') {
+    const other = (e: SpinEra) => e !== p.current?.era && canUse(e);
+    const withTeam = firstAllowed(`${key}:keep`, allEras, (e) => other(e) && teams[e].includes(keepTeam!));
+    if (withTeam) return { era: withTeam, teamId: keepTeam! };
+    const e = firstAllowed(key, allEras, other);
+    const t = e !== undefined ? teamIn(e) : undefined;
+    if (e !== undefined && t !== undefined) return { era: e, teamId: t };
   }
-  const era: SpinEra = keepEra ?? rng.pick(eras.map((e) => e.key));
-  const open = teams[era].filter((t) => !used.has(t) && t !== (keepEra ? p.current?.teamId : -1));
-  if (!open.length) throw new MlbError('No franchises left to spin. Start a new game.', 409);
-  return { era, teamId: rng.pick(open) };
+  const era = keepEra ?? firstAllowed(key, allEras, canUse);
+  const teamId = era !== undefined ? teamIn(era, keepEra ? p.current?.teamId : undefined) : undefined;
+  if (era === undefined || teamId === undefined) throw new MlbError('No franchises left to spin. Start a new game.', 409);
+  return { era, teamId };
 }
 
 /* ------------------------------------------------------------------ state */
@@ -203,7 +213,10 @@ export async function respinMlb(sessionId: string, tok: string, what: 'era' | 't
   if (what === 'era' && !MLB_ERAS.some((e) => e.key !== p.current!.era && !fullMlbEras(p).has(e.key))) throw new MlbError('Every other era is already full.');
   if (what === 'team' && p.teamRespinsUsed >= MLB_TEAM_RESPINS) throw new MlbError('Your team re-spins are used.');
   const next: MlbPayload = { ...p, eraRespinsUsed: p.eraRespinsUsed + (what === 'era' ? 1 : 0), teamRespinsUsed: p.teamRespinsUsed + (what === 'team' ? 1 : 0) };
+  // The draw is keyed on this round's re-spins so far (before this one), so the n-th re-spin is the same for everyone.
+  next.roundEra = p.roundEra ?? 0; next.roundTeam = p.roundTeam ?? 0;
   next.current = await draw(s.seed, p.picks.length, next, what === 'team' ? p.current.era : undefined, what === 'era' ? p.current.teamId : undefined);
+  if (what === 'era') next.roundEra = (p.roundEra ?? 0) + 1; else next.roundTeam = (p.roundTeam ?? 0) + 1;
   await save(s.id, next);
   return state(s.id, next);
 }
@@ -223,7 +236,7 @@ export async function pickMlb(sessionId: string, tok: string, playerId: number, 
   if (!openSlots.length) throw new MlbError(`${pl.fits.join(' and ')} ${pl.fits.length > 1 ? 'are' : 'is'} filled. Take someone at an open spot.`);
   const best = [...openSlots].sort((a, b) => mlbFit(pl.position, pl.kind, b) - mlbFit(pl.position, pl.kind, a))[0];
   const chosen = slot && openSlots.includes(slot) ? slot : best;
-  const next: MlbPayload = { ...p, picks: [...p.picks, { playerId, teamId: team.id, season: pl.season, slot: chosen, era: p.current.era }] };
+  const next: MlbPayload = { ...p, picks: [...p.picks, { playerId, teamId: team.id, season: pl.season, slot: chosen, era: p.current.era }], roundEra: 0, roundTeam: 0 };
   next.current = next.picks.length < MLB_ROUNDS ? await draw(s.seed, next.picks.length, next) : null;
   await save(s.id, next);
   return state(s.id, next);

@@ -4,6 +4,7 @@ import { loadSession, publicTeams, type GameType, type PublicTeam, type SpinPayl
 import { FORMATS, MAX_RESPINS, respinsFor, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
 import { TRAITS, traitValue } from '@/lib/game/build';
 import { getTeams } from './data';
+import { firstAllowed, spinKey } from '@/lib/game/spin-order';
 
 /**
  * The 53 runs long enough that a team can come up with nobody left for your open spots (its only punter is
@@ -96,10 +97,21 @@ export async function respinCurrent(sessionId: string, token: string, gameType: 
   if (p.hard) throw new DraftError('Hard mode has no re-rolls.');
   if (respinsLeft(p) <= 0) throw new DraftError('No re-spins left.');
   const next: SpinPayload = { ...p, teams: [...p.teams], reserves: [...p.reserves], respinsUsed: p.respinsUsed + 1 };
-  // When teams repeat (the 53), a reserve can be the team already on the clock; trade it for a later one.
-  const later = next.reserves.findIndex((t, i) => i > p.respinsUsed && t !== p.teams[index]);
-  if (next.reserves[p.respinsUsed] === p.teams[index] && later > 0) [next.reserves[p.respinsUsed], next.reserves[later]] = [next.reserves[later], next.reserves[p.respinsUsed]];
-  next.teams[index] = next.reserves[p.respinsUsed];
+  const repeat = gameType === '17-0' && FORMATS[teamOpts(p).format].repeatTeams;
+  const n = p.roundRespins?.[index] ?? 0;
+  // The n-th re-spin of this round comes from one seeded order of every team, so Today's re-spins match for everyone.
+  const pick = p.respinPool && firstAllowed(spinKey(gameType, s.seed, index, 'team', n), p.respinPool, (t) => t !== p.teams[index] && (repeat || !p.teams.includes(t)));
+  if (pick !== undefined) {
+    next.teams[index] = pick;
+    next.roundRespins = [...(p.roundRespins ?? [])];
+    next.roundRespins[index] = n + 1;
+  } else {
+    // Sessions started before re-spins were keyed by round use the old shared reserve list.
+    // When teams repeat (the 53), a reserve can be the team already on the clock; trade it for a later one.
+    const later = next.reserves.findIndex((t, i) => i > p.respinsUsed && t !== p.teams[index]);
+    if (next.reserves[p.respinsUsed] === p.teams[index] && later > 0) [next.reserves[p.respinsUsed], next.reserves[later]] = [next.reserves[later], next.reserves[p.respinsUsed]];
+    next.teams[index] = next.reserves[p.respinsUsed];
+  }
   const ready = await ensurePlayable(gameType, next);
   await db.update(schema.gameSessions).set({ spinPayload: ready }).where(eq(schema.gameSessions.id, s.id));
   return draftState(s.id, gameType, ready);

@@ -114,12 +114,12 @@ async function seedFantasy() {
 /** Soccer: two stand-in leagues of eight clubs, five players each, all on the leader lists for two seasons. */
 async function seedSoccer() {
   const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
-  const [{ n }] = await sql`select count(*)::int as n from soccer_players where id >= 9900000`;
-  if (n === 0) {
+  const [{ n }] = await sql`select count(distinct league)::int as n from soccer_players where id >= 9900000`;
+  if (n < 4) {
     const now = new Date(), cur = now.getUTCMonth() >= 6 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
     const nations = ['England', 'Spain', 'France', 'Brazil', 'Argentina', 'Germany', 'Portugal', 'Netherlands'];
     const pos = ['G', 'D', 'M', 'F', 'F'];
-    for (const [li, league] of ['eng.1', 'esp.1'].entries()) {
+    for (const [li, league] of ['eng.1', 'esp.1', 'ita.1', 'ger.1'].entries()) {
       for (let c = 1; c <= 8; c++) {
         const club = 990000 + li * 100 + c;
         await sql`insert into soccer_clubs (id, league, name, abbreviation, color) values (${club}, ${league}, ${`Test FC ${li}-${c}`}, ${`T${li}${c}`}, '#225588') on conflict do nothing`;

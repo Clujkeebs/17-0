@@ -135,6 +135,89 @@ export const soccerWhoScored = pickGame({
   return { prompt: `Who scored the most goals in the ${a.seasonLabel}?`, options: list.map(lcard), notes: list.map((l) => `${l.goals} goals in ${l.matches} matches`), correct };
 });
 
+export const soccerAssistKing = pickGame({
+  slug: 'soccer-assist-king', name: 'Assist King',
+  tagline: 'One league, one season. Which of these four set up the most league goals?',
+  howTo: ['Each round names a league season and four players from its leader lists.', 'Pick the one with the most league assists that season.', 'Six rounds.'],
+}, (rng, data) => {
+  const a = rng.pick(data.leaders);
+  const same = data.leaders.filter((l) => l.league === a.league && l.season === a.season && l.assists > 0);
+  if (same.length < 6) return null;
+  const four = rng.shuffle(same).slice(0, 4);
+  const best = [...four].sort((x, y) => y.assists - x.assists);
+  if (best[0].assists === best[1].assists) return null;
+  const { list, correct } = deal(rng, best[0], four.filter((x) => x !== best[0]));
+  return { prompt: `Who had the most assists in the ${a.seasonLabel}?`, options: list.map(lcard), notes: list.map((l) => `${l.assists} assists in ${l.matches} matches`), correct };
+});
+
+const leagueCard = (league: string) => ({ id: `lg:${league}`, name: leagueName(league), position: '', team: leagueName(league), teamName: leagueName(league), teamColor: '#1F2937', logoUrl: null, img: null });
+export const soccerWhichLeague = pickGame({
+  slug: 'soccer-which-league', name: 'Which League?',
+  tagline: 'One star, four leagues. Where does he play his club football?',
+  howTo: ['Each round names a current player from a recent goals or assists list.', 'Pick the league his club plays in: Premier League, La Liga, Serie A, Bundesliga, Ligue 1 or MLS.', 'Six rounds. The reveal names his club.'],
+}, (rng, data) => {
+  const s = rng.pick(stars(data));
+  const leagues = [...new Set(data.clubs.map((c) => c.league))].sort().filter((l) => l !== s.league);
+  if (leagues.length < 3) return null;
+  const { list, correct } = deal(rng, s.league, rng.shuffle(leagues).slice(0, 3));
+  return { prompt: `Which league does ${s.name} (${s.position.toLowerCase()}) play in?`, options: list.map(leagueCard), notes: list.map((l) => (l === s.league ? s.club : '')), correct };
+});
+
+/** A player card that hides the club: the question is which club. */
+const noClubCard = (s: SStar) => ({ id: s.key, name: s.name, position: s.position, team: leagueName(s.league), teamName: leagueName(s.league), teamColor: '#1F2937', logoUrl: null, img: s.img });
+export const soccerOddClub = pickGame({
+  slug: 'soccer-odd-club', name: 'Odd One Out: Clubs',
+  tagline: 'Four players from one league. Three are teammates. Find the one who is not.',
+  howTo: ['Each round shows four current players from the same league, clubs hidden.', 'Three play for the same club. Tap the one who plays somewhere else.', 'Six rounds. The reveal shows every club.'],
+}, (rng, data) => {
+  const pool = stars(data);
+  const anchor = rng.pick(pool);
+  const mates = pool.filter((x) => x.clubId === anchor.clubId);
+  const outsiders = pool.filter((x) => x.league === anchor.league && x.clubId !== anchor.clubId);
+  if (mates.length < 3 || !outsiders.length) return null;
+  const odd = rng.pick(outsiders);
+  const { list, correct } = deal(rng, odd, rng.shuffle(mates).slice(0, 3));
+  return { prompt: `Three of these play for the same ${leagueName(anchor.league)} club. Who does not?`, options: list.map(noClubCard), notes: list.map((x) => x.club), correct };
+});
+
+/* ------------------------------------------------------------------ Rank 'Em: Goals */
+
+const RANK_N = 5;
+interface RankGoals { label: string; groupName: string; season: string; players: SLeader[] }
+export const soccerRankGoals: MiniGame<RankGoals, string[], SoccerGameData> = {
+  slug: 'soccer-rank-goals', sport: 'soccer',
+  name: "Rank 'Em: Goals",
+  tagline: 'Five scorers from one league season. Put them in order of league goals.',
+  howTo: ['Order the five players from most to fewest league goals that season.', 'Use the up and down buttons, or drag on desktop.', 'Each of the 10 pairs you order correctly is worth 10. Each exact slot adds 4.'],
+  generate(seed, data) {
+    const rng = createRng(seed);
+    const pool = topOfLists(data.leaders);
+    for (let i = 0; i < 300; i++) {
+      const a = rng.pick(pool);
+      const picked: SLeader[] = [];
+      for (const l of rng.shuffle(pool.filter((x) => x.league === a.league && x.season === a.season))) {
+        if (!picked.some((x) => x.goals === l.goals || x.playerId === l.playerId)) picked.push(l);
+        if (picked.length === RANK_N) break;
+      }
+      if (picked.length === RANK_N) return { label: 'League goals', groupName: 'Scorer', season: a.seasonLabel, players: picked };
+    }
+    throw new Error('Soccer data is still loading. Try again in a few minutes.');
+  },
+  publicView: (p) => ({ label: `Goals, ${p.season}`, groupName: 'Scorer', players: p.players.map(lcard) }),
+  score(p, answer) {
+    const ids = p.players.map((x) => x.key);
+    if (!Array.isArray(answer) || answer.length !== ids.length || new Set(answer).size !== ids.length || !answer.every((a) => ids.includes(a))) throw new Error('Order all five players.');
+    const v = new Map(p.players.map((x) => [x.key, x.goals]));
+    let pairs = 0, total = 0;
+    for (let i = 0; i < answer.length; i++) for (let j = i + 1; j < answer.length; j++) { total++; if (v.get(answer[i])! >= v.get(answer[j])!) pairs++; }
+    const truth = [...p.players].sort((a, b) => b.goals - a.goals);
+    let exact = 0;
+    answer.forEach((id, i) => { if (v.get(id) === truth[i].goals) exact++; });
+    const detail = { label: `Goals, ${p.season}`, pairs, total, exact, truth: truth.map((x, i) => ({ id: x.key, name: x.name, team: x.clubAbbr, teamColor: x.clubColor, logoUrl: x.clubLogo, img: x.img, v: x.goals, yourSlot: answer.indexOf(x.key) + 1, ok: v.get(answer[i]) === x.goals })) };
+    return { score: pairs * 10 + exact * 4, summary: `${pairs}/${total} pairs`, detail, perfect: pairs === total };
+  },
+};
+
 /* ------------------------------------------------------------------ Build a Soccer Player */
 
 export const BUILD_TRAITS = [
@@ -207,5 +290,5 @@ export const soccerBuildPlayer: MiniGame<{ rounds: BuildRound[] }, BuildAnswer, 
   },
 };
 
-export const soccerGames = [soccerWhoseClub, soccerWhereFrom, soccerHigherLower, soccerWhoScored, soccerBuildPlayer];
+export const soccerGames = [soccerWhoseClub, soccerWhereFrom, soccerHigherLower, soccerWhoScored, soccerBuildPlayer, soccerAssistKing, soccerWhichLeague, soccerOddClub, soccerRankGoals];
 export type { SStar };

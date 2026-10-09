@@ -111,4 +111,17 @@ test('162-0 challenge: two starts from one challenge draw the same board', async
   expect([y.team.id, y.team.era]).toEqual([first.d.team.id, first.d.team.era]);
   expect(x.team.players.map((p: { id: number }) => p.id)).toEqual(first.d.team.players.map((p: { id: number }) => p.id));
   expect((await call({ action: 'start', challenge: 'nope-not-real' })).status).toBe(404);
+
+  // Re-spins are keyed by round, not by how many were used before: x re-spins in round 1 and y does not,
+  // then both re-spin round 2 once and land on the same franchise.
+  const xa = { sessionId: x.sessionId, token: x.token }, ya = { sessionId: y.sessionId, token: y.token };
+  const pickAny = async (st: { team: { players: { id: number }[] } }, a: object) => (await call({ action: 'pick', playerId: st.team.players[0].id, ...a })).d;
+  const x0 = (await call({ action: 'respin', what: 'team', ...xa })).d;
+  const x1 = await pickAny(x0, xa), y1 = await pickAny(y, ya);
+  const xr = (await call({ action: 'respin', what: 'team', ...xa })).d, yr = (await call({ action: 'respin', what: 'team', ...ya })).d;
+  // The only allowed difference: the franchise one of them already used in round 1.
+  if (x1.team.id === y1.team.id && x1.team.era === y1.team.era && ![x0.team.id, y.team.id].includes(xr.team.id) && ![x0.team.id, y.team.id].includes(yr.team.id)) {
+    expect([yr.team.id, yr.team.era]).toEqual([xr.team.id, xr.team.era]);
+  }
+  expect(xr.team.era).toBe(x1.team.era);
 });

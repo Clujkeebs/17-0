@@ -95,6 +95,8 @@ void (async () => {
   void refreshLegends(true);
   void refreshMlb();
   void refreshWnba();
+  // Data probes for '60s/'70s 82-0 and college games (logged once per boot; removed when those ship).
+  void import('@/lib/server/probes').then(async (m) => { await m.probeOldNba(); await m.probeCollege(); await m.probeBird(); }).catch((e) => console.warn('[probe] failed', (e as Error).message));
   // Soccer: clubs, rosters and season leaders from ESPN, at boot and daily.
   const soccer = () => import('@/lib/server/soccer-sync').then(async (m) => { await m.syncSoccer(); await m.soccerSpotCheck(); }).catch((e) => console.warn('[soccer] sync failed', (e as Error).message));
   void soccer();

@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
 });
 
-for (const [slug, rounds] of [['soccer-whose-club', 6], ['soccer-where-from', 6], ['soccer-top-scorer', 6], ['soccer-higher-lower', 10]] as const) {
+for (const [slug, rounds] of [['soccer-whose-club', 6], ['soccer-where-from', 6], ['soccer-top-scorer', 6], ['soccer-higher-lower', 10], ['soccer-assist-king', 6], ['soccer-which-league', 6], ['soccer-odd-club', 6]] as const) {
   test(`${slug} casual round trip`, async ({ page }) => {
     await page.goto(`/games/${slug}`);
     await page.getByRole('tab', { name: 'Casual' }).click();
@@ -45,4 +45,13 @@ test('Build a Soccer Player: one season and one trait per club', async ({ page }
   await build.click();
   await expect(page.getByText('Your player', { exact: true })).toBeVisible();
   await expect(page.getByText('Best build on this board')).toBeVisible();
+});
+
+test("soccer-rank-goals: order five scorers and see the true order", async ({ page }) => {
+  await page.goto('/games/soccer-rank-goals');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  await expect(page.getByText(/Rank by goals/i)).toBeVisible();
+  await page.getByRole('button', { name: /Move .* down/ }).first().click();
+  await page.getByRole('button', { name: 'Lock it in' }).click();
+  await expect(page.getByText(/pairs in order/)).toBeVisible();
 });

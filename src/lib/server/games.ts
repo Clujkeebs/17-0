@@ -28,6 +28,9 @@ export interface SpinPayload {
   pool?: PoolKey;
   /** Server-side draft log. One entry per revealed team, in order. The next team is revealed only after a pick. */
   picks?: { teamId: number; id: string; slot?: string; trait?: string }[];
+  /** Every team a re-spin can land on, and re-spins used per round: the n-th re-spin of a round is the same for everyone (spin-order.ts). */
+  respinPool?: number[];
+  roundRespins?: number[];
   /** Set when this game is someone's challenge: same seed, same setup, graded from the roster (see challenges.ts). */
   challengeId?: string;
 }
@@ -64,7 +67,8 @@ export async function createGameSession(opts: { gameType: GameType; userId?: str
   const repeat = gameType === '17-0' && FORMATS[format].repeatTeams;
   if (repeat ? pool.length < 8 : pool.length < count + (gameType === '17-0' ? respinsFor(format) : MAX_RESPINS)) throw new Error('Not enough teams with eligible players. Has the database been seeded?');
   const { teams, reserves } = gameType === '17-0' ? boardOrder(seed, pool, format) : draftOrder(seed, pool, count);
-  const payload: SpinPayload = { teams, reserves, respinsUsed: 0, position: opts.position, hard: !!opts.hard, ...(gameType === '17-0' ? { format, pool: playerPool } : {}), ...(opts.challenge && !opts.daily ? { challengeId: opts.challenge.challengeId } : {}) };
+  const respinPool = [...pool].sort((a, b) => a - b).filter((t) => repeat || !teams.includes(t));
+  const payload: SpinPayload = { teams, reserves, respinPool, roundRespins: [], respinsUsed: 0, position: opts.position, hard: !!opts.hard, ...(gameType === '17-0' ? { format, pool: playerPool } : {}), ...(opts.challenge && !opts.daily ? { challengeId: opts.challenge.challengeId } : {}) };
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
     userId: opts.userId ?? null, gameType, seed, spinPayload: payload, token: hashToken(tok),

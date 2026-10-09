@@ -1,3 +1,4 @@
+import { firstAllowed, spinKey } from '@/lib/game/spin-order';
 import { createHash } from 'node:crypto';
 import { and, eq, gte, inArray, lte, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
@@ -29,6 +30,9 @@ export interface NbaPayload {
   hard: boolean;
   eraRespinsUsed: number;
   teamRespinsUsed: number;
+  /** Re-spins used in the current round; with the seed and round they fix the next draw (see spin-order.ts). */
+  roundEra?: number;
+  roundTeam?: number;
   /** The board on the clock. Decided server-side from the seed, never by the client. */
   current: { era: EraKey; teamId: number } | null;
   picks: { playerId: number; teamId: number; season: number; slot: NbaSlot; era: EraKey }[];
@@ -142,23 +146,29 @@ export function fullEras(p: Pick<NbaPayload, 'picks'>): Set<EraKey> {
  * be refreshed into a better draw and everyone on Today sees the same first spin.
  */
 async function draw(seed: string, round: number, p: NbaPayload, keepEra?: EraKey, keepTeam?: number): Promise<{ era: EraKey; teamId: number }> {
+  const asked = keepEra;
   const teams = p.edition === 'standard' ? { ...Object.fromEntries(ERAS.map((e) => [e.key, [] as number[]])), '2020s': await teams2k() } as Record<EraKey, number[]> : await eraTeams();
   if (p.edition === 'standard') keepEra = '2020s';
-  const rng = createRng(`82:${seed}:${round}:${p.eraRespinsUsed}:${p.teamRespinsUsed}`);
   const used = new Set(p.picks.map((x) => x.teamId));
   const full = p.edition === 'standard' ? new Set<string>() : fullEras(p);
-  const eras = ERAS.filter((e) => !full.has(e.key) && teams[e.key].some((t) => !used.has(t)));
+  const canUse = (e: EraKey) => !full.has(e) && teams[e].some((t) => !used.has(t));
+  const allEras = ERAS.map((e) => e.key) as EraKey[];
+  const kind = keepTeam !== undefined && !asked ? 'era' : asked ? 'team' : 'spin';
+  const key = spinKey('82', seed, round, kind, kind === 'era' ? p.roundEra ?? 0 : kind === 'team' ? p.roundTeam ?? 0 : 0);
+  const teamIn = (e: EraKey, not?: number) => firstAllowed(`${key}:${e}`, teams[e], (t) => !used.has(t) && t !== not);
   // Era re-spin: a different era, keeping the franchise when it played in one (only the era changes).
-  if (keepTeam !== undefined && !keepEra) {
-    const others = eras.filter((e) => e.key !== p.current?.era);
-    const withTeam = others.filter((e) => teams[e.key].includes(keepTeam));
-    if (withTeam.length) return { era: rng.pick(withTeam.map((e) => e.key)) as EraKey, teamId: keepTeam };
-    if (others.length) { const e = rng.pick(others.map((x) => x.key)) as EraKey; const pool = teams[e].filter((t) => !used.has(t)); if (pool.length) return { era: e, teamId: rng.pick(pool) }; }
+  if (kind === 'era') {
+    const other = (e: EraKey) => e !== p.current?.era && canUse(e);
+    const withTeam = firstAllowed(`${key}:keep`, allEras, (e) => other(e) && teams[e].includes(keepTeam!));
+    if (withTeam) return { era: withTeam, teamId: keepTeam! };
+    const e = firstAllowed(key, allEras, other);
+    const t = e !== undefined ? teamIn(e) : undefined;
+    if (e !== undefined && t !== undefined) return { era: e, teamId: t };
   }
-  const era = keepEra ?? rng.pick(eras.map((e) => e.key));
-  const open = teams[era].filter((t) => !used.has(t) && t !== (keepEra ? p.current?.teamId : -1));
-  if (!open.length) throw new NbaError('No franchises left to spin. Start a new game.', 409);
-  return { era, teamId: rng.pick(open) };
+  const era = keepEra ?? firstAllowed(key, allEras, canUse);
+  const teamId = era !== undefined ? teamIn(era, keepEra ? p.current?.teamId : undefined) : undefined;
+  if (era === undefined || teamId === undefined) throw new NbaError('No franchises left to spin. Start a new game.', 409);
+  return { era, teamId };
 }
 
 /* ------------------------------------------------------------------ state */
@@ -224,7 +234,10 @@ export async function respinNba(sessionId: string, tok: string, what: 'era' | 't
   if (what === 'era' && !ERAS.some((e) => e.key !== p.current!.era && !fullEras(p).has(e.key))) throw new NbaError('Every other era is already on your roster.');
   if (what === 'team' && p.teamRespinsUsed >= (p.edition === 'standard' ? STANDARD_TEAM_RESPINS : TEAM_RESPINS)) throw new NbaError('Your team re-spins are used.');
   const next: NbaPayload = { ...p, eraRespinsUsed: p.eraRespinsUsed + (what === 'era' ? 1 : 0), teamRespinsUsed: p.teamRespinsUsed + (what === 'team' ? 1 : 0) };
+  // The draw is keyed on this round's re-spins so far (before this one), so the n-th re-spin is the same for everyone.
+  next.roundEra = p.roundEra ?? 0; next.roundTeam = p.roundTeam ?? 0;
   next.current = await draw(s.seed, p.picks.length, next, what === 'team' ? p.current.era : undefined, what === 'era' ? p.current.teamId : undefined);
+  if (what === 'era') next.roundEra = (p.roundEra ?? 0) + 1; else next.roundTeam = (p.roundTeam ?? 0) + 1;
   await save(s.id, next);
   return state(s.id, next);
 }
@@ -240,7 +253,7 @@ export async function pickNba(sessionId: string, tok: string, playerId: number, 
   const openSlots = NBA_SLOTS.filter((x) => !taken.has(x));
   // Out of position is allowed; it just costs value. Default to a natural open spot.
   const chosen = slot && openSlots.includes(slot) ? slot : pl.fits.find((x) => openSlots.includes(x)) ?? openSlots[0];
-  const next: NbaPayload = { ...p, picks: [...p.picks, { playerId, teamId: team.id, season: pl.season, slot: chosen, era: p.current.era }] };
+  const next: NbaPayload = { ...p, picks: [...p.picks, { playerId, teamId: team.id, season: pl.season, slot: chosen, era: p.current.era }], roundEra: 0, roundTeam: 0 };
   next.current = next.picks.length < NBA_ROUNDS ? await draw(s.seed, next.picks.length, next) : null;
   await save(s.id, next);
   return state(s.id, next);
