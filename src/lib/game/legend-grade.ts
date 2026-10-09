@@ -12,7 +12,8 @@ export type Stats = Partial<Record<StatKey, number>>;
 export type LegendGroup = Exclude<PositionGroup, 'OL' | 'K'>;
 export const LEGEND_GROUPS: LegendGroup[] = ['QB', 'RB', 'WR', 'TE', 'DL', 'EDGE', 'LB', 'CB', 'S'];
 /** How many legends each franchise brings at each group. */
-export const PER_TEAM: Record<LegendGroup, number> = { QB: 2, RB: 2, WR: 3, TE: 2, DL: 2, EDGE: 2, LB: 2, CB: 2, S: 2 };
+/** How many greats each franchise keeps per group: deep enough that an All-time board is mostly greats. */
+export const PER_TEAM: Record<LegendGroup, number> = { QB: 3, RB: 4, WR: 5, TE: 3, DL: 4, EDGE: 4, LB: 4, CB: 4, S: 4 };
 
 const v = (s: Stats, k: StatKey) => s[k] ?? 0;
 
@@ -66,6 +67,17 @@ const quantile = (asc: number[], q: number) => {
  * the average of that season's top 32 at the group (starter level), its rank among all seasons at the group
  * becomes a percentile, and the percentile is read off today's grade range at that group.
  */
+/**
+ * Today's grade range tops out in the mid 90s, but the best seasons in NFL history should read as 99s. The
+ * bottom nine tenths map onto today's range as they are; the top tenth stretches from there up to 99.
+ */
+export const TOP_STRETCH = 0.9;
+export function stretchTop(range: number[], q: number): number {
+  if (q <= TOP_STRETCH) return quantile(range, q);
+  const base = quantile(range, TOP_STRETCH);
+  return base + (99 - base) * ((q - TOP_STRETCH) / (1 - TOP_STRETCH));
+}
+
 export function gradeSeasons(seasons: HistSeason[], current: Partial<Record<LegendGroup, number[]>>): Map<string, number> {
   const scored = seasons.flatMap((s) => { const sc = seasonScore(s.group, s.stats); return sc == null ? [] : [{ ...s, sc }]; });
   const level = new Map<string, number>();
@@ -82,7 +94,7 @@ export function gradeSeasons(seasons: HistSeason[], current: Partial<Record<Lege
     mine.forEach((s, i) => {
       if (i > 0 && s.r !== mine[i - 1].r) first = i;
       const q = mine.length > 1 ? first / (mine.length - 1) : 1;
-      out.set(s.key, Math.round(Math.min(99, quantile(range, q)) * 10) / 10);
+      out.set(s.key, Math.round(Math.min(99, stretchTop(range, q)) * 10) / 10);
     });
   }
   return out;

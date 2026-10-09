@@ -241,7 +241,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
                           <button type="button" className="g-player" onClick={() => pick(p, gs[0].key)} disabled={!landed || !!busy}
                             aria-label={`Draft ${p.name}, ${p.position}, ${p.fpts !== undefined ? `${showWorth(p)} fantasy points per game` : `${p.group === 'HC' ? 'coach impact' : 'overall'} ${p.ovr}`}, as your ${gs[0].label}${p.legend ? ', all-time legend' : ''}`}>
                             <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
-                            <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position}{p.legend && <span className="tag-legend">Legend</span>}{p.line && <span className="g-legend-line"> {p.line}</span>}</span></span>
+                            <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position}{p.legend && <span className="tag-legend">Legend</span>}{p.prime && <span className="tag-legend tag-prime">Prime</span>}{p.line && <span className="g-legend-line"> {p.line}</span>}</span></span>
                             <span className={`g-ovr num${p.fpts !== undefined ? ' g-fpts' : ''}`}>{showWorth(p)}</span>
                           </button>
                         </li>
@@ -399,7 +399,7 @@ function HardSearch({ team, openSlots, query, setQuery, busy, onPick, reveal = f
           <li key={p.id}>
             <button type="button" className="g-player" onClick={() => onPick(p)} disabled={busy} aria-label={`Draft ${p.name}, ${p.position === 'HC' ? 'head coach' : p.position}${reveal ? `, ${p.fpts !== undefined ? `${showWorth(p)} fantasy points per game` : `${p.group === 'HC' ? 'coach impact' : 'overall'} ${p.ovr}`}` : ''}${p.legend ? ', all-time legend' : ''}`}>
               <PlayerFace name={p.name} src={p.img} color={team.color} size={44} />
-              <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position} · {label(p.slots!.find((s) => openKeys.includes(s))!)}{p.legend && <span className="tag-legend">Legend</span>}</span></span>
+              <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position === 'HC' ? 'Head coach' : p.position} · {label(p.slots!.find((s) => openKeys.includes(s))!)}{p.legend && <span className="tag-legend">Legend</span>}{p.prime && <span className="tag-legend tag-prime">Prime</span>}</span></span>
               <span className={`g-ovr num${reveal && p.fpts !== undefined ? ' g-fpts' : ''}`} aria-hidden="true">{reveal ? showWorth(p) : '??'}</span>
             </button>
           </li>

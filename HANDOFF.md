@@ -167,6 +167,12 @@ Plan: `/root/.claude/plans/floating-baking-platypus.md` top section (Q1 162-0 fi
   - `/llms.txt` (route, rendered per request): site summary, the three draft games with rules, every other game linked, data sources.
   - IndexNow: key file `public/6b4158a0c2e8d8bf572858230b641949.txt`, `pingIndexNow` in `src/lib/seo/indexnow.ts`, sent once per worker boot (production https only; logs `[indexnow] pinged`).
   - `SITE.description` now covers all three sports.
+- 17-0 All-time rebuilt around primes (2026-10-09, owner: "all-time should be all the greats, greats first, everyone in their prime, Mahomes a 99"):
+  - `stretchTop` in `legend-grade.ts`: history grades keep today's scale for the bottom 90 percent of seasons, and the top 10 percent stretch up to 99, so the best seasons ever read as 99s.
+  - Deeper greats: `PER_TEAM` is now QB 3, RB 4, WR 5, TE 3, DL 4, EDGE 4, LB 4, CB 4, S 4 per franchise.
+  - Primes: `buildLegends` also files each current player's best graded season (any team) under his current team, when it beats his current rating. Those rows live in `nfl_legends` (current players are told apart by espn_id matching someone on that roster). On an All-time board the prime row replaces his today row, tagged "Prime" with the season line.
+  - Board order in All-time: greats (legends and primes) first, best first, then the rest of today's roster.
+  - Calibration drops primed today-rows too, and the All-time floors refit at worker boot after the legends rebuild. OL and K have no ESPN stat seasons, so they stay at today's rating.
 - School block: we do not work around school filters. `docs/school-unblock-request.md` is an honest request the owner can send to school IT.
 
 - Sports Connections rebuilt (shipped): boards now come from a hand-written bank of 136 categories across every sport plus TV, movies, broadcasters, colleges, champions, soccer, nicknames and fill-in-the-blank wordplay (`src/lib/minigames/puzzles/connections-bank.ts`). One category per level (yellow, green, blue, purple); a tile is only used if neither it nor its last word appears in another chosen category (`tileKeys`), so each board has one answer (unit test builds 1,000 boards). Facts are for closed seasons or permanent records. Play screen follows the familiar format: cream tiles, four color levels, mistakes dots, Shuffle / Deselect all / Submit, hop on submit, shake on a miss, "One away..." toast, color-square grid to copy at the end. Tile text shrinks to fit (`useFitTiles`), whole words only. To add categories: append to BANK (label, level, 4+ items).

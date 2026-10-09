@@ -32,7 +32,7 @@ export interface SpinPayload {
   challengeId?: string;
 }
 
-export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** All-time legend from ESPN history: his best season with this franchise, e.g. "1994 · 112 rec, 1,499 yds, 13 TD". */ line?: string; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
+export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** All-time legend from ESPN history: his best season with this franchise, e.g. "1994 · 112 rec, 1,499 yds, 13 TD". */ line?: string; /** All-time: a current player shown at his best season (his prime) instead of today's rating. */ prime?: boolean; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
 export interface PublicTeam { id: number; name: string; city: string; abbreviation: string; slug: string; color: string; logoUrl: string | null; players: PublicPlayer[] }
 
 const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
@@ -120,12 +120,23 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
       const attrs = position ? Object.fromEntries(BUILD_CATEGORIES[position].map((k) => [k, (p.attributes as Record<string, number>)[k] ?? 50])) : undefined;
       return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}), ...(fantasy ? { fpts: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : {}) };
     }).filter((p) => (allowed ? allowed.has(p.group) : p.slots!.length > 0));
-    // History legends go right after the Madden legends, best first.
+    // All-time: today's players with a better best season appear at that season (their prime), not twice.
+    const onTeam = new Set(players.filter((p) => p.teamId === id).map((p) => Number(p.espnId)));
     const hist: PublicPlayer[] = (history.get(id) ?? []).map((l) => {
       const group = l.group as PositionGroup;
-      return { id: l.id, name: l.fullName, slug: '', position: l.position, group, ovr: Math.round(l.grade), slots: slotsFor(group), img: l.headshot, legend: true, line: `${l.season} · ${l.line}` };
+      const prime = onTeam.has(l.espnId);
+      return { id: l.id, name: l.fullName, slug: '', position: l.position, group, ovr: Math.round(l.grade), slots: slotsFor(group), img: l.headshot, legend: !prime, ...(prime ? { prime: true } : {}), line: `${prime ? 'Prime · ' : ''}${l.season} · ${l.line}` };
     }).filter((p) => p.slots!.length > 0);
+    const primed = new Set((history.get(id) ?? []).filter((l) => onTeam.has(l.espnId)).map((l) => l.espnId));
+    const isPrimed = (p: PublicPlayer) => !p.legend && !p.prime && primed.has(Number(players.find((x) => x.id === p.id)?.espnId));
+    for (let i = list.length - 1; i >= 0; i--) if (isPrimed(list[i])) list.splice(i, 1);
     list.splice((legends.get(id) ?? []).length, 0, ...hist);
+    // Greats first (legends and primes, best first), then everyone else as they are today.
+    if (allTime) {
+      const greats = list.filter((p) => p.legend || p.prime).sort((a, b) => b.ovr - a.ovr);
+      const rest = list.filter((p) => !p.legend && !p.prime);
+      list.splice(0, list.length, ...greats, ...rest);
+    }
     // Fantasy boards list by points, best first.
     if (fantasy) list.sort((a, b) => (b.fpts ?? 0) - (a.fpts ?? 0));
     for (const c of coaches.filter((c) => c.teamId === id)) {

@@ -116,7 +116,7 @@ export async function buildLegends(opts: { fetchImpl?: typeof fetch; teamMap?: M
   const [athletes, hist, current, madden] = await Promise.all([
     db.select().from(schema.nflHistAthletes),
     db.select().from(schema.nflHistSeasons),
-    db.select({ position: schema.players.position, attributes: schema.players.attributes, espnId: schema.players.espnId }).from(schema.players).where(and(eq(schema.players.isActive, true), isNotNull(schema.players.teamId))),
+    db.select({ fullName: schema.players.fullName, position: schema.players.position, attributes: schema.players.attributes, espnId: schema.players.espnId, teamId: schema.players.teamId }).from(schema.players).where(and(eq(schema.players.isActive, true), isNotNull(schema.players.teamId))),
     db.select({ name: schema.players.fullName, slug: schema.players.slug }).from(schema.players).where(eq(schema.players.isAllTimeGreat, true)),
   ]);
   // Today's players are drafted as themselves, so they never double as legends.
@@ -154,12 +154,30 @@ export async function buildLegends(opts: { fetchImpl?: typeof fetch; teamMap?: M
       }
     }
   }
+  // Today's players in their prime: each one's best graded season anywhere, filed under his current team, kept
+  // only when it beats his current rating. All-time drafts him at that season instead of today's number.
+  const prime = new Map<number, (typeof seasons)[number] & { grade: number }>();
+  for (const s of seasons) {
+    const grade = grades.get(s.key);
+    if (grade == null || !active.has(s.athleteId)) continue;
+    if ((prime.get(s.athleteId)?.grade ?? -1) < grade) prime.set(s.athleteId, { ...s, grade });
+  }
+  let primes = 0;
+  for (const p of current) {
+    const b = prime.get(Number(p.espnId));
+    if (!b || p.teamId == null) continue;
+    const g = positionGroup(p.position);
+    if (g !== b.group || b.grade <= ratePlayer(p.attributes as Attributes, g)) continue;
+    const a = ath.get(b.athleteId);
+    picked.push({ espnId: b.athleteId, fullName: p.fullName, position: p.position, group: b.group, teamId: p.teamId, season: b.season, grade: b.grade, line: seasonLine(b.group, b.stats), headshot: a?.headshot ?? null });
+    primes++;
+  }
   await db.transaction(async (tx) => {
     await tx.delete(schema.nflLegends);
     for (let i = 0; i < picked.length; i += 200) await tx.insert(schema.nflLegends).values(picked.slice(i, i + 200));
   });
   await getRedis().del('legends:by-team').catch(() => {});
-  const summary = { seasonsGraded: grades.size, legends: picked.length, franchises: teamMap.size };
+  const summary = { seasonsGraded: grades.size, legends: picked.length - primes, primes, franchises: teamMap.size };
   console.log('[nfl-history] legends built', JSON.stringify(summary));
   return summary;
 }

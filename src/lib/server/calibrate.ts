@@ -22,7 +22,10 @@ async function boards(format: FormatKey, pool: PoolKey = 'current') {
   if (allTime) {
     const [teamRows, hist] = await Promise.all([db.select().from(schema.teams), db.select().from(schema.nflLegends)]);
     for (const p of players.filter((x) => x.isAllTimeGreat)) p.teamId = teamRows.find((t) => t.abbreviation === LEGEND_FRANCHISE[p.slug])?.id ?? null;
-    for (const l of hist) players.push({ ...players[0], id: l.id, teamId: l.teamId, fullName: l.fullName, position: l.position, legendGrade: l.grade, legendGroup: l.group } as never);
+    // A current player with a better best season is drafted at that season, so his today row leaves the board.
+    const primed = new Set(hist.map((l) => `${l.espnId}:${l.teamId}`));
+    for (let i = players.length - 1; i >= 0; i--) if (!players[i].isAllTimeGreat && primed.has(`${Number(players[i].espnId)}:${players[i].teamId}`)) players.splice(i, 1);
+    for (const l of hist) players.push({ ...players[0], isAllTimeGreat: false, id: l.id, teamId: l.teamId, fullName: l.fullName, position: l.position, legendGrade: l.grade, legendGroup: l.group } as never);
   }
   const byTeam = new Map<number, Pick[]>();
   for (const t of teams) {
