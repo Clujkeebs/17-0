@@ -1,5 +1,5 @@
 'use client';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 
 /**
  * Credentials sign-in from the browser through NextAuth's /api/auth routes. This replaces a server action:
@@ -16,4 +16,9 @@ export async function signInWithPassword(email: string, password: string): Promi
 
 export function signInWithGoogle(next: string) {
   void signIn('google', { redirectTo: next });
+}
+
+/** Sign out through NextAuth's own route (not a server action, whose id changes on every deploy). */
+export function SignOutButton({ className = 'btn' }: { className?: string }) {
+  return <button className={className} type="button" onClick={() => void signOut({ redirectTo: '/' })}>Sign out</button>;
 }

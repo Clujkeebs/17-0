@@ -248,7 +248,7 @@ test('leaderboards: every sport has its games, with Today, This week and All tim
   await page.goto('/leaderboard');
   await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'Basketball' }).click();
   await expect(page.getByRole('navigation', { name: 'Game' }).getByRole('link', { name: '82-0', exact: true })).toHaveAttribute('aria-current', 'page');
-  await page.getByRole('navigation', { name: 'Game' }).getByRole('link', { name: 'Who Led?' }).click();
+  await page.getByRole('navigation', { name: 'Game' }).getByRole('link', { name: 'Who Led?', exact: true }).click();
   await page.getByRole('navigation', { name: 'Period' }).getByRole('link', { name: 'This week' }).click();
   await expect(page).toHaveURL(/game=nba-who-led&period=week/);
   await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'Baseball' }).click();

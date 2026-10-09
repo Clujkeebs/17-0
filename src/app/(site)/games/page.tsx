@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { games } from '@/lib/minigames/games';
 import { nbaGames } from '@/lib/minigames/nba/games';
+import { wnbaGames } from '@/lib/minigames/wnba/games';
 import { soccerGames } from '@/lib/minigames/soccer/games';
 import { mlbGames } from '@/lib/minigames/mlb/games';
 import { puzzleGames } from '@/lib/minigames/puzzles/games';
@@ -83,6 +84,18 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
         <div className="hub-grid">
           {nbaGames.map((g) => (
             <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+              <h3>{g.name}</h3>
+              <p>{g.tagline}</p>
+              <span className="hub-cta">Play <ArrowIcon size={14} /></span>
+            </Link>
+          ))}
+        </div>
+        <h2 style={{ marginTop: 56 }}>WNBA</h2>
+        <p className="muted" style={{ maxWidth: '58ch' }}>The same stat games on every WNBA season since 1997, from ESPN.</p>
+        <div className="hub-grid">
+          {wnbaGames.map((g) => (
+            <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+              <span className="eyebrow">New</span>
               <h3>{g.name}</h3>
               <p>{g.tagline}</p>
               <span className="hub-cta">Play <ArrowIcon size={14} /></span>

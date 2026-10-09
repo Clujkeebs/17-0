@@ -28,6 +28,9 @@ const refreshLegends = (fetchHistory: boolean) => import('@/lib/server/nfl-histo
 const refreshMlb = () => import('@/lib/server/mlb-sync').then(async (m) => { await m.syncMlb(); await m.mlbSpotCheck(); })
   .then(() => import('@/lib/server/mlb-calibrate')).then((c) => c.tuneMlbFloor())
   .catch((e) => console.warn('[mlb] refresh failed', (e as Error).message));
+/** WNBA history backfill (only missing seasons; the latest two always refresh) and a spot check. */
+const refreshWnba = () => import('@/lib/server/wnba-sync').then(async (m) => { await m.syncWnba(); await m.wnbaSpotCheck(); })
+  .catch((e) => console.warn('[wnba] refresh failed', (e as Error).message));
 const refreshFantasy = () => syncFantasy().then(() => tuneFantasyFloor()).catch((e) => console.warn('[fantasy] refresh failed', (e as Error).message));
 
 if (process.env.SENTRY_DSN) Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0 });
@@ -42,12 +45,14 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
     if (job.name === 'nba') return refreshNba(false);
     if (job.name === 'legends') return refreshLegends(true);
     if (job.name === 'mlb') return refreshMlb();
+    if (job.name === 'wnba') return refreshWnba();
     if (job.name === 'pickem') return import('@/lib/server/pickem').then((m) => m.syncPickem());
     const summary = await runSync({ dryRun: false });
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
     await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
     // Fantasy points refresh on their own schedule (after game days), not with the daily ratings sync.
     await refreshNba(true);
+    await refreshWnba();
     // New ratings move the grade range legends are placed on, so rebuild them (no ESPN fetch) and re-fit.
     await refreshLegends(false);
     console.log('[sync] done', JSON.stringify(summary).slice(0, 600));
@@ -84,11 +89,12 @@ void (async () => {
   await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
   await refreshFantasy();
   // One worker runs at a time, so a sync lock that exists at boot was left by the container this one replaced.
-  await connection.del('nba:sync-lock', 'mlb:sync-lock').catch(() => 0);
+  await connection.del('nba:sync-lock', 'mlb:sync-lock', 'wnba:sync-lock').catch(() => 0);
   // 82-0: backfill NBA seasons in the background (resumes where it stopped; the newest seasons always refresh), then re-fit the win line.
   void refreshNba(false);
   void refreshLegends(true);
   void refreshMlb();
+  void refreshWnba();
   // Soccer: clubs, rosters and season leaders from ESPN, at boot and daily.
   const soccer = () => import('@/lib/server/soccer-sync').then(async (m) => { await m.syncSoccer(); await m.soccerSpotCheck(); }).catch((e) => console.warn('[soccer] sync failed', (e as Error).message));
   void soccer();

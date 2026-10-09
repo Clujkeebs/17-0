@@ -312,6 +312,44 @@ export const nbaPlayerSeasons = pgTable('nba_player_seasons', {
   value: real('value').notNull(),
 }, (t) => [primaryKey({ columns: [t.playerId, t.teamId, t.season] }), index('nba_ps_team_season_idx').on(t.teamId, t.season)]);
 
+/* ------------------------------------------------------------------ WNBA, from ESPN's core API (same shape as the NBA tables) */
+
+export const wnbaTeamSeasons = pgTable('wnba_team_seasons', {
+  teamId: integer('team_id').notNull(),
+  season: integer('season').notNull(),
+  name: text('name').notNull(),
+  location: text('location').notNull(),
+  abbreviation: text('abbreviation').notNull(),
+  color: text('color'),
+  logoUrl: text('logo_url'),
+  syncedAt: timestamp('synced_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.teamId, t.season] })]);
+
+export const wnbaPlayers = pgTable('wnba_players', {
+  id: integer('id').primaryKey(),
+  fullName: text('full_name').notNull(),
+  position: text('position').notNull(),
+  headshot: text('headshot'),
+});
+
+export const wnbaPlayerSeasons = pgTable('wnba_player_seasons', {
+  playerId: integer('player_id').notNull(),
+  teamId: integer('team_id').notNull(),
+  season: integer('season').notNull(),
+  gp: integer('gp').notNull(),
+  mpg: real('mpg').notNull(),
+  ppg: real('ppg').notNull(),
+  rpg: real('rpg').notNull(),
+  apg: real('apg').notNull(),
+  spg: real('spg').notNull(),
+  bpg: real('bpg').notNull(),
+  tov: real('tov'),
+  fgPct: real('fg_pct'),
+  tpPct: real('tp_pct'),
+  ftPct: real('ft_pct'),
+  value: real('value').notNull(),
+}, (t) => [primaryKey({ columns: [t.playerId, t.teamId, t.season] }), index('wnba_ps_team_season_idx').on(t.teamId, t.season)]);
+
 /** The owner's notes to the agent that maintains the site, sent from /owner (school computers block AI chat). */
 export const ownerNotes = pgTable('owner_notes', {
   id: uuid('id').primaryKey().defaultRandom(),

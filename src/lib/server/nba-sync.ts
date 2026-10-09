@@ -22,7 +22,7 @@ export function latestSeason(now = new Date()): number {
 }
 
 type Json = Record<string, unknown>;
-async function get(url: string, fetchImpl: typeof fetch, tries = 3): Promise<Json | null> {
+export async function get(url: string, fetchImpl: typeof fetch, tries = 3): Promise<Json | null> {
   for (let i = 0; i < tries; i++) {
     try {
       const r = await fetchImpl(url.replace(/^http:/, 'https:'), { signal: AbortSignal.timeout(20_000) });
@@ -38,7 +38,7 @@ const DATA_VERSION = 2;
 
 export const leaderIds = (j: Json | null) => [...new Set(((j?.categories as { leaders?: { athlete?: { $ref?: string } }[] }[] | undefined) ?? [])
   .flatMap((c) => c.leaders ?? []).map((l) => Number(l.athlete?.$ref?.match(/athletes\/(\d+)/)?.[1])).filter(Number.isFinite))];
-const idsFrom = (j: Json | null) => ((j?.items as { $ref: string }[] | undefined) ?? []).map((x) => Number(x.$ref.match(/\/(\d+)\?/)?.[1])).filter(Number.isFinite);
+export const idsFrom = (j: Json | null) => ((j?.items as { $ref: string }[] | undefined) ?? []).map((x) => Number(x.$ref.match(/\/(\d+)\?/)?.[1])).filter(Number.isFinite);
 
 /** Flattens ESPN's statistics categories into name -> value. */
 export function readStats(j: Json | null): Record<string, number> {
@@ -51,13 +51,15 @@ export function readStats(j: Json | null): Record<string, number> {
 
 /** Per-game line from ESPN's stat names. Percentages arrive as 0-100. */
 export function lineFrom(s: Record<string, number>) {
-  // Games played is not always listed; minutes over minutes per game recovers it.
-  const gp = Math.round(s.gamesPlayed ?? (s.minutes && s.avgMinutes ? s.minutes / s.avgMinutes : 0));
+  // Games played is not always listed (older seasons often lack it and minutes too); any total over its
+  // per-game average recovers it.
+  const ratio = (t?: number, a?: number) => (t && a ? t / a : 0);
+  const gp = Math.round(s.gamesPlayed || ratio(s.minutes, s.avgMinutes) || ratio(s.points, s.avgPoints) || ratio(s.rebounds, s.avgRebounds) || ratio(s.assists, s.avgAssists) || 0);
   const pct = (v: number | undefined) => (v == null ? null : v > 1 ? v / 100 : v);
   const per = (avg: number | undefined, total: number | undefined) => avg ?? (total != null && gp > 0 ? total / gp : 0);
   return {
     gp,
-    mpg: s.avgMinutes ?? 0,
+    mpg: s.avgMinutes ?? (s.minutes != null && gp > 0 ? s.minutes / gp : 0),
     ppg: per(s.avgPoints, s.points),
     rpg: per(s.avgRebounds, s.rebounds),
     apg: per(s.avgAssists, s.assists),
@@ -70,20 +72,21 @@ export function lineFrom(s: Record<string, number>) {
   };
 }
 
-async function pool<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
+export async function pool<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
   let i = 0;
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) await fn(items[i++]); }));
 }
 
 /** Some older athlete records carry only a display name, or first and last names. */
-const nameOf = (a: Json | null): string | null => {
+export const nameOf = (a: Json | null): string | null => {
   if (!a) return null;
   const full = a.fullName ?? a.displayName ?? [a.firstName, a.lastName].filter(Boolean).join(' ');
   return typeof full === 'string' && full.trim() ? full.trim() : null;
 };
 
-/** Bumped to re-read every past season once without a wipe (v2: players whose record had no fullName were skipped). */
-const ROSTER_VERSION = 2;
+/** Bumped to re-read every past season once without a wipe (v2: players whose record had no fullName were skipped;
+ * v3: old lines without games played or minutes were dropped as "no stats", Larry Bird among them). */
+const ROSTER_VERSION = 3;
 
 /** Bumped when seasonValue changes: stored values are recomputed from the stored stat lines, no refetch. */
 const VALUE_VERSION = 2;
@@ -125,7 +128,7 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
   const [rv] = await db.select().from(schema.gameConfigs).where(and(eq(schema.gameConfigs.gameType, '82-0'), eq(schema.gameConfigs.configKey, 'roster_version'))).limit(1);
   const repair = Number(rv?.configValue ?? 1) < ROSTER_VERSION && from === FIRST_SEASON;
   if (repair) console.log('[nba] re-reading every season once, roster version', ROSTER_VERSION);
-  const missed: string[] = [];
+  const missed: string[] = [], noStatIds: string[] = [];
   const done = repair ? new Set<string>() : new Set((await db.select({ t: schema.nbaPlayerSeasons.teamId, s: schema.nbaPlayerSeasons.season, n: dsql<number>`count(*)::int` })
     .from(schema.nbaPlayerSeasons).groupBy(schema.nbaPlayerSeasons.teamId, schema.nbaPlayerSeasons.season)).filter((r) => r.n >= 5).map((r) => `${r.t}:${r.s}`));
   let rows = 0, seasonsDone = 0, misses = 0, noStats = 0;
@@ -154,7 +157,11 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
           }
           if (!stats.has(pid)) stats.set(pid, lineFrom(readStats(await get(`${CORE}/seasons/${season}/types/2/athletes/${pid}/statistics`, fetchImpl))));
           const line = stats.get(pid);
-          if (!line || line.gp < 1) { noStats++; return; }
+          if (!line || line.gp < 1) {
+            noStats++;
+            if (noStatIds.length < 25) noStatIds.push(`${pid}@${teamId}:${season}`);
+            return;
+          }
           const row = { playerId: pid, teamId, season, ...line, value: seasonValue(line) };
           await db.insert(schema.nbaPlayerSeasons).values(row)
             .onConflictDoUpdate({ target: [schema.nbaPlayerSeasons.playerId, schema.nbaPlayerSeasons.teamId, schema.nbaPlayerSeasons.season], set: row });
@@ -177,6 +184,7 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
     await getRedis().del('nba:sync-lock').catch(() => {});
   }
   if (missed.length) console.log('[nba] athletes with no name on ESPN (first 25)', missed.join(' '));
+  if (noStatIds.length) console.log('[nba] athlete-seasons with no stat line (first 25)', noStatIds.join(' '));
   const [c] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.nbaPlayerSeasons);
   const [p] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.nbaPlayers);
   const summary = { from, to, seasonsDone, rowsWritten: rows, unnamed: misses, withoutStats: noStats, totalPlayerSeasons: c.n, players: p.n };
@@ -206,7 +214,11 @@ export async function nbaStarCheck() {
       .innerJoin(schema.nbaTeamSeasons, and(eq(schema.nbaTeamSeasons.teamId, schema.nbaPlayerSeasons.teamId), eq(schema.nbaTeamSeasons.season, schema.nbaPlayerSeasons.season)))
       .where(and(dsql`${schema.nbaPlayers.fullName} ilike ${name.replace(/[^a-z' ]/gi, '%')}`, eq(schema.nbaTeamSeasons.abbreviation, abbr),
         dsql`${schema.nbaPlayerSeasons.season} between ${from} and ${to}`, dsql`${schema.nbaPlayerSeasons.gp} >= 20`));
-    out.push(`${name} ${abbr} ${from}-${to}: ${r?.n ? `${r.n} seasons` : 'MISSING'}`);
+    if (r?.n) { out.push(`${name} ${abbr} ${from}-${to}: ${r.n} seasons`); continue; }
+    // Tell the two causes apart: never read at all, or read but with no team-season that counts.
+    const [p] = await db.select({ id: schema.nbaPlayers.id }).from(schema.nbaPlayers).where(dsql`${schema.nbaPlayers.fullName} ilike ${name.replace(/[^a-z' ]/gi, '%')}`).limit(1);
+    const rows = p ? await db.select({ t: schema.nbaPlayerSeasons.teamId, s: schema.nbaPlayerSeasons.season, gp: schema.nbaPlayerSeasons.gp }).from(schema.nbaPlayerSeasons).where(eq(schema.nbaPlayerSeasons.playerId, p.id)).limit(20) : [];
+    out.push(`${name} ${abbr} ${from}-${to}: MISSING (${p ? `player ${p.id}, stored ${rows.map((x) => `${x.t}:${x.s}/${x.gp}gp`).join(' ') || 'no seasons'}` : 'not in nba_players'})`);
   }
   console.log('[nba] star check', out.join('; '));
 }

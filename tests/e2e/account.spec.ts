@@ -160,6 +160,12 @@ test('sign up with just a username and password, then sign back in with the user
   await page.evaluate(() => sessionStorage.clear());
   await page.goto('/games/82-0');
   await expect(page.getByRole('dialog', { name: 'Game setup' }).getByRole('group', { name: 'Mode' }).getByRole('radio', { name: /Casual/ })).toBeChecked();
+  // Sign out from settings goes through NextAuth's route, so it works on a page opened before a deploy.
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.waitForURL((url) => url.pathname === '/');
+  await page.goto('/settings');
+  await expect(page).toHaveURL(/\/login/);
   await sql`delete from user_accounts where username = ${u}`;
 });
 

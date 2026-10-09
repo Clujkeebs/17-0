@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getUserById } from '@/lib/server/account';
 import { DeleteAccountForm, IdentityForm, Toggle } from './SettingsForms';
-import { signOutAction } from './actions';
+import { SignOutButton } from '@/lib/client-auth';
 
 export const metadata: Metadata = {
   title: 'Settings',
@@ -48,7 +48,7 @@ export default async function SettingsPage() {
 
       <section aria-labelledby="session-h" className="card" style={{ marginTop: 24 }}>
         <h2 id="session-h">Session</h2>
-        <form action={signOutAction}><button className="btn" type="submit">Sign out</button></form>
+        <SignOutButton />
       </section>
 
       <section aria-labelledby="delete-h" className="card card-error" style={{ marginTop: 24 }}>

@@ -17,6 +17,13 @@ describe('82-0 ESPN parsing', () => {
     expect(l.ppg).toBeCloseTo(30.4, 1);
     expect(l.rpg).toBeCloseTo(6.6, 1);
   });
+  it('recovers games played from points when an old line has no games or minutes', () => {
+    // Totals and averages without gamesPlayed or minutes, using Larry Bird's 1985-86 numbers.
+    const l = lineFrom({ points: 2115, avgPoints: 25.8, rebounds: 805, avgRebounds: 9.8, avgAssists: 6.8 });
+    expect(l.gp).toBe(82);
+    expect(l.ppg).toBe(25.8);
+    expect(l.apg).toBe(6.8);
+  });
   it('treats an empty response as zero games', () => {
     expect(lineFrom(readStats(null)).gp).toBe(0);
   });

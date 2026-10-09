@@ -17,61 +17,44 @@ const STATS: { key: Stat; label: string; short: string }[] = [
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const line = (s: NSeason) => `${r1(s.ppg)} pts, ${r1(s.rpg)} reb, ${r1(s.apg)} ast`;
 
-function tries<T>(n: number, make: () => T | null): T[] {
+function tries<T>(n: number, make: () => T | null, what = 'NBA'): T[] {
   const out: T[] = [];
   for (let i = 0; out.length < n && i < n * 400; i++) { const x = make(); if (x) out.push(x); }
-  if (out.length < n) throw new Error('Not enough NBA history to build this puzzle.');
+  if (out.length < n) throw new Error(`Not enough ${what} history to build this puzzle.`);
   return out;
 }
 const distinctBy = <T>(xs: T[], key: (x: T) => string | number) => xs.filter((x, i) => xs.findIndex((y) => key(y) === key(x)) === i);
+/** Puts the answer among the decoys in seeded order and remembers where it went. */
+function deal<T>(rng: Rng, answer: T, decoys: T[]): { list: T[]; correct: number } {
+  const list = rng.shuffle([answer, ...decoys]);
+  return { list, correct: list.indexOf(answer) };
+}
 
-/* ------------------------------------------------------------------ Higher or Lower */
+/** What differs between the NBA and WNBA versions of the stat games. */
+export interface HoopsLeague {
+  sport: 'nba' | 'wnba'; prefix: string; league: string; she: 'he' | 'she';
+  names: { hl: string; br: string; led: string; team: string };
+  /** How many all-time best players Higher or Lower draws from. */
+  stars: number;
+  /** Season value cut-offs: a decent season, a good one, a star one. */
+  cuts: (data: NbaGameData) => { ok: number; good: number; star: number };
+}
 
-type HLRound = { a: NSeason; b: NSeason; stat: Stat; label: string };
-export const nbaHigherLower: MiniGame<{ rounds: HLRound[] }, ('a' | 'b')[], NbaGameData> = {
-  slug: 'nba-higher-lower', sport: 'nba',
-  name: 'Higher or Lower: Hoops',
-  tagline: 'Two real NBA seasons, one stat. Ten calls. Who averaged more?',
-  howTo: ['Each round shows two players, each in one season, and one per-game stat.', 'Tap the player who averaged more. Ties count either way.', 'Ten rounds. The reveal shows every number.'],
-  generate(seed, data) {
-    const rng = createRng(seed);
-    // Known names only: the 150 best players since 1985 (by their best season), in their good seasons.
-    const stars = starIds(data.seasons, (s) => s.playerId, (s) => s.value, 150);
-    const pool = data.seasons.filter((s) => s.value >= 72 && stars.has(s.playerId));
-    const used = new Set<number>();
-    return { rounds: tries(10, () => {
-      const a = rng.pick(pool), st = rng.pick(STATS);
-      if (used.has(a.playerId)) return null;
-      const av = r1(a[st.key]);
-      if (av < (st.key === 'ppg' ? 8 : st.key === 'rpg' || st.key === 'apg' ? 3 : 0.8)) return null;
-      // Close calls from roughly the same era make it a game.
-      const near = pool.filter((b) => b.playerId !== a.playerId && !used.has(b.playerId) && Math.abs(b.season - a.season) <= 8 && r1(b[st.key]) !== av && Math.abs(b[st.key] - a[st.key]) <= Math.max(0.3, av * 0.15));
-      if (!near.length) return null;
-      const b = rng.pick(near); used.add(a.playerId); used.add(b.playerId);
-      return { a, b, stat: st.key, label: st.label };
-    }) };
-  },
-  publicView: (p) => ({ rounds: p.rounds.map((r) => ({ a: ncard(r.a), b: ncard(r.b), label: r.label })) }),
-  score(p, answer) {
-    if (!Array.isArray(answer) || answer.length !== p.rounds.length) throw new Error('Answer every round.');
-    const detail = p.rounds.map((r, i) => {
-      const av = r1(r.a[r.stat]), bv = r1(r.b[r.stat]);
-      const ok = av === bv || (answer[i] === 'a' ? av > bv : bv > av);
-      return { a: `${r.a.name} (${r.a.seasonLabel})`, b: `${r.b.name} (${r.b.seasonLabel})`, aImg: r.a.img, bImg: r.b.img, aTeam: r.a.team, bTeam: r.b.team, aColor: r.a.teamColor, bColor: r.b.teamColor, aLogo: r.a.logoUrl, bLogo: r.b.logoUrl, label: r.label, av, bv, pick: answer[i], ok };
-    });
-    const right = detail.filter((d) => d.ok).length;
-    return { score: right, summary: `${right}/${p.rounds.length}`, detail, perfect: right === p.rounds.length };
-  },
-};
-
-/* ------------------------------------------------------------------ shared "tap one card" rounds */
+/** Value at the given share of the way up every stored season (0.9 = better than nine in ten). */
+export function valueAt(data: NbaGameData, q: number) {
+  const v = data.seasons.map((s) => s.value).sort((a, b) => a - b);
+  return v.length ? v[Math.min(v.length - 1, Math.floor(q * v.length))] : 99;
+}
 
 type Card = ReturnType<typeof ncard>;
 type PickRound = { prompt: string; options: Card[]; notes: string[]; correct: number };
-function pickGame(meta: { slug: string; name: string; tagline: string; howTo: string[] }, build: (rng: Rng, data: NbaGameData) => PickRound | null, rounds = 6): MiniGame<{ rounds: PickRound[] }, number[], NbaGameData> {
-  return {
-    ...meta, sport: 'nba',
-    generate: (seed, data) => { const rng = createRng(seed); return { rounds: tries(rounds, () => build(rng, data)) }; },
+type HLRound = { a: NSeason; b: NSeason; stat: Stat; label: string };
+
+/** Higher or Lower, Blind Résumé, Who Led? and Whose Team? for one league. */
+export function hoopsGames(L: HoopsLeague) {
+  const pickGame = (meta: { slug: string; name: string; tagline: string; howTo: string[] }, build: (rng: Rng, data: NbaGameData) => PickRound | null, rounds = 6): MiniGame<{ rounds: PickRound[] }, number[], NbaGameData> => ({
+    ...meta, sport: L.sport,
+    generate: (seed, data) => { const rng = createRng(seed); return { rounds: tries(rounds, () => build(rng, data), L.league) }; },
     publicView: (p) => ({ rounds: p.rounds.map((r) => ({ prompt: r.prompt, options: r.options })) }),
     score(p, answer) {
       if (!Array.isArray(answer) || answer.length !== p.rounds.length) throw new Error('Answer every round.');
@@ -79,55 +62,98 @@ function pickGame(meta: { slug: string; name: string; tagline: string; howTo: st
       const right = detail.filter((d) => d.right).length;
       return { score: right, summary: `${right}/${p.rounds.length}`, detail, perfect: right === p.rounds.length };
     },
+  });
+
+  const higherLower: MiniGame<{ rounds: HLRound[] }, ('a' | 'b')[], NbaGameData> = {
+    slug: `${L.prefix}-higher-lower`, sport: L.sport,
+    name: L.names.hl,
+    tagline: `Two real ${L.league} seasons, one stat. Ten calls. Who averaged more?`,
+    howTo: ['Each round shows two players, each in one season, and one per-game stat.', 'Tap the player who averaged more. Ties count either way.', 'Ten rounds. The reveal shows every number.'],
+    generate(seed, data) {
+      const rng = createRng(seed);
+      // Known names only: the league's best players (by their best season), in their good seasons.
+      const stars = starIds(data.seasons, (s) => s.playerId, (s) => s.value, L.stars);
+      const pool = data.seasons.filter((s) => s.value >= L.cuts(data).ok && stars.has(s.playerId));
+      const used = new Set<number>();
+      return { rounds: tries(10, () => {
+        const a = rng.pick(pool), st = rng.pick(STATS);
+        if (used.has(a.playerId)) return null;
+        const av = r1(a[st.key]);
+        if (av < (st.key === 'ppg' ? 8 : st.key === 'rpg' || st.key === 'apg' ? 3 : 0.8)) return null;
+        // Close calls from roughly the same era make it a game.
+        const near = pool.filter((b) => b.playerId !== a.playerId && !used.has(b.playerId) && Math.abs(b.season - a.season) <= 8 && r1(b[st.key]) !== av && Math.abs(b[st.key] - a[st.key]) <= Math.max(0.3, av * 0.15));
+        if (!near.length) return null;
+        const b = rng.pick(near); used.add(a.playerId); used.add(b.playerId);
+        return { a, b, stat: st.key, label: st.label };
+      }, L.league) };
+    },
+    publicView: (p) => ({ rounds: p.rounds.map((r) => ({ a: ncard(r.a), b: ncard(r.b), label: r.label })) }),
+    score(p, answer) {
+      if (!Array.isArray(answer) || answer.length !== p.rounds.length) throw new Error('Answer every round.');
+      const detail = p.rounds.map((r, i) => {
+        const av = r1(r.a[r.stat]), bv = r1(r.b[r.stat]);
+        const ok = av === bv || (answer[i] === 'a' ? av > bv : bv > av);
+        return { a: `${r.a.name} (${r.a.seasonLabel})`, b: `${r.b.name} (${r.b.seasonLabel})`, aImg: r.a.img, bImg: r.b.img, aTeam: r.a.team, bTeam: r.b.team, aColor: r.a.teamColor, bColor: r.b.teamColor, aLogo: r.a.logoUrl, bLogo: r.b.logoUrl, label: r.label, av, bv, pick: answer[i], ok };
+      });
+      const right = detail.filter((d) => d.ok).length;
+      return { score: right, summary: `${right}/${p.rounds.length}`, detail, perfect: right === p.rounds.length };
+    },
   };
+
+  const blindResume = pickGame({
+    slug: `${L.prefix}-blind-resume`, name: L.names.br,
+    tagline: 'A real season stat line. Four players from that year. Whose season was it?',
+    howTo: ['Each round shows one season\'s per-game line: points, rebounds, assists.', 'Pick the player who put it up. All four played that season.', 'Six rounds.'],
+  }, (rng, data) => {
+    const c = L.cuts(data);
+    const t = rng.pick(data.seasons.filter((s) => s.value >= c.star));
+    const same = distinctBy(data.seasons.filter((s) => s.season === t.season && s.playerId !== t.playerId && s.value >= c.ok), (s) => s.playerId);
+    if (same.length < 3) return null;
+    const { list, correct } = deal(rng, t, rng.shuffle(same).slice(0, 3));
+    return { prompt: `${t.seasonLabel}: ${line(t)}. Whose season?`, options: list.map(ncard), notes: list.map(line), correct };
+  });
+
+  const whoLed = pickGame({
+    slug: `${L.prefix}-who-led`, name: L.names.led,
+    tagline: 'One team, one season, one stat. Which teammate led the way?',
+    howTo: ['Each round names a team-season and a per-game stat.', 'Pick the player who led that team in it. All four were on the roster.', 'Six rounds.'],
+  }, (rng, data) => {
+    const any = rng.pick(data.seasons);
+    const roster = distinctBy(data.seasons.filter((s) => s.teamId === any.teamId && s.season === any.season), (s) => s.playerId);
+    if (roster.length < 4) return null;
+    const st = rng.pick(STATS.slice(0, 3));
+    const sorted = [...roster].sort((a, b) => b[st.key] - a[st.key]);
+    if (r1(sorted[0][st.key]) === r1(sorted[1][st.key])) return null;
+    const { list, correct } = deal(rng, sorted[0], rng.shuffle(sorted.slice(1, 7)).slice(0, 3));
+    return { prompt: `Who led the ${any.seasonLabel} ${any.teamName} in ${st.short} per game?`, options: list.map(ncard), notes: list.map((s) => `${r1(s[st.key])} ${st.short}`), correct };
+  });
+
+  const whoseTeam = pickGame({
+    slug: `${L.prefix}-whose-team`, name: L.names.team,
+    tagline: `One player, one season. Which franchise was ${L.she} on?`,
+    howTo: ['Each round names a player and a season.', `Pick the team ${L.she} played for that year. Four teams from that season.`, 'Six rounds.'],
+  }, (rng, data) => {
+    const t = rng.pick(data.seasons.filter((s) => s.value >= L.cuts(data).good));
+    const hers = new Set(data.seasons.filter((s) => s.playerId === t.playerId && s.season === t.season).map((s) => s.teamId));
+    if (hers.size !== 1) return null; // traded mid-season: two right answers
+    const teams = distinctBy(data.seasons.filter((s) => s.season === t.season && !hers.has(s.teamId)), (s) => s.teamId);
+    if (teams.length < 3) return null;
+    const asTeam = (s: NSeason) => ({ id: `${s.teamId}:${s.season}`, name: s.teamName, position: s.seasonLabel, team: s.team, teamName: s.teamName, teamColor: s.teamColor, logoUrl: s.logoUrl, img: s.logoUrl });
+    const { list, correct } = deal(rng, t, rng.shuffle(teams).slice(0, 3));
+    return { prompt: `Which team did ${t.name} play for in ${t.seasonLabel}?`, options: list.map(asTeam), notes: list.map((s, k) => (k === list.indexOf(t) ? line(t) : '')), correct };
+  });
+  return { higherLower, blindResume, whoLed, whoseTeam };
 }
-/** Puts the answer among the decoys in seeded order and remembers where it went. */
-function deal<T>(rng: Rng, answer: T, decoys: T[]): { list: T[]; correct: number } {
-  const list = rng.shuffle([answer, ...decoys]);
-  return { list, correct: list.indexOf(answer) };
-}
 
-export const nbaBlindResume = pickGame({
-  slug: 'nba-blind-resume', name: 'Blind Résumé: Hoops',
-  tagline: 'A real season stat line. Four players from that year. Whose season was it?',
-  howTo: ['Each round shows one season\'s per-game line: points, rebounds, assists.', 'Pick the player who put it up. All four played that season.', 'Six rounds.'],
-}, (rng, data) => {
-  const t = rng.pick(data.seasons.filter((s) => s.value >= 82));
-  const same = distinctBy(data.seasons.filter((s) => s.season === t.season && s.playerId !== t.playerId && s.value >= 72), (s) => s.playerId);
-  if (same.length < 3) return null;
-  const { list, correct } = deal(rng, t, rng.shuffle(same).slice(0, 3));
-  return { prompt: `${t.seasonLabel}: ${line(t)}. Whose season?`, options: list.map(ncard), notes: list.map(line), correct };
+const NBA = hoopsGames({
+  sport: 'nba', prefix: 'nba', league: 'NBA', she: 'he', stars: 150,
+  names: { hl: 'Higher or Lower: Hoops', br: 'Blind Résumé: Hoops', led: 'Who Led?', team: 'Whose Team?' },
+  cuts: () => ({ ok: 72, good: 78, star: 82 }),
 });
-
-export const nbaWhoLed = pickGame({
-  slug: 'nba-who-led', name: 'Who Led?',
-  tagline: 'One team, one season, one stat. Which teammate led the way?',
-  howTo: ['Each round names a team-season and a per-game stat.', 'Pick the player who led that team in it. All four were on the roster.', 'Six rounds.'],
-}, (rng, data) => {
-  const any = rng.pick(data.seasons);
-  const roster = distinctBy(data.seasons.filter((s) => s.teamId === any.teamId && s.season === any.season), (s) => s.playerId);
-  if (roster.length < 4) return null;
-  const st = rng.pick(STATS.slice(0, 3));
-  const sorted = [...roster].sort((a, b) => b[st.key] - a[st.key]);
-  if (r1(sorted[0][st.key]) === r1(sorted[1][st.key])) return null;
-  const { list, correct } = deal(rng, sorted[0], rng.shuffle(sorted.slice(1, 7)).slice(0, 3));
-  return { prompt: `Who led the ${any.seasonLabel} ${any.teamName} in ${st.short} per game?`, options: list.map(ncard), notes: list.map((s) => `${r1(s[st.key])} ${st.short}`), correct };
-});
-
-export const nbaWhoseTeam = pickGame({
-  slug: 'nba-whose-team', name: 'Whose Team?',
-  tagline: 'One player, one season. Which franchise was he on?',
-  howTo: ['Each round names a player and a season.', 'Pick the team he played for that year. Four teams from that season.', 'Six rounds.'],
-}, (rng, data) => {
-  const t = rng.pick(data.seasons.filter((s) => s.value >= 78));
-  const his = new Set(data.seasons.filter((s) => s.playerId === t.playerId && s.season === t.season).map((s) => s.teamId));
-  if (his.size !== 1) return null; // traded mid-season: two right answers
-  const teams = distinctBy(data.seasons.filter((s) => s.season === t.season && !his.has(s.teamId)), (s) => s.teamId);
-  if (teams.length < 3) return null;
-  const asTeam = (s: NSeason) => ({ id: `${s.teamId}:${s.season}`, name: s.teamName, position: s.seasonLabel, team: s.team, teamName: s.teamName, teamColor: s.teamColor, logoUrl: s.logoUrl, img: s.logoUrl });
-  const { list, correct } = deal(rng, t, rng.shuffle(teams).slice(0, 3));
-  return { prompt: `Which team did ${t.name} play for in ${t.seasonLabel}?`, options: list.map(asTeam), notes: list.map((s, k) => (k === list.indexOf(t) ? line(t) : '')), correct };
-});
+export const nbaHigherLower = NBA.higherLower;
+export const nbaBlindResume = NBA.blindResume;
+export const nbaWhoLed = NBA.whoLed;
+export const nbaWhoseTeam = NBA.whoseTeam;
 
 /* ------------------------------------------------------------------ NBA 2K rating games (ratings via NBA2KLab) */
 

@@ -1,5 +1,6 @@
 import { games } from '@/lib/minigames/games';
 import { nbaGames } from '@/lib/minigames/nba/games';
+import { wnbaGames } from '@/lib/minigames/wnba/games';
 import { puzzleGames } from '@/lib/minigames/puzzles/games';
 import { top100Games } from '@/lib/minigames/top100/games';
 import { soccerGames } from '@/lib/minigames/soccer/games';
@@ -24,6 +25,7 @@ export const GAMES: GameEntry[] = [
   ...fantasyGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nfl' as const })),
   { slug: '82-0', name: '82-0', sport: 'nba', hard: true },
   ...nbaGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nba' as const })),
+  ...wnbaGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nba' as const })),
   { slug: '162-0', name: '162-0', sport: 'mlb', hard: true },
   ...mlbGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'mlb' as const })),
   ...soccerGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'soccer' as const })),
