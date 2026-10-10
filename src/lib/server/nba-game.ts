@@ -100,7 +100,7 @@ async function board2k(teamId: number): Promise<NbaTeamView | null> {
   const players = rows.sort((a, b) => b.rating2k! - a.rating2k!).map((p) => {
     const l = lines.find((x) => x.playerId === p.id);
     const pos = p.rating2kPosition ?? p.position;
-    return { id: p.id, name: p.fullName, position: pos, season: t.season, seasonLabel: 'NBA 2K', value: p.rating2k!, ppg: l?.ppg ?? 0, rpg: l?.rpg ?? 0, apg: l?.apg ?? 0, headshot: p.headshot, fits: naturalSlots(pos) };
+    return { id: p.id, name: p.fullName, position: pos, season: t.season, seasonLabel: 'NBA 2K', value: p.rating2k!, ppg: l?.ppg ?? 0, rpg: l?.rpg ?? 0, apg: l?.apg ?? 0, headshot: p.headshot, fits: naturalSlots(pos, l?.apg) };
   });
   return { id: teamId, era: '2020s', eraLabel: '2K', name: t.name, location: t.location, abbreviation: t.abbreviation, color: t.color ?? '#555555', logoUrl: t.logoUrl, players };
 }
@@ -127,7 +127,7 @@ async function board(teamId: number, era: EraKey): Promise<NbaTeamView | null> {
   for (const r of rows) { const b = best.get(r.p.id); if (!b || r.ps.value > b.ps.value) best.set(r.p.id, r); }
   const players = [...best.values()].sort((a, b) => b.ps.value - a.ps.value).map(({ ps, p }) => ({
     id: p.id, name: p.fullName, position: p.position, season: ps.season, seasonLabel: seasonLabel(ps.season), value: ps.value,
-    ppg: ps.ppg, rpg: ps.rpg, apg: ps.apg, headshot: p.headshot, fits: naturalSlots(p.position),
+    ppg: ps.ppg, rpg: ps.rpg, apg: ps.apg, headshot: p.headshot, fits: naturalSlots(p.position, ps.apg),
   }));
   return { id: teamId, era, eraLabel: e.label, name: t.name, location: t.location, abbreviation: t.abbreviation, color: t.color ?? '#555555', logoUrl: t.logoUrl, players };
 }
@@ -184,7 +184,7 @@ async function state(sessionId: string, p: NbaPayload): Promise<NbaState> {
     if (!hit) return { slot, pick: null };
     const pl = hit.t?.players.find((y) => y.id === hit.x.playerId);
     if (!pl || !hit.t) return { slot, pick: null };
-    const fit = fitMultiplier(pl.position, slot);
+    const fit = fitMultiplier(pl.position, slot, pl.apg);
     return { slot, pick: { ...hide(pl), teamName: `${hit.t.location} ${hit.t.name}`.trim(), teamColor: hit.t.color, logoUrl: hit.t.logoUrl, fit } };
   });
   const usedEras = p.edition === 'standard' ? [] : [...fullEras(p)];
@@ -279,15 +279,18 @@ export async function gradeNba(ctx: { sessionId: string; token: string; userId?:
   const rated = standard ? await db.select().from(schema.nbaPlayers).where(inArray(schema.nbaPlayers.id, ids)) : [];
   const rows = await db.select({ ps: schema.nbaPlayerSeasons, p: schema.nbaPlayers }).from(schema.nbaPlayerSeasons)
     .innerJoin(schema.nbaPlayers, eq(schema.nbaPlayers.id, schema.nbaPlayerSeasons.playerId)).where(inArray(schema.nbaPlayerSeasons.playerId, ids));
+  // Standard plays today's rosters: a player's latest season says whether he runs the point.
+  const lastApg = new Map<number, number>();
+  for (const r of [...rows].sort((a, b) => a.ps.season - b.ps.season)) lastApg.set(r.p.id, r.ps.apg);
   const picks: NbaPick[] = p.picks.map((x) => {
     if (standard) {
       const r = rated.find((y) => y.id === x.playerId);
       if (!r || r.rating2k == null) throw new NbaError('Unknown player.');
-      return { slot: x.slot, name: r.fullName, position: r.rating2kPosition ?? r.position, teamId: x.teamId, season: x.season, value: r.rating2k };
+      return { slot: x.slot, name: r.fullName, position: r.rating2kPosition ?? r.position, teamId: x.teamId, season: x.season, value: r.rating2k, apg: lastApg.get(r.id) };
     }
     const r = rows.find((y) => y.p.id === x.playerId && y.ps.teamId === x.teamId && y.ps.season === x.season);
     if (!r) throw new NbaError('Unknown player.');
-    return { slot: x.slot, name: r.p.fullName, position: r.p.position, teamId: x.teamId, season: x.season, value: r.ps.value };
+    return { slot: x.slot, name: r.p.fullName, position: r.p.position, teamId: x.teamId, season: x.season, value: r.ps.value, apg: r.ps.apg };
   });
   const seed = s.isDaily || p.challengeId ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
   const result = gradeNbaRoster(seed, picks, await getNbaFloor(standard ? 'standard' : 'classic'));

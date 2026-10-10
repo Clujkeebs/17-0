@@ -14,6 +14,7 @@ export const LIMITS = {
   feedback: { max: 120, windowSec: 3600 },
   shopUser: { max: 120, windowSec: 3600 },
   challenge: { max: 600, windowSec: 3600 },
+  claim: { max: 60, windowSec: 3600 },
 } as const;
 export type LimitScope = keyof typeof LIMITS;
 

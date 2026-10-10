@@ -5,7 +5,7 @@ import { createRng } from '@/lib/game/prng';
 import { getRedis } from './redis';
 import { NBA_FLOOR_KEY, NBA_FLOOR_KEY_2K } from './nba-floor';
 
-type Cand = { name: string; position: string; teamId: number; season: number; value: number };
+type Cand = { name: string; position: string; teamId: number; season: number; value: number; apg?: number };
 /** A careful drafter using both re-spins goes 82-0 about this often (was 6 percent; owners asked for harder). */
 const TARGET_P17 = 0.03;
 const RESPIN_BELOW = 85;
@@ -17,7 +17,7 @@ const PERMS: number[][] = [];
 export function bestLineup(c: Cand[]): NbaPick[] {
   let best: number[] = PERMS[0], bv = -1;
   for (const p of PERMS) {
-    const v = p.reduce((s, ci, si) => s + c[ci].value * fitMultiplier(c[ci].position, NBA_SLOTS[si]), 0);
+    const v = p.reduce((s, ci, si) => s + c[ci].value * fitMultiplier(c[ci].position, NBA_SLOTS[si], c[ci].apg), 0);
     if (v > bv) { bv = v; best = p; }
   }
   return best.map((ci, si) => ({ ...c[ci], slot: NBA_SLOTS[si] as NbaSlot }));
@@ -34,7 +34,7 @@ async function boards() {
       if (r.ps.season < e.from || r.ps.season > e.to) continue;
       const m = byTeam.get(r.ps.teamId) ?? new Map<number, Cand>();
       const cur = m.get(r.p.id);
-      if (!cur || r.ps.value > cur.value) m.set(r.p.id, { name: r.p.fullName, position: r.p.position, teamId: r.ps.teamId, season: r.ps.season, value: r.ps.value });
+      if (!cur || r.ps.value > cur.value) m.set(r.p.id, { name: r.p.fullName, position: r.p.position, teamId: r.ps.teamId, season: r.ps.season, value: r.ps.value, apg: r.ps.apg });
       byTeam.set(r.ps.teamId, m);
     }
     out.set(e.key, new Map([...byTeam].filter(([, m]) => m.size >= 5).map(([t, m]) => [t, [...m.values()].sort((a, b) => b.value - a.value)])));

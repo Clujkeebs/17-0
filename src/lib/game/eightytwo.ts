@@ -1,4 +1,4 @@
-import { clamp, createRng, softTop } from './prng';
+import { clamp, createRng, seasonWins, softTop } from './prng';
 import { letterGrade } from './formulas';
 import { lastName } from '@/lib/names';
 
@@ -34,7 +34,15 @@ export const ERA_RESPINS = 2;
 export const TEAM_RESPINS = 2;
 
 /** Slots a listed position plays naturally. Combo listings cover both. */
-export function naturalSlots(position: string): NbaSlot[] {
+/** A season with this many assists a game runs an offense: he plays the point with no cost (Jokic, LeBron, Magic). */
+export const PLAYMAKER_APG = 7;
+
+export function naturalSlots(position: string, apg?: number | null): NbaSlot[] {
+  const own = listedSlots(position);
+  return apg != null && apg >= PLAYMAKER_APG && !own.includes('PG') ? ['PG', ...own] : own;
+}
+
+function listedSlots(position: string): NbaSlot[] {
   const p = position.toUpperCase().replace(/\s/g, '');
   const map: Record<string, NbaSlot[]> = {
     PG: ['PG'], SG: ['SG'], SF: ['SF'], PF: ['PF'], C: ['C'],
@@ -48,8 +56,8 @@ export function naturalSlots(position: string): NbaSlot[] {
  * Playing out of position costs a share of the player's value: one spot over (a shooting guard at the point)
  * costs a little, two or more spots (a center at guard) costs a lot. This is what makes moving players matter.
  */
-export function fitMultiplier(position: string, slot: NbaSlot): number {
-  const nat = naturalSlots(position).map((s) => NBA_SLOTS.indexOf(s));
+export function fitMultiplier(position: string, slot: NbaSlot, apg?: number | null): number {
+  const nat = naturalSlots(position, apg).map((s) => NBA_SLOTS.indexOf(s));
   const d = Math.min(...nat.map((i) => Math.abs(i - NBA_SLOTS.indexOf(slot))));
   return d === 0 ? 1 : d === 1 ? 0.94 : d === 2 ? 0.82 : 0.7;
 }
@@ -65,14 +73,19 @@ export interface SeasonLine { gp: number; mpg: number; ppg: number; rpg: number;
 export function seasonValue(s: SeasonLine): number {
   const tov = s.tov ?? 0.12 * (s.ppg + s.apg);
   const eff = s.fgPct != null && s.ppg >= 5 ? (s.fgPct - 0.46) * 40 : 0;
-  const raw = s.ppg + 1.2 * s.rpg + 1.5 * s.apg + 2.5 * s.spg + 2 * s.bpg - 1.5 * tov + eff;
+  // Shooting beyond the field goal: great three-point and free-throw shooters (Reggie Miller) score more per shot
+  // than FG% shows. Attempts are not stored, so a low three-point rate never counts against anyone.
+  const scorer = s.ppg >= 10;
+  const three = scorer && s.tpPct != null ? Math.min(3.5, Math.max(0, s.tpPct - 0.35) * 30) : 0;
+  const line = scorer && s.ftPct != null ? clamp((s.ftPct - 0.77) * 15, -1.5, 2.5) : 0;
+  const raw = s.ppg + 1.2 * s.rpg + 1.5 * s.apg + 2.5 * s.spg + 2 * s.bpg - 1.5 * tov + eff + three + line;
   const sample = clamp(s.gp / 40, 0, 1);
   return Math.round(clamp(softTop(50 + raw * 1.02), 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
 }
 
-export interface NbaPick { slot: NbaSlot; name: string; position: string; teamId: number; season: number; value: number }
+export interface NbaPick { slot: NbaSlot; name: string; position: string; teamId: number; season: number; value: number; /** That season's assists a game: 7+ plays the point at no cost. */ apg?: number | null }
 export interface NbaSlotResult { slot: NbaSlot; name: string; position: string; teamId: number; season: number; value: number; fit: number; grade: number; letter: string }
-export interface NbaResult { slots: NbaSlotResult[]; teamStrength: number; wins: number; losses: number; narrative: string[]; score: number }
+export interface NbaResult { slots: NbaSlotResult[]; teamStrength: number; /** Team strength that locks in 82-0. */ perfectAt?: number; wins: number; losses: number; narrative: string[]; score: number }
 
 export const NBA_WIN_FLOOR_DEFAULT = 70;
 export const NBA_WIN_SPAN = 24;
@@ -81,16 +94,17 @@ export function gradeNbaRoster(seed: string, picks: NbaPick[], winFloor = NBA_WI
   const slots = NBA_SLOTS.map((slot) => {
     const p = picks.find((x) => x.slot === slot);
     if (!p) throw new Error(`Missing pick for ${slot}`);
-    const fit = fitMultiplier(p.position, slot);
+    const fit = fitMultiplier(p.position, slot, p.apg);
     const grade = Math.round(p.value * fit * 10) / 10;
     return { slot, name: p.name, position: p.position, teamId: p.teamId, season: p.season, value: p.value, fit, grade, letter: letterGrade(grade) };
   });
   const teamStrength = Math.round((slots.reduce((s, r) => s + r.grade, 0) / slots.length) * 10) / 10;
   const rng = createRng(`nba:${seed}`);
   const jitter = rng.int(-3, 2);
-  const wins = clamp(Math.round(((teamStrength - winFloor) / NBA_WIN_SPAN) * 82 + jitter), 0, 82);
+  const wins = seasonWins(((teamStrength - winFloor) / NBA_WIN_SPAN) * 82, 82, jitter);
+  const perfectAt = Math.round((winFloor + NBA_WIN_SPAN) * 10) / 10;
   const losses = 82 - wins;
-  return { slots, teamStrength, wins, losses, narrative: nbaNarrative(seed, slots, wins), score: wins * 1000 + Math.min(999, Math.round(teamStrength * 10)) };
+  return { slots, teamStrength, wins, losses, perfectAt, narrative: nbaNarrative(seed, slots, wins), score: wins * 1000 + Math.min(999, Math.round(teamStrength * 10)) };
 }
 
 const last = lastName;

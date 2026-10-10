@@ -58,14 +58,13 @@
 .g-ovr { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; }
 .g-ovr.g-fpts { font-size: 1.25rem; }
 
-.face { position: relative; flex: none; border-radius: 50%; overflow: hidden; background: var(--green); display: inline-flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 2px var(--tc, transparent); }
-.face img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
-.face-i { font-weight: 600; color: var(--bone-dim); letter-spacing: .02em; }
 
 .g-done { border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); padding: 48px 32px; }
 
 .g-side { position: sticky; top: calc(var(--header-h) + 16px); }
 .g-side-inner { border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); padding: 20px; }
+/* The lineup scrolls on its own, so a long roster (162-0, 12 and 16 man) never hides its bottom slots or the play button while the board scrolls. */
+@media (min-width: 901px) { .g-side-inner { max-height: calc(100dvh - var(--header-h) - 32px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; } }
 @media (max-width: 900px) { .g-side { position: static; margin-bottom: 20px; } .g-side-inner { padding: 14px 16px; } }
 .g-slots { list-style: none; margin: 0; padding: 0; }
 .g-slots li { display: grid; grid-template-columns: 56px 1fr; align-items: center; min-height: 48px; border-top: 1px solid var(--steel); }
@@ -96,7 +95,7 @@
 
 @media (max-width: 900px) {
   .g-side { position: sticky; top: var(--header-h); z-index: 5; margin: 0 calc(-1 * var(--gutter)) 16px; }
-  .g-side-inner { border-radius: 0; border-left: 0; border-right: 0; padding: 10px var(--gutter); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); }
+  .g-side-inner { border-radius: 0; border-left: 0; border-right: 0; padding: 10px var(--gutter); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); max-height: 34dvh; overflow-y: auto; overscroll-behavior: contain; }
   .g-side .g-kicker, .g-reset { display: none; }
   .g-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .g-slots li { border: 1px solid var(--steel) !important; border-radius: 10px; padding: 4px 8px; min-height: 0; grid-template-columns: 1fr; gap: 0; }

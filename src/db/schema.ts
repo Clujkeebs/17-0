@@ -51,8 +51,10 @@ export const players = pgTable('players', {
   sleeperId: text('sleeper_id'),
   /** Sleeper's popularity rank (lower is more drafted and rostered); used to find waiver-wire players. */
   sleeperRank: integer('sleeper_rank'),
-  /** Adds across Sleeper leagues in the last 48 hours. */
+  /** Adds across Sleeper leagues in the last 24 hours. */
   fantasyTrend: integer('fantasy_trend'),
+  /** Share of ESPN fantasy leagues where he is rostered, 0-100. */
+  rosteredPct: real('rostered_pct'),
 }, (t) => [index('players_team_idx').on(t.teamId), index('players_pos_idx').on(t.position)]);
 
 export const coaches = pgTable('coaches', {

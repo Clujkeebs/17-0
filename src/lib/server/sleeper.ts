@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { GROUP_RAW } from './data';
 import { lastNameKey } from './espn-match';
@@ -78,9 +78,9 @@ export function recentForm(weeks: number[] | undefined): number | null {
   return Math.round((last.reduce((s, v, i) => s + v * w[i], 0) / w.reduce((a, b) => a + b, 0)) * 10) / 10;
 }
 
-/** Adds in Sleeper leagues over the last two days, by Sleeper id. */
+/** Adds in Sleeper leagues over the last day, by Sleeper id. */
 async function trendingAdds(fetchImpl: typeof fetch): Promise<Map<string, number>> {
-  const rows = await getJson<{ player_id: string; count: number }[]>(`${API}/players/nfl/trending/add?lookback_hours=48&limit=300`, fetchImpl);
+  const rows = await getJson<{ player_id: string; count: number }[]>(`${API}/players/nfl/trending/add?lookback_hours=24&limit=500`, fetchImpl);
   return new Map((rows ?? []).map((r) => [String(r.player_id), r.count]));
 }
 
@@ -152,4 +152,46 @@ export async function syncFantasy(fetchImpl: typeof fetch = fetch) {
   console.log('[fantasy] synced', JSON.stringify(summary));
   if (unmatched.length) console.log('[fantasy] unmatched', unmatched.length, unmatched.slice(0, 60).join(', '));
   return summary;
+}
+
+/**
+ * Share of ESPN fantasy leagues rostering each player, by ESPN athlete id, from ESPN's public player list
+ * (the one its own player pages read). Returns an empty map if ESPN changes the shape; the page then omits it.
+ */
+async function espnRostered(season: string, fetchImpl: typeof fetch): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  try {
+    const r = await fetchImpl(`https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}/segments/0/leaguedefaults/3?view=kona_player_info`, {
+      headers: { 'x-fantasy-filter': JSON.stringify({ players: { limit: 1500, sortPercOwned: { sortAsc: false, sortPriority: 1 } } }), accept: 'application/json' },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!r.ok) { console.warn('[fantasy] ESPN rostered list', r.status); return out; }
+    const j = await r.json() as { players?: { id?: number; player?: { id?: number; ownership?: { percentOwned?: number } } }[] };
+    for (const x of j.players ?? []) {
+      const id = x.player?.id ?? x.id, pct = x.player?.ownership?.percentOwned;
+      if (id != null && typeof pct === 'number') out.set(String(id), Math.round(pct * 10) / 10);
+    }
+  } catch (e) { console.warn('[fantasy] ESPN rostered list failed', (e as Error).message); }
+  return out;
+}
+
+/** The waiver wire's numbers, refreshed every few hours: adds in the last day (Sleeper) and rostered share (ESPN). */
+export async function syncTrending(fetchImpl: typeof fetch = fetch) {
+  const state = await getJson<{ season?: string; league_season?: string }>(`${API}/state/nfl`, fetchImpl);
+  const season = String(state?.league_season ?? state?.season ?? new Date().getUTCFullYear());
+  const [trend, rostered] = await Promise.all([trendingAdds(fetchImpl), espnRostered(season, fetchImpl)]);
+  const rows = await db.select({ id: schema.players.id, sleeperId: schema.players.sleeperId, espnId: schema.players.espnId }).from(schema.players)
+    .where(and(eq(schema.players.isActive, true), inArray(schema.players.position, SKILL)));
+  let adds = 0, owned = 0;
+  for (let i = 0; i < rows.length; i += 400) {
+    const chunk = rows.slice(i, i + 400).map((p) => {
+      const t = p.sleeperId ? trend.get(p.sleeperId) ?? 0 : 0, r = p.espnId ? rostered.get(p.espnId) ?? null : null;
+      if (t) adds++; if (r != null) owned++;
+      return sql`(${p.id}::uuid, ${t}::int, ${r}::real)`;
+    });
+    if (!chunk.length) continue;
+    await db.execute(sql`update players set fantasy_trend = v.t, rostered_pct = coalesce(v.r, players.rostered_pct) from (values ${sql.join(chunk, sql`, `)}) as v(id, t, r) where players.id = v.id`);
+  }
+  console.log(`[fantasy] waiver numbers: ${adds} players with adds in the last day (Sleeper list ${trend.size}), rostered share for ${owned} (ESPN list ${rostered.size})`);
+  return { adds, owned };
 }

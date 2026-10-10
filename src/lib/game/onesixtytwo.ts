@@ -1,4 +1,4 @@
-import { clamp, createRng, softTop } from './prng';
+import { clamp, createRng, seasonWins, softTop } from './prng';
 import { letterGrade } from './formulas';
 import { lastName } from '@/lib/names';
 
@@ -138,7 +138,7 @@ export const mlbSeasonLabel = (season: number) => String(season);
 
 export interface MlbPick { slot: MlbSlot; name: string; position: string; kind: MlbKind; teamId: number; season: number; value: number }
 export interface MlbSlotResult extends MlbPick { fit: number; grade: number; letter: string }
-export interface MlbResult { slots: MlbSlotResult[]; teamStrength: number; wins: number; losses: number; narrative: string[]; score: number }
+export interface MlbResult { slots: MlbSlotResult[]; teamStrength: number; /** Team strength that locks in 162-0. */ perfectAt?: number; wins: number; losses: number; narrative: string[]; score: number }
 
 export const MLB_WIN_FLOOR_DEFAULT = 70;
 export const MLB_WIN_SPAN = 24;
@@ -157,8 +157,9 @@ export function gradeMlbRoster(seed: string, picks: MlbPick[], winFloor = MLB_WI
   const totalW = slots.reduce((s, r) => s + (SLOT_WEIGHT[r.slot] ?? 1), 0);
   const teamStrength = Math.round((slots.reduce((s, r) => s + r.grade * (SLOT_WEIGHT[r.slot] ?? 1), 0) / totalW) * 10) / 10;
   const rng = createRng(`mlb:${seed}`);
-  const wins = clamp(Math.round(((teamStrength - winFloor) / MLB_WIN_SPAN) * 162 + rng.int(-5, 4)), 0, 162);
-  return { slots, teamStrength, wins, losses: 162 - wins, narrative: mlbNarrative(seed, slots, wins), score: wins * 1000 + Math.min(999, Math.round(teamStrength * 10)) };
+  const wins = seasonWins(((teamStrength - winFloor) / MLB_WIN_SPAN) * 162, 162, rng.int(-5, 4));
+  const perfectAt = Math.round((winFloor + MLB_WIN_SPAN) * 10) / 10;
+  return { slots, teamStrength, wins, losses: 162 - wins, perfectAt, narrative: mlbNarrative(seed, slots, wins), score: wins * 1000 + Math.min(999, Math.round(teamStrength * 10)) };
 }
 
 function mlbNarrative(seed: string, slots: MlbSlotResult[], wins: number): string[] {

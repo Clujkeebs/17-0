@@ -96,11 +96,15 @@ void (async () => {
   void refreshMlb();
   void refreshWnba();
   // Data probes for '60s/'70s 82-0 and college games (logged once per boot; removed when those ship).
-  void import('@/lib/server/probes').then(async (m) => { await m.probeOldNba(); await m.probeCollege(); await m.probeBird(); }).catch((e) => console.warn('[probe] failed', (e as Error).message));
+  void import('@/lib/server/probes').then(async (m) => { await m.probeOldNba(); await m.probeCollege(); await m.probeBird(); await m.probeMlbHeadshots(); }).catch((e) => console.warn('[probe] failed', (e as Error).message));
   // Soccer: clubs, rosters and season leaders from ESPN, at boot and daily.
   const soccer = () => import('@/lib/server/soccer-sync').then(async (m) => { await m.syncSoccer(); await m.soccerSpotCheck(); }).catch((e) => console.warn('[soccer] sync failed', (e as Error).message));
   void soccer();
   setInterval(() => void soccer(), 24 * 3600_000);
+  // Waiver wire: adds in the last day and rostered share, every three hours.
+  const waivers = () => import('@/lib/server/sleeper').then((m) => m.syncTrending()).catch((e) => console.warn('[fantasy] waiver numbers failed', (e as Error).message));
+  void waivers();
+  setInterval(() => void waivers(), 3 * 3600_000);
   // Pick 'em: this week's NFL games and results, every 20 minutes (finished games pay out on each run).
   const pickem = () => import('@/lib/server/pickem').then((m) => m.syncPickem()).catch((e) => console.warn('[pickem] sync failed', (e as Error).message));
   void pickem();

@@ -23,7 +23,7 @@ export async function loadFantasyPlayers(): Promise<FPlayer[]> {
     return {
       id: p.id, slug: p.slug, name: p.fullName, pos: positionGroup(p.position) as FPos, team: t?.abbreviation ?? '', teamColor: t?.primaryColor ?? '#0A0A0A', logoUrl: t?.logoUrl ?? null,
       img: resolvePlayerImage(p), value: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent),
-      recent: p.fantasyRecent, ppg: p.fantasyPpg, proj: p.fantasyProjPpg, games: p.fantasyGames ?? 0, popularity: p.sleeperRank, trend: p.fantasyTrend ?? 0,
+      recent: p.fantasyRecent, ppg: p.fantasyPpg, proj: p.fantasyProjPpg, games: p.fantasyGames ?? 0, popularity: p.sleeperRank, trend: p.fantasyTrend ?? 0, rostered: p.rosteredPct,
     };
   }).filter((p) => p.value > 0);
   cache = { at: Date.now(), players };

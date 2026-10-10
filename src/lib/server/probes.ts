@@ -80,3 +80,22 @@ export async function probeBird() {
   }
   console.log('[probe] bird\n' + out.join('\n'));
 }
+
+/** Image size from the first bytes of a PNG or JPEG (enough to see how a headshot is framed). */
+function imageSize(b: Uint8Array): string {
+  if (b[0] === 0x89 && b[1] === 0x50) return `png ${(b[16] << 24 | b[17] << 16 | b[18] << 8 | b[19])}x${(b[20] << 24 | b[21] << 16 | b[22] << 8 | b[23])}`;
+  for (let i = 2; i < b.length - 9; i++) if (b[i] === 0xff && (b[i + 1] === 0xc0 || b[i + 1] === 0xc2)) return `jpeg ${(b[i + 7] << 8) | b[i + 8]}x${(b[i + 5] << 8) | b[i + 6]}`;
+  return `unknown ${b.length}B`;
+}
+/** MLB headshots look cramped in round frames: which of mlbstatic's crops are served, and at what shape? */
+export async function probeMlbHeadshots() {
+  const out: string[] = [];
+  for (const path of ['w_120,q_auto:best/v1/people/660271/headshot/67/current', 'w_120,q_auto:best/v1/people/660271/headshot/silo/current', 'c_thumb,g_face,w_120,h_120/v1/people/660271/headshot/67/current', 'w_120,q_auto:best/v1/people/121578/headshot/silo/current']) {
+    try {
+      const r = await fetch(`https://img.mlbstatic.com/mlb-photos/image/upload/${path}`, { signal: AbortSignal.timeout(15_000) });
+      const b = new Uint8Array(await r.arrayBuffer());
+      out.push(`${path}: ${r.status} ${r.headers.get('content-type')} ${imageSize(b)}`);
+    } catch (e) { out.push(`${path}: failed ${(e as Error).message}`); }
+  }
+  console.log('[probe] mlb headshots\n' + out.join('\n'));
+}

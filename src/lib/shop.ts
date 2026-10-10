@@ -3,7 +3,7 @@
  * Points have no cash value and cannot be bought. Limited items have a fixed stock, first come first served.
  * Owner-only items are never for sale: only the owner account has them, decided on the server by email.
  */
-export type ItemKind = 'font' | 'color' | 'border' | 'banner' | 'title' | 'flair';
+export type ItemKind = 'font' | 'color' | 'border' | 'banner' | 'title' | 'flair' | 'effect';
 export interface ShopItem {
   key: string;
   kind: ItemKind;
@@ -15,12 +15,14 @@ export interface ShopItem {
   ownerOnly?: boolean;
   /** One line for the shop card. */
   blurb?: string;
+  /** Gift only: never sold. Given to the players listed in GIFTS (or by the owner from /owner). */
+  giftOnly?: boolean;
 }
 
 export const KIND_LABELS: Record<ItemKind, string> = {
-  font: 'Name fonts', color: 'Name colors', border: 'Avatar borders', banner: 'Profile banners', title: 'Titles', flair: 'Leaderboard flair',
+  font: 'Name fonts', color: 'Name colors', border: 'Avatar borders', banner: 'Profile banners', title: 'Titles', flair: 'Leaderboard flair', effect: 'Effects',
 };
-export const KIND_ORDER: ItemKind[] = ['color', 'font', 'border', 'banner', 'title', 'flair'];
+export const KIND_ORDER: ItemKind[] = ['effect', 'color', 'font', 'border', 'banner', 'title', 'flair'];
 
 export const SHOP_ITEMS: ShopItem[] = [
   // Name colors (every flat color keeps 4.5:1 on white; gradients are bold enough to read)
@@ -134,17 +136,88 @@ export const SHOP_ITEMS: ShopItem[] = [
   { key: 'flair-trophy', kind: 'flair', label: 'Trophy', price: 1200 },
   { key: 'flair-ring', kind: 'flair', label: 'Title ring', price: 2000, limit: 30, blurb: '30 made.' },
   { key: 'flair-owner-key', kind: 'flair', label: 'Master key', price: 0, ownerOnly: true, blurb: 'Owner exclusive.' },
+  // Effects: animated pieces that move around your avatar on your profile and beside your name on leaderboards.
+  { key: 'fx-sparks', kind: 'effect', label: 'Sparks', price: 300, blurb: 'Three sparks circling your picture.' },
+  { key: 'fx-football', kind: 'effect', label: 'Tight spiral', price: 450, blurb: 'A football orbiting, in a perfect spiral.' },
+  { key: 'fx-basketball', kind: 'effect', label: 'Crossover', price: 450, blurb: 'A basketball circling, with a bounce.' },
+  { key: 'fx-baseball', kind: 'effect', label: 'Heater', price: 450, blurb: 'A fastball with red seams on a loop.' },
+  { key: 'fx-snow', kind: 'effect', label: 'Snow game', price: 600, blurb: 'Flakes drifting down past you.' },
+  { key: 'fx-halo', kind: 'effect', label: 'Halo', price: 800, blurb: 'A ring of light turning above you.' },
+  { key: 'fx-comet', kind: 'effect', label: 'Comet', price: 900, blurb: 'A glowing comet trailing fire around your picture.' },
+  { key: 'fx-lightning', kind: 'effect', label: 'Storm', price: 1100, blurb: 'Lightning that cracks across now and then.' },
+  { key: 'fx-flames', kind: 'effect', label: 'Heat check', price: 1400, blurb: 'Real flames licking up from behind you.' },
+  { key: 'fx-confetti', kind: 'effect', label: 'Champion', price: 2400, limit: 30, blurb: 'Gold and red confetti that never stops. 30 made.' },
+  { key: 'fx-owner', kind: 'effect', label: 'Crown orbit', price: 0, ownerOnly: true, blurb: 'Owner exclusive. A gold crown circling.' },
+
+  // More name colors
+  { key: 'ember', kind: 'color', label: 'Ember', price: 1200, blurb: 'Letters that burn: flickering orange and red with a glow.' },
+  { key: 'neon-green', kind: 'color', label: 'Neon', price: 500, blurb: 'Electric green with a soft glow.' },
+  { key: 'ocean', kind: 'color', label: 'Deep water', price: 450, blurb: 'Navy into teal, slowly rolling.' },
+  { key: 'bubblegum', kind: 'color', label: 'Bubblegum', price: 350, blurb: 'Pink into purple.' },
+  { key: 'midnight', kind: 'color', label: 'Midnight', price: 250 },
+  { key: 'electric', kind: 'color', label: 'Electric', price: 1600, blurb: 'Blue current running through your name.' },
+
+  // More borders
+  { key: 'ring-lava', kind: 'border', label: 'Lava ring', price: 1300, blurb: 'Molten rock with flames that rise off it.' },
+  { key: 'ring-electric', kind: 'border', label: 'Live wire', price: 1000, blurb: 'Blue current crackling around.' },
+  { key: 'ring-camo', kind: 'border', label: 'Camo', price: 350, blurb: 'Salute to service colors.' },
+  { key: 'ring-neon', kind: 'border', label: 'Neon sign', price: 600, blurb: 'Pink neon tube that hums on and off.' },
+
+  // More banners
+  { key: 'banner-inferno', kind: 'banner', label: 'Inferno', price: 1600, blurb: 'A wall of real-looking fire behind your name.' },
+  { key: 'banner-stadium', kind: 'banner', label: 'Under the lights', price: 700, blurb: 'Light towers sweeping a packed stadium.' },
+  { key: 'banner-ocean', kind: 'banner', label: 'Open water', price: 500, blurb: 'Rolling waves.' },
+  { key: 'banner-city', kind: 'banner', label: 'Skyline', price: 650, blurb: 'A city at night, windows flickering on.' },
+
+  // More titles
+  { key: 'clutch', kind: 'title', label: 'Clutch', price: 200 },
+  { key: 'hooper', kind: 'title', label: 'Hooper', price: 150 },
+  { key: 'ace', kind: 'title', label: 'Ace', price: 250 },
+  { key: 'ball-knower', kind: 'title', label: 'Ball knower', price: 300 },
+  { key: 'cheat-code', kind: 'title', label: 'Cheat code', price: 700 },
+  { key: 'underdog', kind: 'title', label: 'Underdog', price: 150 },
+  { key: 'captain', kind: 'title', label: 'Captain', price: 500 },
+  { key: 'dynasty', kind: 'title', label: 'Dynasty', price: 1400 },
+
+  // More flair
+  { key: 'flair-rocket', kind: 'flair', label: 'Rocket', price: 400 },
+  { key: 'flair-target', kind: 'flair', label: 'Bullseye', price: 250 },
+  { key: 'flair-goat', kind: 'flair', label: 'GOAT', price: 1600, blurb: 'For the ones who know.' },
+
+  // Gifts: never sold. The B set (every slot) and a few pieces for friends of the site.
+  { key: 'honeycomb', kind: 'color', label: 'Honeycomb', price: 0, giftOnly: true, blurb: 'Gift. Black and gold, dripping like honey.' },
+  { key: 'buzz', kind: 'font', label: 'Buzz', price: 0, giftOnly: true, blurb: 'Gift. Bold stinger caps.' },
+  { key: 'ring-hive', kind: 'border', label: 'Hive ring', price: 0, giftOnly: true, blurb: 'Gift. Honeycomb that turns.' },
+  { key: 'banner-hive', kind: 'banner', label: 'The Hive', price: 0, giftOnly: true, blurb: 'Gift. Honeycomb with bees crossing.' },
+  { key: 'b-team', kind: 'title', label: 'B Team', price: 0, giftOnly: true, blurb: 'Gift.' },
+  { key: 'flair-bee', kind: 'flair', label: 'Bee', price: 0, giftOnly: true, blurb: 'Gift.' },
+  { key: 'fx-bee', kind: 'effect', label: 'Busy bee', price: 0, giftOnly: true, blurb: 'Gift. A bee buzzing around you.' },
 ];
+
+/** The B set: one of everything. */
+export const B_SET = ['honeycomb', 'buzz', 'ring-hive', 'banner-hive', 'b-team', 'flair-bee', 'fx-bee'];
+/**
+ * Gifts by username (compared without case, spaces or punctuation, so "B-Man" and "bman" match).
+ * Gifted items are owned outright; the owner can also give any gift from /owner.
+ */
+export const GIFTS: Record<string, { items: string[]; note: string }> = {
+  bees: { items: B_SET, note: 'The B set: a color, font, ring, banner, title, flair and a bee that follows you around.' },
+  bman: { items: B_SET, note: 'The B set: a color, font, ring, banner, title, flair and a bee that follows you around.' },
+  bot: { items: ['chrome', 'ring-ice', 'flair-bolt', 'fx-sparks'], note: 'Chrome name, Ice ring, Bolt flair and Sparks.' },
+};
+export const giftKey = (username: string | null | undefined) => (username ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+export const giftsFor = (username: string | null | undefined) => GIFTS[giftKey(username)] ?? null;
 
 export const shopItem = (key: string) => SHOP_ITEMS.find((i) => i.key === key);
 export const itemsOf = (kind: ItemKind) => SHOP_ITEMS.filter((i) => i.kind === kind);
 export const titleLabel = (key: string | null | undefined) => (key ? shopItem(key)?.label ?? null : null);
 
 /** Rarity, from how an item is sold: owner exclusives, limited runs, then by price. Drives the card and title styling. */
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'limited' | 'exclusive';
-export const RARITY_LABEL: Record<Rarity, string> = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', limited: 'Limited', exclusive: 'Owner exclusive' };
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'limited' | 'exclusive' | 'gift';
+export const RARITY_LABEL: Record<Rarity, string> = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', limited: 'Limited', exclusive: 'Owner exclusive', gift: 'Gift' };
 export function rarity(i: ShopItem): Rarity {
   if (i.ownerOnly) return 'exclusive';
+  if (i.giftOnly) return 'gift';
   if (i.limit) return 'limited';
   return i.price >= 1500 ? 'legendary' : i.price >= 700 ? 'epic' : i.price >= 300 ? 'rare' : 'common';
 }
@@ -152,4 +225,4 @@ export function rarity(i: ShopItem): Rarity {
 export const titleRarity = (key: string | null | undefined) => { const i = key ? shopItem(key) : undefined; return i ? rarity(i) : null; };
 
 /** What a player has equipped beyond the name font and color. */
-export interface Equipped { border?: string | null; banner?: string | null; title?: string | null; flair?: string | null }
+export interface Equipped { border?: string | null; banner?: string | null; title?: string | null; flair?: string | null; effect?: string | null }

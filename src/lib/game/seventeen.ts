@@ -1,6 +1,6 @@
 import type { Attributes, PositionGroup } from './attributes';
 import { DEFAULT_FORMULAS, letterGrade, ratePlayer, type FormulaKey, type Weights } from './formulas';
-import { clamp, createRng } from './prng';
+import { clamp, createRng, seasonWins } from './prng';
 import { buildNarrative } from './narrative';
 import { FANTASY_FLOOR_DEFAULT, FANTASY_SPAN, fantasyGrade } from './fantasy';
 
@@ -176,6 +176,8 @@ export interface SlotResult { slot: string; name: string; teamId: number; grade:
 export interface SeventeenResult {
   slots: SlotResult[];
   teamStrength: number;
+  /** Team strength that locks in 17-0 on this roster size. */
+  perfectAt?: number;
   wins: number;
   losses: number;
   pointDiff: number;
@@ -239,12 +241,14 @@ export function gradeRoster(
   const rng = createRng(`grade:${seed}`);
   // Calibrated so a well-built roster (every pick a star) goes 17-0 roughly one time in eight.
   const jitter = rng.int(-2, 1);
-  const wins = clamp(Math.round(((teamStrength - floor) / fmt.winSpan) * 17 + jitter), 0, 17);
+  const wins = seasonWins(((teamStrength - floor) / fmt.winSpan) * 17, 17, jitter);
+  // The team strength at which 17-0 is locked in (shown on the result).
+  const perfectAt = Math.round((floor + fmt.winSpan) * 10) / 10;
   const losses = 17 - wins;
   const schedule = buildSchedule(seed, wins, fantasy ? 70 + wins : teamStrength, opponents);
   const pointDiff = schedule.reduce((d, g) => d + g.us - g.them, 0);
   const narrative = buildNarrative(seed, slots, wins, losses, pointDiff);
   // Leaderboard score: wins dominate, strength breaks ties.
   const score = wins * 1000 + Math.min(999, Math.round(teamStrength * (fantasy ? 5 : 10)));
-  return { slots, teamStrength, wins, losses, pointDiff, narrative, score, schedule };
+  return { slots, teamStrength, wins, losses, pointDiff, narrative, score, schedule, ...(fantasy ? {} : { perfectAt }) };
 }

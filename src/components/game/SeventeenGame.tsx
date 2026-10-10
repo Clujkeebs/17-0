@@ -1,4 +1,5 @@
 'use client';
+import { rememberGuestRun } from '@/lib/guest-runs';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reel, SpinningReel, usePreloadLogos, type ReelTeam } from './Reel';
@@ -136,6 +137,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
       if (!res.ok) throw new Error(data.error ?? 'Grading failed.');
       track('game_completed', { game: '17-0', wins: data.result.wins, daily: draft.daily, format: draft.format ?? '6' });
       try { sessionStorage.removeItem(STATE_KEY); } catch {}
+      if (!signedIn) rememberGuestRun({ id: data.id, sessionId: draft.sessionId, token: draft.token });
       router.push(`/results/${data.id}`);
     } catch (e) { setError((e as Error).message); setBusy(null); }
   }
@@ -317,6 +319,7 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
     <div className="sheet-scrim" onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose(); }}>
       <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="setup-h">
         <div className="sheet-grip" aria-hidden="true" />
+        {onClose && <button type="button" className="sheet-x" aria-label="Close setup" onClick={onClose}>×</button>}
         <h2 id="setup-h" className="sheet-h">Game setup</h2>
         <Choice label="Mode" name="mode" value={value.mode} onChange={(v) => set({ mode: v as Mode })}
           options={[{ v: 'today', t: 'Today', d: 'Ranked, one try' }, { v: 'casual', t: 'Casual', d: 'Unlimited' }]} />

@@ -89,9 +89,10 @@ export const nameOf = (a: Json | null): string | null => {
 const ROSTER_VERSION = 3;
 
 /** Bumped when seasonValue changes: stored values are recomputed from the stored stat lines, no refetch. */
-const VALUE_VERSION = 2;
+const VALUE_VERSION = 3;
 
-/** Recomputes every stored season's value with today's formula (v2: bent top, so only all-time years sit near 99). */
+/** Recomputes every stored season's value with today's formula (v2: bent top, so only all-time years sit near 99;
+ * v3: three-point and free-throw shooting count). */
 export async function rescoreNba() {
   const [ver] = await db.select().from(schema.gameConfigs).where(and(eq(schema.gameConfigs.gameType, '82-0'), eq(schema.gameConfigs.configKey, 'value_version'))).limit(1);
   if (Number(ver?.configValue ?? 1) >= VALUE_VERSION) return 0;

@@ -1,4 +1,5 @@
 'use client';
+import { rememberGuestRun } from '@/lib/guest-runs';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Reel, SpinningReel, usePreloadLogos, type ReelTeam } from './Reel';
@@ -96,6 +97,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? 'Grading failed.');
     track('game_completed', { game: 'build-a-player', rating: data.result.rating });
+    if (!signedIn) rememberGuestRun({ id: data.id, sessionId: d.sessionId, token: d.token });
     router.push(`/results/${data.id}`);
   }
 

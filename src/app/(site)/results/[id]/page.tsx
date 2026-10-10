@@ -78,6 +78,7 @@ export default async function ResultPage({ params }: Props) {
                 <>
                   <span className="stat"><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">{d.format === 'fantasy' ? 'Points per week' : 'Team strength'}</span></span>
                   <span className="muted num">Point diff {Number(d.pointDiff) >= 0 ? '+' : ''}{String(d.pointDiff)}</span>
+                  {d.perfectAt != null && Number(d.wins) < 17 && <span className="muted num">17-0 locks in at {Number(d.perfectAt).toFixed(1)}</span>}
                 </>
               ) : (
                 <span className="stat"><span className="v">{String(d.letter)}</span><span className="l">{String(d.position)} grade</span></span>
@@ -200,7 +201,7 @@ function MiniResultPage({ r, name, slug, tagline }: { r: { id: string; isDaily: 
 }
 
 function NbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: string | null; resultData: unknown } }) {
-  const d = r.resultData as { wins: number; losses: number; teamStrength: number; hard?: boolean; edition?: string; narrative: string[]; slots: NbaSlotResult[]; teams?: { slot: string; team: string; logoUrl: string | null }[] };
+  const d = r.resultData as { wins: number; losses: number; teamStrength: number; perfectAt?: number; hard?: boolean; edition?: string; narrative: string[]; slots: NbaSlotResult[]; teams?: { slot: string; team: string; logoUrl: string | null }[] };
   const text = d.wins === 82 ? 'I went 82-0. Perfect season on Unbeaten. Your turn.' : `My lineup went ${d.wins}-${d.losses} in 82-0.${d.hard ? ' Hard mode, no stats.' : ''}`;
   return (
     <div className="container section">
@@ -211,6 +212,7 @@ function NbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
         </figure>
         <SeasonPlayback seed={r.id} wins={d.wins} games={82} />
         <span className="stat" style={{ marginTop: 16, display: 'inline-flex' }}><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">Lineup strength</span></span>
+        {d.perfectAt != null && d.wins < 82 && <p className="muted num" style={{ margin: '6px 0 0' }}>82-0 locks in at lineup strength {d.perfectAt.toFixed(1)}.</p>}
         <div className="row" style={{ margin: '20px 0' }}>
           <ShareButton text={text} url={`/results/${r.id}`} imageUrl={`/api/og/game-result?id=${r.id}`} fileName="unbeaten-82-0.png" />
           <Link className="btn btn-primary" href="/games/82-0">Play again</Link>
@@ -245,7 +247,7 @@ function NbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
 }
 
 function MlbResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: string | null; resultData: unknown } }) {
-  const d = r.resultData as { wins: number; losses: number; teamStrength: number; hard?: boolean; narrative: string[]; slots: MlbSlotResult[]; teams?: { slot: string; team: string; logoUrl: string | null }[] };
+  const d = r.resultData as { wins: number; losses: number; teamStrength: number; perfectAt?: number; hard?: boolean; narrative: string[]; slots: MlbSlotResult[]; teams?: { slot: string; team: string; logoUrl: string | null }[] };
   const text = d.wins === 162 ? 'I went 162-0. Perfect season on Unbeaten. Your turn.' : `My roster went ${d.wins}-${d.losses} in 162-0.${d.hard ? ' Hard mode, no stats.' : ''}`;
   return (
     <div className="container section">
@@ -256,6 +258,7 @@ function MlbResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
         </figure>
         <SeasonPlayback seed={r.id} wins={d.wins} games={162} />
         <span className="stat" style={{ marginTop: 16, display: 'inline-flex' }}><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">Roster strength</span></span>
+        {d.perfectAt != null && d.wins < 162 && <p className="muted num" style={{ margin: '6px 0 0' }}>162-0 locks in at roster strength {d.perfectAt.toFixed(1)}.</p>}
         <div className="row" style={{ margin: '20px 0' }}>
           <ShareButton text={text} url={`/results/${r.id}`} imageUrl={`/api/og/game-result?id=${r.id}`} fileName="unbeaten-162-0.png" />
           <Link className="btn btn-primary" href="/games/162-0">Play again</Link>

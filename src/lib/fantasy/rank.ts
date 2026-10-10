@@ -8,7 +8,7 @@ export const F_POS: FPos[] = ['QB', 'RB', 'WR', 'TE'];
 
 export interface FPlayer {
   id: string; slug: string; name: string; pos: FPos; team: string; teamColor: string; logoUrl: string | null; img: string | null;
-  value: number; recent: number | null; ppg: number | null; proj: number | null; games: number; popularity: number | null; trend: number;
+  value: number; recent: number | null; ppg: number | null; proj: number | null; games: number; popularity: number | null; trend: number; /** Share of ESPN leagues rostering him, 0-100. */ rostered?: number | null;
 }
 export interface Ranked extends FPlayer { vor: number; overall: number; posRank: number }
 
@@ -113,10 +113,16 @@ export function balancers<T extends TradeP>(pool: T[], give: TradeP[], get: Trad
   return scored.length ? { side, players: scored.slice(0, n).map((x) => x.p) } : null;
 }
 
-/** Waiver wire: players outside the commonly rostered pool (Sleeper popularity past the top 150) who are producing or trending. */
-export function waiverTargets(ranked: Ranked[], limit = 40): Ranked[] {
+/**
+ * Waiver wire: the most-added players first (adds across Sleeper leagues in the last day), so a breakout
+ * everyone is grabbing tops the list. Before anyone is being added (the offseason), it falls back to
+ * producing players outside the commonly rostered pool.
+ */
+export function waiverTargets(ranked: Ranked[], limit = 50): Ranked[] {
+  const added = ranked.filter((p) => p.trend > 0).sort((a, b) => b.trend - a.trend || b.value - a.value);
+  if (added.length >= 10) return added.slice(0, limit);
   return ranked
-    .filter((p) => (p.popularity == null || p.popularity > 150) && (p.trend > 0 || p.value >= 8))
-    .sort((a, b) => b.value + Math.log10(1 + b.trend) * 2 - (a.value + Math.log10(1 + a.trend) * 2))
+    .filter((p) => (p.popularity == null || p.popularity > 150) && p.value >= 8)
+    .sort((a, b) => b.value - a.value)
     .slice(0, limit);
 }

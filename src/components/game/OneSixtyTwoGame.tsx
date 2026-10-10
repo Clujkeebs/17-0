@@ -1,4 +1,5 @@
 'use client';
+import { rememberGuestRun } from '@/lib/guest-runs';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { EraReel, Reel, usePreloadLogos, type ReelTeam } from './Reel';
@@ -138,14 +139,16 @@ export function OneSixtyTwoGame({ franchises, signedIn, playedTodayId = null, in
       const d = await call({ action: 'grade', sessionId: game.sessionId, token: game.token });
       track('game_completed', { game: '162-0', wins: d.result.wins, daily: game.daily });
       try { sessionStorage.removeItem(STATE_KEY); } catch {}
+      if (!signedIn) rememberGuestRun({ id: d.id, sessionId: game.sessionId, token: game.token });
       router.push(`/results/${d.id}`);
     } catch (e) { setError((e as Error).message); setBusy(null); }
   }
 
   const setupSheet = sheet && (
-    <div className="sheet-scrim" onClick={(e) => { if (e.target === e.currentTarget && game) setSheet(false); }}>
+    <div className="sheet-scrim" onClick={(e) => { if (e.target === e.currentTarget) setSheet(false); }} onKeyDown={(e) => { if (e.key === 'Escape') setSheet(false); }}>
       <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="mlb-setup-h">
         <div className="sheet-grip" aria-hidden="true" />
+        <button type="button" className="sheet-x" aria-label="Close setup" onClick={() => setSheet(false)}>×</button>
         <h2 id="mlb-setup-h" className="sheet-h">Game setup</h2>
         <Choice label="Mode" name="mode" value={mode} onChange={(v) => setMode(v as Mode)} options={[{ v: 'today', t: 'Today', d: 'Ranked, one try' }, { v: 'casual', t: 'Casual', d: 'Unlimited' }]} />
         <Choice label="Spin" name="spin" value={mode === 'today' ? 'eras' : spinMode} disabled={mode === 'today'} onChange={(v) => setSpinMode(v as MlbMode)}
@@ -155,7 +158,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, playedTodayId = null, in
         {mode === 'today' && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/162-0">Sign in</a> or <a href="/register?next=/games/162-0">create one</a>.</p>}
         {playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. {mode === 'today' ? 'A new board drops at midnight ET. Casual is unlimited.' : 'Casual is unlimited: press Start.'}</p>}
         <div className="sheet-actions">
-          {game && <button type="button" className="btn btn-lg" onClick={() => setSheet(false)}>Cancel</button>}
+          <button type="button" className="btn btn-lg" onClick={() => setSheet(false)}>Cancel</button>
           <button type="button" className="btn btn-primary btn-lg" disabled={!!busy || (mode === 'today' && (!signedIn || !!playedId))} onClick={start}>Start</button>
         </div>
       </div>

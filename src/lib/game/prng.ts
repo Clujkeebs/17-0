@@ -62,3 +62,13 @@ export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.ma
 export function softTop(v: number, knee = 82, k = 12): number {
   return v <= knee ? v : knee + (99 - knee) * (1 - Math.exp(-(v - knee) / k));
 }
+
+/**
+ * A season's wins from where the roster's strength puts it (`expected`, in games) and the season's luck.
+ * A roster strong enough to win them all always does: luck only moves teams below that line, so the best
+ * rosters are never robbed and close ones still have a chance.
+ */
+export function seasonWins(expected: number, games: number, luck: number): number {
+  if (expected >= games) return games;
+  return clamp(Math.round(expected + luck), 0, games);
+}

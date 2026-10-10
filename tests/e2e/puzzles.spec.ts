@@ -32,10 +32,11 @@ test('Sports Connections casual: guesses are checked until the board ends', asyn
 });
 
 test('Sports Crossword casual: checks count mistakes, a full solve scores a time', async ({ page }) => {
-  await page.goto('/games/sports-crossword');
   // The page may load more than one casual puzzle; the answer key is the one whose layout is on screen.
+  // Listen before the page loads: a fast first fetch would otherwise be missed.
   const seeds: string[] = [];
   page.on('response', async (r) => { if (r.url().includes('/api/mini/sports-crossword?mode=casual')) seeds.push((await r.json().catch(() => ({}))).seed); });
+  await page.goto('/games/sports-crossword');
   await page.getByRole('tab', { name: 'Casual' }).click();
   await expect(page.locator('.xw-grid')).toBeVisible({ timeout: 20_000 });
   const { buildCrossword, solutionRows } = await import('../../src/lib/minigames/puzzles/crossword');
