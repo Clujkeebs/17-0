@@ -2,10 +2,11 @@ import { and, eq, gte, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { computeStreak, dailyDateET } from '@/lib/game/daily';
 import { GAMES } from '@/lib/game-registry';
-import { SHOP_ITEMS, shopItem, type ItemKind } from '@/lib/shop';
+import { SHOP_ITEMS, giftsFor, shopItem, type ItemKind } from '@/lib/shop';
 import { isOwnerEmail } from '@/lib/cosmetics';
 import { DOUBLE_DEFAULT_DAY, weekdayOf } from '@/lib/badges';
 import { getRedis } from './redis';
+import { notify } from './notifications';
 
 /**
  * Points: earned by playing, spent in the shop. Every change is a row in point_events with a unique
@@ -16,8 +17,13 @@ export const EARN = {
   welcome: 50,
   daily: 10,
   perfect: 25,
-  casual: 1,
-  casualDailyCap: 15,
+  /** A perfect season in a draft game (17-0, 82-0, 162-0) is the hardest thing on the site. */
+  perfectSeason: 75,
+  casual: 2,
+  casualDailyCap: 25,
+  casualPerfect: 10,
+  casualPerfectSeason: 25,
+  casualPerfectDailyCap: 5,
   streak: { 3: 15, 7: 40, 14: 100, 30: 250, 50: 400, 100: 1000 } as Record<number, number>,
   board: [50, 35, 25, 20, 15, 12, 10, 10, 10, 10],
   week: [150, 100, 60],
@@ -54,23 +60,42 @@ export async function doubleDay(): Promise<number | null> {
 export const isDoubleToday = async (date = dailyDateET()) => (await doubleDay()) === weekdayOf(date);
 
 /** Points for one graded game. Ranked (Today) results earn the most; casual play earns a little, capped per day. */
+const SEASON_GAMES = new Set(['17-0', '82-0', '162-0']);
+const GAME_NAME: Record<string, string> = { '17-0': '17-0', '82-0': '82-0', '162-0': '162-0' };
+
+/**
+ * Points for one finished game. Every game pays a little (ranked Today 10, Casual 2, up to 25 Casual games a
+ * day); a perfect result pays a bonus on top, biggest for a perfect season in 17-0, 82-0 or 162-0.
+ */
 export async function earnForResult(userId: string, gameType: string, isDaily: boolean, perfect: boolean, resultId: string) {
   const today = dailyDateET();
+  const season = SEASON_GAMES.has(gameType);
+  const label = GAME_NAME[gameType] ?? GAMES.find((g) => g.slug === gameType)?.name ?? 'that game';
   if (isDaily) {
     const x = (await isDoubleToday(today)) ? 2 : 1;
     await grant(userId, EARN.daily * x, 'daily', `${gameType}:${today}`);
-    if (perfect) await grant(userId, EARN.perfect * x, 'perfect', `${gameType}:${today}`);
+    if (perfect) {
+      const bonus = (season ? EARN.perfectSeason : EARN.perfect) * x;
+      if (await grant(userId, bonus, 'perfect', `${gameType}:${today}`)) await notify(userId, 'perfect', `${gameType}:${today}`, season ? `Perfect season in ${label}. +${bonus} points` : `Perfect in ${label}. +${bonus} points`, 'Bonus for a flawless ranked game.', `/results/${resultId}`);
+    }
     // Streak milestones: the streak is days in a row with at least one ranked game.
     const rows = await db.selectDistinct({ d: schema.gameResults.dailyDate }).from(schema.gameResults)
       .where(and(eq(schema.gameResults.userId, userId), eq(schema.gameResults.isDaily, true)));
     const streak = computeStreak(rows.map((r) => r.d!).filter(Boolean), today);
-    if (EARN.streak[streak]) await grant(userId, EARN.streak[streak], 'streak', `${streak}:${today}`);
+    if (EARN.streak[streak] && await grant(userId, EARN.streak[streak], 'streak', `${streak}:${today}`)) await notify(userId, 'streak', `${streak}:${today}`, `${streak}-day streak. +${EARN.streak[streak]} points`, 'Keep it going tomorrow.', '/profile');
     return;
   }
   const start = new Date(`${today}T04:00:00Z`);
-  const [c] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.pointEvents)
-    .where(and(eq(schema.pointEvents.userId, userId), eq(schema.pointEvents.reason, 'casual'), gte(schema.pointEvents.createdAt, start)));
-  if ((c?.n ?? 0) < EARN.casualDailyCap) await grant(userId, EARN.casual, 'casual', resultId);
+  const count = async (reason: string) => {
+    const [c] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.pointEvents)
+      .where(and(eq(schema.pointEvents.userId, userId), eq(schema.pointEvents.reason, reason), gte(schema.pointEvents.createdAt, start)));
+    return c?.n ?? 0;
+  };
+  if ((await count('casual')) < EARN.casualDailyCap) await grant(userId, EARN.casual, 'casual', resultId);
+  if (perfect && (await count('casual-perfect')) < EARN.casualPerfectDailyCap) {
+    const bonus = season ? EARN.casualPerfectSeason : EARN.casualPerfect;
+    if (await grant(userId, bonus, 'casual-perfect', resultId)) await notify(userId, 'perfect', resultId, season ? `Perfect season in ${label}. +${bonus} points` : `Perfect in ${label}. +${bonus} points`, 'Casual bonus. Ranked Today pays more.', `/results/${resultId}`);
+  }
 }
 
 /** Top ten on yesterday's board for every game earn points. Run once a day after midnight ET; safe to re-run. */
@@ -124,8 +149,12 @@ export async function backfillPoints(): Promise<number> {
 /** Item keys a player owns. The owner owns everything, including items added later, without any rows. */
 export async function ownedKeys(userId: string, email: string | null | undefined): Promise<Set<string>> {
   if (isOwnerEmail(email)) return new Set(SHOP_ITEMS.map((i) => i.key));
-  const rows = await db.select({ k: schema.userItems.itemKey }).from(schema.userItems).where(eq(schema.userItems.userId, userId));
-  return new Set(rows.map((r) => r.k));
+  const [rows, [u]] = await Promise.all([
+    db.select({ k: schema.userItems.itemKey }).from(schema.userItems).where(eq(schema.userItems.userId, userId)),
+    db.select({ username: schema.users.username }).from(schema.users).where(eq(schema.users.id, userId)).limit(1),
+  ]);
+  // Gifts by username are owned outright, decided on the server.
+  return new Set([...rows.map((r) => r.k), ...(giftsFor(u?.username)?.items ?? [])]);
 }
 
 /** Units sold for each limited item. */
@@ -137,7 +166,7 @@ export async function stockSold(): Promise<Record<string, number>> {
 /** Buys an item: checks the price and, for limited items, the stock under a row lock, all in one transaction. */
 export async function buy(userId: string, email: string | null | undefined, itemKey: string) {
   const item = shopItem(itemKey);
-  if (!item || item.ownerOnly) throw new ShopError('That item is not for sale.', 404);
+  if (!item || item.ownerOnly || item.giftOnly) throw new ShopError('That item is not for sale.', 404);
   if (isOwnerEmail(email)) throw new ShopError('You already own everything in the shop.', 409);
   return db.transaction(async (tx) => {
     const [have] = await tx.select().from(schema.userItems).where(and(eq(schema.userItems.userId, userId), eq(schema.userItems.itemKey, itemKey))).limit(1);
@@ -158,7 +187,7 @@ export async function buy(userId: string, email: string | null | undefined, item
 }
 
 const COLUMN: Record<ItemKind, keyof typeof schema.users.$inferInsert> = {
-  font: 'nameFont', color: 'nameColor', border: 'equipBorder', banner: 'equipBanner', title: 'equipTitle', flair: 'equipFlair',
+  font: 'nameFont', color: 'nameColor', border: 'equipBorder', banner: 'equipBanner', title: 'equipTitle', flair: 'equipFlair', effect: 'equipEffect',
 };
 
 /** Equips an owned item, or clears a slot when key is null. Owner exclusives equip only for the owner. */

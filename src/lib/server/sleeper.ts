@@ -2,6 +2,8 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { GROUP_RAW } from './data';
 import { lastNameKey } from './espn-match';
+import { fantasyValue } from '@/lib/game/fantasy';
+import { getRedis } from './redis';
 
 /**
  * Fantasy points from Sleeper's public API (PPR). Sleeper's player list carries ESPN ids, which our players
@@ -9,8 +11,9 @@ import { lastNameKey } from './espn-match';
  * which can reach the API; the web service only reads the stored numbers.
  */
 const API = 'https://api.sleeper.app/v1';
-const SKILL = [...GROUP_RAW.QB, ...GROUP_RAW.RB, ...GROUP_RAW.WR, ...GROUP_RAW.TE];
-const SLEEPER_SKILL = new Set(['QB', 'RB', 'FB', 'WR', 'TE']);
+/** Fantasy positions we score: the skill spots plus kickers (punters are not fantasy players). */
+const SKILL = [...GROUP_RAW.QB, ...GROUP_RAW.RB, ...GROUP_RAW.WR, ...GROUP_RAW.TE, 'K'];
+const SLEEPER_SKILL = new Set(['QB', 'RB', 'FB', 'WR', 'TE', 'K']);
 
 export interface SleeperPlayer { espn_id?: string | number | null; full_name?: string; first_name?: string; last_name?: string; position?: string; team?: string | null; search_rank?: number | null }
 type StatLine = { pts_ppr?: number; gp?: number; gms_active?: number };
@@ -148,7 +151,18 @@ export async function syncFantasy(fetchImpl: typeof fetch = fetch) {
       fantasyUpdatedAt: now,
     }).where(eq(schema.players.id, p.id));
   }
-  const summary = { season, week, players: ours.length, matched, withStats, withProj, sleeperStats: stats.size, sleeperProj: proj.size, weeksWithForm: weeks.size, trending: trend.size };
+  // Team defenses: Sleeper files each one under its team abbreviation (same as ours).
+  let defenses = 0;
+  for (const t of teams) {
+    const st = stats.get(t.abbr), pj = proj.get(t.abbr);
+    if (!st && pj === undefined) continue;
+    const v = fantasyValue(st ? st.pts / st.gp : null, st?.gp ?? 0, pj ?? null, recentForm(weeks.get(t.abbr)));
+    await db.update(schema.teams).set({ fantasyDef: v }).where(eq(schema.teams.id, t.id));
+    defenses++;
+  }
+  // Team rows are cached for a day; drop the cache so boards show the new defense values now.
+  await getRedis().del('teams:all').catch(() => 0);
+  const summary = { season, week, players: ours.length, matched, withStats, withProj, defenses, sleeperStats: stats.size, sleeperProj: proj.size, weeksWithForm: weeks.size, trending: trend.size };
   console.log('[fantasy] synced', JSON.stringify(summary));
   if (unmatched.length) console.log('[fantasy] unmatched', unmatched.length, unmatched.slice(0, 60).join(', '));
   return summary;

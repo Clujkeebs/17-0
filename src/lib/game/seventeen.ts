@@ -2,7 +2,7 @@ import type { Attributes, PositionGroup } from './attributes';
 import { DEFAULT_FORMULAS, letterGrade, ratePlayer, type FormulaKey, type Weights } from './formulas';
 import { clamp, createRng, seasonWins } from './prng';
 import { buildNarrative } from './narrative';
-import { FANTASY_FLOOR_DEFAULT, FANTASY_SPAN, fantasyGrade } from './fantasy';
+import { FANTASY_FLOOR_DEFAULT, FANTASY_SPAN, fantasyEdge, fantasyGrade } from './fantasy';
 
 // Roster matches the StickToTheModel 17-0 format: QB, RB, WR, TE, one defender, head coach.
 export const SLOTS = ['QB', 'RB', 'WR', 'TE', 'DEF', 'HC'] as const;
@@ -20,7 +20,7 @@ export const WIN_SPAN = 26;
 
 /**
  * Roster size: the classic six, or a fuller 12 or 16 man roster. One spin per slot, one pick per team.
- * 'fantasy' is the Fantasy edition: a seven-man fantasy lineup scored on real PPR points, not ratings.
+ * 'fantasy' is the Fantasy edition: a nine-spot fantasy lineup (with K and D/ST) scored on real PPR points, not ratings.
  */
 export type FormatKey = '6' | '12' | '16' | '53' | 'fantasy';
 export const FORMAT_KEYS: FormatKey[] = ['6', '12', '16', '53', 'fantasy'];
@@ -28,7 +28,7 @@ export const FORMAT_KEYS: FormatKey[] = ['6', '12', '16', '53', 'fantasy'];
 export type PoolKey = 'current' | 'all-time';
 export const POOL_KEYS: PoolKey[] = ['current', 'all-time'];
 
-type Group = PositionGroup | 'HC';
+export type Group = PositionGroup | 'HC' | 'DST';
 export interface SlotDef { key: string; label: string; hint: string; accepts: readonly Group[]; weight: number }
 export interface FormatDef {
   name: string; slots: readonly SlotDef[]; winFloor: number; winSpan: number; scoring?: 'ratings' | 'fantasy';
@@ -113,7 +113,7 @@ export const FORMATS: Record<FormatKey, FormatDef> = {
     slots: [
       s('QB', 'QB', 'Quarterback', ['QB'], 1), s('RB1', 'RB1', 'Running back', ['RB'], 1), s('RB2', 'RB2', 'Running back', ['RB'], 1),
       s('WR1', 'WR1', 'Wide receiver', ['WR'], 1), s('WR2', 'WR2', 'Wide receiver', ['WR'], 1), s('TE', 'TE', 'Tight end', ['TE'], 1),
-      s('FLEX', 'FLEX', 'RB, WR or TE', ['RB', 'WR', 'TE'], 1),
+      s('FLEX', 'FLEX', 'RB, WR or TE', ['RB', 'WR', 'TE'], 1), s('K', 'K', 'Kicker', ['K'], 1), s('DST', 'D/ST', 'Team defense', ['DST'], 1),
     ],
   },
 };
@@ -162,7 +162,7 @@ export interface Pick {
   slot: string;
   teamId: number;
   name: string;
-  group: PositionGroup | 'HC';
+  group: Group;
   attributes?: Attributes;
   coachImpact?: number;
   overall?: number;
@@ -170,6 +170,19 @@ export interface Pick {
   fantasy?: number;
   /** All-time legend from ESPN history: his graded best season with the franchise (no Madden attributes). */
   legendGrade?: number;
+  /** The best current grade at this player's position league-wide (see scarcityGrade). */
+  ceiling?: number;
+}
+
+/**
+ * Positions are not equally deep: if the best safety in the league grades 93, taking him is as good as a safety
+ * gets. Each position is rescaled so its best current player counts as a 99. The lift fades toward 60, so stars
+ * at a thin position gain the most and ordinary players barely move.
+ */
+export function scarcityGrade(grade: number, ceiling?: number): number {
+  if (!ceiling || ceiling >= 99 || ceiling <= 65) return grade;
+  const lift = (99 - ceiling) * clamp((grade - 60) / (ceiling - 60), 0, 1);
+  return Math.round(Math.min(99, grade + lift) * 10) / 10;
 }
 
 export interface SlotResult { slot: string; name: string; teamId: number; grade: number; letter: string; points?: number }
@@ -178,6 +191,8 @@ export interface SeventeenResult {
   teamStrength: number;
   /** Team strength that locks in 17-0 on this roster size. */
   perfectAt?: number;
+  /** Fantasy: points per week above replacement starters, which decides the record. */
+  edge?: number;
   wins: number;
   losses: number;
   pointDiff: number;
@@ -209,8 +224,8 @@ export function buildSchedule(seed: string, wins: number, strength: number, oppo
 export function gradePick(p: Pick, formulas: Record<FormulaKey, Weights> = DEFAULT_FORMULAS): number {
   if (p.fantasy !== undefined) return fantasyGrade(p.fantasy, p.group);
   if (p.slot === 'HC') return clamp(p.coachImpact ?? 60, 0, 99);
-  if (p.legendGrade !== undefined) return p.legendGrade;
-  return ratePlayer(p.attributes ?? {}, p.group as PositionGroup, formulas);
+  if (p.legendGrade !== undefined) return scarcityGrade(p.legendGrade, p.ceiling);
+  return scarcityGrade(ratePlayer(p.attributes ?? {}, p.group as PositionGroup, formulas), p.ceiling);
 }
 
 export function gradeRoster(
@@ -241,7 +256,9 @@ export function gradeRoster(
   const rng = createRng(`grade:${seed}`);
   // Calibrated so a well-built roster (every pick a star) goes 17-0 roughly one time in eight.
   const jitter = rng.int(-2, 1);
-  const wins = seasonWins(((teamStrength - floor) / fmt.winSpan) * 17, 17, jitter);
+  // Fantasy wins come from points above replacement at each spot, not raw points (see FANTASY_REPLACEMENT).
+  const edge = fantasy ? Math.round(slots.reduce((s, r) => s + fantasyEdge(r.points ?? 0, picks.find((x) => x.slot === r.slot)!.group), 0) * 10) / 10 : 0;
+  const wins = seasonWins((((fantasy ? edge : teamStrength) - floor) / fmt.winSpan) * 17, 17, jitter);
   // The team strength at which 17-0 is locked in (shown on the result).
   const perfectAt = Math.round((floor + fmt.winSpan) * 10) / 10;
   const losses = 17 - wins;
@@ -250,5 +267,5 @@ export function gradeRoster(
   const narrative = buildNarrative(seed, slots, wins, losses, pointDiff);
   // Leaderboard score: wins dominate, strength breaks ties.
   const score = wins * 1000 + Math.min(999, Math.round(teamStrength * (fantasy ? 5 : 10)));
-  return { slots, teamStrength, wins, losses, pointDiff, narrative, score, schedule, ...(fantasy ? {} : { perfectAt }) };
+  return { slots, teamStrength, wins, losses, pointDiff, narrative, score, schedule, ...(fantasy ? { edge } : { perfectAt }) };
 }

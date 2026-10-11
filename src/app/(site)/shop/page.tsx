@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 const REASON: Record<string, string> = {
   welcome: 'Welcome bonus', daily: 'Ranked game', perfect: 'Perfect result', casual: 'Casual game', streak: 'Streak milestone',
-  board: 'Daily top 10', week: 'Weekly podium', backfill: 'Launch credit for past games', buy: 'Bought', owner: 'From the owner', pickem: "Pick 'em: right pick", 'pickem-week': "Pick 'em: perfect week", 'challenge-win': 'Won a challenge', 'challenge-defend': 'Defended your challenge',
+  board: 'Daily top 10', week: 'Weekly podium', backfill: 'Launch credit for past games', buy: 'Bought', owner: 'From the owner', pickem: "Pick 'em: right pick", 'pickem-week': "Pick 'em: perfect week", 'challenge-win': 'Won a challenge', 'challenge-defend': 'Defended your challenge', 'casual-perfect': 'Perfect result (Casual)',
 };
 
 export default async function ShopPage() {
@@ -40,7 +40,7 @@ export default async function ShopPage() {
         <div className="card" style={{ margin: '16px 0' }}><p style={{ margin: 0 }}><Link href="/login?next=/shop">Sign in</Link> or <Link href="/register?next=/shop">create an account</Link> to earn points. New accounts start with {EARN.welcome}.</p></div>
       )}
       <ShopClient signedIn={!!user} points={user?.points ?? 0} owned={[...owned]} sold={sold} name={name} image={user?.image ?? null}
-        equipped={style ? { font: style.font, color: style.color, border: style.border ?? null, banner: style.banner ?? null, title: style.title ?? null, flair: style.flair ?? null } : null} owner={!!style?.owner} />
+        equipped={style ? { font: style.font, color: style.color, border: style.border ?? null, banner: style.banner ?? null, title: style.title ?? null, flair: style.flair ?? null, effect: style.effect ?? null } : null} owner={!!style?.owner} />
 
       <section style={{ marginTop: 48 }}>
         <h2>How to earn</h2>

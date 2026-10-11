@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { NameStyle } from '@/lib/cosmetics';
+import { Effect } from './Effect';
+import { NotificationBell } from './NotificationBell';
 
 type Me = { signedIn: false } | { signedIn: true; username: string | null; name: string; image: string | null; style: NameStyle };
 
@@ -19,18 +21,25 @@ export function HeaderProfile() {
   if (!me) return <span className="hp hp-wait" aria-hidden="true" />;
   if (!me.signedIn) return <Link href="/login?next=/profile" className="hp hp-in">Sign in</Link>;
   return (
+    <span className="hp-row">
+    <NotificationBell />
     <Link href="/profile" className="hp" title={me.name}>
       <Avatar name={me.name} src={me.image} size={28} />
       <span className="hp-name">Account</span>
     </Link>
+    </span>
   );
 }
 
-export function Avatar({ name, src, size = 40, ring }: { name: string; src: string | null; size?: number; ring?: string | null }) {
+export function Avatar({ name, src, size = 40, ring, effect }: { name: string; src: string | null; size?: number; ring?: string | null; effect?: string | null }) {
   const initials = name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
   const img = src
     ? <img className="avatar" src={src} alt="" width={size} height={size} style={{ width: size, height: size }} />
     : <span className="avatar avatar-i" aria-hidden="true" style={{ width: size, height: size, fontSize: size * 0.4 }}>{initials || '?'}</span>;
   // An equipped avatar border (shop item) wraps the picture in a ring.
-  return ring ? <span className={`ring ${ring}`}>{img}</span> : img;
+  const pic = ring ? <span className={`ring ${ring}`}>{img}</span> : img;
+  // An equipped effect (shop item) animates around the picture.
+  // Fire rings burn for real: small flames rise off them even without an effect equipped.
+  const fx = effect ?? (ring === 'ring-flame' || ring === 'ring-lava' ? 'fx-ringfire' : null);
+  return fx ? <span className="fx-wrap" style={{ ['--fx-size' as string]: `${size}px` }}>{pic}<Effect k={fx} /></span> : pic;
 }

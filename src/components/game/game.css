@@ -186,3 +186,8 @@
 .g-find input { width: 100%; }
 .g-find .hint { margin: 6px 0 0; }
 
+
+/* Game setup and sound stay on one line; on narrow phones the sound button shows only its icon. */
+.g-ctrl { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; flex: none; }
+.g-ctrl > * { flex: none; }
+@media (max-width: 420px) { .snd .snd-l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } .snd { padding-left: 10px; padding-right: 10px; } }

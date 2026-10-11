@@ -141,6 +141,20 @@
       "when": 1791572117369,
       "tag": "0019_rostered",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791760233284,
+      "tag": "0020_effects_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791760812874,
+      "tag": "0021_fantasy_def",
+      "breakpoints": true
     }
   ]
 }

@@ -5,21 +5,21 @@ import { KIND_LABELS, KIND_ORDER, RARITY_LABEL, itemsOf, rarity, type ItemKind, 
 import { StyledName } from '@/components/StyledName';
 import { Avatar } from '@/components/HeaderProfile';
 
-type Equipped = { font: string; color: string; border: string | null; banner: string | null; title: string | null; flair: string | null };
+type Equipped = { font: string; color: string; border: string | null; banner: string | null; title: string | null; flair: string | null; effect: string | null };
 type Sort = 'price' | 'rarest' | 'owned';
-const RANK: Record<Rarity, number> = { exclusive: 5, limited: 4, legendary: 3, epic: 2, rare: 1, common: 0 };
+const RANK: Record<Rarity, number> = { exclusive: 6, gift: 5, limited: 4, legendary: 3, epic: 2, rare: 1, common: 0 };
 
 export function ShopClient({ signedIn, points, owned, sold, name, image, equipped, owner }: {
   signedIn: boolean; points: number; owned: string[]; sold: Record<string, number>; name: string; image: string | null; equipped: Equipped | null; owner: boolean;
 }) {
   const router = useRouter();
-  const [kind, setKind] = useState<ItemKind>('color');
+  const [kind, setKind] = useState<ItemKind>('effect');
   const [sort, setSort] = useState<Sort>('price');
   const [trying, setTrying] = useState<ShopItem | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const have = new Set(owned);
-  const base = equipped ?? { font: 'classic', color: 'ink', border: null, banner: null, title: null, flair: null };
+  const base = equipped ?? { font: 'classic', color: 'ink', border: null, banner: null, title: null, flair: null, effect: null };
 
   async function post(body: object, key: string, okText: string) {
     setBusy(key); setMsg(null);
@@ -38,23 +38,26 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
   const preview = (i: ShopItem) => {
     const s = withItem(i);
     if (i.kind === 'border') return <Avatar name={name} src={image} size={56} ring={i.key} />;
+    if (i.kind === 'effect') return <Avatar name={name} src={image} size={56} ring={base.border} effect={i.key} />;
     if (i.kind === 'banner') return <div className={`banner ${i.key} shop-banner`}><StyledName name={name} style={s} showTitle={false} /></div>;
     return <span className="shop-name"><StyledName name={name} style={s} showTitle={i.kind === 'title'} /></span>;
   };
   const look = withItem(trying);
 
-  const list = itemsOf(kind).filter((i) => !i.ownerOnly || owner);
+  // Owner exclusives show only to the owner; gifts only to whoever was given them.
+  const visible = (i: ShopItem) => (!i.ownerOnly || owner) && (!i.giftOnly || have.has(i.key));
+  const list = itemsOf(kind).filter(visible);
   const items = [...list].sort((a, b) =>
     sort === 'rarest' ? RANK[rarity(b)] - RANK[rarity(a)] || b.price - a.price
       : sort === 'owned' ? Number(have.has(b.key)) - Number(have.has(a.key)) || a.price - b.price
         : a.price - b.price);
-  const ownedIn = (k: ItemKind) => itemsOf(k).filter((i) => (!i.ownerOnly || owner) && have.has(i.key)).length;
-  const countIn = (k: ItemKind) => itemsOf(k).filter((i) => !i.ownerOnly || owner).length;
+  const ownedIn = (k: ItemKind) => itemsOf(k).filter((i) => visible(i) && have.has(i.key)).length;
+  const countIn = (k: ItemKind) => itemsOf(k).filter(visible).length;
 
   return (
     <>
       <div className={`shop-look${look.banner ? ` banner ${look.banner}` : ''}`} aria-label="Your look">
-        <Avatar name={name} src={image} size={44} ring={look.border} />
+        <Avatar name={name} src={image} size={44} ring={look.border} effect={look.effect} />
         <span className="shop-look-name"><StyledName name={name} style={look} /></span>
         <span className="shop-look-meta">
           {trying ? <><span>Trying on {trying.label}</span><button type="button" className="btn btn-sm" onClick={() => setTrying(null)}>Back to mine</button></>
@@ -90,7 +93,7 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
                 <span className="shop-tags">
                   <span className={`shop-tag r-${r}`}>{RARITY_LABEL[r]}</span>
                   {left !== null && !i.ownerOnly && <span className="shop-tag stock">{left === 0 ? 'Sold out' : `${left} of ${i.limit} left`}</span>}
-                  {mine && !i.ownerOnly && <span className="shop-tag owned">Owned</span>}
+                  {mine && !i.ownerOnly && <span className="shop-tag owned">{i.giftOnly ? 'Gifted to you' : 'Owned'}</span>}
                 </span>
                 {i.blurb && <span className="muted shop-blurb">{i.blurb}</span>}
               </div>

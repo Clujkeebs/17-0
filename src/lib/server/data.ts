@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, max, sql as dsql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, max, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { cached } from './redis';
 import { positionGroup, type PositionGroup } from '@/lib/game/attributes';
@@ -79,3 +79,24 @@ export const GROUP_RAW: Record<PositionGroup, string[]> = {
   QB: ['QB'], RB: ['HB', 'FB', 'RB'], WR: ['WR'], TE: ['TE'], OL: ['LT', 'LG', 'C', 'RG', 'RT'],
   DL: ['DT'], EDGE: ['LE', 'RE', 'LEDG', 'REDG'], LB: ['LOLB', 'MLB', 'ROLB', 'SAM', 'MIKE', 'WILL'], CB: ['CB'], S: ['FS', 'SS'], K: ['K', 'P'],
 };
+
+let ceilingCache: { at: number; v: Record<string, number> } | null = null;
+/**
+ * The best current grade at each position, league-wide, for 17-0's scarcity rescale. The top three are averaged so
+ * one outlier rating does not set the bar. Cached ten minutes; ratings change once a day.
+ */
+export async function groupCeilings(): Promise<Record<string, number>> {
+  if (ceilingCache && Date.now() - ceilingCache.at < 10 * 60_000) return ceilingCache.v;
+  const { ratePlayer } = await import('@/lib/game/formulas');
+  const rows = await db.select({ position: schema.players.position, attributes: schema.players.attributes }).from(schema.players)
+    .where(and(eq(schema.players.isActive, true), eq(schema.players.isAllTimeGreat, false), isNotNull(schema.players.teamId)));
+  const by = new Map<string, number[]>();
+  for (const r of rows) {
+    if (!r.attributes) continue;
+    const g = positionGroup(r.position);
+    by.set(g, [...(by.get(g) ?? []), ratePlayer(r.attributes as never, g)]);
+  }
+  const v = Object.fromEntries([...by].map(([g, xs]) => { const top = xs.sort((a, b) => b - a).slice(0, 3); return [g, Math.round((top.reduce((s, x) => s + x, 0) / top.length) * 10) / 10]; }));
+  ceilingCache = { at: Date.now(), v };
+  return v;
+}

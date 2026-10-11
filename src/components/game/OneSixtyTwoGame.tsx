@@ -228,7 +228,7 @@ export function OneSixtyTwoGame({ franchises, signedIn, playedTodayId = null, in
               {Array.from({ length: game.total }, (_, i) => <span key={i} className={i < game.index ? 'on' : i === game.index ? 'now' : ''} />)}
             </div>
           </div>
-          <div className="row"><button type="button" className="btn btn-sm" onClick={() => { if (game.index > 0 && !game.done && !window.confirm('Changing the setup starts a new game. Continue?')) return; setSheet(true); }}>Game setup</button><SoundToggle /></div>
+          <div className="g-ctrl"><button type="button" className="btn btn-sm" onClick={() => { if (game.index > 0 && !game.done && !window.confirm('Changing the setup starts a new game. Continue?')) return; setSheet(true); }}>Game setup</button><SoundToggle /></div>
         </header>
 
         {error && <div role="alert" className="card card-error">{error}</div>}

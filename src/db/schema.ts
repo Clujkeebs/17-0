@@ -14,6 +14,8 @@ export const teams = pgTable('teams', {
   division: text('division').notNull(),
   logoUrl: text('logo_url'),
   primaryColor: text('primary_color').notNull(),
+  /** Fantasy edition: the team defense (D/ST) in PPR points per game, from Sleeper. */
+  fantasyDef: real('fantasy_def'),
 });
 
 export const players = pgTable('players', {
@@ -118,9 +120,23 @@ export const users = pgTable('user_accounts', {
   equipBanner: text('equip_banner'),
   equipTitle: text('equip_title'),
   equipFlair: text('equip_flair'),
+  equipEffect: text('equip_effect'),
   /** Owner moderation: hidden players never appear on leaderboards or earn board awards. */
   lbHidden: boolean('lb_hidden').notNull().default(false),
 });
+
+/** The bell in the header: gifts, points, challenge results. (user, kind, ref) is unique, so nothing is sent twice. */
+export const notifications = pgTable('notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),
+  ref: text('ref').notNull(),
+  title: text('title').notNull(),
+  body: text('body'),
+  href: text('href'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  readAt: timestamp('read_at', { withTimezone: true }),
+}, (t) => [uniqueIndex('notifications_once').on(t.userId, t.kind, t.ref), index('notifications_user_idx').on(t.userId, t.createdAt)]);
 
 /** Every point earned or spent. (user, reason, ref) is unique, so a grant can never be paid twice. */
 export const pointEvents = pgTable('point_events', {

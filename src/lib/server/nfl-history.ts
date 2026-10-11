@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { and, eq, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { positionGroup } from '@/lib/game/attributes';
@@ -172,9 +173,11 @@ export async function buildLegends(opts: { fetchImpl?: typeof fetch; teamMap?: M
     picked.push({ espnId: b.athleteId, fullName: p.fullName, position: p.position, group: b.group, teamId: p.teamId, season: b.season, grade: b.grade, line: seasonLine(b.group, b.stats), headshot: a?.headshot ?? null });
     primes++;
   }
+  // Ids are fixed by player and franchise, so a rebuild during someone's draft never orphans a legend they picked.
+  const rows = picked.map((x) => ({ ...x, id: legendId(x.espnId, x.teamId) }));
   await db.transaction(async (tx) => {
     await tx.delete(schema.nflLegends);
-    for (let i = 0; i < picked.length; i += 200) await tx.insert(schema.nflLegends).values(picked.slice(i, i + 200));
+    for (let i = 0; i < rows.length; i += 200) await tx.insert(schema.nflLegends).values(rows.slice(i, i + 200));
   });
   await getRedis().del('legends:by-team').catch(() => {});
   const summary = { seasonsGraded: grades.size, legends: picked.length - primes, primes, franchises: teamMap.size };
@@ -188,4 +191,10 @@ export async function legendsSpotCheck(abbr = 'SF') {
   if (!t) return;
   const rows = await db.select().from(schema.nflLegends).where(eq(schema.nflLegends.teamId, t.id));
   console.log(`[nfl-history] spot check ${abbr}`, rows.sort((a, b) => b.grade - a.grade).map((r) => `${r.group} ${r.fullName} ${r.season} ${r.grade}`).join('; '));
+}
+
+/** A stable uuid for one legend row: the same player at the same franchise always gets the same id. */
+export function legendId(espnId: number, teamId: number): string {
+  const h = createHash('sha1').update(`nfl-legend:${espnId}:${teamId}`).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-${((parseInt(h[16], 16) & 0x3) | 0x8).toString(16)}${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }

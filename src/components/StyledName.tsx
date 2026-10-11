@@ -1,6 +1,7 @@
 import type { NameStyle } from '@/lib/cosmetics';
 import { titleLabel, titleRarity } from '@/lib/shop';
 import { Flair } from './Flair';
+import { NameEffect } from './Effect';
 
 /**
  * A player name in their equipped style: font, color, flair before it, and (with showTitle) the title after it.
@@ -11,6 +12,7 @@ export function StyledName({ name, style, className, showTitle = true }: { name:
   const title = showTitle ? titleLabel(s.title) : null;
   return (
     <span className={`nm${className ? ` ${className}` : ''}`}>
+      <NameEffect k={s.effect} />
       <Flair k={s.flair} />
       <span className={`nm-text nm-f-${s.font} nm-c-${s.color}`}>{name}</span>
       {s.owner && <span className="owner-tag" aria-label="Site owner">[OWNER]</span>}

@@ -6,6 +6,7 @@ import { fantasyValue } from '@/lib/game/fantasy';
 import { createRng } from '@/lib/game/prng';
 import { eq } from 'drizzle-orm';
 import { getRedis } from './redis';
+import { groupCeilings } from './data';
 
 type Mode = 'greedy' | 'reroll' | 'random';
 // greedy: best player on each team, no re-rolls (Hard mode). reroll: the same, but spends both re-rolls on any
@@ -27,14 +28,18 @@ async function boards(format: FormatKey, pool: PoolKey = 'current') {
     for (let i = players.length - 1; i >= 0; i--) if (!players[i].isAllTimeGreat && primed.has(`${Number(players[i].espnId)}:${players[i].teamId}`)) players.splice(i, 1);
     for (const l of hist) players.push({ ...players[0], isAllTimeGreat: false, id: l.id, teamId: l.teamId, fullName: l.fullName, position: l.position, legendGrade: l.grade, legendGroup: l.group } as never);
   }
+  const ceilings: Record<string, number> = fantasy ? {} : await groupCeilings();
+  const defs = new Map((fantasy ? await db.select({ id: schema.teams.id, d: schema.teams.fantasyDef }).from(schema.teams) : []).map((r) => [r.id, r.d]));
   const byTeam = new Map<number, Pick[]>();
   for (const t of teams) {
     const list: Pick[] = players.filter((p) => p.teamId === t && (allTime || !p.isAllTimeGreat)).map((p) => ({
       slot: 'QB', teamId: t, name: p.fullName, group: ((p as { legendGroup?: string }).legendGroup ?? positionGroup(p.position)) as Pick['group'], attributes: p.attributes as never,
       ...((p as { legendGrade?: number }).legendGrade !== undefined ? { legendGrade: (p as { legendGrade?: number }).legendGrade } : {}),
-      ...(fantasy ? { fantasy: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : {}),
+      ...(fantasy ? { fantasy: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : { ceiling: ceilings[((p as { legendGroup?: string }).legendGroup ?? positionGroup(p.position))] }),
     }));
     for (const c of coaches.filter((c) => c.teamId === t)) list.push({ slot: 'HC', teamId: t, name: c.fullName, group: 'HC', coachImpact: c.coachImpactScore });
+    const def = fantasy ? defs.get(t) : null;
+    if (def != null) list.push({ slot: 'DST', teamId: t, name: 'D/ST', group: 'DST', fantasy: def });
     byTeam.set(t, list);
   }
   return { teams, byTeam };
@@ -80,7 +85,8 @@ export async function calibrate(format: FormatKey = '6', games = 3000, winFloor?
   return out;
 }
 
-export const FANTASY_FLOOR_KEY = 'fantasy:win-floor';
+// v2: the line is points above replacement (K and D/ST added), not raw points, so the old fitted value no longer applies.
+export const FANTASY_FLOOR_KEY = 'fantasy:win-floor:v2';
 const TARGET_P17 = 0.11;
 
 /**
@@ -91,7 +97,7 @@ export async function tuneFantasyFloor(games = 1500): Promise<number | null> {
   const b = await boards('fantasy');
   const valued = [...b.byTeam.values()].flat().filter((p) => (p.fantasy ?? 0) > 0).length;
   if (valued < 150) { console.warn('[fantasy] not enough players with points to calibrate', valued); return null; }
-  let lo = 20, hi = 200;
+  let lo = -40, hi = 120;
   for (let i = 0; i < 14; i++) {
     const mid = (lo + hi) / 2;
     if (simulate('fantasy', b, 'reroll', games, mid).p17 > TARGET_P17) lo = mid; else hi = mid;

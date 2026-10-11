@@ -25,17 +25,23 @@ describe('fantasy scoring', () => {
     expect(slotsFor('TE', 'fantasy')).toEqual(['TE', 'FLEX']);
     expect(slotsFor('QB', 'fantasy')).toEqual(['QB']);
   });
-  it('turns weekly points into a record against the floor', () => {
+  it('turns points above replacement into a record against the floor (K and D/ST included)', () => {
     const pick = (slot: string, group: Pick['group'], fantasy: number, teamId: number): Pick => ({ slot, group, fantasy, teamId, name: slot });
     const lineup = (pts: number) => FORMATS.fantasy.slots.map((d, i) => pick(d.key, d.accepts[0] as Pick['group'], pts, i + 1));
-    const great = gradeRoster('x', lineup(25), undefined, undefined, [], 'fantasy', 100);
-    const bad = gradeRoster('x', lineup(8), undefined, undefined, [], 'fantasy', 100);
-    expect(great.teamStrength).toBe(175);
+    expect(FORMATS.fantasy.slots.map((d) => d.key)).toEqual(['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'TE', 'FLEX', 'K', 'DST']);
+    const great = gradeRoster('x', lineup(25), undefined, undefined, [], 'fantasy', 20);
+    const bad = gradeRoster('x', lineup(8), undefined, undefined, [], 'fantasy', 20);
+    expect(great.teamStrength).toBe(225);
     expect(great.wins).toBe(17);
     expect(bad.wins).toBe(0);
     expect(great.slots[0].points).toBe(25);
-    expect(great.score % 1000).toBeLessThan(1000);
     expect(Math.floor(great.score / 1000)).toBe(17);
+  });
+  it('an elite QB moves the record; an average one barely does', () => {
+    const base = (qb: number): Pick[] => FORMATS.fantasy.slots.map((d, i) => ({ slot: d.key, group: d.accepts[0] as Pick['group'], fantasy: d.key === 'QB' ? qb : 12, teamId: i + 1, name: d.key }));
+    const avg = gradeRoster('q', base(17), undefined, undefined, [], 'fantasy', 20), allen = gradeRoster('q', base(26), undefined, undefined, [], 'fantasy', 20);
+    expect(avg.edge! < allen.edge!).toBe(true);
+    expect(allen.edge! - avg.edge!).toBeCloseTo(9, 5);
   });
 });
 

@@ -12,3 +12,14 @@ describe('season wins', () => {
     expect(seasonWins(-3, 17, -2)).toBe(0);
   });
 });
+
+import { scarcityGrade } from '@/lib/game/seventeen';
+describe('position scarcity', () => {
+  it('the best player at a thin position counts as a 99; ordinary players barely move', () => {
+    expect(scarcityGrade(93, 93)).toBe(99);
+    expect(scarcityGrade(88, 93)).toBeGreaterThan(92);
+    expect(scarcityGrade(62, 93)).toBeLessThan(63);
+    expect(scarcityGrade(97, 99)).toBe(97);
+    expect(scarcityGrade(80)).toBe(80);
+  });
+});

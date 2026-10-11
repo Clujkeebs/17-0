@@ -35,7 +35,7 @@ export interface SpinPayload {
   challengeId?: string;
 }
 
-export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** All-time legend from ESPN history: his best season with this franchise, e.g. "1994 · 112 rec, 1,499 yds, 13 TD". */ line?: string; /** All-time: a current player shown at his best season (his prime) instead of today's rating. */ prime?: boolean; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
+export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC' | 'DST'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** All-time legend from ESPN history: his best season with this franchise, e.g. "1994 · 112 rec, 1,499 yds, 13 TD". */ line?: string; /** All-time: a current player shown at his best season (his prime) instead of today's rating. */ prime?: boolean; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
 export interface PublicTeam { id: number; name: string; city: string; abbreviation: string; slug: string; color: string; logoUrl: string | null; players: PublicPlayer[] }
 
 const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
@@ -123,7 +123,7 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
       const group = positionGroup(p.position);
       const attrs = position ? Object.fromEntries(BUILD_CATEGORIES[position].map((k) => [k, (p.attributes as Record<string, number>)[k] ?? 50])) : undefined;
       return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}), ...(fantasy ? { fpts: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : {}) };
-    }).filter((p) => (allowed ? allowed.has(p.group) : p.slots!.length > 0));
+    }).filter((p) => (allowed ? allowed.has(p.group as PositionGroup) : p.slots!.length > 0) && !(fantasy && p.position === 'P'));
     // All-time: today's players with a better best season appear at that season (their prime), not twice.
     const onTeam = new Set(players.filter((p) => p.teamId === id).map((p) => Number(p.espnId)));
     const hist: PublicPlayer[] = (history.get(id) ?? []).map((l) => {
@@ -141,7 +141,8 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
       const rest = list.filter((p) => !p.legend && !p.prime);
       list.splice(0, list.length, ...greats, ...rest);
     }
-    // Fantasy boards list by points, best first.
+    // Fantasy: the team defense is drafted as a unit (D/ST), then the board lists by points, best first.
+    if (fantasy && t.fantasyDef != null) list.push({ id: `dst:${id}`, name: `${t.name} D/ST`, slug: '', position: 'D/ST', group: 'DST', ovr: 0, slots: ['DST'], img: t.logoUrl, fpts: t.fantasyDef });
     if (fantasy) list.sort((a, b) => (b.fpts ?? 0) - (a.fpts ?? 0));
     for (const c of coaches.filter((c) => c.teamId === id)) {
       list.push({ id: `coach:${c.id}`, name: c.fullName, slug: c.slug, position: 'HC', group: 'HC', ovr: c.coachImpactScore, slots: ['HC'], img: c.imageUrl });

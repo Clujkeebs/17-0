@@ -2,6 +2,7 @@ import { and, eq, inArray, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { getFormulas, getSlotWeights } from './config';
 import { invalidatePrefix } from './redis';
+import { groupCeilings } from './data';
 import { earnForResult } from './points';
 import { recordEntry } from './challenges';
 import { loadSession, type SpinPayload } from './games';
@@ -70,7 +71,7 @@ export async function gradeSeventeen(ctx: Ctx) {
   const playerIds = picks.filter((p) => !p.id.startsWith('coach:')).map((p) => p.id);
   const coachIds = picks.filter((p) => p.id.startsWith('coach:')).map((p) => Number(p.id.slice(6)));
   if (playerIds.some((id) => !/^[0-9a-f-]{36}$/i.test(id)) || coachIds.some((n) => !Number.isInteger(n))) throw new GradeError('Invalid pick.');
-  const teamRows = await db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation }).from(schema.teams);
+  const teamRows = await db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation, name: schema.teams.name, fantasyDef: schema.teams.fantasyDef }).from(schema.teams);
   const [players, coaches, formulas, weights, hist] = await Promise.all([
     playerIds.length ? db.select().from(schema.players).where(inArray(schema.players.id, playerIds)) : [],
     coachIds.length ? db.select().from(schema.coaches).where(inArray(schema.coaches.id, coachIds)) : [],
@@ -80,7 +81,14 @@ export async function gradeSeventeen(ctx: Ctx) {
   if (new Set(picks.map((p) => p.id)).size !== picks.length) throw new GradeError('Each player can only be drafted once.');
   const repeat = !!FORMATS[format].repeatTeams;
   const usedTeams = new Set<number>();
+  const ceilings = isFantasy(format) ? {} : await groupCeilings();
   const full: Pick[] = picks.map((p) => {
+    if (p.id.startsWith('dst:')) {
+      // Fantasy D/ST: the spun team's defense as a unit.
+      const t = teamRows.find((x) => x.id === Number(p.id.slice(4)));
+      if (!t || t.fantasyDef == null || !isFantasy(format)) throw new GradeError('Unknown defense.');
+      return { slot: p.slot, teamId: t.id, name: `${t.name} D/ST`, group: 'DST' as const, fantasy: t.fantasyDef };
+    }
     if (p.id.startsWith('coach:')) {
       const c = coaches.find((x) => x.id === Number(p.id.slice(6)));
       if (!c || c.teamId === null) throw new GradeError('Unknown coach.');
@@ -90,7 +98,7 @@ export async function gradeSeventeen(ctx: Ctx) {
     if (hl) {
       // A history legend counts only for his franchise.
       if (hl.teamId !== p.teamId) throw new GradeError(`${hl.fullName} is not on one of your spun teams.`);
-      return { slot: p.slot, teamId: hl.teamId, name: hl.fullName, group: hl.group as PositionGroup, legendGrade: hl.grade, overall: Math.round(hl.grade) };
+      return { slot: p.slot, teamId: hl.teamId, name: hl.fullName, group: hl.group as PositionGroup, legendGrade: hl.grade, overall: Math.round(hl.grade), ceiling: ceilings[hl.group] };
     }
     const pl = players.find((x) => x.id === p.id);
     if (!pl) throw new GradeError('Unknown player.');
@@ -103,6 +111,7 @@ export async function gradeSeventeen(ctx: Ctx) {
     }
     if (teamId === null) throw new GradeError('Unknown player.');
     return { slot: p.slot, teamId, name: pl.fullName, group: positionGroup(pl.position), attributes: pl.attributes as Attributes, overall: pl.overallRating,
+      ...(isFantasy(format) ? {} : { ceiling: ceilings[positionGroup(pl.position)] }),
       ...(isFantasy(format) ? { fantasy: fantasyValue(pl.fantasyPpg, pl.fantasyGames, pl.fantasyProjPpg, pl.fantasyRecent) } : {}) };
   });
   for (const p of full) {

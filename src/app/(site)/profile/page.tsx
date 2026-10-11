@@ -36,7 +36,7 @@ export default async function ProfilePage() {
     <div className="container section">
       <span className="eyebrow">Profile</span>
       <div className={`profile-head${style.banner ? ` banner ${style.banner}` : ''}`}>
-        <Avatar name={name} src={user.image} size={84} ring={style.border} />
+        <Avatar name={name} src={user.image} size={84} ring={style.border} effect={style.effect} />
         <div style={{ minWidth: 0 }}>
           <h1 style={{ margin: 0 }}><StyledName name={name} style={style} /></h1>
           {user.username && <p className="muted num" style={{ margin: '4px 0 0' }}>@{user.username}</p>}

@@ -47,8 +47,8 @@ const validFont = (k: string | null | undefined) => !!k && (NAME_FONTS.some((f) 
 const validColor = (k: string | null | undefined) => !!k && (NAME_COLORS.some((c) => c.key === k) || shopKeys('color').includes(k));
 const validOf = (kind: string, k: string | null | undefined) => !!k && SHOP_ITEMS.some((i) => i.kind === kind && i.key === k);
 
-export interface NameStyle { font: string; color: string; owner: boolean; title?: string | null; flair?: string | null; border?: string | null; banner?: string | null }
-type Stored = { font?: string | null; color?: string | null; title?: string | null; flair?: string | null; border?: string | null; banner?: string | null };
+export interface NameStyle { font: string; color: string; owner: boolean; title?: string | null; flair?: string | null; border?: string | null; banner?: string | null; effect?: string | null }
+type Stored = { font?: string | null; color?: string | null; title?: string | null; flair?: string | null; border?: string | null; banner?: string | null; effect?: string | null };
 /**
  * The style a name actually renders with. A stored key that is not (or no longer) valid falls back to the
  * default. The owner renders in the owner style unless they equipped something else from the shop.
@@ -59,6 +59,7 @@ export function resolveStyle(stored: Stored, owner: boolean): NameStyle {
     flair: validOf('flair', stored.flair) ? stored.flair : owner ? 'flair-owner' : null,
     border: validOf('border', stored.border) ? stored.border : owner ? 'ring-owner' : null,
     banner: validOf('banner', stored.banner) ? stored.banner : owner ? 'banner-founder' : null,
+    effect: validOf('effect', stored.effect) ? stored.effect : owner ? 'fx-owner' : null,
   };
   // For the owner only shop picks replace the owner style (a saved default like Classic does not).
   if (owner) return { font: shopKeys('font').includes(stored.font ?? '') ? stored.font! : OWNER_FONT, color: shopKeys('color').includes(stored.color ?? '') ? stored.color! : OWNER_COLOR, owner: true, ...extras };

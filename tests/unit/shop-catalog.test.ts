@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { SHOP_ITEMS, rarity } from '@/lib/shop';
 import { FLAIR_KEYS } from '@/components/Flair';
 
-const css = readFileSync('src/app/globals.css', 'utf8');
+const css = readFileSync('src/app/globals.css', 'utf8') + readFileSync('src/components/effects.css', 'utf8');
+const effects = readFileSync('src/components/Effect.tsx', 'utf8');
 const selector = (kind: string, key: string) => kind === 'color' ? `.nm-c-${key}` : kind === 'font' ? `.nm-f-${key}` : `.${key}`;
 
 describe('shop catalog', () => {
@@ -12,6 +13,7 @@ describe('shop catalog', () => {
     for (const i of SHOP_ITEMS) {
       if (i.kind === 'title') continue;
       if (i.kind === 'flair') { expect(FLAIR_KEYS, i.key).toContain(i.key); continue; }
+      if (i.kind === 'effect') { expect(effects.includes(`case '${i.key}'`), `effect ${i.key} is not drawn`).toBe(true); continue; }
       expect(new RegExp(`\\${selector(i.kind, i.key)}[\\s,{]`).test(css), `${i.kind} ${i.key} has no CSS`).toBe(true);
     }
   });
@@ -27,5 +29,16 @@ describe('shop catalog', () => {
     expect(rarity({ key: 'a', kind: 'title', label: 'A', price: 100, limit: 20 })).toBe('limited');
     expect(rarity({ key: 'a', kind: 'title', label: 'A', price: 1500 })).toBe('legendary');
     expect(rarity({ key: 'a', kind: 'title', label: 'A', price: 100 })).toBe('common');
+  });
+});
+
+describe('gifts', () => {
+  it('every gifted item exists, is gift-only or sold, and usernames match loosely', async () => {
+    const { GIFTS, giftsFor, shopItem } = await import('@/lib/shop');
+    for (const g of Object.values(GIFTS)) for (const k of g.items) expect(shopItem(k), k).toBeTruthy();
+    expect(giftsFor('B-Man')?.items).toContain('fx-bee');
+    expect(giftsFor('Bees')?.items).toContain('banner-hive');
+    expect(giftsFor('bot')?.items).toContain('fx-sparks');
+    expect(giftsFor('somebody')).toBeNull();
   });
 });

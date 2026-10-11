@@ -9,7 +9,7 @@ import { invalidatePrefix } from '@/lib/server/redis';
 
 export const runtime = 'nodejs';
 
-const Kind = z.enum(['font', 'color', 'border', 'banner', 'title', 'flair']);
+const Kind = z.enum(['font', 'color', 'border', 'banner', 'title', 'flair', 'effect']);
 const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('buy'), item: z.string().min(1).max(40) }),
   z.object({ action: z.literal('equip'), kind: Kind, item: z.string().min(1).max(40).nullable() }),

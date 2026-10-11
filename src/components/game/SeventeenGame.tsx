@@ -194,7 +194,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
               {Array.from({ length: draft.total }, (_, i) => <span key={i} className={i < draft.picks.length ? 'on' : i === draft.index ? 'now' : ''} />)}
             </div>
           </div>
-          <div className="row"><button type="button" className="btn btn-sm" onClick={openSettings}>Game setup</button><SoundToggle /></div>
+          <div className="g-ctrl"><button type="button" className="btn btn-sm" onClick={openSettings}>Game setup</button><SoundToggle /></div>
         </header>
 
         {error && <div role="alert" className="card card-error">{error}</div>}
@@ -314,7 +314,7 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
   const blocked = today && (!signedIn || !!playedId);
   // Mode and Start come first; everything else waits behind "More options" with a one-line summary.
   const [more, setMore] = useState(false);
-  const summary = [fantasy ? 'Fantasy' : 'Ratings', today ? '6-man' : fantasy ? '7-man lineup' : `${value.format}-man`, today || fantasy ? 'Current players' : value.pool === 'all-time' ? 'All-time' : 'Current players', value.hard ? 'Hard' : 'Easy'].join(' · ');
+  const summary = [fantasy ? 'Fantasy' : 'Ratings', today ? '6-man' : fantasy ? '9-man lineup' : `${value.format}-man`, today || fantasy ? 'Current players' : value.pool === 'all-time' ? 'All-time' : 'Current players', value.hard ? 'Hard' : 'Easy'].join(' · ');
   return (
     <div className="sheet-scrim" onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose(); }}>
       <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="setup-h">
@@ -337,7 +337,7 @@ function SetupSheet({ value, onChange, onStart, onClose, signedIn, playedId, bus
         <Choice label="Difficulty" name="hard" value={value.hard ? 'hard' : 'easy'} onChange={(v) => set({ hard: v === 'hard' })}
           options={[{ v: 'easy', t: 'Easy', d: fantasy ? 'Points shown, 2 re-rolls' : `Overalls shown, ${!today && value.format === '53' ? 5 : 2} re-rolls` }, { v: 'hard', t: 'Hard', d: fantasy ? 'Type names, no points, no re-rolls' : 'Type names, no overalls, no re-rolls' }]} />
         </div>}
-        {fantasy && <p className="hint" style={{ margin: '4px 0 0' }}>Fantasy drafts a seven-man lineup (QB, two RBs, two WRs, TE, FLEX) from current rosters. Each player counts his PPR points per game this season, blended with his projection while the sample is small. Your weekly total sets the record.</p>}
+        {fantasy && <p className="hint" style={{ margin: '4px 0 0' }}>Fantasy drafts a full lineup (QB, two RBs, two WRs, TE, FLEX, K and a team D/ST) from current rosters, on PPR points per game this season, blended with projections early on. The record comes from points above a replacement starter at each spot: running backs are scarce, every QB scores, so only an elite QB moves the needle.</p>}
         {today && more && <p className="hint" style={{ margin: '4px 0 0' }}>Today is the same board for everyone: six slots, current rosters. Roster size and legends are Casual options.</p>}
         {today && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/17-0">Sign in</a> or <a href="/register?next=/games/17-0">create one</a>.</p>}
         {playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. {today ? 'A new board drops at midnight ET. Casual is unlimited.' : 'Casual is unlimited: press Start.'}</p>}

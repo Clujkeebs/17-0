@@ -19,16 +19,24 @@ export function fantasyValue(ppg: number | null | undefined, games: number | nul
 }
 
 /** Points per game that earns an A+ at each spot: roughly a top-three PPR season. */
-export const FANTASY_ELITE: Partial<Record<PositionGroup, number>> = { QB: 24, RB: 21, WR: 20, TE: 15 };
+export const FANTASY_ELITE: Record<string, number> = { QB: 24, RB: 21, WR: 20, TE: 15, K: 10, DST: 11 };
+
+/**
+ * Points per game a replacement starter gives at each spot (what is on waivers in a 12-team league). A pick is
+ * worth what he scores above that: every starting QB scores, so only a great one (Josh Allen) moves the needle,
+ * while good running backs are scarce and count the most.
+ */
+export const FANTASY_REPLACEMENT: Record<string, number> = { QB: 17, RB: 8.5, WR: 9.5, TE: 6.5, K: 7, DST: 6 };
+export const fantasyEdge = (points: number, group: string) => Math.round((points - (FANTASY_REPLACEMENT[group] ?? 8)) * 10) / 10;
 
 /** A 55-99 grade for one pick, relative to its position, so a 15 point tight end reads as elite. */
-export function fantasyGrade(points: number, group: PositionGroup | 'HC'): number {
-  const elite = FANTASY_ELITE[group as PositionGroup] ?? 20;
+export function fantasyGrade(points: number, group: PositionGroup | 'HC' | 'DST'): number {
+  const elite = FANTASY_ELITE[group] ?? 20;
   return clamp(Math.round(55 + 44 * (points / elite)), 0, 99);
 }
 
 /** The fantasy win line is points per week. These defaults hold until the worker calibrates on live data. */
-export const FANTASY_FLOOR_DEFAULT = 80;
-export const FANTASY_SPAN = 60;
+export const FANTASY_FLOOR_DEFAULT = 15;
+export const FANTASY_SPAN = 40;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;

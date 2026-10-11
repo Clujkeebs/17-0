@@ -12,8 +12,8 @@ export function SoundToggle() {
     return onSoundChange(setOn);
   }, []);
   return (
-    <button type="button" className="btn btn-sm" aria-pressed={on} onClick={() => { setSound(!on); }}>
-      <SoundIcon size={16} on={on} /> Sound {on ? 'on' : 'off'}
+    <button type="button" className="btn btn-sm snd" aria-pressed={on} aria-label={`Sound ${on ? 'on' : 'off'}`} onClick={() => { setSound(!on); }}>
+      <SoundIcon size={16} on={on} /><span className="snd-l"> Sound {on ? 'on' : 'off'}</span>
     </button>
   );
 }

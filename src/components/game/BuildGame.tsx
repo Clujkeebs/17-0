@@ -184,7 +184,7 @@ export function BuildGame({ reelPool, initialPosition, positionOfDay, signedIn, 
               {Array.from({ length: draft.total }, (_, i) => <span key={i} className={i < draft.picks.length ? 'on' : i === draft.index ? 'now' : ''} />)}
             </div>
           </div>
-          <div className="row">{tabs}<SoundToggle /></div>
+          <div className="g-ctrl">{tabs}<SoundToggle /></div>
         </header>
 
         {error && <div role="alert" className="card card-error">{error}</div>}

@@ -20,11 +20,11 @@ describe('name styles', () => {
     expect(isOwnerEmail('clujkeebs@aol.co')).toBe(false);
     expect(isOwnerEmail(null)).toBe(false);
     // Streak styles never replace the owner style; owner exclusives are on by default.
-    expect(resolveStyle({ font: 'stadium', color: 'gold' }, true)).toEqual({ font: OWNER_FONT, color: OWNER_COLOR, owner: true, title: 'commissioner', flair: 'flair-owner', border: 'ring-owner', banner: 'banner-founder' });
+    expect(resolveStyle({ font: 'stadium', color: 'gold' }, true)).toEqual({ font: OWNER_FONT, color: OWNER_COLOR, owner: true, title: 'commissioner', flair: 'flair-owner', border: 'ring-owner', banner: 'banner-founder', effect: 'fx-owner' });
     // A shop item the owner equips does.
     expect(resolveStyle({ color: 'founders', title: 'day-one' }, true)).toMatchObject({ font: OWNER_FONT, color: 'founders', title: 'day-one' });
     // A stored owner key (say, written by hand) still renders as the default for everyone else.
-    expect(resolveStyle({ font: OWNER_FONT, color: OWNER_COLOR }, false)).toEqual({ font: 'classic', color: 'ink', owner: false, title: null, flair: null, border: null, banner: null });
+    expect(resolveStyle({ font: OWNER_FONT, color: OWNER_COLOR }, false)).toEqual({ font: 'classic', color: 'ink', owner: false, title: null, flair: null, border: null, banner: null, effect: null });
     // Shop keys are valid styles for anyone (ownership is checked when equipping).
     expect(resolveStyle({ font: 'varsity', color: 'aurora', flair: 'flair-star' }, false)).toMatchObject({ font: 'varsity', color: 'aurora', flair: 'flair-star' });
   });

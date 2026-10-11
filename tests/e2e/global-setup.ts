@@ -107,7 +107,8 @@ async function seedMlb() {
 async function seedFantasy() {
   const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
   await sql`update players set fantasy_proj_ppg = round((overall_rating / 5.0)::numeric, 1), fantasy_games = 0
-    where fantasy_proj_ppg is null and fantasy_ppg is null and is_active and position in ('QB','HB','FB','WR','TE')`;
+    where fantasy_proj_ppg is null and fantasy_ppg is null and is_active and position in ('QB','HB','FB','WR','TE','K')`;
+  await sql`update teams set fantasy_def = 7.5 where fantasy_def is null`;
   await sql.end();
 }
 

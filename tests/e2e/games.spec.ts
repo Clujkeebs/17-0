@@ -209,7 +209,8 @@ for (const [slug, rounds] of [['speed-trap', 8], ['odd-one-out', 6], ['numbers-g
 test('17-0 remembers the last setup: Fantasy and Hard come back without touching the sheet', async ({ page }) => {
   const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
   await sql`update players set fantasy_proj_ppg = round((overall_rating / 5.0)::numeric, 1), fantasy_games = 0
-    where fantasy_proj_ppg is null and fantasy_ppg is null and is_active and position in ('QB','HB','FB','WR','TE')`;
+    where fantasy_proj_ppg is null and fantasy_ppg is null and is_active and position in ('QB','HB','FB','WR','TE','K')`;
+  await sql`update teams set fantasy_def = 7.5 where fantasy_def is null`;
   await sql.end();
   await page.goto('/games/17-0');
   await setup(page, { mode: 'Casual', scoring: 'Fantasy', difficulty: 'Hard' });
@@ -224,23 +225,25 @@ test('17-0 remembers the last setup: Fantasy and Hard come back without touching
   await expect(sheet.getByRole('group', { name: 'Difficulty' }).getByRole('radio', { name: /Hard/ })).toBeChecked();
 });
 
-test('17-0 Fantasy: seven-man lineup scored on points per game', async ({ page }) => {
+test('17-0 Fantasy: nine-spot lineup with K and D/ST, scored on points per game', async ({ page }) => {
   // Test databases have no Sleeper data; give skill players a stand-in projection so the edition opens.
   const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
   await sql`update players set fantasy_proj_ppg = round((overall_rating / 5.0)::numeric, 1), fantasy_games = 0
-    where fantasy_proj_ppg is null and fantasy_ppg is null and is_active and position in ('QB','HB','FB','WR','TE')`;
+    where fantasy_proj_ppg is null and fantasy_ppg is null and is_active and position in ('QB','HB','FB','WR','TE','K')`;
+  await sql`update teams set fantasy_def = 7.5 where fantasy_def is null`;
   await sql.end();
   await page.goto('/games/17-0');
   await setup(page, { mode: 'Casual', scoring: 'Fantasy', difficulty: 'Easy' });
-  await expect(page.locator('.g-slots li')).toHaveCount(7);
+  await expect(page.locator('.g-slots li')).toHaveCount(9);
+  await expect(page.locator('.g-slots')).toContainText('D/ST');
   await expect(page.locator('.g-slots')).toContainText('FLEX');
   await expect(page.locator('.g-fpts').first()).toHaveText(/^\d+\.\d$/, { timeout: 20_000 });
-  await draftAll(page, 7);
+  await draftAll(page, 9);
   await page.getByRole('button', { name: 'Simulate the season' }).first().click();
   await page.waitForURL(/\/results\//);
   await expect(page.locator('.eyebrow').first()).toContainText('Fantasy');
   await expect(page.getByText('Points per week')).toBeVisible();
-  await expect(page.locator('.grade-table tbody tr')).toHaveCount(7);
+  await expect(page.locator('.grade-table tbody tr')).toHaveCount(9);
   await expect(page.locator('.grade-table .grade-sub').first()).toContainText('pts/g');
 });
 
