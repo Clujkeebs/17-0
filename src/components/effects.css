@@ -74,10 +74,10 @@
 .fx-fire::before { content: ''; position: absolute; left: 4%; right: 4%; bottom: -2%; height: 55%; border-radius: 50%;
   background: radial-gradient(ellipse at 50% 100%, rgba(253, 186, 116, .9), rgba(234, 88, 12, .55) 40%, transparent 72%); filter: blur(4px); animation: fx-glow 1.3s ease-in-out infinite alternate; }
 @keyframes fx-glow { from { opacity: .65; transform: scaleY(.9); } to { opacity: 1; transform: scaleY(1.1); } }
-.fx-tongue { position: absolute; bottom: 0; left: calc(var(--i) * 5.4% + 4%); width: 30%; aspect-ratio: .62; border-radius: 50% 50% 44% 44% / 66% 66% 34% 34%;
+.fx-tongue { position: absolute; bottom: 0; left: calc(var(--i) * 4.5% + 1%); width: 30%; aspect-ratio: .62; border-radius: 50% 50% 44% 44% / 66% 66% 34% 34%;
   background: radial-gradient(ellipse 50% 60% at 50% 74%, #FFFBEB 0%, #FEF08A 16%, #FACC15 30%, #F97316 52%, rgba(220, 38, 38, .9) 70%, rgba(127, 29, 29, 0) 82%);
   transform-origin: 50% 100%; opacity: 0; animation: fx-rise calc(.95s + var(--i) * .041s) cubic-bezier(.3, .1, .6, 1) infinite; animation-delay: calc(var(--i) * -.137s); }
-.fx-ringfire .fx-tongue { left: calc(var(--i) * 9.5% + 1%); width: 22%; }
+.fx-ringfire .fx-tongue { left: calc(var(--i) * 8.6% + 1%); width: 22%; }
 .fx-tongue:nth-child(odd) { width: 20%; animation-name: fx-rise-b; }
 @keyframes fx-rise { 0% { transform: translate(0, 10%) scale(1.1, .9); opacity: 0; } 10% { opacity: 1; } 50% { transform: translate(10%, -55%) scale(.8, 1.15); opacity: 1; } 100% { transform: translate(-8%, -150%) scale(.25, .55); opacity: 0; } }
 @keyframes fx-rise-b { 0% { transform: translate(0, 10%) scale(1, .9); opacity: 0; } 12% { opacity: 1; } 55% { transform: translate(-12%, -60%) scale(.75, 1.2); opacity: .95; } 100% { transform: translate(8%, -165%) scale(.2, .5); opacity: 0; } }
@@ -170,3 +170,10 @@
 @keyframes flair-flicker { 0% { transform: scale(1, 1) skewX(0); } 35% { transform: scale(.95, 1.08) skewX(-3deg); } 70% { transform: scale(1.03, .96) skewX(2deg); } 100% { transform: scale(.98, 1.05) skewX(-1deg); } }
 .nm-flair.flair-bee svg { animation: fx-bee-bob .45s ease-in-out infinite alternate; }
 @media (prefers-reduced-motion: reduce) { .nm-flair svg { animation: none !important; } }
+
+/* Flame placement: tongues up both sides of the picture, a few through the middle that rise above the head. */
+.fx-flames .fx-tongue:nth-child(3n + 1) { left: calc(2% + var(--i) * 0.9%); }
+.fx-flames .fx-tongue:nth-child(3n + 2) { left: calc(68% - var(--i) * 0.9%); }
+.fx-flames .fx-tongue:nth-child(3n) { left: calc(30% + var(--i) * 0.8%); animation-duration: calc(1.25s + var(--i) * .03s); }
+.fx-ringfire .fx-tongue:nth-child(odd) { left: calc(4% + var(--i) * 1.4%); }
+.fx-ringfire .fx-tongue:nth-child(even) { left: calc(70% - var(--i) * 1.4%); }

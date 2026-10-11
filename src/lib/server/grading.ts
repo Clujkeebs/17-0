@@ -68,9 +68,9 @@ export async function gradeSeventeen(ctx: Ctx) {
   if (picks.length !== slotKeys.length || new Set(picks.map((p) => p.slot)).size !== slotKeys.length || !slotKeys.every((sl) => picks.some((p) => p.slot === sl))) {
     throw new GradeError(`Fill all ${slotKeys.length} slots.`);
   }
-  const playerIds = picks.filter((p) => !p.id.startsWith('coach:')).map((p) => p.id);
+  const playerIds = picks.filter((p) => !p.id.startsWith('coach:') && !p.id.startsWith('dst:')).map((p) => p.id);
   const coachIds = picks.filter((p) => p.id.startsWith('coach:')).map((p) => Number(p.id.slice(6)));
-  if (playerIds.some((id) => !/^[0-9a-f-]{36}$/i.test(id)) || coachIds.some((n) => !Number.isInteger(n))) throw new GradeError('Invalid pick.');
+  if (playerIds.some((id) => !/^[0-9a-f-]{36}$/i.test(id)) || coachIds.some((n) => !Number.isInteger(n)) || picks.some((p) => p.id.startsWith('dst:') && !Number.isInteger(Number(p.id.slice(4))))) throw new GradeError('Invalid pick.');
   const teamRows = await db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation, name: schema.teams.name, fantasyDef: schema.teams.fantasyDef }).from(schema.teams);
   const [players, coaches, formulas, weights, hist] = await Promise.all([
     playerIds.length ? db.select().from(schema.players).where(inArray(schema.players.id, playerIds)) : [],
@@ -121,7 +121,7 @@ export async function gradeSeventeen(ctx: Ctx) {
     if (!slotAccepts(p.slot, p.group, format)) throw new GradeError(`${p.name} cannot play ${p.slot}.`);
   }
   // Daily results must be identical for identical rosters, so seed from the date plus the roster.
-  const seed = s.isDaily || payload.challengeId ? `${s.seed}:${[...playerIds, ...coachIds].sort().join(',')}` : s.id;
+  const seed = s.isDaily || payload.challengeId ? `${s.seed}:${[...playerIds, ...coachIds, ...picks.filter((p) => p.id.startsWith("dst:")).map((p) => p.id)].sort().join(",")}` : s.id;
   // The 53 drafts from most of the league, so its schedule draws from every team.
   const opponents = teamRows.filter((t) => repeat || !usedTeams.has(t.id)).map((t) => t.abbr);
   const floor = isFantasy(format) ? await getFantasyFloor() : format === '53' ? await get53Floor(pool) : pool === 'all-time' ? await getAllTimeFloor(format) : undefined;
