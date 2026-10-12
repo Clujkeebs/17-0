@@ -46,6 +46,7 @@ function TopCards({ lg }: { lg: 'nfl' | 'nba' | 'mlb' }) {
 const FEATURED = [
   { slug: '17-0', name: '17-0', tagline: 'Six spins, one roster, one season. Can it go unbeaten?', meta: 'Draft · 2 min' },
   { slug: 'build-a-player', name: 'Build a Player', tagline: 'Five spins. Take one trait from each. Grade the player you built.', meta: 'Draft · 1 min' },
+  { slug: 'unbeaten-bowl', name: 'Unbeaten Bowl', tagline: 'Retro arcade football on real NFL rosters. Call it, throw it, break the tackle.', meta: 'New · Arcade · 5 min' },
 ];
 
 export default async function GamesHub({ searchParams }: { searchParams: Promise<{ sport?: string }> }) {

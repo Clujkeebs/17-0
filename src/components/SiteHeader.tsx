@@ -6,7 +6,7 @@ import { SiteNav, type NavItem, type NavSection } from './SiteNav';
 import { SPORTS, gamesFor } from '@/lib/game-registry';
 
 /** The big draft games lead each sport; the rest of the list follows in hub order. */
-const FEATURED: Record<string, string[]> = { nfl: ['17-0', 'build-a-player'], nba: ['82-0'], mlb: ['162-0'], soccer: [], puzzles: [] };
+const FEATURED: Record<string, string[]> = { nfl: ['17-0', 'build-a-player', 'unbeaten-bowl'], nba: ['82-0'], mlb: ['162-0'], soccer: [], puzzles: [] };
 
 /** The column heading already names the sport, so "Who Led? Baseball" reads "Who Led?" in the menu. */
 const menuName = (n: string) => n.replace(/(:\s*(Hoops|Baseball|Soccer)|\s+(Baseball|Soccer))$/, '');
