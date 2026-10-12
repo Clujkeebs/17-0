@@ -6,7 +6,7 @@ import { unbeatenBowl as g } from '@/lib/minigames/bowl/game';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: `${g.name}: retro football on real NFL rosters`, description: g.tagline, alternates: { canonical: `/games/${g.slug}` } };
 
-export default async function Page() {
-  const session = await auth().catch(() => null);
-  return <UnbeatenBowl signedIn={!!session?.user?.id} meta={{ slug: g.slug, name: g.name, tagline: g.tagline, howTo: g.howTo }} />;
+export default async function Page({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
+  const [session, sp] = await Promise.all([auth().catch(() => null), searchParams]);
+  return <UnbeatenBowl signedIn={!!session?.user?.id} gm={sp.mode === 'gm'} meta={{ slug: g.slug, name: g.name, tagline: g.tagline, howTo: g.howTo }} />;
 }

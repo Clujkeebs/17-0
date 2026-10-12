@@ -12,12 +12,13 @@ interface Answer { team: string; drives: number[] }
 export const unbeatenBowl: MiniGame<Puzzle, Answer, GameData> = {
   slug: 'unbeaten-bowl',
   name: 'Unbeaten Bowl',
-  tagline: 'An arcade football game on real NFL rosters. Call the play, throw the pass, break the tackle.',
+  tagline: 'Retro football on real NFL rosters. Play the daily match, a quick game, or run a franchise as GM.',
   howTo: [
     'Pick a team (Today, everyone plays the same matchup). You get six drives; the other team gets six, played out from the real rosters.',
     'Before the snap, choose Pass or Run. On a pass, tap a receiver to throw to him; the ball leads him. Throw before the rush gets home.',
     'With the ball, steer by holding above or below your runner (or the arrow keys) and tap him (or Space) to juke past a tackler.',
     'Fourth down: go for it, kick a field goal or punt. Ratings matter: arm, accuracy, speed, hands, blocking, the pass rush, coverage and your kicker\'s leg.',
+    'GM mode: take over a team and play season after season. Win credits to train players, upgrade facilities and hire coordinators; handle the press, injuries, contracts and the cap; draft rookies, sign free agents and chase the Unbeaten Bowl.',
   ],
   generate(seed, data) {
     const teams = bowlTeams(data.teams.map((t) => ({ id: t.id, abbr: t.abbr, name: t.name, city: t.city, color: t.color, logoUrl: t.logoUrl })),

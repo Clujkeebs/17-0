@@ -15,6 +15,7 @@ export const LIMITS = {
   shopUser: { max: 120, windowSec: 3600 },
   challenge: { max: 600, windowSec: 3600 },
   claim: { max: 60, windowSec: 3600 },
+  bowlSave: { max: 900, windowSec: 3600 },
 } as const;
 export type LimitScope = keyof typeof LIMITS;
 

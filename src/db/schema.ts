@@ -138,6 +138,18 @@ export const notifications = pgTable('notifications', {
   readAt: timestamp('read_at', { withTimezone: true }),
 }, (t) => [uniqueIndex('notifications_once').on(t.userId, t.kind, t.ref), index('notifications_user_idx').on(t.userId, t.createdAt)]);
 
+/** Unbeaten Bowl GM mode: one franchise save per account, plus a summary for the GM rankings. */
+export const bowlSaves = pgTable('bowl_saves', {
+  userId: uuid('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  data: jsonb('data').notNull(),
+  team: text('team').notNull(),
+  titles: integer('titles').notNull().default(0),
+  seasons: integer('seasons').notNull().default(0),
+  wins: integer('wins').notNull().default(0),
+  losses: integer('losses').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('bowl_saves_rank_idx').on(t.titles, t.wins)]);
+
 /** Every point earned or spent. (user, reason, ref) is unique, so a grant can never be paid twice. */
 export const pointEvents = pgTable('point_events', {
   id: serial('id').primaryKey(),

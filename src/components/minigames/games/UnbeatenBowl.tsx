@@ -1,19 +1,23 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { MiniGameShell } from '../MiniGameShell';
-import { BOWL_DRIVES, bowlMatchup, fgChance, oppDrives, type BowlTeam, type OppDrive } from '@/lib/game/bowl';
+import { bowlMatchup, oppDrives, type BowlTeam } from '@/lib/game/bowl';
 import { createRng } from '@/lib/game/prng';
-import { RES_H, RES_W, draw, juke, receivers, scramble, setupPlay, snap, step, throwTo, toField, type PlayCall, type PlayState } from '../bowl/engine';
-import { click, swell, thud } from '@/components/game/sound';
+import { BowlGame } from '../bowl/BowlGame';
+import { Franchise } from '../bowl/Franchise';
 import '../bowl.css';
 
 type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
 interface P { seed: string; today: boolean; teams: BowlTeam[]; fixed: string | null; drives: number }
 interface D { you: string; opp: string; youName: string; oppName: string; pf: number; pa: number; drives: number[]; theirs: number[] }
 
-export function UnbeatenBowl({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
+const LAST_TEAM = 'bowl:quick-team';
+
+export function UnbeatenBowl({ signedIn, meta, gm }: { signedIn: boolean; meta: Meta; gm?: boolean }) {
   return (
     <MiniGameShell<P> {...meta} signedIn={signedIn}
+      labels={{ today: 'Daily match', casual: 'Quick play' }}
+      extra={{ label: 'GM mode', kicker: 'GM mode · Your franchise', node: <Franchise signedIn={signedIn} />, initial: gm }}
       render={({ puzzle, submit, busy, seed, mode }) => <Bowl puzzle={puzzle} seed={seed} today={mode === 'today'} submit={submit} busy={busy} />}
       renderResult={(r) => {
         const d = r.detail as D;
@@ -35,17 +39,26 @@ export function UnbeatenBowl({ signedIn, meta }: { signedIn: boolean; meta: Meta
 
 function Bowl({ puzzle, seed, today, submit, busy }: { puzzle: P; seed: string; today: boolean; submit: (a: unknown) => Promise<unknown>; busy: boolean }) {
   const [team, setTeam] = useState<string | null>(puzzle.fixed);
-  if (!team) return <TeamPicker teams={puzzle.teams} onPick={setTeam} />;
-  return <Game key={team} puzzle={puzzle} seed={seed} today={today} team={team} submit={submit} busy={busy} />;
+  const pick = (abbr: string) => { try { localStorage.setItem(LAST_TEAM, abbr); } catch { /* private mode */ } setTeam(abbr); };
+  if (!team) return <TeamPicker teams={puzzle.teams} onPick={pick} />;
+  return <Match key={team} puzzle={puzzle} seed={seed} today={today} team={team} submit={submit} busy={busy} />;
 }
 
 function TeamPicker({ teams, onPick }: { teams: BowlTeam[]; onPick: (abbr: string) => void }) {
+  // Quick play: one tap to go again with your usual team, or a random one.
+  const [lastTeam] = useState(() => { try { return typeof window === 'undefined' ? null : localStorage.getItem(LAST_TEAM); } catch { return null; } });
+  const last = teams.find((t) => t.abbr === lastTeam);
+  const random = useCallback(() => onPick(teams[Math.floor(Math.random() * teams.length)].abbr), [teams, onPick]);
   return (
     <div>
-      <p className="m-kicker">Pick your team</p>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        {last && <button type="button" className="btn btn-primary btn-lg" onClick={() => onPick(last.abbr)}>Play as the {last.name}</button>}
+        <button type="button" className={`btn btn-lg${last ? '' : ' btn-primary'}`} onClick={random}>Random team</button>
+      </div>
+      <p className="m-kicker" style={{ marginTop: 18 }}>Or pick your team</p>
       <p className="muted" style={{ marginTop: 0 }}>Real rosters, real ratings. Your opponent is drawn when you pick.</p>
       <ul className="bw-teams">
-        {[...teams].sort((a, b) => b.offense - a.offense).map((t) => (
+        {[...teams].sort((a, b) => b.offense + b.defense - a.offense - a.defense).map((t) => (
           <li key={t.abbr}>
             <button type="button" className="bw-team" style={{ ['--tc' as string]: t.color }} onClick={() => onPick(t.abbr)}>
               {t.logo ? <img src={t.logo} alt="" width={36} height={36} /> : <span className="bw-abbr">{t.abbr}</span>}
@@ -58,216 +71,17 @@ function TeamPicker({ teams, onPick }: { teams: BowlTeam[]; onPick: (abbr: strin
   );
 }
 
-type Stage = 'intro' | 'pre' | 'play' | 'result' | 'fourth' | 'pat' | 'kick' | 'opp' | 'half' | 'final';
-const yardLine = (los: number) => (los === 50 ? '50' : los < 50 ? `OWN ${Math.round(los)}` : `OPP ${Math.round(100 - los)}`);
-const ord = (n: number) => ['1st', '2nd', '3rd', '4th'][n - 1] ?? `${n}th`;
-
-function Game({ puzzle, seed, today, team, submit, busy }: { puzzle: P; seed: string; today: boolean; team: string; submit: (a: unknown) => Promise<unknown>; busy: boolean }) {
+function Match({ puzzle, seed, today, team, submit, busy }: { puzzle: P; seed: string; today: boolean; team: string; submit: (a: unknown) => Promise<unknown>; busy: boolean }) {
   const { you, opp } = useMemo(() => bowlMatchup(seed, puzzle.teams, puzzle.fixed ?? team), [seed, puzzle, team]);
-  const theirs = useMemo<OppDrive[]>(() => oppDrives(seed, you, opp), [seed, you, opp]);
+  const theirs = useMemo(() => oppDrives(seed, you, opp), [seed, you, opp]);
   // Who has the ball first comes from the seed too.
   const youFirst = useMemo(() => createRng(`bowl:${seed}:coin`).next() < 0.5, [seed]);
-  // Play-by-play luck is fresh each game (only the matchup and the other team's drives are fixed by the seed).
-  const luck = useRef<(() => number) | null>(null);
-  const rng = useCallback(() => {
-    if (!luck.current) { const r = createRng(`bowl:${seed}:play:${Math.random()}`); luck.current = () => r.next(); }
-    return luck.current();
-  }, [seed]);
-
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const play = useRef<PlayState | null>(null);
-  const [stage, setStage] = useState<Stage>('intro');
-  // Twelve possessions alternate (six each), halftime after six. poss is the one being played.
-  const [poss, setPoss] = useState(0);
-  const [mine, setMine] = useState<number[]>([]);
-  const [oppIdx, setOppIdx] = useState(0);
-  const drive = mine.length;
-  const [down, setDown] = useState(1);
-  const [los, setLos] = useState(25);
-  const [firstAt, setFirstAt] = useState(35);
-  const [msg, setMsg] = useState('');
-  const [log, setLog] = useState('');
-  const [call, setCall] = useState<PlayCall>('pass');
-  const pf = mine.reduce((s, x) => s + x, 0);
-  const pa = theirs.slice(0, oppIdx).reduce((s, d) => s + d.points, 0);
-
-  const recordDrive = useCallback((points: number, idx: number) => {
+  // Today: each finished drive is recorded as you play, so a reload cannot replay a bad drive.
+  const onDrive = useCallback((idx: number, points: number) => {
     if (today) void fetch('/api/mini/unbeaten-bowl/check', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ seed, guess: { drive: idx, points } }) }).catch(() => {});
   }, [today, seed]);
-
-  const isYours = useCallback((i: number) => (i % 2 === 0) === youFirst, [youFirst]);
-  const goTo = useCallback((i: number) => {
-    setPoss(i);
-    if (i >= BOWL_DRIVES * 2) { setStage('final'); return; }
-    if (isYours(i)) { setLos(25); setFirstAt(35); setDown(1); setLog(''); setMsg(''); setStage('pre'); } else setStage('opp');
-  }, [isYours]);
-  const advance = useCallback((next: number) => { if (next === BOWL_DRIVES) { setPoss(next); setStage('half'); } else goTo(next); }, [goTo]);
-
-  const afterYourDrive = useCallback((points: number) => {
-    recordDrive(points, mine.length);
-    setMine((m) => [...m, points]);
-    advance(poss + 1);
-  }, [mine.length, poss, advance, recordDrive]);
-
-  const nextAfterOpp = useCallback(() => { setOppIdx((n) => n + 1); advance(poss + 1); }, [poss, advance]);
-
-  const begin = () => { click(); goTo(0); };
-
-  const startPlay = (c: PlayCall, two = false) => {
-    click(); setCall(c);
-    play.current = setupPlay(you, opp, two ? 98 : los, two ? 100 : firstAt, c, rng, two);
-    setStage('play'); setMsg(c === 'pass' ? 'Tap a receiver (1, 2, 3) to throw. Tap your QB to run.' : 'Hold above or below your runner to steer. Tap him to juke.');
-    window.setTimeout(() => { if (play.current) snap(play.current); }, 450);
-  };
-
-  /** A play is over: move the chains, score, or end the drive. */
-  const resolve = (s: PlayState) => {
-    const o = s.outcome!;
-    setLog(o.text);
-    if (s.twoPoint) { const ok = o.kind === 'td'; setMsg(ok ? 'Two-point try is good.' : 'Two-point try fails.'); if (ok) swell(); finish(ok ? 8 : 6); return; }
-    if (o.kind === 'td') { swell(); setMsg('Touchdown.'); setStage('pat'); return; }
-    if (o.kind === 'int') { thud(); setMsg('Turnover.'); finish(0); return; }
-    const gain = o.kind === 'incomplete' ? 0 : o.yards;
-    const spot = Math.max(1, Math.min(99, los + gain));
-    if (o.kind !== 'incomplete') thud();
-    if (spot >= firstAt) { setLos(spot); setFirstAt(Math.min(100, spot + 10)); setDown(1); setMsg('First down.'); setStage('pre'); return; }
-    if (down >= 4) { setMsg('Turnover on downs.'); finish(0); return; }
-    setLos(spot); setDown(down + 1);
-    setStage(down + 1 === 4 ? 'fourth' : 'pre');
-  };
-
-  const finish = (points: number) => { window.setTimeout(() => afterYourDrive(points), points ? 600 : 300); setStage('result'); };
-
-  const kickFg = () => {
-    const p = fgChance(100 - los, you.k);
-    const ok = rng() < p;
-    setStage('kick'); setLog(`${you.k.name} lines up from ${Math.round(100 - los + 17)}.`);
-    window.setTimeout(() => { setLog(ok ? `It is good from ${Math.round(100 - los + 17)}.` : `No good from ${Math.round(100 - los + 17)}.`); if (ok) swell(); else thud(); finish(ok ? 3 : 0); }, 1300);
-  };
-  const kickPat = () => { const ok = rng() < 0.9 + you.k.acc / 1000; setLog(ok ? 'Extra point is good.' : 'Extra point is no good.'); finish(ok ? 7 : 6); };
-
-  // The play loop.
-  useEffect(() => {
-    if (stage !== 'play') return;
-    const ctx = canvas.current?.getContext('2d');
-    let raf = 0, last = performance.now(), frame = 0, done = false;
-    const tick = (now: number) => {
-      const s = play.current;
-      if (!s || !ctx) return;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now; frame++;
-      step(s, dt);
-      draw(ctx, s, frame, s.phase === 'pre');
-      if (s.phase === 'dead' && !done) { done = true; window.setTimeout(() => resolve(s), 900); }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage]);
-
-  // Input on the field: tap a receiver to throw, the QB to scramble, the runner to juke; hold to steer.
-  const pointer = (e: React.PointerEvent<HTMLCanvasElement>, kind: 'down' | 'move' | 'up') => {
-    const s = play.current, el = canvas.current;
-    if (!s || !el) return;
-    const r = el.getBoundingClientRect();
-    const at = toField(s, ((e.clientX - r.left) / r.width) * RES_W, ((e.clientY - r.top) / r.height) * RES_H);
-    if (kind === 'up') { s.steerY = null; return; }
-    if (s.phase === 'run') {
-      const c = s.bodies[s.carrier!];
-      if (kind === 'down' && Math.hypot(at.x - c.x, at.y - c.y) < 2.5) { juke(s); click(); return; }
-      if (kind === 'down' || e.buttons) s.steerY = at.y;
-      return;
-    }
-    if (kind !== 'down' || s.phase !== 'live') return;
-    const qb = s.bodies[s.qb];
-    if (Math.hypot(at.x - qb.x, at.y - qb.y) < 2.2) { scramble(s); return; }
-    if (s.call !== 'pass') return;
-    const rs = receivers(s).map((b) => ({ b, d: Math.hypot(at.x - b.x, at.y - b.y) })).sort((x, y) => x.d - y.d);
-    if (rs[0] && rs[0].d < 5) { throwTo(s, s.bodies.indexOf(rs[0].b)); click(); }
-  };
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const s = play.current;
-      if (!s || stage !== 'play') return;
-      if (['1', '2', '3'].includes(e.key) && s.phase === 'live' && s.call === 'pass') { const r = receivers(s)[Number(e.key) - 1]; if (r) { throwTo(s, s.bodies.indexOf(r)); click(); } }
-      else if (e.key.toLowerCase() === 'q') scramble(s);
-      else if (e.key === ' ') { e.preventDefault(); juke(s); }
-      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const c = s.carrier !== null ? s.bodies[s.carrier] : null; if (c) s.steerY = c.y + (e.key === 'ArrowUp' ? -6 : 6); }
-    };
-    const onUp = (e: KeyboardEvent) => { if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && play.current) play.current.steerY = null; };
-    window.addEventListener('keydown', onKey); window.addEventListener('keyup', onUp);
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onUp); };
-  }, [stage]);
-
-  // Draw a still frame of the formation between plays, so the field never goes blank.
-  useEffect(() => {
-    if (stage === 'play' || !canvas.current) return;
-    const ctx = canvas.current.getContext('2d');
-    if (!ctx) return;
-    const s = setupPlay(you, opp, los, firstAt, call, rng);
-    draw(ctx, s, 0, false);
-  }, [stage, los, firstAt, you, opp, call, rng]);
-
-  const oppNow = theirs[oppIdx];
-  const fg = fgChance(100 - los, you.k);
-  const quarter = Math.min(4, Math.floor((poss / (BOWL_DRIVES * 2)) * 4) + 1);
-
   return (
-    <div className="bw" style={{ ['--you' as string]: you.color, ['--opp' as string]: opp.color }}>
-      <div className="bw-score" aria-live="polite">
-        <span className="bw-side"><span className="bw-chip" style={{ background: you.color }}>{you.abbr}</span><span className="bw-pts num">{pf}</span></span>
-        <span className="bw-mid"><span>Q{quarter}</span><span className="muted">Drive {Math.min(drive + 1, BOWL_DRIVES)} of {BOWL_DRIVES}</span></span>
-        <span className="bw-side bw-r"><span className="bw-pts num">{pa}</span><span className="bw-chip" style={{ background: opp.color }}>{opp.abbr}</span></span>
-      </div>
-      <div className="bw-stage">
-        <canvas ref={canvas} width={RES_W} height={RES_H} className="bw-canvas" role="img" aria-label={`Field: ${you.abbr} ball, ${ord(down)} and ${Math.max(1, Math.round(firstAt - los))} at ${yardLine(los)}`}
-          onPointerDown={(e) => pointer(e, 'down')} onPointerMove={(e) => pointer(e, 'move')} onPointerUp={(e) => pointer(e, 'up')} onPointerLeave={(e) => pointer(e, 'up')} />
-        {stage === 'intro' && (
-          <div className="bw-over">
-            <p className="bw-big">{you.city} {you.name}</p>
-            <p className="bw-vs">vs {opp.city} {opp.name}</p>
-            <p className="muted">{you.qb.name} to {you.targets.map((t) => t.name.split(' ').slice(-1)[0]).join(', ')}. {youFirst ? 'You receive.' : `${opp.abbr} receives.`}</p>
-            <button type="button" className="btn btn-primary btn-lg" onClick={begin}>Kick off</button>
-          </div>
-        )}
-        {stage === 'opp' && oppNow && (
-          <div className="bw-over bw-oppcard" style={{ ['--tc' as string]: opp.color }}>
-            <p className="m-kicker">{opp.abbr} drive {oppIdx + 1}</p>
-            <p className="bw-big">{oppNow.points ? `${opp.abbr} ${oppNow.points === 3 ? 'field goal' : 'touchdown'}` : 'Stop.'}</p>
-            <p>{oppNow.text}</p>
-            <button type="button" className="btn btn-primary" onClick={nextAfterOpp} autoFocus>{poss + 1 >= BOWL_DRIVES * 2 ? 'Final' : poss + 1 === BOWL_DRIVES ? 'Halftime' : 'Your ball'}</button>
-          </div>
-        )}
-        {stage === 'half' && (
-          <div className="bw-over"><p className="bw-big">Halftime</p><p className="num">{you.abbr} {pf}, {opp.abbr} {pa}</p><button type="button" className="btn btn-primary" onClick={() => goTo(BOWL_DRIVES)} autoFocus>Second half</button></div>
-        )}
-        {stage === 'final' && (
-          <div className="bw-over"><p className="bw-big">{pf > pa ? 'You win.' : pf < pa ? 'You lose.' : 'A tie.'}</p><p className="num bw-vs">{you.abbr} {pf}, {opp.abbr} {pa}</p>
-            <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={() => void submit({ team: you.abbr, drives: mine })}>{busy ? 'Saving' : 'Post the score'}</button></div>
-        )}
-      </div>
-      <div className="bw-bar">
-        <p className="bw-dd num">{stage === 'pat' ? 'Try' : `${ord(down)} & ${firstAt >= 100 ? 'Goal' : Math.max(1, Math.round(firstAt - los))}`} · {yardLine(los)}</p>
-        <p className="bw-log" aria-live="polite">{log || msg}</p>
-      </div>
-      <div className="bw-actions">
-        {stage === 'pre' && <>
-          <button type="button" className="btn btn-primary btn-lg" onClick={() => startPlay('pass')}>Pass</button>
-          <button type="button" className="btn btn-lg" onClick={() => startPlay('run')}>Run ({you.rb.name.split(' ').slice(-1)[0]})</button>
-        </>}
-        {stage === 'fourth' && <>
-          <button type="button" className="btn btn-primary" onClick={() => setStage('pre')}>Go for it</button>
-          <button type="button" className="btn" disabled={fg <= 0} onClick={kickFg}>Field goal ({Math.round(100 - los + 17)} yd, {Math.round(fg * 100)}%)</button>
-          <button type="button" className="btn" onClick={() => { setLog('Punt.'); finish(0); }}>Punt</button>
-        </>}
-        {stage === 'pat' && <>
-          <button type="button" className="btn btn-primary" onClick={kickPat}>Kick the extra point</button>
-          <button type="button" className="btn" onClick={() => startPlay('pass', true)}>Go for two (pass)</button>
-          <button type="button" className="btn" onClick={() => startPlay('run', true)}>Go for two (run)</button>
-        </>}
-        {stage === 'play' && <p className="hint" style={{ margin: 0 }}>{call === 'pass' ? 'Tap a numbered receiver or press 1, 2, 3. Tap the QB (or Q) to scramble.' : 'Steer with a finger above or below the runner, or the arrow keys. Tap him or press Space to juke.'}</p>}
-      </div>
-    </div>
+    <BowlGame you={you} opp={opp} theirs={theirs} youFirst={youFirst} luckSeed={seed} label={today ? 'Daily match' : 'Quick play'} onDrive={onDrive}
+      final={(r) => <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={() => void submit({ team: you.abbr, drives: r.drives })}>{busy ? 'Saving' : 'Post the score'}</button>} />
   );
 }

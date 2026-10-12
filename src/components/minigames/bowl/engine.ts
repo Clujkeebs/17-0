@@ -41,6 +41,8 @@ export interface PlayState {
   rushTime: number; steerY: number | null; juke: number; jukeCd: number; outcome: Outcome | null;
   shake: number; particles: { x: number; y: number; vx: number; vy: number; life: number; color: string }[];
   you: BowlTeam; opp: BowlTeam; rng: () => number; twoPoint: boolean;
+  /** The receiver a pass went to, for the box score. */
+  thrown: number | null;
 }
 
 const WR_ROUTES: [string, (s: number) => Vec[]][] = [
@@ -86,7 +88,7 @@ export function setupPlay(you: BowlTeam, opp: BowlTeam, los: number, firstAt: nu
   add({ role: 'S', side: 'def', x: los + 13, y: MID + 6, vx: 0, vy: 0 });
   // Pocket time: your line's pass blocking against their rush.
   const rushTime = clamp(2.7 + (you.ol.pass - opp.def.rush) * 0.035, 1.7, 3.8);
-  return { phase: 'pre', call, t: 0, los, firstAt, bodies, carrier: null, qb, ball: null, rushTime, steerY: null, juke: 0, jukeCd: 0, outcome: null, shake: 0, particles: [], you, opp, rng, twoPoint };
+  return { phase: 'pre', call, t: 0, los, firstAt, bodies, carrier: null, qb, ball: null, rushTime, steerY: null, juke: 0, jukeCd: 0, outcome: null, shake: 0, particles: [], you, opp, rng, twoPoint, thrown: null };
 }
 
 export const receivers = (s: PlayState) => s.bodies.filter((b) => b.role === 'WR' || b.role === 'TE');
@@ -108,6 +110,7 @@ export function throwTo(s: PlayState, idx: number) {
   const sigma = (0.35 + dist(qb, aim) * 0.03) * (1.3 - s.you.qb.acc / 100) * (1 + (pressure > 0.75 ? 0.8 : 0));
   const g = () => (s.rng() + s.rng() + s.rng() - 1.5) * 1.4;
   s.ball = { x: qb.x, y: qb.y, z: 1.8, sx: qb.x, sy: qb.y, tx: aim.x + g() * sigma, ty: aim.y + g() * sigma, t: 0, dur: t, target: idx };
+  s.thrown = idx;
   s.phase = 'air';
 }
 
@@ -390,4 +393,30 @@ export function toField(s: PlayState, px: number, py: number): Vec {
   const cx = clamp(focus.x + (s.phase === 'pre' || s.phase === 'live' ? 9 : 5), VIEW_W / 2 - 10, 110 - VIEW_W / 2 + 10);
   const cy = clamp(focus.y, VIEW_H / 2, FIELD_W - VIEW_H / 2);
   return { x: cx - VIEW_W / 2 + px / PX, y: cy - VIEW_H / 2 + py / PX };
+}
+
+/** Box score lines from a finished play, keyed by player name. */
+export type StatLine = Partial<Record<'pa' | 'pc' | 'py' | 'ptd' | 'int' | 'ra' | 'ry' | 'rtd' | 'rec' | 'ryd' | 'rectd' | 'sk', number>>;
+export function playStats(s: PlayState): Record<string, StatLine> {
+  const o = s.outcome;
+  if (!o || s.twoPoint) return {};
+  const qb = s.you.qb.name, out: Record<string, StatLine> = {};
+  const add = (n: string, l: StatLine) => { const c = (out[n] ??= {}); for (const [k, v] of Object.entries(l)) c[k as keyof StatLine] = (c[k as keyof StatLine] ?? 0) + (v ?? 0); };
+  const yards = o.kind === 'td' ? Math.round(100 - s.los) : o.kind === 'gain' ? o.yards : 0;
+  if (o.kind === 'sack') { add(qb, { sk: 1 }); return out; }
+  if (s.thrown !== null) {
+    if (o.kind === 'int') { add(qb, { pa: 1, int: 1 }); return out; }
+    if (o.kind === 'incomplete') { add(qb, { pa: 1 }); return out; }
+    if (s.carrier === s.thrown) {
+      const r = s.bodies[s.thrown].skill?.name ?? '';
+      add(qb, { pa: 1, pc: 1, py: yards, ptd: o.kind === 'td' ? 1 : 0 });
+      if (r) add(r, { rec: 1, ryd: yards, rectd: o.kind === 'td' ? 1 : 0 });
+      return out;
+    }
+  }
+  if (s.carrier !== null) {
+    const c = s.bodies[s.carrier], n = c.skill?.name ?? qb;
+    add(n, { ra: 1, ry: yards, rtd: o.kind === 'td' ? 1 : 0 });
+  }
+  return out;
 }
