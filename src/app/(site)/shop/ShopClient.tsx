@@ -1,14 +1,27 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { KIND_LABELS, KIND_ORDER, RARITY_LABEL, itemsOf, rarity, type ItemKind, type Rarity, type ShopItem } from '@/lib/shop';
+import { KIND_LABELS, KIND_ORDER, RARITY_LABEL, SHOP_ITEMS, itemsOf, rarity, shopItem, type ItemKind, type Rarity, type ShopItem } from '@/lib/shop';
+import { clock } from '@/lib/drops';
+import { claimDrop, useActiveDrop, useSecondsLeft } from '@/components/drops/useActiveDrop';
 import { StyledName } from '@/components/StyledName';
 import { Avatar } from '@/components/HeaderProfile';
 import '@/components/shop.css';
 
 type Equipped = { font: string; color: string; border: string | null; banner: string | null; title: string | null; flair: string | null; effect: string | null };
 type Sort = 'price' | 'rarest' | 'owned';
-const RANK: Record<Rarity, number> = { exclusive: 6, gift: 5, limited: 4, legendary: 3, epic: 2, rare: 1, common: 0 };
+const RANK: Record<Rarity, number> = { exclusive: 7, drop: 6, gift: 5, limited: 4, legendary: 3, epic: 2, rare: 1, common: 0 };
+
+/** Asks the browser for permission to show a system notification when a drop lands (works while a tab is open). */
+function NotifyToggle() {
+  const [perm, setPerm] = useState<NotificationPermission | 'unsupported' | null>(null);
+  useEffect(() => { setPerm(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission); }, []);
+  if (perm === null || perm === 'unsupported') return null;
+  if (perm === 'granted') return <span className="sd-notify on">Alerts are on while Unbeaten is open</span>;
+  if (perm === 'denied') return <span className="sd-notify muted">Alerts are blocked in this browser</span>;
+  return <button type="button" className="btn btn-sm" onClick={() => { void Notification.requestPermission().then(setPerm); }}>Alert me when one lands</button>;
+}
 
 export function ShopClient({ signedIn, points, owned, sold, name, image, equipped, owner }: {
   signedIn: boolean; points: number; owned: string[]; sold: Record<string, number>; name: string; image: string | null; equipped: Equipped | null; owner: boolean;
@@ -19,6 +32,11 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
   const [trying, setTrying] = useState<ShopItem | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [claiming, setClaiming] = useState(false);
+  const live = useActiveDrop();
+  const liveDrop = live?.drop ?? null;
+  const liveItem = liveDrop ? shopItem(liveDrop.itemKey) : undefined;
+  const dropLeft = useSecondsLeft(liveDrop, live?.skew ?? 0);
   const have = new Set(owned);
   const base = equipped ?? { font: 'classic', color: 'ink', border: null, banner: null, title: null, flair: null, effect: null };
 
@@ -49,7 +67,16 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
   const look = withItem(trying);
 
   // Owner exclusives show only to the owner; gifts only to whoever was given them.
-  const visible = (i: ShopItem) => (!i.ownerOnly || owner) && (!i.giftOnly || have.has(i.key));
+  const visible = (i: ShopItem) => (!i.ownerOnly || owner) && (!i.giftOnly || have.has(i.key)) && (!i.dropOnly || have.has(i.key));
+  const dropItems = SHOP_ITEMS.filter((i) => i.dropOnly);
+  async function claimLive() {
+    if (!liveDrop) return;
+    setClaiming(true); setMsg(null);
+    try { const out = await claimDrop(liveDrop.id); setMsg({ ok: true, text: `${out.label} is yours. Equip it any time.` }); router.refresh(); }
+    catch (e) { setMsg({ ok: false, text: (e as Error).message }); } finally { setClaiming(false); }
+  }
+  const gotDrops = dropItems.filter((i) => have.has(i.key)).length;
+  const dropOpen = !!liveDrop && !!liveItem && !live?.owned && (dropLeft ?? 1) > 0;
   const list = itemsOf(kind).filter(visible);
   const items = [...list].sort((a, b) =>
     sort === 'rarest' ? RANK[rarity(b)] - RANK[rarity(a)] || b.price - a.price
@@ -60,6 +87,46 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
 
   return (
     <div className="shop-scope">
+      <section id="drops" className={`shop-drops${dropOpen ? ' live' : ''}`} aria-labelledby="drops-h">
+        <div className="sd-top">
+          <div>
+            <h2 id="drops-h">Free drops</h2>
+            <p className="muted sd-sub">{dropItems.length} items you cannot buy. One lands at random every few days and stays for ten minutes. Claim it and it is yours for good.</p>
+          </div>
+          <NotifyToggle />
+        </div>
+        {dropOpen && liveItem && liveDrop && (
+          <div className="sd-live" role="status">
+            <button type="button" className="shop-prev-btn" aria-label={`Try on ${liveItem.label}`} aria-pressed={trying?.key === liveItem.key} onClick={() => setTrying(trying?.key === liveItem.key ? null : liveItem)}>{preview(liveItem)}</button>
+            <div className="sd-live-text">
+              <p className="eyebrow">Live now</p>
+              <h3>{liveItem.label}</h3>
+              <p className="muted">{KIND_LABELS[liveItem.kind]}. {liveItem.blurb?.replace('Drop exclusive. ', '')}</p>
+            </div>
+            <div className="sd-live-act">
+              <span className="sd-clock num" role="timer" aria-label={`${Math.ceil((dropLeft ?? 0) / 60)} minutes left`}>{clock(dropLeft ?? 0)}</span>
+              {signedIn
+                ? <button type="button" className="btn btn-primary" disabled={claiming} onClick={claimLive}>{claiming ? 'Claiming' : 'Claim free'}</button>
+                : <Link className="btn btn-primary" href="/login?next=/shop%23drops">Sign in to claim</Link>}
+            </div>
+          </div>
+        )}
+        <ul className="sd-grid">
+          {dropItems.map((i) => {
+            const got = have.has(i.key);
+            return (
+              <li key={i.key} className={`sd-tile k-${i.kind}${got ? ' got' : ''}`}>
+                <button type="button" className="shop-prev-btn" aria-label={`Try on ${i.label}`} aria-pressed={trying?.key === i.key} onClick={() => setTrying(trying?.key === i.key ? null : i)}>{preview(i)}</button>
+                <strong>{i.label}</strong>
+                <span className="muted">{KIND_LABELS[i.kind]}</span>
+                <span className={`shop-tag r-drop${got ? ' got' : ''}`}>{got ? 'Yours' : 'Drop only'}</span>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="muted sd-foot">{dropOpen ? '' : 'No drop right now. The next one comes without warning. '}You have {gotDrops} of {dropItems.length}.</p>
+      </section>
+
       <div className={`shop-look${look.banner ? ` banner ${look.banner}` : ''}`} aria-label="Your look">
         <Avatar name={name} src={image} size={44} ring={look.border} effect={look.effect} />
         <span className="shop-look-name"><StyledName name={name} style={look} /></span>
@@ -97,7 +164,7 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
                 <span className="shop-tags">
                   <span className={`shop-tag r-${r}`}>{RARITY_LABEL[r]}</span>
                   {left !== null && !i.ownerOnly && <span className="shop-tag stock">{left === 0 ? 'Sold out' : `${left} of ${i.limit} left`}</span>}
-                  {mine && !i.ownerOnly && <span className="shop-tag owned">{i.giftOnly ? 'Gifted to you' : 'Owned'}</span>}
+                  {mine && !i.ownerOnly && <span className="shop-tag owned">{i.giftOnly ? 'Gifted to you' : i.dropOnly ? 'From a drop' : 'Owned'}</span>}
                 </span>
                 {i.blurb && <span className="muted shop-blurb">{i.blurb}</span>}
               </div>

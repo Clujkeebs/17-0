@@ -104,7 +104,7 @@ void (async () => {
   void refreshCollege();
   setInterval(() => void refreshCollege(), 24 * 3600_000);
   // Data probes for '60s/'70s 82-0 and college games (logged once per boot; removed when those ship).
-  void import('@/lib/server/probes').then(async (m) => { await m.probeOldNba(); await m.probeCollege(); await m.probeCollegeShapes(); await m.probeBird(); await m.probeMlbHeadshots(); }).catch((e) => console.warn('[probe] failed', (e as Error).message));
+  void import('@/lib/server/probes').then(async (m) => { await m.probeOldNba(); await m.probeCollege(); await m.probeCollegeShapes(); await m.probeBird(); await m.probeMlbHeadshots(); await m.probeWbbRecent(); }).catch((e) => console.warn('[probe] failed', (e as Error).message));
   // Soccer: clubs, rosters and season leaders from ESPN, at boot and daily.
   const soccer = () => import('@/lib/server/soccer-sync').then(async (m) => { await m.syncSoccer(); await m.soccerSpotCheck(); await m.syncSoccerPhotos(); }).catch((e) => console.warn('[soccer] sync failed', (e as Error).message));
   void soccer();
@@ -117,6 +117,16 @@ void (async () => {
   const pickem = () => import('@/lib/server/pickem').then((m) => m.syncPickem()).catch((e) => console.warn('[pickem] sync failed', (e as Error).message));
   void pickem();
   setInterval(() => void pickem(), 20 * 60_000);
+  // Free drops: plan the next one when none is scheduled, and announce one the moment it goes live.
+  const drops = () => import('@/lib/server/drops').then((m) => m.dropsTick()).catch((e) => console.warn('[drops] tick failed', (e as Error).message));
+  void drops();
+  setInterval(() => void drops(), 30_000);
+  // Difficulty balance: once a day in the small hours Eastern, nudge each mode's win line from what real players reached.
+  // Checked hourly (the step itself decides whether today's is done); the first check waits for the calibrators to finish.
+  const balance = () => import('@/lib/server/difficulty-balance').then((m) => m.balanceDifficulty()).catch((e) => console.warn('[difficulty] balance failed', (e as Error).message));
+  const balanceFirst = () => import('@/lib/server/difficulty-balance').then(async (m) => { await m.balanceDifficulty({ dry: true }); await m.balanceDifficulty(); }).catch((e) => console.warn('[difficulty] balance failed', (e as Error).message));
+  setTimeout(() => void balanceFirst(), 10 * 60_000);
+  setInterval(() => void balance(), 3600_000);
   // Shop launch: points for every ranked game played before the shop existed (once; idempotent).
   void import('@/lib/server/points').then((p) => p.backfillPoints()).then((n) => console.log('[points] launch backfill paid', n)).catch((e) => console.warn('[points] backfill failed', (e as Error).message));
   if (process.env.CALIBRATE === '1') {

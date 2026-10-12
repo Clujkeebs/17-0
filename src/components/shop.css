@@ -6,7 +6,7 @@
   --t-rare-bg: #DBEAFE; --t-rare-fg: #1E3A8A; --t-epic-bg: #EDE9FE; --t-epic-fg: #4C1D95;
   --t-leg-bg: linear-gradient(90deg, #FEF3C7, #FDE68A); --t-leg-fg: #78350F;
   --t-lim-bg: #0A0A0A; --t-lim-fg: #FDE68A; --t-lim-edge: transparent;
-  --t-ex-bg: #FEE2E2; --t-ex-fg: #7F1D1D; --t-gift-bg: #FEF9C3; --t-gift-fg: #713F12;
+  --t-ex-bg: #FEE2E2; --t-ex-fg: #7F1D1D; --t-gift-bg: #FEF9C3; --t-gift-fg: #713F12; --t-drop-bg: #4C1D95; --t-drop-fg: #fff;
   --t-own-bg: #DCFCE7; --t-own-fg: #14532D; --t-stock-bg: #FEF3C7; --t-stock-fg: #78350F;
 }
 @media (prefers-color-scheme: dark) {
@@ -15,7 +15,7 @@
     --t-rare-bg: #1B2A4A; --t-rare-fg: #BFDBFE; --t-epic-bg: #2A2150; --t-epic-fg: #DDD6FE;
     --t-leg-bg: linear-gradient(90deg, #3B2D0A, #4A3608); --t-leg-fg: #FDE68A;
     --t-lim-bg: #000; --t-lim-fg: #FDE68A; --t-lim-edge: #6B4E0F;
-    --t-ex-bg: #3A1414; --t-ex-fg: #FCA5A5; --t-gift-bg: #3A3410; --t-gift-fg: #FDE68A;
+    --t-ex-bg: #3A1414; --t-ex-fg: #FCA5A5; --t-gift-bg: #3A3410; --t-gift-fg: #FDE68A; --t-drop-bg: #2E1065; --t-drop-fg: #DDD6FE;
     --t-own-bg: #12301D; --t-own-fg: #86EFAC; --t-stock-bg: #3A2D0C; --t-stock-fg: #FCD34D;
   }
 }
@@ -24,7 +24,7 @@
   --t-rare-bg: #1B2A4A; --t-rare-fg: #BFDBFE; --t-epic-bg: #2A2150; --t-epic-fg: #DDD6FE;
   --t-leg-bg: linear-gradient(90deg, #3B2D0A, #4A3608); --t-leg-fg: #FDE68A;
   --t-lim-bg: #000; --t-lim-fg: #FDE68A; --t-lim-edge: #6B4E0F;
-  --t-ex-bg: #3A1414; --t-ex-fg: #FCA5A5; --t-gift-bg: #3A3410; --t-gift-fg: #FDE68A;
+  --t-ex-bg: #3A1414; --t-ex-fg: #FCA5A5; --t-gift-bg: #3A3410; --t-gift-fg: #FDE68A; --t-drop-bg: #2E1065; --t-drop-fg: #DDD6FE;
   --t-own-bg: #12301D; --t-own-fg: #86EFAC; --t-stock-bg: #3A2D0C; --t-stock-fg: #FCD34D;
 }
 
@@ -51,6 +51,7 @@
 .shop-card.r-limited { border-color: #B7860B; box-shadow: inset 0 3px 0 #E8C547, 0 0 20px -8px rgba(232,197,71,.55); }
 .shop-card.r-exclusive { border-color: #B91C1C; box-shadow: inset 0 3px 0 #B91C1C, 0 0 20px -10px rgba(185,28,28,.6); }
 .shop-card.r-gift { border-color: #CA8A04; box-shadow: inset 0 3px 0 #FACC15; }
+.shop-card.r-drop { border-color: #7C3AED; box-shadow: inset 0 3px 0 #A78BFA, 0 0 20px -8px rgba(124,58,237,.55); }
 .shop-card.trying { outline: 2px solid var(--bone); outline-offset: 1px; }
 
 /* The stage: the item shown on you, on a tinted floor so every color and effect has something to sit on. */
@@ -75,6 +76,8 @@
 .shop-tag.r-limited { background: var(--t-lim-bg); color: var(--t-lim-fg); border-color: var(--t-lim-edge); }
 .shop-tag.r-exclusive { background: var(--t-ex-bg); color: var(--t-ex-fg); }
 .shop-tag.r-gift { background: var(--t-gift-bg); color: var(--t-gift-fg); }
+.shop-tag.r-drop { background: var(--t-drop-bg); color: var(--t-drop-fg); }
+.shop-tag.r-drop.got { background: var(--t-own-bg); color: var(--t-own-fg); }
 .shop-tag.stock { background: var(--t-stock-bg); color: var(--t-stock-fg); }
 .shop-tag.owned { background: var(--t-own-bg); color: var(--t-own-fg); }
 
@@ -87,3 +90,31 @@
   .shop-grid { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .shop-card { transition: none; } }
+
+/* Free drops panel */
+.shop-drops { border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); padding: 20px; margin: 0 0 16px; }
+.shop-drops.live { border-color: #7C3AED; box-shadow: 0 0 0 1px #7C3AED, 0 12px 40px -18px rgba(124,58,237,.6); }
+.sd-top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 20px; }
+.sd-top h2 { margin: 0; }
+.sd-sub { margin: 4px 0 0; max-width: 56ch; }
+.sd-notify { font-size: .85rem; font-weight: 600; }
+.sd-notify.on { color: var(--good-ink); }
+.sd-live { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px 20px; margin: 16px 0 4px; padding: 16px; border-radius: 16px; background: var(--panel); color: #FAFAF9; }
+.sd-live .eyebrow { color: #C4B5FD; margin: 0; }
+.sd-live h3 { margin: 0; font-size: 1.4rem; }
+.sd-live .muted { color: #C9C7C1; margin: 2px 0 0; }
+.sd-live .shop-prev-btn { background: rgba(255,255,255,.08); border-radius: 14px; }
+.sd-live-act { display: flex; align-items: center; gap: 14px; }
+.sd-clock { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; min-width: 3.2ch; text-align: right; }
+@media (max-width: 640px) { .sd-live { grid-template-columns: auto 1fr; } .sd-live-act { grid-column: 1 / -1; justify-content: space-between; } }
+.sd-grid { list-style: none; padding: 0; margin: 16px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.sd-tile .shop-prev-btn { min-height: 96px; padding: 8px 6px; }
+.sd-tile.k-effect .shop-prev-btn, .sd-tile.k-border .shop-prev-btn { min-height: 150px; }
+.sd-tile.k-banner .shop-prev-btn { padding: 0; min-height: 0; background: none; }
+.sd-tile.k-banner .shop-banner { width: 100%; margin: 0; min-height: 96px; display: grid; align-items: end; padding: 10px; font-size: .95rem; font-weight: 700; border-radius: 12px; }
+.sd-tile .shop-name { font-size: 1.05rem; }
+.sd-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; padding: 12px 8px 10px; border: 1px solid var(--steel); border-radius: 14px; background: var(--green); }
+.sd-tile .muted { font-size: .78rem; }
+.sd-tile .shop-tag { margin-top: 6px; }
+.sd-tile:not(.got) .shop-prev-btn { opacity: .82; }
+.sd-foot { margin: 12px 0 0; font-size: .88rem; }

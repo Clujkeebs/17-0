@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FOOTBALL_CATEGORIES, MBB_PROGRAMS, WBB_PROGRAMS, latestCollegeSeason, parseFootballLeaders, parseScorers } from '@/lib/server/college-sync';
+import { FBS_PROGRAMS, FOOTBALL_CATEGORIES, MBB_PROGRAMS, WBB_PROGRAMS, latestCollegeSeason, listPrograms, parseFootballLeaders, parseScorers } from '@/lib/server/college-sync';
 
 const athlete = (id: number) => ({ $ref: `http://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2025/athletes/${id}?lang=en&region=us` });
 const leader = (id: number, value: number, displayValue: string) => ({ athlete: athlete(id), value, displayValue, team: { $ref: 'http://x/teams/333?lang=en' } });
@@ -53,5 +53,20 @@ describe('seasons and programs', () => {
   it('program lists have no duplicates', () => {
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
     for (const list of [MBB_PROGRAMS, WBB_PROGRAMS]) expect(new Set(list.map(norm)).size).toBe(list.length);
+    const fbs = FBS_PROGRAMS.flatMap((e) => (Array.isArray(e) ? e : [e])).map(norm);
+    expect(new Set(fbs).size).toBe(fbs.length);
+    expect(FBS_PROGRAMS.length).toBeGreaterThanOrEqual(130);
+    expect(FBS_PROGRAMS.length).toBeLessThanOrEqual(140);
+  });
+  it('football keeps only FBS programs from a teams feed that lists every college, and says who was not found', async () => {
+    const team = (id: number, location: string) => ({ team: { id: String(id), location, displayName: `${location} Team`, abbreviation: location.slice(0, 3).toUpperCase() } });
+    const feed = { sports: [{ leagues: [{ teams: [team(1, 'Alabama'), team(2, 'Wheaton College'), team(3, 'San José State'), team(4, 'Miami (OH)'), team(5, "Hawai'i"), team(6, 'UT San Antonio'), team(7, 'Alabama')] }] }] };
+    const fake = (async () => ({ ok: true, status: 200, json: async () => feed })) as unknown as typeof fetch;
+    const { programs, missing } = await listPrograms('cfb', fake);
+    expect(programs.map((p) => p.location).sort()).toEqual(["Alabama", "Hawai'i", 'Miami (OH)', 'San José State', 'UT San Antonio']);   // a duplicate row and a Division III school are dropped
+    expect(missing).toContain('Ohio State');
+    expect(missing).not.toContain('Alabama');
+    expect(missing).not.toContain('UT San Antonio');       // found under the first of its two spellings
+    expect(missing.length).toBe(FBS_PROGRAMS.length - 5);
   });
 });

@@ -5,7 +5,8 @@ import type { Ranked } from '@/lib/fantasy/rank';
 const n1 = (v: number | null) => (v == null ? '·' : v.toFixed(1));
 
 /** One player line used across the fantasy pages. */
-export function FRow({ p, rank, note }: { p: Ranked; rank: number | string; note?: React.ReactNode }) {
+export type FRowPlayer = Pick<Ranked, 'slug' | 'name' | 'img' | 'teamColor' | 'pos' | 'posRank' | 'team' | 'value' | 'recent' | 'ppg'>;
+export function FRow({ p, rank, note }: { p: FRowPlayer; rank: number | string; note?: React.ReactNode }) {
   return (
     <li className="f-row">
       <span className="f-rank num">{rank}</span>

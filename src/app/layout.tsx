@@ -10,6 +10,7 @@ import { CookieBanner } from '@/components/CookieBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { JsonLd } from '@/components/JsonLd';
 import { THEME_SCRIPT } from '@/components/ThemeToggle';
+import { KonamiCode } from '@/components/KonamiCode';
 
 // Self-hosted, Latin subset, variable. next/font preloads them and generates metric-matched fallbacks (no CLS).
 // Inter only: numbers use its tabular figures via --font-num.
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <SiteFooter />
         <CookieBanner />
+        <KonamiCode />
       </body>
     </html>
   );

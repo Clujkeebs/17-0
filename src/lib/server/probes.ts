@@ -128,3 +128,22 @@ export async function probeCollegeShapes() {
   }
   console.log('[probe] college shapes\n' + out.join('\n'));
 }
+
+/** Why women's basketball has no rows for 2025 and 2026: what ESPN returns for UConn in 2024 (works), 2025 and 2026. */
+export async function probeWbbRecent() {
+  const out: string[] = [];
+  const wb = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/womens-college-basketball';
+  for (const season of [2024, 2025, 2026]) {
+    const l = await fetchJson(`${wb}/seasons/${season}/types/2/teams/41/leaders`);
+    const cats = (l.j?.categories as { name: string; leaders?: Json[] }[] | undefined) ?? [];
+    out.push(`wbb UConn ${season}: status ${l.status}, categories ${cats.map((c) => `${c.name}(${c.leaders?.length ?? 0})`).slice(0, 12).join(',') || 'none'}`);
+    const pts = cats.find((c) => c.name === 'pointsPerGame');
+    const pid = String(((pts?.leaders?.[0] as { athlete?: { $ref?: string } } | undefined)?.athlete?.$ref ?? '').match(/athletes\/(\d+)/)?.[1] ?? '');
+    if (!pid) continue;
+    const st = await fetchJson(`${wb}/seasons/${season}/types/2/athletes/${pid}/statistics`);
+    const stats = ((st.j?.splits as { categories?: { name: string; stats?: { name: string; value: number }[] }[] } | undefined)?.categories ?? []).flatMap((c) => c.stats ?? []);
+    const pick = stats.filter((s) => /gamesPlayed|avgMinutes|^minutes|avgPoints|avgRebounds/i.test(s.name)).map((s) => `${s.name}=${s.value}`);
+    out.push(`  athlete ${pid} statistics ${st.status}: ${stats.length} stats; ${pick.join(' ') || 'none of games, minutes or points'}`);
+  }
+  console.log('[probe] wbb recent seasons\n' + out.join('\n'));
+}

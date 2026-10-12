@@ -613,3 +613,33 @@ export const collegeHoops = pgTable('college_hoops', {
   value: real('value').notNull(),
 }, (t) => [primaryKey({ columns: [t.league, t.playerId, t.teamId, t.season] }), index('college_hoops_team_season_idx').on(t.league, t.teamId, t.season)]);
 
+
+/**
+ * Free drops: one item from the drop-only pool, claimable by anyone for ten minutes. `announcedAt` is set once, by
+ * whichever worker tick first sees the drop live, and is what sends the notifications.
+ */
+export const drops = pgTable('drops', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  itemKey: text('item_key').notNull(),
+  startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+  endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  announcedAt: timestamp('announced_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('drops_starts_idx').on(t.startsAt)]);
+
+/** Who claimed which drop. The key makes a second claim by the same player impossible. */
+export const dropClaims = pgTable('drop_claims', {
+  dropId: uuid('drop_id').notNull().references(() => drops.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  claimedAt: timestamp('claimed_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.dropId, t.userId] })]);
+
+/**
+ * When each achievement was earned, so it is announced and paid once. A row keyed '_baseline' marks a player whose
+ * first sync is done (what they had already earned before achievements existed is recorded without a fanfare).
+ */
+export const userBadges = pgTable('user_badges', {
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  badgeKey: text('badge_key').notNull(),
+  earnedAt: timestamp('earned_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.userId, t.badgeKey] })]);

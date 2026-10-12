@@ -1,4 +1,4 @@
-import { and, eq, sql as dsql } from 'drizzle-orm';
+import { and, eq, notInArray, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { seasonValue } from '@/lib/game/eightytwo';
 import { get, lineFrom, nameOf, pool, readStats } from './nba-sync';
@@ -34,7 +34,7 @@ export const FOOTBALL_CATEGORIES: Record<string, number> = {
 const HOOPS_DEEP = 8;
 
 /** Programs whose names are known to everyone. Matched against ESPN's school name (case, spaces and punctuation ignored). */
-const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+const key = (s: string) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 export const MBB_PROGRAMS = ['Duke', 'Kentucky', 'Kansas', 'North Carolina', 'UCLA', 'UConn', 'Gonzaga', 'Villanova', 'Michigan State', 'Louisville', 'Arizona', 'Florida', 'Syracuse', 'Indiana', 'Purdue', 'Houston',
   'Baylor', 'Texas', 'Tennessee', 'Auburn', 'Alabama', 'Arkansas', 'Oregon', 'Wisconsin', 'Maryland', 'Ohio State', 'Illinois', 'Iowa', 'Virginia', 'Michigan', 'Notre Dame', 'Georgetown', 'Memphis', 'Oklahoma',
   'Creighton', 'Marquette', "St. John's", 'Xavier', 'San Diego State', "Saint Mary's", 'BYU', 'Texas Tech', 'Iowa State', 'Kansas State', 'West Virginia', 'Cincinnati', 'Butler', 'Wichita State', 'VCU',
@@ -44,6 +44,34 @@ export const MBB_PROGRAMS = ['Duke', 'Kentucky', 'Kansas', 'North Carolina', 'UC
 export const WBB_PROGRAMS = ['UConn', 'South Carolina', 'Stanford', 'Tennessee', 'Notre Dame', 'Baylor', 'LSU', 'Iowa', 'Texas', 'UCLA', 'USC', 'Louisville', 'Maryland', 'NC State', 'Oregon', 'Ohio State',
   'Duke', 'North Carolina', 'Oklahoma', 'Kentucky', 'Virginia Tech', 'Utah', 'Ole Miss', 'Gonzaga', 'Michigan', 'Colorado', 'Mississippi State', 'Georgia', 'Arizona', 'Florida State', 'Miami', 'Kansas State',
   'Syracuse', 'Texas A&M', 'Arkansas', 'Auburn', 'Indiana', 'Purdue', 'Princeton', 'Oregon State', 'Washington', 'West Virginia', 'Creighton', 'Marquette', 'Villanova', 'Penn State', 'Michigan State', 'Illinois'];
+
+/**
+ * FBS football programs (2025 membership, plus the schools that left FBS since 2010 are left out on purpose). ESPN's
+ * teams feed ignores its group filter and lists every college in the country, so football takes a fixed list like
+ * basketball does. An entry with alternatives (ESPN's spelling has changed before) counts as found if any one matches.
+ */
+export const FBS_PROGRAMS: (string | string[])[] = [
+  // ACC
+  'Boston College', 'California', 'Clemson', 'Duke', 'Florida State', 'Georgia Tech', 'Louisville', 'Miami', 'NC State', 'North Carolina', 'Pittsburgh', 'SMU', 'Stanford', 'Syracuse', 'Virginia', 'Virginia Tech', 'Wake Forest',
+  // Big 12
+  'Arizona', 'Arizona State', 'Baylor', 'BYU', 'Cincinnati', 'Colorado', 'Houston', 'Iowa State', 'Kansas', 'Kansas State', 'Oklahoma State', 'TCU', 'Texas Tech', 'UCF', 'Utah', 'West Virginia',
+  // Big Ten
+  'Illinois', 'Indiana', 'Iowa', 'Maryland', 'Michigan', 'Michigan State', 'Minnesota', 'Nebraska', 'Northwestern', 'Ohio State', 'Oregon', 'Penn State', 'Purdue', 'Rutgers', 'UCLA', 'USC', 'Washington', 'Wisconsin',
+  // SEC
+  'Alabama', 'Arkansas', 'Auburn', 'Florida', 'Georgia', 'Kentucky', 'LSU', 'Mississippi State', 'Missouri', 'Oklahoma', 'Ole Miss', 'South Carolina', 'Tennessee', 'Texas', 'Texas A&M', 'Vanderbilt',
+  // Pac-12 and independents
+  'Oregon State', 'Washington State', 'Notre Dame', 'UConn', 'UMass',
+  // American
+  'Army', 'Charlotte', 'East Carolina', 'Florida Atlantic', 'Memphis', 'Navy', 'North Texas', 'Rice', 'South Florida', 'Temple', 'Tulane', 'Tulsa', 'UAB', ['UT San Antonio', 'UTSA'],
+  // Conference USA
+  'Delaware', ['Florida International', 'FIU'], 'Jacksonville State', 'Kennesaw State', 'Liberty', 'Louisiana Tech', 'Middle Tennessee', 'Missouri State', 'New Mexico State', ['Sam Houston', 'Sam Houston State'], 'UTEP', 'Western Kentucky',
+  // MAC
+  'Akron', 'Ball State', 'Bowling Green', 'Buffalo', 'Central Michigan', 'Eastern Michigan', 'Kent State', 'Miami (OH)', 'Northern Illinois', 'Ohio', 'Toledo', 'Western Michigan',
+  // Mountain West
+  'Air Force', 'Boise State', 'Colorado State', 'Fresno State', "Hawai'i", 'Nevada', 'New Mexico', 'San Diego State', 'San Jose State', 'UNLV', 'Utah State', 'Wyoming',
+  // Sun Belt
+  ['Appalachian State', 'App State'], 'Arkansas State', 'Coastal Carolina', 'Georgia Southern', 'Georgia State', 'James Madison', 'Louisiana', ['UL Monroe', 'Louisiana Monroe'], 'Marshall', 'Old Dominion', 'South Alabama', ['Southern Mississippi', 'Southern Miss'], 'Texas State', 'Troy',
+];
 
 export interface Program { id: number; name: string; location: string; abbreviation: string; color: string | null; logo: string | null }
 type J = Record<string, any>;
@@ -60,16 +88,24 @@ async function siteGet(url: string, fetchImpl: typeof fetch): Promise<J | null> 
 /** The programs for a league: football's FBS teams, or the curated basketball programs found among Division I. */
 export async function listPrograms(lg: CollegeLeague, fetchImpl: typeof fetch = fetch): Promise<{ programs: Program[]; missing: string[] }> {
   const c = COLLEGE[lg];
-  const j = await siteGet(`https://site.api.espn.com/apis/site/v2/sports/${c.sport}/${c.league}/teams?groups=${c.group}&limit=500`, fetchImpl);
+  const j = await siteGet(`https://site.api.espn.com/apis/site/v2/sports/${c.sport}/${c.league}/teams?groups=${c.group}&limit=1000`, fetchImpl);
   const all: Program[] = ((j?.sports?.[0]?.leagues?.[0]?.teams ?? []) as J[]).map((x) => x.team as J).filter((t) => t?.id && t.location).map((t) => ({
     id: Number(t.id), name: String(t.displayName ?? t.name), location: String(t.location), abbreviation: String(t.abbreviation ?? ''),
     color: t.color ? `#${t.color}` : null, logo: ((t.logos as { href: string }[] | undefined) ?? [])[0]?.href ?? null,
   }));
-  if (lg === 'cfb') return { programs: all, missing: [] };
-  const wanted = (lg === 'mbb' ? MBB_PROGRAMS : WBB_PROGRAMS).map(key);
-  const programs = all.filter((p) => wanted.includes(key(p.location)));
+  const list: (string | string[])[] = lg === 'cfb' ? FBS_PROGRAMS : lg === 'mbb' ? MBB_PROGRAMS : WBB_PROGRAMS;
+  const groups = list.map((e) => (Array.isArray(e) ? e : [e]));
+  const wanted = new Set(groups.flat().map(key));
+  // A program can be listed twice (under two conferences, or once more by another id): the first row wins.
+  const seenId = new Set<number>(), seenName = new Set<string>();
+  const programs = all.filter((p) => {
+    const k = key(p.location);
+    if (!wanted.has(k) || seenId.has(p.id) || seenName.has(k)) return false;
+    seenId.add(p.id); seenName.add(k);
+    return true;
+  });
   const have = new Set(programs.map((p) => key(p.location)));
-  return { programs, missing: wanted.filter((w) => !have.has(w)) };
+  return { programs, missing: groups.filter((g) => !g.some((n) => have.has(key(n)))).map((g) => g[0]) };
 }
 
 /** One football leaders feed -> rows to keep. Pure, so the shapes can be tested without ESPN. */
@@ -111,6 +147,17 @@ export async function syncCollege(opts: { leagues?: CollegeLeague[]; from?: numb
         const row = { league: lg, id: p.id, name: p.name, location: p.location, abbreviation: p.abbreviation, color: p.color, logoUrl: p.logo };
         await db.insert(schema.collegeTeams).values(row).onConflictDoUpdate({ target: [schema.collegeTeams.league, schema.collegeTeams.id], set: row });
       }
+      // An earlier run kept every college ESPN listed for football; drop what is no longer on the list, and players nobody uses.
+      // Only when the feed gave nearly the whole list: a short or glitched answer must never delete real data.
+      if (missing.length <= (programs.length + missing.length) * 0.1) {
+        const keep = programs.map((p) => p.id);
+        await db.delete(schema.collegeLeaders).where(and(eq(schema.collegeLeaders.league, lg), notInArray(schema.collegeLeaders.teamId, keep)));
+        await db.delete(schema.collegeHoops).where(and(eq(schema.collegeHoops.league, lg), notInArray(schema.collegeHoops.teamId, keep)));
+        await db.delete(schema.collegeTeams).where(and(eq(schema.collegeTeams.league, lg), notInArray(schema.collegeTeams.id, keep)));
+        await db.execute(dsql`delete from college_players p where p.league = ${lg}
+          and not exists (select 1 from college_leaders l where l.league = p.league and l.player_id = p.id)
+          and not exists (select 1 from college_hoops h where h.league = p.league and h.player_id = p.id)`);
+      } else console.warn(`[college] ${lg}: ${missing.length} of ${programs.length + missing.length} programs missing from the feed, not purging`);
       const known = new Set((await db.select({ id: schema.collegePlayers.id }).from(schema.collegePlayers).where(eq(schema.collegePlayers.league, lg))).map((r) => r.id));
       /** Name, position and photo of one athlete, stored once. */
       const ensure = async (pid: number, season: number): Promise<boolean> => {

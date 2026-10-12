@@ -11,8 +11,8 @@ const GAMES: Record<string, number> = { '17-0': 17, '82-0': 82, '162-0': 162 };
  */
 export async function logPlayerDifficulty(days = 30): Promise<void> {
   try {
-    const rows = await db.execute<{ game: string; format: string; pool: string; edition: string; hard: boolean; wins: number; n: number }>(dsql`
-      select game_type as game,
+    const rows = await db.execute<{ game: string; daily: boolean; format: string; pool: string; edition: string; hard: boolean; wins: number; n: number }>(dsql`
+      select game_type as game, is_daily as daily,
              coalesce(result_data->>'format', '') as format,
              coalesce(result_data->>'pool', result_data->>'mode', '') as pool,
              coalesce(result_data->>'edition', '') as edition,
@@ -22,12 +22,12 @@ export async function logPlayerDifficulty(days = 30): Promise<void> {
       from game_results
       where game_type in ('17-0', '82-0', '162-0') and not flagged and result_data ? 'wins'
         and created_at > now() - make_interval(days => ${days})
-      group by 1, 2, 3, 4, 5, 6`);
+      group by 1, 2, 3, 4, 5, 6, 7`);
     const groups = new Map<string, { game: string; dist: number[] }>();
     for (const r of rows) {
       const games = GAMES[r.game];
       if (!games || r.wins < 0 || r.wins > games) continue;
-      const key = [r.game, r.format || '-', r.pool || '-', r.edition || '-', r.hard ? 'hard' : 'easy'].join(' ');
+      const key = [r.game, r.format || '-', r.pool || '-', r.edition || '-', r.hard ? 'hard' : 'easy', r.daily ? 'today' : 'casual'].join(' ');
       const g = groups.get(key) ?? { game: r.game, dist: new Array<number>(games + 1).fill(0) };
       g.dist[r.wins] += r.n;
       groups.set(key, g);

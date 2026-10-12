@@ -5,6 +5,7 @@ import { HeaderProfile } from './HeaderProfile';
 import { ThemeToggle } from './ThemeToggle';
 import { SiteNav, type NavItem, type NavSection } from './SiteNav';
 import { SPORTS, gamesFor } from '@/lib/game-registry';
+import { DropBanner } from './drops/DropBanner';
 
 /** The big draft games lead each sport; the rest of the list follows in hub order. */
 const FEATURED: Record<string, string[]> = { nfl: ['17-0', 'build-a-player', 'unbeaten-bowl'], nba: ['82-0'], wnba: [], college: [], mlb: ['162-0'], soccer: [], puzzles: [] };
@@ -25,7 +26,7 @@ function menus(): NavItem[] {
     }),
   };
   const fantasySection: NavSection = { title: 'Fantasy football', href: '/fantasy', links: [
-      { label: 'Rankings', href: '/fantasy/rankings' }, { label: 'Waiver wire', href: '/fantasy/waivers' }, { label: 'Trade calculator', href: '/fantasy/trade' },
+      { label: 'Mock draft', href: '/fantasy/mock-draft' }, { label: 'Start or sit', href: '/fantasy/start-sit' }, { label: 'Rankings', href: '/fantasy/rankings' }, { label: 'Waiver wire', href: '/fantasy/waivers' }, { label: 'Trade calculator', href: '/fantasy/trade' },
       { label: 'Draft cheat sheet', href: '/fantasy/cheat-sheet' }, { label: 'Tier list maker', href: '/fantasy/tier-list' }, { label: 'Draft order', href: '/fantasy/draft-order' }, { label: "Start 'Em game", href: '/games/fantasy-start-em' }, { label: "Rank 'Em game", href: '/games/fantasy-rank-em' },
   ] };
   const fantasy: NavItem = { label: 'Fantasy', href: '/fantasy', sections: [fantasySection], hideOn: 'narrow' };
@@ -54,6 +55,7 @@ export function SiteHeader({ minimal = false }: { minimal?: boolean }) {
         <ThemeToggle />
         {!minimal && <div className="sh-me"><HeaderProfile /></div>}
       </div>
+      {!minimal && <DropBanner />}
     </header>
   );
 }

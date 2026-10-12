@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getUserById, getUserStats, nameStyleOf } from '@/lib/server/account';
-import { badgesFor } from '@/lib/server/badges';
+import { syncBadges } from '@/lib/server/badges';
 import { Badges } from '@/components/Badges';
 import { StyledName } from '@/components/StyledName';
 import { Avatar } from '@/components/HeaderProfile';
@@ -27,7 +27,7 @@ export default async function ProfilePage() {
   if (!session?.user?.id) redirect('/login?next=/profile');
   const user = await getUserById(session.user.id);
   if (!user) redirect('/login?next=/profile');
-  const [stats, badges] = await Promise.all([getUserStats(user.id), badgesFor(user.id).catch(() => [])]);
+  const [stats, badges] = await Promise.all([getUserStats(user.id), syncBadges(user.id).then((r) => r.earned).catch(() => [])]);
   const name = user.name || user.username || 'Unnamed';
   const style = nameStyleOf(user);
   const favs = (user.favoriteGames ?? []).map((slug) => ALL_GAMES.find((g) => g.slug === slug)).filter((g): g is { slug: string; name: string } => !!g);

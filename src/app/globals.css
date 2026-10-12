@@ -863,3 +863,37 @@ a.sn-sec-h:hover { color: var(--bone); }
 .theme-toggle.labelled { width: auto; height: auto; padding: 8px 14px; gap: 8px; display: inline-flex; align-items: center; font: inherit; font-size: .9rem; font-weight: 600; }
 .theme-toggle.labelled:hover { transform: none; }
 @media (max-width: 760px) { .theme-toggle.in-header { display: none; } }
+
+/* Free drop bar: a second row inside the sticky header, only while a drop can be claimed */
+.site-header .drop-row { min-height: 48px; padding-block: 6px; justify-content: flex-start; flex-wrap: wrap; gap: 6px 16px; }
+.drop-bar { background: var(--panel); color: #FAFAF9; border-top: 1px solid rgba(255,255,255,.14); }
+.drop-bar a { color: #C4B5FD; }
+.drop-gift { display: inline-flex; color: #C4B5FD; animation: drop-bob 1.6s ease-in-out infinite; }
+@keyframes drop-bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-2px) rotate(6deg); } }
+.drop-text { display: flex; flex-direction: column; line-height: 1.25; margin-right: auto; min-width: 0; }
+.drop-text strong { font-size: .95rem; overflow-wrap: anywhere; }
+.drop-sub { font-size: .78rem; color: #C9C7C1; }
+.drop-time { font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em; min-width: 3.4ch; text-align: right; }
+.drop-bar .drop-claim { background: #fff; color: #0A0A0A; border-color: #fff; }
+.drop-see { font-size: .85rem; text-decoration: underline; }
+.drop-err { color: #FCA5A5; font-size: .85rem; flex-basis: 100%; }
+.drop-bar.done { background: #14532D; }
+.drop-bar.done a { color: #fff; text-decoration: underline; }
+@media (max-width: 520px) { .drop-sub { display: none; } .drop-see { display: none; } }
+@media (prefers-reduced-motion: reduce) { .drop-gift { animation: none; } }
+.nb-dot.k-drop { background: #7C3AED; box-shadow: 0 0 6px rgba(124, 58, 237, .7); }
+
+/* Achievements: tiers, groups and hidden ones */
+.badge.t-bronze.on .badge-mark { color: #FDBA74; }
+.badge.t-silver.on .badge-mark { color: #E5E7EB; }
+.badge.t-gold.on .badge-mark { color: #FDE047; }
+.badge.t-platinum.on .badge-mark { color: #A5F3FC; background: linear-gradient(135deg, #312E81, #0E7490); }
+.badge.on.t-gold { border-color: #CA8A04; } .badge.on.t-platinum { border-color: #0891B2; } .badge.on.t-bronze { border-color: #B45309; } .badge.on.t-silver { border-color: var(--steel-hi); }
+.badge.secret:not(.on) { border-style: dashed; }
+.badge-tier { font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--bone-dim); }
+.badge-group { margin-top: 10px; border: 1px solid var(--steel); border-radius: 16px; background: var(--surface); padding: 10px 14px 12px; }
+.badge-group > summary { cursor: pointer; padding: 4px 0; list-style-position: inside; }
+.badge-group[open] > summary { margin-bottom: 8px; }
+.badge-group .badge { background: var(--navy); }
+.badge-foot { margin: 12px 0 0; font-size: .9rem; }
+.konami-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 90; padding: 12px 18px; border-radius: 999px; background: var(--panel); color: #FAFAF9; font-weight: 600; box-shadow: var(--shadow-lift); }

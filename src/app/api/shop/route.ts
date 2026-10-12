@@ -6,6 +6,7 @@ import { ShopError, buy, equip } from '@/lib/server/points';
 import { errorJson, json } from '@/lib/server/request';
 import { rateLimit } from '@/lib/server/rate-limit';
 import { invalidatePrefix } from '@/lib/server/redis';
+import { queueBadgeSync } from '@/lib/server/badges';
 
 export const runtime = 'nodejs';
 
@@ -30,11 +31,13 @@ export async function POST(req: Request) {
     if (b.action === 'buy') {
       const out = await buy(userId, user.email, b.item);
       await audit(userId, 'shop.buy', 'item', b.item);
+      void queueBadgeSync(userId);
       return json({ ok: true, points: out.points });
     }
     await equip(userId, user.email, b.kind, b.item);
     // Names on leaderboards render the new look on the next load.
     await invalidatePrefix('lb:').catch(() => {});
+    void queueBadgeSync(userId);
     return json({ ok: true });
   } catch (e) {
     if (e instanceof ShopError) return errorJson(e.status, e.message);

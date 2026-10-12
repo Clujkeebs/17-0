@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { PickError, savePick } from '@/lib/server/pickem';
 import { errorJson, json } from '@/lib/server/request';
 import { rateLimit } from '@/lib/server/rate-limit';
+import { queueBadgeSync } from '@/lib/server/badges';
 
 export const runtime = 'nodejs';
 const Body = z.object({ gameId: z.string().min(1).max(20), pick: z.enum(['home', 'away']) });
@@ -15,6 +16,6 @@ export async function POST(req: Request) {
   if (!(await rateLimit('shopUser', userId)).ok) return errorJson(429, 'Slow down a little.');
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return errorJson(400, 'Bad request.');
-  try { await savePick(userId, parsed.data.gameId, parsed.data.pick); return json({ ok: true }); }
+  try { await savePick(userId, parsed.data.gameId, parsed.data.pick); void queueBadgeSync(userId); return json({ ok: true }); }
   catch (e) { if (e instanceof PickError) return errorJson(e.status, e.message); console.error('[pickem]', (e as Error).message); return errorJson(503, 'Could not save. Try again.'); }
 }

@@ -49,6 +49,7 @@ export async function createChallenge(resultId: string): Promise<{ id: string }>
     throw new ChallengeError('Could not create the challenge. Try again.', 503);
   }
   await db.insert(schema.challengeEntries).values({ challengeId: id, resultId: r.id, userId: r.userId, username: r.username }).onConflictDoNothing();
+  if (r.userId) void import('./badges').then((m) => m.queueBadgeSync(r.userId!)).catch(() => {});
   return { id };
 }
 

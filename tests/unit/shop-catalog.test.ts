@@ -97,6 +97,22 @@ describe('name colors in both themes', () => {
   });
 });
 
+describe('drop items', () => {
+  it('are free, never sold or limited, and there is a small pool of them', () => {
+    const drops = SHOP_ITEMS.filter((i) => i.dropOnly);
+    expect(drops.length).toBeGreaterThanOrEqual(4);
+    expect(drops.length).toBeLessThanOrEqual(10);
+    for (const d of drops) {
+      expect(d.price, d.key).toBe(0);
+      expect(d.limit, d.key).toBeUndefined();
+      expect(d.ownerOnly || d.giftOnly, d.key).toBeFalsy();
+      expect(rarity(d), d.key).toBe('drop');
+    }
+    // A mix of kinds, so a drop is never the same sort of thing every time.
+    expect(new Set(drops.map((d) => d.kind)).size).toBeGreaterThanOrEqual(4);
+  });
+});
+
 describe('gifts', () => {
   it('every gifted item exists, is gift-only or sold, and usernames match loosely', async () => {
     const { GIFTS, giftsFor, shopItem } = await import('@/lib/shop');

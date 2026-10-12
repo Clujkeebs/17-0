@@ -115,10 +115,10 @@ test('owner account gets the owner style; nobody else can', async ({ page, reque
   // Even the owner cannot "equip" the owner keys through the API, and nobody can name themselves [OWNER].
   expect((await page.request.patch('/api/user/profile', { data: { nameFont: 'neon' } })).status()).toBe(403);
   expect((await page.request.patch('/api/user/profile', { data: { displayName: '[OWNER]' } })).status()).toBe(400);
-  // Own profile lists every badge, the unearned ones greyed out.
-  await expect(page.locator('.badges h2')).toContainText('of 17');
-  await page.locator('.badges-more summary').click();
-  await expect(page.locator('.badges .badge')).toHaveCount(17);
+  // Own profile lists every achievement: earned, still to earn, and the hidden ones as mysteries.
+  const total = Number((await page.locator('.badges h2').textContent())!.match(/of (\d+)/)![1]);
+  expect(total).toBeGreaterThanOrEqual(50);
+  await expect(page.locator('.badges .badge')).toHaveCount(total);
   // Daily Double: the owner moves it to today, the shop says so; then switches it off and the note goes away.
   const todayIdx = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })).getDay();
   expect((await page.request.post('/api/owner/manage', { data: { action: 'double', day: todayIdx } })).ok()).toBe(true);
@@ -205,6 +205,36 @@ test('owner page: only the owner sees it, notes save and log', async ({ page, re
   await page.goto('/owner');
   await page.getByRole('button', { name: 'Take it down' }).click();
   await expect(page.getByRole('status').and(page.locator(':not(.banner)')).and(page.locator(':not(.banner)')).filter({ hasText: 'Banner removed' })).toBeVisible();
+  // Difficulty balance: every mode is listed. With enough strong casual runs, a step raises that mode's win line a little; reset puts it back.
+  await page.goto('/owner');
+  await expect(page.getByRole('heading', { name: 'Difficulty balance' })).toBeVisible();
+  const overview = async () => (await (await page.request.post('/api/owner/manage', { data: { action: 'difficulty' } })).json()).difficulty as { modes: { mode: string; base: number; offset: number; meta: { runs: number; top: number; wanted: number | null } | null }[] };
+  await page.request.post('/api/owner/manage', { data: { action: 'difficulty-reset' } });
+  const before = (await overview()).modes.find((m) => m.mode === '162-0:now')!;
+  expect(before.offset).toBe(0);
+  expect((await overview()).modes.map((m) => m.mode)).toEqual(expect.arrayContaining(['17-0:6:current', '17-0:fantasy:current', '82-0:classic', '82-0:standard', '162-0:eras', '162-0:now']));
+  const strength = before.base + 24 + 5;       // far above the line that locks in a perfect season
+  await sql`insert into game_results (game_type, is_daily, result_data, score)
+            select '162-0', false, ${sql.json({ wins: 162, losses: 0, teamStrength: strength, mode: 'now', hard: false, e2eBalance: true })}, 162000 from generate_series(1, 30)`;
+  // Looking first records what the mode wants and changes nothing.
+  expect((await (await page.request.post('/api/owner/manage', { data: { action: 'difficulty-run', dry: true } })).json()).message).toContain('changed nothing');
+  const looked = (await overview()).modes.find((m) => m.mode === '162-0:now')!;
+  expect(looked.offset).toBe(0);
+  expect(looked.meta!.wanted!).toBeGreaterThan(1);
+  const run = await (await page.request.post('/api/owner/manage', { data: { action: 'difficulty-run' } })).json();
+  expect(run.message).toContain('162-0:now');
+  const after = (await overview()).modes.find((m) => m.mode === '162-0:now')!;
+  expect(after.offset).toBeGreaterThan(0.2);
+  expect(after.offset).toBeLessThanOrEqual(0.5 * 24 / 26 + 0.001);       // half a point on a 26-point span, scaled to this span of 24
+  expect(after.meta!.runs).toBeGreaterThanOrEqual(30);
+  expect(after.meta!.top).toBeGreaterThanOrEqual(strength - 0.2);
+  // Pausing keeps the number where it is; reset puts every mode back on its simulated line.
+  expect((await page.request.post('/api/owner/manage', { data: { action: 'difficulty-pause', paused: true } })).ok()).toBe(true);
+  expect((await overview()).modes.find((m) => m.mode === '162-0:now')!.offset).toBe(after.offset);
+  await page.request.post('/api/owner/manage', { data: { action: 'difficulty-pause', paused: false } });
+  await page.request.post('/api/owner/manage', { data: { action: 'difficulty-reset' } });
+  expect((await overview()).modes.every((m) => m.offset === 0)).toBe(true);
+  await sql`delete from game_results where result_data->>'e2eBalance' = 'true'`;
   expect((await request.post('/api/owner/manage', { data: { action: 'stats' } })).status()).toBe(404);
   await sql`delete from owner_notes where body like 'e2e:%'`;
   await sql`delete from user_accounts where email = ${owner}`;

@@ -6,7 +6,7 @@
  */
 
 /** Effects drawn in two layers: the back one sits behind the picture (fire, glow, wings), the front one on top. */
-export const EFFECT_BACK = new Set(['fx-flames', 'fx-ringfire', 'fx-aura-gold', 'fx-aura-blue', 'fx-aura-violet', 'fx-wings']);
+export const EFFECT_BACK = new Set(['fx-flames', 'fx-ringfire', 'fx-aura-gold', 'fx-aura-blue', 'fx-aura-violet', 'fx-wings', 'fx-lasers']);
 
 /** Avatar borders that also draw an ornate frame over the picture. */
 export const FRAMED = new Set([

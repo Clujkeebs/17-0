@@ -6,6 +6,8 @@ import { token as newToken } from './request';
 import { getRedis } from './redis';
 import { saveResult } from './grading';
 import { getMlbFloor } from './mlb-floor';
+import { getOffset } from './difficulty-offset';
+import { modeKey } from '@/lib/game/difficulty';
 import { latestMlbSeason } from './mlb-sync';
 import { createRng } from '@/lib/game/prng';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
@@ -266,9 +268,10 @@ export async function gradeMlb(ctx: { sessionId: string; token: string; userId?:
   });
   for (const x of picks) if (mlbFit(x.position, x.kind, x.slot) === 0) throw new MlbError(`${x.name} cannot play ${x.slot}.`);
   const seed = s.isDaily || p.challengeId ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
-  const result = gradeMlbRoster(seed, picks, await getMlbFloor(p.mode ?? 'eras'));
+  const mode = p.mode ?? 'eras';
+  const result = gradeMlbRoster(seed, picks, (await getMlbFloor(mode)) + (await getOffset(modeKey('162-0', { mode }))));
   const teams = await Promise.all(p.picks.map((x) => teamInEra(x.teamId, x.era)));
-  const resultData = { ...result, hard: p.hard, mode: p.mode ?? 'eras', teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: mlbLogo(x.teamId), era: x.era })) };
+  const resultData = { ...result, hard: p.hard, mode, teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: mlbLogo(x.teamId), era: x.era })) };
   const id = await saveResult(s, ctx, MLB_GAME, resultData, result.score, result.wins === 162);
   return { id, result: resultData, daily: s.isDaily };
 }

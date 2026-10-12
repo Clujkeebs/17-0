@@ -32,7 +32,8 @@ export function replacementLevels(players: Pick<FPlayer, 'pos' | 'value'>[], l: 
   })) as Record<FPos, number>;
 }
 
-export function rankPlayers(players: FPlayer[], teams = 12, superflex = false): Ranked[] {
+/** Ranks any rows that carry a position and a value, keeping their other fields. */
+export function rankPlayers<T extends Pick<FPlayer, 'pos' | 'value'>>(players: T[], teams = 12, superflex = false): (T & { vor: number; overall: number; posRank: number })[] {
   const repl = replacementLevels(players, { teams, superflex });
   const ranked = players.map((p) => ({ ...p, vor: Math.round((p.value - repl[p.pos]) * 10) / 10, overall: 0, posRank: 0 }));
   ranked.sort((a, b) => b.vor - a.vor || b.value - a.value);

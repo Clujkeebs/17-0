@@ -3,11 +3,23 @@ import { DOUBLE_DEFAULT_DAY, WEEKDAYS } from '@/lib/badges';
 import { useEffect, useState } from 'react';
 import { SHOP_ITEMS } from '@/lib/shop';
 
+type DropsInfo = { upcoming: { id: string; itemKey: string; startsAt: string; endsAt: string }[]; recent: { id: string; itemKey: string; startsAt: string; claims: number }[]; paused: boolean };
+const etTime = (iso: string) => new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(iso)) + ' ET';
+type Balance = { paused: boolean; day: string | null; modes: { mode: string; base: number | null; span: number | null; offset: number; meta: { runs: number; players: number; top: number | null; wanted: number | null; skipped?: string } | null }[] };
+const MODE_NAMES: Record<string, string> = { '6': '6-man', '12': '12-man', '16': '16-man', '53': '53-man', fantasy: 'Fantasy', classic: 'Classic', standard: 'Standard', eras: 'Eras', now: 'Right now' };
+function modeLabel(mode: string) {
+  const [game, a, b] = mode.split(':');
+  return [game, MODE_NAMES[a] ?? a, game === '17-0' && a !== 'fantasy' ? (b === 'all-time' ? 'All-time' : 'Current') : ''].filter(Boolean).join(' ');
+}
+const signed = (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(2)}`;
 type Stats = { gamesToday: number; activeNow: number; signupsToday: number; players: number; pointsHeld: number; topGames: { game: string; n: number }[]; challengesToday?: number; challengeEntriesToday?: number };
 
 /** Owner tools: live numbers, a site banner, and player tools (points, items, leaderboard moderation, replays). */
 export function OwnerTools({ games }: { games: { slug: string; name: string }[] }) {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [drops, setDrops] = useState<DropsInfo | null>(null);
+  const [dropItem, setDropItem] = useState('');
+  const [balance, setBalance] = useState<Balance | null>(null);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [user, setUser] = useState('');
@@ -23,10 +35,15 @@ export function OwnerTools({ games }: { games: { slug: string; name: string }[] 
       const r = await fetch('/api/owner/manage', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error ?? 'That did not work.');
-      if (d.stats) setStats(d.stats); else setMsg({ ok: true, text: d.message });
+      if (d.difficulty) setBalance(d.difficulty);
+      if (d.stats) setStats(d.stats);
+      else if (d.drops) setDrops(d.drops);
+      else if (d.message) { setMsg({ ok: true, text: d.message }); if (/rop/.test(label)) void call({ action: 'drops' }, 'drops-info'); }
     } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } finally { setBusy(''); }
   }
-  useEffect(() => { void call({ action: 'stats' }, 'stats'); }, []);
+  // Load the live numbers and the drop schedule once, when the page opens.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { void call({ action: 'stats' }, 'stats'); void call({ action: 'drops' }, 'drops-info'); void call({ action: 'difficulty' }, 'difficulty-info'); }, []);
   const need = !user.trim();
 
   return (
@@ -49,6 +66,55 @@ export function OwnerTools({ games }: { games: { slug: string; name: string }[] 
       {stats && stats.topGames.length > 0 && <p className="muted">Most played today: {stats.topGames.map((g) => `${g.game} (${g.n})`).join(', ')}</p>}
 
       <div aria-live="polite">{msg && <p className={msg.ok ? 'hint' : 'field-error'} role={msg.ok ? 'status' : 'alert'}>{msg.text}</p>}</div>
+
+      <h2 style={{ marginTop: 32 }}>Free drops</h2>
+      <div className="card owner-tools">
+        <p className="muted" style={{ margin: 0 }}>A random item from the drop-only set lands every two to four days, mostly after school, and can be claimed for ten minutes. Everyone gets a bell notification.</p>
+        {drops && (
+          <ul className="ot-list">
+            {drops.upcoming.map((d) => <li key={d.id}><strong>{SHOP_ITEMS.find((i) => i.key === d.itemKey)?.label ?? d.itemKey}</strong> <span className="muted">{new Date(d.startsAt).getTime() <= Date.now() ? 'live now, ends' : 'next:'} {etTime(new Date(d.startsAt).getTime() <= Date.now() ? d.endsAt : d.startsAt)}</span></li>)}
+            {!drops.upcoming.length && <li className="muted">Nothing scheduled{drops.paused ? ' (paused)' : ''}.</li>}
+            {drops.recent.map((d) => <li key={d.id} className="muted">{etTime(d.startsAt)}: {SHOP_ITEMS.find((i) => i.key === d.itemKey)?.label ?? d.itemKey}, {d.claims} claimed</li>)}
+          </ul>
+        )}
+        <div className="ot-row">
+          <label htmlFor="ot-drop" className="sr-only">Drop item</label>
+          <select id="ot-drop" value={dropItem} onChange={(e) => setDropItem(e.target.value)}>
+            <option value="">Random item</option>
+            {SHOP_ITEMS.filter((i) => i.dropOnly).map((i) => <option key={i.key} value={i.key}>{i.label}</option>)}
+          </select>
+          <button type="button" className="btn btn-sm btn-primary" disabled={!!busy} onClick={() => call({ action: 'drop-now', item: dropItem || null }, 'drop-now')}>Start a drop now</button>
+        </div>
+        <div className="ot-row">
+          <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => call({ action: 'drop-skip' }, 'drop-skip')}>Skip the next one</button>
+          <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => call({ action: 'drops-pause', paused: !drops?.paused }, 'drops-pause')}>{drops?.paused ? 'Turn drops back on' : 'Pause drops'}</button>
+        </div>
+      </div>
+
+      <h2 style={{ marginTop: 32 }}>Difficulty balance</h2>
+      <div className="card owner-tools">
+        <p className="muted" style={{ margin: 0 }}>Once a day, each mode&apos;s win line moves a little (half a point at most) so the best tenth of real Casual runs finish at 94 percent of the season everywhere: 16-1 in 17-0, 77-5 in 82-0, 152-10 in 162-0. Modes with fewer than 20 runs from 5 players stay on the simulated line.{balance?.paused ? ' Paused.' : ''}</p>
+        {balance && (
+          <ul className="ot-list">
+            {balance.modes.filter((m) => m.meta && (m.meta.runs > 0 || m.offset !== 0)).map((m) => (
+              <li key={m.mode}>
+                <strong>{modeLabel(m.mode)}</strong>{' '}
+                <span className="muted num">
+                  line {m.base ?? '?'}, offset {signed(m.offset)}
+                  {m.meta?.skipped ? `, waiting for runs (${m.meta.runs} from ${m.meta.players} players)` : `, ${m.meta?.runs} runs from ${m.meta?.players} players, top tenth ${m.meta?.top ?? '?'}, wants ${m.meta?.wanted != null ? signed(m.meta.wanted) : '?'}`}
+                </span>
+              </li>
+            ))}
+            {!balance.modes.some((m) => m.meta && (m.meta.runs > 0 || m.offset !== 0)) && <li className="muted">No findings yet. The first step runs in the small hours Eastern.</li>}
+          </ul>
+        )}
+        <div className="ot-row">
+          <button type="button" className="btn btn-sm btn-primary" disabled={!!busy} onClick={() => call({ action: 'difficulty-run' }, 'difficulty-run')}>Run the step now</button>
+          <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => call({ action: 'difficulty-run', dry: true }, 'difficulty-look')}>Look first (changes nothing)</button>
+          <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => call({ action: 'difficulty-pause', paused: !balance?.paused }, 'difficulty-pause')}>{balance?.paused ? 'Turn it back on' : 'Pause it'}</button>
+          <button type="button" className="btn btn-sm" disabled={!!busy} onClick={() => { if (window.confirm('Put every mode back on its simulated win line?')) void call({ action: 'difficulty-reset' }, 'difficulty-reset'); }}>Reset to simulated lines</button>
+        </div>
+      </div>
 
       <h2 style={{ marginTop: 32 }}>Site banner</h2>
       <div className="card">

@@ -10,6 +10,8 @@ import { positionGroup, type Attributes, type PositionGroup } from '@/lib/game/a
 import { FORMATS, gradeRoster, isFantasy, slotAccepts, type Pick } from '@/lib/game/seventeen';
 import { fantasyValue } from '@/lib/game/fantasy';
 import { get53Floor, getAllTimeFloor, getFantasyFloor } from './calibrate';
+import { getOffset } from './difficulty-offset';
+import { modeKey } from '@/lib/game/difficulty';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { BUILD_ELIGIBLE, TRAITS, bestPossible, gradeTraitBuild, traitValue } from '@/lib/game/build';
 
@@ -124,7 +126,9 @@ export async function gradeSeventeen(ctx: Ctx) {
   const seed = s.isDaily || payload.challengeId ? `${s.seed}:${[...playerIds, ...coachIds, ...picks.filter((p) => p.id.startsWith("dst:")).map((p) => p.id)].sort().join(",")}` : s.id;
   // The 53 drafts from most of the league, so its schedule draws from every team.
   const opponents = teamRows.filter((t) => repeat || !usedTeams.has(t.id)).map((t) => t.abbr);
-  const floor = isFantasy(format) ? await getFantasyFloor() : format === '53' ? await get53Floor(pool) : pool === 'all-time' ? await getAllTimeFloor(format) : undefined;
+  // The simulated line for this mode, plus the balance nudge the daily step has found for it (zero until it has).
+  const baseFloor = isFantasy(format) ? await getFantasyFloor() : format === '53' ? await get53Floor(pool) : pool === 'all-time' ? await getAllTimeFloor(format) : FORMATS[format].winFloor;
+  const floor = baseFloor + await getOffset(modeKey('17-0', { format, pool }));
   const result = gradeRoster(seed, full, formulas, weights, opponents, format, floor);
   const resultData = { ...result, hard: !!payload.hard, format, pool, picks: full.map(({ slot, name, teamId, group, overall, fantasy }) => ({ slot, name, teamId, group, overall, ...(fantasy !== undefined ? { fantasy } : {}) })) };
   const id = await saveResult(s, ctx, '17-0', resultData, result.score, result.wins === 17);

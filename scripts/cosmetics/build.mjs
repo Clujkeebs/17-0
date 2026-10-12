@@ -33,7 +33,8 @@ export const BANNERS3 = {
   'banner-rain': 'rain', 'banner-gilded': 'gilded', 'banner-sakura': 'sakura', 'banner-matrix': 'matrix', 'banner-pixelcity': 'pixelcity', 'banner-summit': 'summit',
   'banner-scoreboard': 'scoreboard', 'banner-hologram': 'hologram',
 };
-if (!only || only === 'banners') { await emit('banners', './banners1.mjs', BANNERS); await emit('banners', './banners2.mjs', BANNERS2); await emit('banners', './banners3.mjs', BANNERS3); }
+export const BANNERS4 = { 'banner-eclipse': 'eclipse' };
+if (!only || only === 'banners') { await emit('banners', './banners1.mjs', BANNERS); await emit('banners', './banners2.mjs', BANNERS2); await emit('banners', './banners3.mjs', BANNERS3); await emit('banners', './drops.mjs', BANNERS4); }
 
 export const FX1 = { 'fx-sparks': 'sparks', 'fx-football': 'footballFx', 'fx-basketball': 'basketballFx', 'fx-baseball': 'baseballFx', 'fx-soccer': 'soccerFx', 'fx-hockey': 'hockeyFx', 'fx-comet': 'cometFx', 'fx-coins': 'coinsFx', 'fx-owner': 'crownFx', 'fx-bee': 'beeFx' };
 if (!only || only === 'fx') { await emit('fx', './fx1.mjs', FX1); }
@@ -43,6 +44,8 @@ if (!only || only === 'fx') { await emit('fx', './fx2.mjs', FX2); }
 
 export const FX3 = { 'fx-halo': 'halo', 'fx-lightning': 'lightning', 'fx-flames': 'flamesFx', 'fx-ringfire': 'ringfireFx', 'fx-gyro': 'gyro', 'fx-shockwave': 'shockwave', 'fx-electric': 'electric', 'fx-aura-gold': 'auraGold', 'fx-aura-blue': 'auraBlue', 'fx-aura-violet': 'auraViolet', 'fx-glitch': 'glitch', 'fx-wings': 'wingsFx' };
 if (!only || only === 'fx') { await emit('fx', './fx3.mjs', FX3); }
+export const FX4 = { 'fx-meteors': 'meteors', 'fx-lasers': 'lasers' };
+if (!only || only === 'fx') { await emit('fx', './drops.mjs', FX4); }
 
 export const FRAMES = { 'ring-laurel': 'laurelGold', 'ring-laurel-silver': 'laurelSilver', 'ring-gems': 'gems', 'ring-spikes': 'spikes', 'ring-rays': 'rays', 'ring-pixel': 'pixel', 'ring-reel': 'reel', 'ring-circuit': 'circuit', 'ring-thorns': 'thorns', 'ring-chain': 'chain', 'ring-frost': 'frost', 'ring-allstar': 'allstar', 'ring-cup': 'cup', 'ring-crown': 'crownring' };
 if (!only || only === 'frames') { await emit('frames', './frames.mjs', FRAMES); }

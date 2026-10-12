@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorag
 
 test('fantasy hub links to every tool and rankings filter by position', async ({ page }) => {
   await page.goto('/fantasy');
-  for (const name of ['Rankings', 'Waiver wire', 'Trade calculator', 'Draft cheat sheet', 'Draft order randomizer', 'Tier list maker']) await expect(page.getByRole('link', { name: new RegExp(name) })).toBeVisible();
+  for (const name of ['Mock draft', 'Start or sit', 'Rankings', 'Waiver wire', 'Trade calculator', 'Draft cheat sheet', 'Draft order randomizer', 'Tier list maker']) await expect(page.getByRole('link', { name: new RegExp(name) })).toBeVisible();
   await page.goto('/fantasy/rankings?pos=TE');
   await expect(page.locator('h1')).toHaveText('TE rankings');
   await expect(page.locator('.f-row').first()).toBeVisible();
@@ -121,4 +121,86 @@ test("Rank 'Em: Fantasy orders five players and shows the true order", async ({ 
   await expect(page.locator('.gc-item')).toHaveCount(5, { timeout: 20_000 });
   await page.getByRole('button', { name: 'Lock it in' }).click();
   await expect(page.getByText(/pairs in order/)).toBeVisible();
+});
+
+test('rankings: search, sort, tiers and league size', async ({ page }) => {
+  await page.goto('/fantasy/rankings', { waitUntil: 'networkidle' });
+  await expect(page.locator('h1')).toHaveText('Overall rankings');
+  await expect(page.locator('.f-row').first()).toBeVisible();
+  await expect(page.locator('.fr-tier').first()).toContainText('Tier 1');
+  // Search narrows the list to the name typed.
+  const name = (await page.locator('.f-row .f-who strong').first().textContent())!;
+  await page.getByLabel('Search players').fill(name.split(' ').pop()!);
+  await expect(page.locator('.f-row').first()).toContainText(name);
+  await page.getByLabel('Search players').fill('');
+  // A position tab, with the address bar following it.
+  await page.getByRole('button', { name: 'RB', exact: true }).click();
+  await expect(page.locator('h1')).toHaveText('RB rankings');
+  await expect(page).toHaveURL(/pos=RB/);
+  for (const pos of await page.locator('.f-row .f-who .muted').allTextContents()) expect(pos.startsWith('RB')).toBe(true);
+  // Sorting by points a game puts the highest value first; league size and superflex are accepted.
+  await page.getByLabel('Sort').selectOption('value');
+  const nums = (await page.locator('.f-row .f-nums strong').allTextContents()).map(Number);
+  expect([...nums].sort((x, y) => y - x)).toEqual(nums);
+  await page.getByRole('radio', { name: '14 teams' }).click();
+  await page.getByLabel('Superflex').check();
+  await expect(page.locator('.md-pos-tabs')).toBeVisible();
+  // The hub's "heating up" link opens the list sorted that way.
+  await page.goto('/fantasy/rankings?sort=hot', { waitUntil: 'networkidle' });
+  await expect(page.getByLabel('Sort')).toHaveValue('hot');
+});
+
+test('mock draft: set up, draft, the bots pick, auto-draft the rest, get a grade', async ({ page }) => {
+  await page.goto('/fantasy/mock-draft', { waitUntil: 'networkidle' });
+  await page.evaluate(() => localStorage.removeItem('gl-mock-draft-v1'));
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.getByRole('radio', { name: '8 teams' }).click();
+  await page.getByLabel('Your pick').selectOption('1');
+  await page.getByRole('button', { name: 'Start the draft' }).click();
+  await expect(page.locator('.md-clock-main')).toHaveText("You're on the clock");
+  await expect(page.locator('.md-rec')).toContainText('Suggested:');
+  // Draft the top player on the board.
+  const top = page.locator('.md-row').first();
+  const name = (await top.locator('strong').first().textContent())!;
+  await top.getByRole('button', { name: /^Draft / }).click();
+  await expect(page.locator('.md-team li.filled').first()).toContainText(name);
+  // The computer teams pick on their own and hand it back.
+  await expect(page.locator('.md-clock-main')).toContainText('is picking');
+  await expect(page.locator('.md-clock-main')).toHaveText("You're on the clock", { timeout: 25_000 });
+  await expect(page.locator('.md-feed li').first()).toBeAttached();
+  // The full board shows every pick so far, and a refresh keeps the draft.
+  await page.getByRole('button', { name: 'Full board' }).click();
+  await expect(page.locator('.md-board thead th')).toHaveCount(9);
+  await expect(page.locator('.md-board td.md-cell strong').first()).toBeVisible();
+  await page.reload({ waitUntil: 'networkidle' });
+  await expect(page.locator('.md-clock-main')).toHaveText("You're on the clock");
+  await page.getByRole('button', { name: 'Auto-draft the rest' }).click();
+  await expect(page.locator('.md-result')).toBeVisible();
+  await expect(page.locator('.md-grade')).toHaveText(/^[ABCDF]\+?$/);
+  await expect(page.locator('.md-standings li')).toHaveCount(8);
+  await expect(page.locator('.md-lineup li')).toHaveCount(7);
+  // Draft again starts a fresh one.
+  await page.getByRole('button', { name: 'Draft again' }).click();
+  await expect(page.locator('.md-result')).toHaveCount(0);
+  await expect(page.locator('.md-clock')).toBeVisible();
+});
+
+test('start or sit: pick players, get a call, the link keeps them', async ({ page }) => {
+  await page.goto('/fantasy/start-sit', { waitUntil: 'networkidle' });
+  await expect(page.getByText('Start by searching for a player.')).toBeVisible();
+  const pick = async (q: string, nth: number) => { await page.getByLabel(/^Add (a|another) player$/).fill(q); await page.locator('.ps-list button').nth(nth).click(); };
+  await pick('a', 0);
+  await expect(page.getByText('Add one more player to get a call.')).toBeVisible();
+  await pick('e', 0);
+  await expect(page.locator('.ss-verdict')).toBeVisible();
+  await expect(page.locator('.ss-pill')).toHaveText(/Clear call|Lean|Toss-up/);
+  await expect(page.locator('.ss-card')).toHaveCount(2);
+  await expect(page).toHaveURL(/p=.+,.+/);
+  const url = page.url();
+  await page.goto(url, { waitUntil: 'networkidle' });
+  await expect(page.locator('.ss-card')).toHaveCount(2);
+  // Remove one and the call goes away; four is the most.
+  await page.getByRole('button', { name: /^Remove / }).first().click();
+  await expect(page.locator('.ss-card')).toHaveCount(1);
+  await expect(page.locator('.ss-pill')).toHaveCount(0);
 });

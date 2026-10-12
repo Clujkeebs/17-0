@@ -176,6 +176,20 @@
       "when": 1791784590864,
       "tag": "0024_college",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791811437560,
+      "tag": "0025_drops",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791814486150,
+      "tag": "0026_badges",
+      "breakpoints": true
     }
   ]
 }

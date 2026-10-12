@@ -27,3 +27,81 @@ describe('difficulty stats', () => {
     expect(describeStats(statsFromWins([17, 10], 17))).toMatch(/^n=2 perfect 50\.0% median /);
   });
 });
+
+import { MIN_PLAYERS, MIN_RUNS, OFFSET_LIMIT, PER_PLAYER, STEP_LIMIT, TARGET_TOP_TENTH, lastRunsPerPlayer, modeKey, nextOffset, quantile, trust, wantedOffset } from '@/lib/game/difficulty';
+
+describe('daily balance step', () => {
+  it('quantile interpolates between neighbours and ignores input order', () => {
+    expect(quantile([3, 1, 2], 0.5)).toBe(2);
+    expect(quantile([0, 10], 0.9)).toBeCloseTo(9, 10);
+    expect(quantile([1, 2, 3, 4, 5], 1)).toBe(5);
+    expect(quantile([1, 2, 3, 4, 5], 0)).toBe(1);
+    expect(Number.isNaN(quantile([], 0.5))).toBe(true);
+  });
+
+  it('a mode whose best tenth already finishes at the target stays put', () => {
+    // Strengths 60..79 on a span of 26: the 90th percentile is 77.1, so a line of 77.1 - 0.94 * 26 is exactly right.
+    const s = Array.from({ length: 20 }, (_, i) => 60 + i);
+    const base = quantile(s, 0.9) - TARGET_TOP_TENTH * 26;
+    expect(wantedOffset(s, base, 26)).toBeCloseTo(0, 10);
+  });
+  it('raises the line when the top tenth is above the target and lowers it when below', () => {
+    const s = Array.from({ length: 100 }, (_, i) => 60 + i * 0.2);          // 60..79.8
+    const right = quantile(s, 0.9) - TARGET_TOP_TENTH * 26;
+    expect(wantedOffset(s, right - 2, 26)).toBeGreaterThan(0);              // line too low, runs too easy: harder
+    expect(wantedOffset(s, right + 2, 26)).toBeLessThan(0);                 // line too high: easier
+  });
+  it('trusts few runs less and never asks for more than 15 percent of the span', () => {
+    const many = Array.from({ length: 400 }, (_, i) => 60 + (i % 20));
+    const few = many.slice(0, 20);
+    expect(Math.abs(wantedOffset(few, 50, 24))).toBeLessThan(Math.abs(wantedOffset(many, 50, 24)));
+    expect(wantedOffset(many, 0, 24)).toBeCloseTo(OFFSET_LIMIT * 24, 10);
+    expect(wantedOffset(many, 200, 24)).toBeCloseTo(-OFFSET_LIMIT * 24, 10);
+    expect(trust(20)).toBeCloseTo(1 / 3, 5); expect(trust(360)).toBeCloseTo(0.9, 5);
+  });
+  it('moves half way a day, never more than half a point on a 26-point span, and ignores slivers', () => {
+    expect(nextOffset(0, 1, 26)).toBeCloseTo(0.5, 10);
+    expect(nextOffset(0, 10, 26)).toBeCloseTo(STEP_LIMIT, 10);
+    expect(nextOffset(0, 10, 40)).toBeCloseTo((STEP_LIMIT * 40) / 26, 10);
+    expect(nextOffset(2, -10, 26)).toBeCloseTo(1.5, 10);
+    expect(nextOffset(1, 1.05, 26)).toBe(1);
+  });
+  it('settles on a mode that responds to it: top-tenth strength falls short of the target, then the line stops moving', () => {
+    // Players are fixed (strengths 60..80); the line starts 3 points too low. Each day the offset closes half the gap.
+    const s = Array.from({ length: 200 }, (_, i) => 60 + i * 0.1);
+    const ideal = quantile(s, 0.9) - TARGET_TOP_TENTH * 26;
+    const base = ideal - 3;
+    let o = 0;
+    for (let d = 0; d < 30; d++) o = nextOffset(o, wantedOffset(s, base, 26), 26);
+    const want = wantedOffset(s, base, 26);
+    expect(want).toBeGreaterThan(2);                 // 3 points, shrunk a little for 200 runs
+    expect(Math.abs(o - want)).toBeLessThan(0.11);
+    const after = o;
+    for (let d = 0; d < 5; d++) o = nextOffset(o, wantedOffset(s, base, 26), 26);
+    expect(Math.abs(o - after)).toBeLessThan(0.11);
+  });
+  it('a base line that moves under it does not cause a lurch: the wanted offset follows the base', () => {
+    const s = Array.from({ length: 200 }, (_, i) => 60 + i * 0.1);
+    const ideal = quantile(s, 0.9) - TARGET_TOP_TENTH * 26;
+    // The tuner raises the base by one point: the offset wanted falls by about the same amount.
+    expect(wantedOffset(s, ideal - 3, 26) - wantedOffset(s, ideal - 2, 26)).toBeGreaterThan(0.8);
+  });
+  it('keeps each player latest few runs only', () => {
+    // Newest first: a a b a a a b c. Player a keeps the three newest (positions 0, 1, 3).
+    const runs = [...'aabaaabc'].map((who, i) => ({ who, i }));
+    expect(lastRunsPerPlayer(runs, 3).map((r) => r.i)).toEqual([0, 1, 2, 3, 6, 7]);
+    expect(lastRunsPerPlayer(runs).filter((r) => r.who === 'a')).toHaveLength(PER_PLAYER);
+    expect(lastRunsPerPlayer(runs, 1).map((r) => r.i)).toEqual([0, 2, 7]);
+  });
+  it('keys modes by game, format, pool, edition and era, and treats old results as 6-man current', () => {
+    expect(modeKey('17-0', { format: '12', pool: 'all-time' })).toBe('17-0:12:all-time');
+    expect(modeKey('17-0', { format: 'fantasy', pool: '' })).toBe('17-0:fantasy:current');
+    expect(modeKey('17-0', {})).toBe('17-0:6:current');
+    expect(modeKey('82-0', { edition: 'standard' })).toBe('82-0:standard');
+    expect(modeKey('82-0', {})).toBe('82-0:classic');
+    expect(modeKey('162-0', { mode: 'now' })).toBe('162-0:now');
+    expect(modeKey('162-0', {})).toBe('162-0:eras');
+    expect(modeKey('higher-lower', {})).toBeNull();
+    expect(MIN_RUNS).toBeGreaterThanOrEqual(15); expect(MIN_PLAYERS).toBeGreaterThanOrEqual(3);
+  });
+});

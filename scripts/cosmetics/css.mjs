@@ -66,6 +66,7 @@ gtext('holo', grad('105deg', ['#0E7490', '#6D28D9 25%', '#BE185D 45%', '#B45309 
 gtext('galaxy', `radial-gradient(circle at 20% 30%, #C4B5FD 0 6%, transparent 7%), radial-gradient(circle at 70% 60%, #fff 0 3%, transparent 4%), ${grad('90deg', ['#1E1B4B', '#4C1D95', '#1E3A8A', '#312E81', '#1E1B4B'])}`, `radial-gradient(circle at 20% 30%, #fff 0 6%, transparent 7%), radial-gradient(circle at 70% 60%, #fff 0 3%, transparent 4%), ${grad('90deg', ['#A5B4FC', '#C4B5FD', '#93C5FD', '#E9D5FF', '#A5B4FC'])}`, { size: '100% 100%, 100% 100%, 300% 100%', anim: 'slide 10s linear infinite' });
 gtext('vapor', grad('90deg', ['#DB2777', '#7C3AED', '#0891B2', '#DB2777']), grad('90deg', ['#FF8AD8', '#B69CFF', '#67E8F9', '#FF8AD8']), { size: '300% 100%', anim: 'slide 6s linear infinite' });
 gtext('sunrise', grad('90deg', ['#B45309', '#DB2777', '#4F46E5', '#B45309']), grad('90deg', ['#FCD34D', '#F9A8D4', '#A5B4FC', '#FCD34D']), { size: '300% 100%', anim: 'slide 9s linear infinite' });
+gtext('nebula', grad('110deg', ['#7C3AED', '#DB2777 35%', '#0891B2 65%', '#7C3AED']), grad('110deg', ['#A78BFA', '#F472B6 35%', '#22D3EE 65%', '#A78BFA']), { size: '300% 100%', anim: 'slide 7s linear infinite' });
 gtext('prism', grad('100deg', ['#DC2626', '#EA580C', '#B45309', '#15803D', '#0E7490', '#2563EB', '#9333EA', '#DC2626']), grad('100deg', ['#FF7B7B', '#FDBA74', '#FDE047', '#86EFAC', '#67E8F9', '#93C5FD', '#D8B4FE', '#FF7B7B']), { size: '300% 100%', anim: 'slide 5s linear infinite' });
 gtext('royal', grad('100deg', ['#4C1D95', '#7C3AED 35%', '#A67C00 50%', '#7C3AED 65%', '#4C1D95']), grad('100deg', ['#DDD6FE', '#C4B5FD 35%', '#FDE68A 50%', '#C4B5FD 65%', '#DDD6FE']), { size: '300% 100%', anim: 'slide 6s linear infinite' });
 // metals
@@ -141,7 +142,8 @@ add(`.nm-title { font-size: .62em; font-weight: 700; letter-spacing: .08em; text
 .nm-title.t-limited { color: #FDE68A; border-color: #B7860B; background: linear-gradient(180deg, #1C1917, #0A0A0A); box-shadow: 0 0 0 1px rgba(183,134,11,.5), 0 0 10px rgba(232,197,71,.25); }
 .nm-title.t-exclusive { color: #fff; border-color: #7F1D1D; background: linear-gradient(120deg, #7F1D1D, #B91C1C 55%, #7F1D1D); box-shadow: 0 0 0 1px rgba(232,197,71,.5), 0 0 10px rgba(185,28,28,.4); }
 .nm-title.t-gift { color: #1C1917; border-color: #CA8A04; background: linear-gradient(120deg, #FACC15, #FDE047 50%, #EAB308); }
-.nm-title.t-legendary::after, .nm-title.t-limited::after, .nm-title.t-exclusive::after, .nm-title.t-gift::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%); background-size: 250% 100%; background-position: 120% 0; animation: sweep 5s ease-in-out infinite; pointer-events: none; mix-blend-mode: overlay; }
+.nm-title.t-drop { color: #fff; border-color: #A78BFA; background: linear-gradient(120deg, #312E81, #6D28D9 55%, #312E81); box-shadow: 0 0 0 1px rgba(167,139,250,.5), 0 0 10px rgba(124,58,237,.45); }
+.nm-title.t-legendary::after, .nm-title.t-limited::after, .nm-title.t-exclusive::after, .nm-title.t-gift::after, .nm-title.t-drop::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%); background-size: 250% 100%; background-position: 120% 0; animation: sweep 5s ease-in-out infinite; pointer-events: none; mix-blend-mode: overlay; }
 ${DARK(`.nm-title.t-rare { color: #BFDBFE; border-color: #3B6FD4; background: linear-gradient(180deg, #1B2A4A, #14203A); }
 .nm-title.t-epic { color: #DDD6FE; border-color: #7C5CE0; background: linear-gradient(180deg, #2A2150, #1F1840); }
 .nm-title.t-legendary { color: #FDE68A; border-color: #B7860B; background: linear-gradient(180deg, #3B2D0A, #2A1F05); }`)}
@@ -183,6 +185,7 @@ ringBg('owner-crown', metalConic(['#8A6400', '#FDE68A', '#B91C1C', '#FDE68A', '#
 ringBg('lava', metalConic(['#450A0A', '#B91C1C', '#F97316', '#FACC15', '#EA580C', '#7F1D1D', '#450A0A']), 'padding: 4.5px; animation: ring-spin 4s linear infinite, ring-heat 1.1s ease-in-out infinite alternate;');
 ringBg('electric', metalConic(['#1E3A8A', '#60A5FA', '#fff', '#3B82F6', '#1E3A8A', '#93C5FD', '#1E3A8A']), 'animation: ring-spin .9s linear infinite, ring-buzz 2.4s steps(1) infinite;');
 ringBg('camo', 'radial-gradient(circle at 20% 30%, #4D5D2B 0 18%, transparent 19%), radial-gradient(circle at 70% 20%, #2F3A1C 0 16%, transparent 17%), radial-gradient(circle at 60% 75%, #6B5B3A 0 20%, transparent 21%), radial-gradient(circle at 25% 80%, #2F3A1C 0 14%, transparent 15%), #556B2F', 'padding: 4.5px;');
+ringBg('orbit', 'conic-gradient(from var(--ring-a), #1E1B4B 0%, #312E81 55%, #6D28D9 80%, #C4B5FD 94%, #fff 100%)', 'padding: 4.5px; animation: ring-spin 2.6s linear infinite; box-shadow: 0 0 10px rgba(167,139,250,.6);');
 ringBg('neon', '#EC4899', 'animation: ring-neon 3.2s steps(1) infinite;');
 ringBg('hive', 'conic-gradient(from var(--ring-a), #FACC15 0 8%, #1C1917 0 12.5%, #EAB308 0 20.5%, #1C1917 0 25%, #FACC15 0 33%, #1C1917 0 37.5%, #EAB308 0 45.5%, #1C1917 0 50%, #FACC15 0 58%, #1C1917 0 62.5%, #EAB308 0 70.5%, #1C1917 0 75%, #FACC15 0 83%, #1C1917 0 87.5%, #EAB308 0 95.5%, #1C1917 0)', 'padding: 4.5px; animation: ring-spin 6s linear infinite; box-shadow: 0 0 10px rgba(234,179,8,.5);');
 // framed rings: a thin bevelled band; the SVG frame does the rest
@@ -191,12 +194,12 @@ for (const [k, [a, b]] of Object.entries(framed)) add(`.ring-${k} { background: 
 add(`@keyframes ring-heat { from { box-shadow: 0 0 6px rgba(234,88,12,.45); } to { box-shadow: 0 0 16px rgba(234,88,12,.8); } }
 @keyframes ring-buzz { 0%, 100% { box-shadow: 0 0 6px rgba(59,130,246,.5); } 47% { box-shadow: 0 0 16px rgba(147,197,253,.95); } 50% { box-shadow: 0 0 4px rgba(59,130,246,.4); } }
 @keyframes ring-neon { 0%, 100% { box-shadow: 0 0 8px 2px rgba(236,72,153,.75), 0 0 20px 4px rgba(236,72,153,.35); opacity: 1; } 62% { box-shadow: none; opacity: .55; } 64% { box-shadow: 0 0 8px 2px rgba(236,72,153,.75), 0 0 20px 4px rgba(236,72,153,.35); opacity: 1; } 66% { box-shadow: none; opacity: .6; } }`);
-REDUCE_SELECTORS.push('.ring-gold', '.ring-gradient', '.ring-diamond', '.ring-owner', '.ring-ice', '.ring-flame', '.ring-holo', '.ring-owner-crown', '.ring-lava', '.ring-electric', '.ring-neon', '.ring-hive');
+REDUCE_SELECTORS.push('.ring-gold', '.ring-gradient', '.ring-diamond', '.ring-owner', '.ring-ice', '.ring-flame', '.ring-holo', '.ring-owner-crown', '.ring-lava', '.ring-electric', '.ring-neon', '.ring-hive', '.ring-orbit');
 
 // ------------------------------------------------------------------ banners and effect art
 export const BANNER_KEYS = [
   'field', 'court', 'diamond', 'night', 'sunset', 'launch', 'founder', 'endzone', 'snow', 'playbook', 'jumbotron', 'retro', 'marble', 'aurora', 'confetti', 'vault',
-  'inferno', 'stadium', 'ocean', 'city', 'hive', 'tunnel', 'pitch', 'rink', 'ballpark', 'trophy', 'draft', 'synthwave', 'comic', 'circuit', 'galaxy', 'rain', 'gilded', 'sakura', 'matrix', 'pixelcity', 'summit', 'scoreboard', 'hologram',
+  'inferno', 'stadium', 'ocean', 'city', 'hive', 'tunnel', 'pitch', 'rink', 'ballpark', 'trophy', 'draft', 'synthwave', 'comic', 'circuit', 'galaxy', 'rain', 'gilded', 'sakura', 'matrix', 'pixelcity', 'summit', 'scoreboard', 'hologram', 'eclipse',
 ];
 add(`.banner { position: relative; border-radius: 18px; padding: 18px; margin: 8px 0 0; color: #fff; background-size: cover; background-position: center; background-repeat: no-repeat; isolation: isolate; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 10px 28px -14px rgba(0,0,0,.5); }
 .banner::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.1), transparent 30%, rgba(0,0,0,.18)); }

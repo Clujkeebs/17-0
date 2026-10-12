@@ -68,6 +68,12 @@ const GAME_NAME: Record<string, string> = { '17-0': '17-0', '82-0': '82-0', '162
  * day); a perfect result pays a bonus on top, biggest for a perfect season in 17-0, 82-0 or 162-0.
  */
 export async function earnForResult(userId: string, gameType: string, isDaily: boolean, perfect: boolean, resultId: string) {
+  try { await earn(userId, gameType, isDaily, perfect, resultId); }
+  // Whatever the game paid, achievements are looked at once it is done (loaded late: badges.ts imports this file).
+  finally { void import('./badges').then((m) => m.queueBadgeSync(userId)).catch(() => {}); }
+}
+
+async function earn(userId: string, gameType: string, isDaily: boolean, perfect: boolean, resultId: string) {
   const today = dailyDateET();
   const season = SEASON_GAMES.has(gameType);
   const label = GAME_NAME[gameType] ?? GAMES.find((g) => g.slug === gameType)?.name ?? 'that game';
@@ -166,7 +172,7 @@ export async function stockSold(): Promise<Record<string, number>> {
 /** Buys an item: checks the price and, for limited items, the stock under a row lock, all in one transaction. */
 export async function buy(userId: string, email: string | null | undefined, itemKey: string) {
   const item = shopItem(itemKey);
-  if (!item || item.ownerOnly || item.giftOnly) throw new ShopError('That item is not for sale.', 404);
+  if (!item || item.ownerOnly || item.giftOnly || item.dropOnly) throw new ShopError('That item is not for sale.', 404);
   if (isOwnerEmail(email)) throw new ShopError('You already own everything in the shop.', 409);
   return db.transaction(async (tx) => {
     const [have] = await tx.select().from(schema.userItems).where(and(eq(schema.userItems.userId, userId), eq(schema.userItems.itemKey, itemKey))).limit(1);

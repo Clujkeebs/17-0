@@ -25,7 +25,8 @@ test('shop: welcome points, buy a title, equip it, it shows on the profile', asy
   const rookie = page.locator('.shop-card', { hasText: 'Rookie' });
   await rookie.getByRole('button', { name: '50 pts' }).click();
   await expect(page.getByRole('status').and(page.locator(':not(.banner)')).and(page.locator(':not(.banner)'))).toContainText('Rookie is yours');
-  await expect(page.getByTestId('balance')).toHaveText('0 pts');
+  // Spent to zero; the first purchase also unlocks Window Shopper, whose 10 points land a moment later.
+  await expect(page.getByTestId('balance')).toHaveText(/^(0|10) pts$/);
   // Too expensive now.
   await expect(page.locator('.shop-card', { hasText: 'Grinder' }).getByRole('button', { name: '200 pts' })).toBeDisabled();
   await rookie.getByRole('button', { name: 'Equip' }).click();

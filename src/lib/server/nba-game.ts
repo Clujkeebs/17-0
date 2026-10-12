@@ -6,6 +6,8 @@ import { token as newToken } from './request';
 import { getRedis } from './redis';
 import { saveResult } from './grading';
 import { getNbaFloor } from './nba-floor';
+import { getOffset } from './difficulty-offset';
+import { modeKey } from '@/lib/game/difficulty';
 import { createRng } from '@/lib/game/prng';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
 import {
@@ -293,9 +295,10 @@ export async function gradeNba(ctx: { sessionId: string; token: string; userId?:
     return { slot: x.slot, name: r.p.fullName, position: r.p.position, teamId: x.teamId, season: x.season, value: r.ps.value, apg: r.ps.apg };
   });
   const seed = s.isDaily || p.challengeId ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
-  const result = gradeNbaRoster(seed, picks, await getNbaFloor(standard ? 'standard' : 'classic'));
+  const edition = standard ? 'standard' : 'classic';
+  const result = gradeNbaRoster(seed, picks, (await getNbaFloor(edition)) + (await getOffset(modeKey('82-0', { edition }))));
   const teams = await Promise.all(p.picks.map((x) => teamInEra(x.teamId, x.era)));
-  const resultData = { ...result, hard: p.hard, edition: standard ? 'standard' : 'classic', teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: teams[i]?.logoUrl ?? null, era: x.era })) };
+  const resultData = { ...result, hard: p.hard, edition, teams: p.picks.map((x, i) => ({ slot: x.slot, team: teams[i] ? `${teams[i]!.location} ${teams[i]!.name}`.trim() : '', abbr: teams[i]?.abbreviation ?? '', logoUrl: teams[i]?.logoUrl ?? null, era: x.era })) };
   const id = await saveResult(s, ctx, NBA_GAME, resultData, result.score, result.wins === 82);
   return { id, result: resultData, daily: s.isDaily };
 }

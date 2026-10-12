@@ -17,6 +17,8 @@ export interface ShopItem {
   blurb?: string;
   /** Gift only: never sold. Given to the players listed in GIFTS (or by the owner from /owner). */
   giftOnly?: boolean;
+  /** Drop only: never sold. The only way to get it is to claim it from a free drop (src/lib/drops.ts). */
+  dropOnly?: boolean;
 }
 
 export const KIND_LABELS: Record<ItemKind, string> = {
@@ -308,6 +310,14 @@ export const SHOP_ITEMS: ShopItem[] = [
   { key: 'fx-fireworks', kind: 'effect', label: 'Fireworks', price: 1800, blurb: 'Bursts going off around your picture.' },
   { key: 'fx-aura-gold', kind: 'effect', label: 'Gold aura', price: 2000, blurb: 'A golden flame of light behind you.' },
   { key: 'fx-wings', kind: 'effect', label: 'Wings', price: 2600, limit: 25, blurb: 'White wings spread behind you. 25 made.' },
+
+  // Drop exclusives: never sold. They turn up in free drops, ten minutes at a time, and nowhere else.
+  { key: 'nebula', kind: 'color', label: 'Nebula', price: 0, dropOnly: true, blurb: 'Drop exclusive. Pink, violet and teal, drifting.' },
+  { key: 'ring-orbit', kind: 'border', label: 'Orbit', price: 0, dropOnly: true, blurb: 'Drop exclusive. A bright comet circling your picture.' },
+  { key: 'banner-eclipse', kind: 'banner', label: 'Total eclipse', price: 0, dropOnly: true, blurb: 'Drop exclusive. The moon covers the sun.' },
+  { key: 'drop-hunter', kind: 'title', label: 'Drop hunter', price: 0, dropOnly: true, blurb: 'Drop exclusive.' },
+  { key: 'fx-meteors', kind: 'effect', label: 'Meteor shower', price: 0, dropOnly: true, blurb: 'Drop exclusive. Streaks of fire fall past you.' },
+  { key: 'fx-lasers', kind: 'effect', label: 'Laser show', price: 0, dropOnly: true, blurb: 'Drop exclusive. Beams sweep out from behind your picture.' },
 ];
 
 /** The B set: one of everything. */
@@ -329,11 +339,12 @@ export const itemsOf = (kind: ItemKind) => SHOP_ITEMS.filter((i) => i.kind === k
 export const titleLabel = (key: string | null | undefined) => (key ? shopItem(key)?.label ?? null : null);
 
 /** Rarity, from how an item is sold: owner exclusives, limited runs, then by price. Drives the card and title styling. */
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'limited' | 'exclusive' | 'gift';
-export const RARITY_LABEL: Record<Rarity, string> = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', limited: 'Limited', exclusive: 'Owner exclusive', gift: 'Gift' };
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'limited' | 'exclusive' | 'gift' | 'drop';
+export const RARITY_LABEL: Record<Rarity, string> = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', limited: 'Limited', exclusive: 'Owner exclusive', gift: 'Gift', drop: 'Drop exclusive' };
 export function rarity(i: ShopItem): Rarity {
   if (i.ownerOnly) return 'exclusive';
   if (i.giftOnly) return 'gift';
+  if (i.dropOnly) return 'drop';
   if (i.limit) return 'limited';
   return i.price >= 1500 ? 'legendary' : i.price >= 700 ? 'epic' : i.price >= 300 ? 'rare' : 'common';
 }

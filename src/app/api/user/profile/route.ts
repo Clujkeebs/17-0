@@ -13,6 +13,7 @@ import { ownedKeys } from '@/lib/server/points';
 import { games } from '@/lib/minigames/games';
 import { subscribe, unsubscribeByEmail } from '@/lib/server/newsletter';
 import { audit } from '@/lib/server/audit';
+import { queueBadgeSync } from '@/lib/server/badges';
 
 export async function GET() {
   const s = await auth();
@@ -110,5 +111,6 @@ export async function PATCH(req: Request) {
   }
 
   const fresh = await getUserById(u.id);
+  void queueBadgeSync(u.id);
   return json({ ok: true, account: fresh ? publicAccount(fresh) : null, message: newsletterMessage ?? 'Saved.' });
 }
