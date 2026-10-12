@@ -26,7 +26,7 @@ export const MLB_COLORS: Record<number, string> = {
 };
 /** MLB's own club logo; only real club ids (108 to 160) have one. */
 export const mlbLogo = (teamId: number) => (teamId >= 108 && teamId <= 160 ? `https://www.mlbstatic.com/team-logos/${teamId}.svg` : '');
-export const mlbHeadshot = (playerId: number) => `https://img.mlbstatic.com/mlb-photos/image/upload/w_120,q_auto:best/v1/people/${playerId}/headshot/67/current`;
+export const mlbHeadshot = (playerId: number) => `https://img.mlbstatic.com/mlb-photos/image/upload/c_thumb,g_face,w_120,h_120,q_auto:best/v1/people/${playerId}/headshot/67/current`;
 
 /** A spin lands on an era, or on 'now' (this season only) in Right now mode. */
 export type SpinEra = MlbEraKey | 'now';
