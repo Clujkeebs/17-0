@@ -8,8 +8,8 @@ const base = (size = 20, title?: string) => ({
 export const LogoMark = ({ size = 22, title }: P) => (
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden={title ? undefined : true} role={title ? 'img' : undefined}>{title && <title>{title}</title>}
     <rect width="24" height="24" rx="6.5" fill="currentColor" />
-    <path d="M7.4 4.6 V10.6 Q7.4 14.2 11 14.2 H13 Q16.6 14.2 16.6 10.6 V4.6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-    <path d="M12 14.2 V19.6" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+    <path d="M7.4 4.6 V10.6 Q7.4 14.2 11 14.2 H13 Q16.6 14.2 16.6 10.6 V4.6" fill="none" style={{ stroke: 'var(--on-bone, #fff)' }} strokeWidth="2" strokeLinecap="round" />
+    <path d="M12 14.2 V19.6" style={{ stroke: 'var(--on-bone, #fff)' }} strokeWidth="2" strokeLinecap="round" />
     <g transform="rotate(-32 12 8.4)"><ellipse cx="12" cy="8.4" rx="2.5" ry="1.55" fill="#E11D2E" /><path d="M10.9 8.4 H13.1" stroke="#fff" strokeWidth=".6" strokeLinecap="round" /></g>
   </svg>
 );

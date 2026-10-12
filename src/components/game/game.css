@@ -139,7 +139,7 @@
 }
 .g-hard { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--steel-hi); background: var(--surface); color: var(--bone); font: 600 .88rem var(--font-ui); cursor: pointer; }
 .g-hard-dot { width: 26px; height: 16px; border-radius: 999px; background: var(--steel); position: relative; transition: background .15s; }
-.g-hard-dot::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.g-hard-dot::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); transition: transform .15s; }
 .g-hard.on { border-color: var(--bone); }
 .g-hard.on .g-hard-dot { background: var(--orange); }
 .g-hard.on .g-hard-dot::after { transform: translateX(10px); }

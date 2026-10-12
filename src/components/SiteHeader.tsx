@@ -2,14 +2,15 @@ import Link from 'next/link';
 import { LogoMark } from './Icons';
 import { SITE } from '@/lib/site';
 import { HeaderProfile } from './HeaderProfile';
+import { ThemeToggle } from './ThemeToggle';
 import { SiteNav, type NavItem, type NavSection } from './SiteNav';
 import { SPORTS, gamesFor } from '@/lib/game-registry';
 
 /** The big draft games lead each sport; the rest of the list follows in hub order. */
-const FEATURED: Record<string, string[]> = { nfl: ['17-0', 'build-a-player', 'unbeaten-bowl'], nba: ['82-0'], mlb: ['162-0'], soccer: [], puzzles: [] };
+const FEATURED: Record<string, string[]> = { nfl: ['17-0', 'build-a-player', 'unbeaten-bowl'], nba: ['82-0'], wnba: [], mlb: ['162-0'], soccer: [], puzzles: [] };
 
 /** The column heading already names the sport, so "Who Led? Baseball" reads "Who Led?" in the menu. */
-const menuName = (n: string) => n.replace(/(:\s*(Hoops|Baseball|Soccer)|\s+(Baseball|Soccer))$/, '');
+const menuName = (n: string) => n.replace(/(:\s*(Hoops|Baseball|Soccer|WNBA)|\s+(Baseball|Soccer|WNBA))$/, '');
 
 function menus(): NavItem[] {
   const games: NavItem = {
@@ -48,6 +49,7 @@ export function SiteHeader({ minimal = false }: { minimal?: boolean }) {
         </Link>
         {!minimal && <SiteNav items={menus()} />}
         {!minimal && <Link href="/games/17-0" className="sh-cta">Play 17-0</Link>}
+        <ThemeToggle />
         {!minimal && <div className="sh-me"><HeaderProfile /></div>}
       </div>
     </header>

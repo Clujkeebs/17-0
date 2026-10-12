@@ -1,7 +1,7 @@
 .gc-board { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .gc-slot { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 14px; border: 1px dashed var(--steel); border-radius: 12px; background: var(--green); }
-.gc-slot.hit { border-style: solid; border-color: #15803D; background: #F0FDF4; animation: gc-pop .35s ease-out; }
-.gc-slot.miss { border-style: solid; border-color: var(--orange); background: #FEF2F2; }
+.gc-slot.hit { border-style: solid; border-color: #15803D; background: color-mix(in srgb, #22C55E 10%, var(--surface)); animation: gc-pop .35s ease-out; }
+.gc-slot.miss { border-style: solid; border-color: var(--orange); background: color-mix(in srgb, #EF4444 9%, var(--surface)); }
 .gc-rank { width: 2ch; font-weight: 700; color: var(--bone-dim); text-align: right; }
 .gc-name { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gc-tag { font-size: .8rem; font-weight: 600; color: var(--bone-dim); }

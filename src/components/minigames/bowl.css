@@ -120,3 +120,11 @@
 .gm-hist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .gm-hist li { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--steel); }
 .gm-hist p { margin: 0; }
+.bw-plays { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.bw-play { display: grid; justify-items: center; gap: 2px; padding: 8px 6px 10px; border-radius: 12px; border: 2px solid var(--steel); background: #0F2A14; color: #F5F5F4; font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; transition: transform .12s, border-color .12s, box-shadow .12s; }
+.bw-play:hover, .bw-play:focus-visible { transform: translateY(-2px); border-color: #FDE047; box-shadow: 0 6px 16px rgba(0, 0, 0, .25); }
+.bw-play .bw-art { color: #F5F5F4; }
+.bw-play.bw-run .bw-art { color: #FDE047; }
+.bw-kind { font-size: .68rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #A3E635; }
+.bw-run .bw-kind { color: #FDE047; }
+@media (max-width: 420px) { .bw-play { font-size: .76rem; } }

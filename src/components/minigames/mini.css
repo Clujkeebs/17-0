@@ -19,8 +19,8 @@
 @media (hover: hover) and (pointer: fine) { .m-opt:hover:not(:disabled) { border-color: var(--bone); } }
 .m-opt[aria-pressed=true] { border-color: var(--bone); box-shadow: inset 0 0 0 1px var(--bone); }
 .m-opt.on { border-color: var(--bone); box-shadow: inset 0 0 0 1px var(--bone); }
-.m-opt.right { border-color: #15803D; background: #F0FDF4; }
-.m-opt.wrong { border-color: var(--orange); background: #FEF2F2; }
+.m-opt.right { border-color: #15803D; background: color-mix(in srgb, #22C55E 10%, var(--surface)); }
+.m-opt.wrong { border-color: var(--orange); background: color-mix(in srgb, #EF4444 9%, var(--surface)); }
 .m-opt:disabled { cursor: default; }
 .m-grid { display: grid; gap: 8px; }
 .m-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

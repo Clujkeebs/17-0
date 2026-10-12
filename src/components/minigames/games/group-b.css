@@ -20,7 +20,7 @@
 @media (max-width: 700px) { .gb-match { grid-template-columns: 1fr; } }
 .gb-col h3 { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--bone-dim); margin: 0 0 8px; }
 .gb-tag { display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 8px; background: var(--green); border: 1px solid var(--steel); font-weight: 700; font-size: .85rem; flex: none; }
-.gb-tag.on { background: var(--bone); color: #fff; border-color: var(--bone); }
+.gb-tag.on { background: var(--bone); color: var(--on-bone); border-color: var(--bone); }
 .gb-line { display: grid; grid-template-columns: auto repeat(5, minmax(0, 1fr)); gap: 6px; align-items: center; }
 .gb-line .v { text-align: center; font-weight: 700; }
 .gb-line .v small { display: block; font-size: .62rem; font-weight: 600; color: var(--bone-dim); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -193,9 +193,12 @@ export function starters(t: FTeam): Set<string> {
 
 /** The game's view of a team: its healthy players, plus your coordinators and chemistry if it is yours. */
 export function ratingsOf(L: League, t: FTeam): BowlTeam {
-  // Healthy players; at a spot where everyone is hurt, the best of them plays anyway.
-  const healthy = t.roster.filter((p) => p.inj === 0);
-  const pool = [...healthy, ...POSITIONS.filter((pos) => !healthy.some((p) => p.p === pos)).flatMap((pos) => t.roster.filter((p) => p.p === pos).sort((a, b) => b.o - a.o).slice(0, 2))];
+  // Healthy players. Where too few are healthy to field the position, the best injured ones play through it.
+  const pool = POSITIONS.flatMap((pos) => {
+    const at = t.roster.filter((p) => p.p === pos), ok = at.filter((p) => p.inj === 0);
+    const need = STARTERS[pos];
+    return ok.length >= need ? ok : [...ok, ...at.filter((p) => p.inj > 0).sort((x, y) => y.o - x.o).slice(0, need - ok.length)];
+  });
   const b = bowlTeam({ id: 0, abbr: t.abbr, name: t.name, city: t.city, color: t.color, logoUrl: t.logo },
     pool.map((p) => ({ name: p.n, position: p.p, group: p.p, ovr: p.o, teamId: 0, jersey: p.num, attrs: expand(p) })));
   if (!b) throw new Error(`${t.abbr} cannot field a team.`);

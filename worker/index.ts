@@ -98,7 +98,7 @@ void (async () => {
   // Data probes for '60s/'70s 82-0 and college games (logged once per boot; removed when those ship).
   void import('@/lib/server/probes').then(async (m) => { await m.probeOldNba(); await m.probeCollege(); await m.probeBird(); await m.probeMlbHeadshots(); }).catch((e) => console.warn('[probe] failed', (e as Error).message));
   // Soccer: clubs, rosters and season leaders from ESPN, at boot and daily.
-  const soccer = () => import('@/lib/server/soccer-sync').then(async (m) => { await m.syncSoccer(); await m.soccerSpotCheck(); }).catch((e) => console.warn('[soccer] sync failed', (e as Error).message));
+  const soccer = () => import('@/lib/server/soccer-sync').then(async (m) => { await m.syncSoccer(); await m.soccerSpotCheck(); await m.syncSoccerPhotos(); }).catch((e) => console.warn('[soccer] sync failed', (e as Error).message));
   void soccer();
   setInterval(() => void soccer(), 24 * 3600_000);
   // Waiver wire: adds in the last day and rostered share, every three hours.

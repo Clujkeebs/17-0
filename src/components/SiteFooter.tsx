@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { NewsletterForm } from './NewsletterForm';
 import { FeedbackForm } from './FeedbackForm';
 import { LogoMark } from './Icons';
+import { ThemeToggle } from './ThemeToggle';
 import { SITE } from '@/lib/site';
 
 export function SiteFooter() {
@@ -31,6 +32,8 @@ export function SiteFooter() {
             </ul>
           </div>
           <div>
+            <span className="eyebrow">Appearance</span>
+            <p style={{ margin: '0 0 18px' }}><ThemeToggle labelled /></p>
             <span className="eyebrow">Legal</span>
             <ul className="footer-links">
               <li><Link href="/legal/terms">Terms</Link></li>
@@ -38,6 +41,7 @@ export function SiteFooter() {
               <li><Link href="/legal/cookies">Cookies</Link></li>
               <li><Link href="/legal/disclaimer">Disclaimer</Link></li>
               <li><Link href="/legal/dmca">DMCA</Link></li>
+              <li><Link href="/credits">Photo credits</Link></li>
               <li><Link href="/legal/accessibility">Accessibility</Link></li>
               <li><Link href="/contact">Contact</Link></li>
             </ul>

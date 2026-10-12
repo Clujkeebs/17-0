@@ -11,11 +11,11 @@ import { fantasyGames } from '@/lib/minigames/fantasy/games';
  * Every ranked game on the site, grouped by sport, in the order the hub and leaderboards show them.
  * Adding a game here is what puts it on the leaderboards; nothing else needs a list.
  */
-export type Sport = 'nfl' | 'nba' | 'mlb' | 'soccer' | 'puzzles';
+export type Sport = 'nfl' | 'nba' | 'wnba' | 'mlb' | 'soccer' | 'puzzles';
 export interface GameEntry { slug: string; name: string; sport: Sport; hard?: boolean }
 
 export const SPORTS: { key: Sport; label: string }[] = [
-  { key: 'nfl', label: 'Football' }, { key: 'nba', label: 'Basketball' }, { key: 'mlb', label: 'Baseball' }, { key: 'soccer', label: 'Soccer' }, { key: 'puzzles', label: 'Puzzles' },
+  { key: 'nfl', label: 'Football' }, { key: 'nba', label: 'Basketball' }, { key: 'wnba', label: 'WNBA' }, { key: 'mlb', label: 'Baseball' }, { key: 'soccer', label: 'Soccer' }, { key: 'puzzles', label: 'Puzzles' },
 ];
 
 export const GAMES: GameEntry[] = [
@@ -25,7 +25,7 @@ export const GAMES: GameEntry[] = [
   ...fantasyGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nfl' as const })),
   { slug: '82-0', name: '82-0', sport: 'nba', hard: true },
   ...nbaGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nba' as const })),
-  ...wnbaGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nba' as const })),
+  ...wnbaGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'wnba' as const })),
   { slug: '162-0', name: '162-0', sport: 'mlb', hard: true },
   ...mlbGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'mlb' as const })),
   ...soccerGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'soccer' as const })),

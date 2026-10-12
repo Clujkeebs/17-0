@@ -9,19 +9,25 @@ export interface SClub { id: number; league: string; name: string; abbr: string;
 export interface SoccerGameData { stars: SStar[]; leaders: SLeader[]; clubs: SClub[] }
 
 const POS: Record<string, string> = { G: 'Goalkeeper', D: 'Defender', M: 'Midfielder', F: 'Forward' };
-/** ESPN headshot; stand-in test players (ids from 9,000,000) have none, so they get initials instead of a 404. */
-const headshot = (id: number) => (id < 9_000_000 ? `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png` : '');
+/**
+ * Photo from the worker's check (ESPN headshot or a Commons photo). Not checked yet: ESPN's URL, which may be blank.
+ * Stand-in test players (ids from 9,000,000) have none, so they get initials instead of a 404.
+ */
+let photos = new Map<number, string | null>();
+const headshot = (id: number) => (id >= 9_000_000 ? '' : photos.has(id) ? photos.get(id) ?? '' : `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png`);
 
 let cache: { at: number; data: SoccerGameData } | null = null;
 
 /** Soccer minis draw only on players fans would know: those on a recent league goal or assist leader list. Cached 10 minutes. */
 export async function loadSoccerGameData(): Promise<SoccerGameData> {
   if (cache && Date.now() - cache.at < 10 * 60_000) return cache.data;
-  const [clubRows, players, leaderRows] = await Promise.all([
+  const [clubRows, players, leaderRows, photoRows] = await Promise.all([
     db.select().from(schema.soccerClubs),
     db.select().from(schema.soccerPlayers),
     db.select().from(schema.soccerLeaders),
+    db.select({ id: schema.soccerPhotos.playerId, url: schema.soccerPhotos.url }).from(schema.soccerPhotos).catch(() => []),
   ]);
+  photos = new Map(photoRows.map((p) => [p.id, p.url]));
   const clubs: SClub[] = clubRows.map((c) => ({ id: c.id, league: c.league, name: c.name, abbr: c.abbreviation, color: c.color ?? '#1F2937', logo: c.logoUrl }));
   const club = new Map(clubs.map((c) => [c.id, c]));
   const onList = new Set(leaderRows.map((l) => l.playerId));

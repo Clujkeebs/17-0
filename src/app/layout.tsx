@@ -8,6 +8,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { CookieBanner } from '@/components/CookieBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { JsonLd } from '@/components/JsonLd';
+import { THEME_SCRIPT } from '@/components/ThemeToggle';
 
 // Self-hosted, Latin subset, variable. next/font preloads them and generates metric-matched fallbacks (no CLS).
 // Inter only: numbers use its tabular figures via --font-num.
@@ -23,12 +24,16 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
-export const viewport: Viewport = { themeColor: '#FFFFFF', width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = {
+  themeColor: [{ media: '(prefers-color-scheme: light)', color: '#FFFFFF' }, { media: '(prefers-color-scheme: dark)', color: '#0F0F10' }],
+  width: 'device-width', initialScale: 1,
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${nameFontVariables}`}>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`} crossOrigin="anonymous" />
       </head>
       <body>

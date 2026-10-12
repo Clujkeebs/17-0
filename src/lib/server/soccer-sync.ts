@@ -99,3 +99,55 @@ export async function soccerSpotCheck() {
   const [top] = await db.execute<{ name: string; goals: number; season: number }>(dsql`select name, goals, season from soccer_leaders where league = 'eng.1' and season = ${currentSeason('eng.1') - 1} order by goals desc limit 1`);
   console.log('[soccer] spot check', JSON.stringify({ manCityPlayers: c?.n ?? 0, plTopScorerLastSeason: top ?? null }));
 }
+
+const WIKI_UA = { headers: { 'user-agent': 'UnbeatenBot/1.0 (https://playunbeaten.com)', accept: 'application/json' } };
+const stripTags = (h: string) => h.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+/** A Wikipedia article about this footballer with a free (Commons) lead photo, and the photo's credit. */
+export async function wikiPhoto(name: string): Promise<{ url: string; credit: string; page: string } | null> {
+  for (const title of [name, `${name} (footballer)`, `${name} (soccer)`]) {
+    let j: J | null = null;
+    try { const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`, WIKI_UA); if (r.ok) j = (await r.json()) as J; } catch { /* next */ }
+    if (!j || j.type !== 'standard' || !/footballer|soccer|football player/i.test(j.description ?? '')) continue;
+    const src: string | undefined = j.thumbnail?.source, orig: string | undefined = j.originalimage?.source;
+    // Only Commons files are free to reuse; local Wikipedia files are often fair use.
+    if (!src || !orig || !orig.includes('/wikipedia/commons/')) return null;
+    const file = decodeURIComponent(orig.split('/').pop() ?? '');
+    let credit = 'Wikimedia Commons';
+    try {
+      const r = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=extmetadata&titles=${encodeURIComponent(`File:${file}`)}`, WIKI_UA);
+      const m = (Object.values(((await r.json()) as J).query?.pages ?? {})[0] as J)?.imageinfo?.[0]?.extmetadata;
+      const artist = m?.Artist?.value ? stripTags(m.Artist.value).slice(0, 80) : '', lic = m?.LicenseShortName?.value ?? '';
+      if (lic && !/^(CC|Public domain|PD)/i.test(lic)) return null;
+      credit = [artist, lic].filter(Boolean).join(', ') + ', via Wikimedia Commons';
+    } catch { /* keep the generic credit */ }
+    return { url: src, credit, page: j.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}` };
+  }
+  return null;
+}
+
+/**
+ * Photos for the players the soccer games use (everyone on a leader list): ESPN's headshot when it exists, else a
+ * Commons photo from the player's Wikipedia article. Rechecked monthly; misses retried weekly.
+ */
+export async function syncSoccerPhotos(limit = 900) {
+  const todo = await db.execute<{ id: number; name: string }>(dsql`
+    select distinct l.player_id as id, l.name from soccer_leaders l left join soccer_photos p on p.player_id = l.player_id
+    where p.player_id is null or (p.source = 'none' and p.checked_at < now() - interval '7 days') or p.checked_at < now() - interval '30 days'
+    limit ${limit}`);
+  const n = { espn: 0, wiki: 0, none: 0 };
+  for (const { id, name } of todo) {
+    let row: { url: string | null; source: string; credit: string | null; page: string | null } = { url: null, source: 'none', credit: null, page: null };
+    const espn = `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png`;
+    try {
+      const r = await fetch(espn, { method: 'HEAD', ...UA });
+      if (r.ok && (r.headers.get('content-type') ?? '').startsWith('image/')) row = { url: espn, source: 'espn', credit: null, page: null };
+    } catch { /* fall through */ }
+    if (row.source === 'none') { const w = await wikiPhoto(name); if (w) row = { url: w.url, source: 'wiki', credit: w.credit, page: w.page }; }
+    n[row.source as keyof typeof n]++;
+    await db.insert(schema.soccerPhotos).values({ playerId: id, ...row }).onConflictDoUpdate({ target: schema.soccerPhotos.playerId, set: { ...row, checkedAt: new Date() } });
+    await new Promise((res) => setTimeout(res, 150));
+  }
+  console.log('[soccer] photos', JSON.stringify({ checked: todo.length, ...n }));
+  return n;
+}

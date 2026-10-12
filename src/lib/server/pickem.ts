@@ -130,3 +130,24 @@ export async function standings(season: number, week?: number, limit = 50) {
     group by u.username having count(*) filter (where g.winner is not null) > 0
     order by won desc, made asc, username asc limit ${limit}`);
 }
+
+/** One player's record: right and wrong picks on finished games, by week, plus where they rank this season. */
+export async function myRecord(userId: string, season: number) {
+  const rows = await db.execute<{ week: number; right: number; wrong: number; pending: number }>(dsql`
+    select g.week::int as week, count(*) filter (where g.winner is not null and p.pick = g.winner)::int as right,
+      count(*) filter (where g.winner is not null and p.pick <> g.winner)::int as wrong,
+      count(*) filter (where g.winner is null)::int as pending
+    from pickem_picks p join pickem_games g on g.id = p.game_id
+    where p.user_id = ${userId} and g.season = ${season} group by g.week order by g.week`);
+  const weeks = [...rows];
+  const right = weeks.reduce((s, w) => s + w.right, 0), wrong = weeks.reduce((s, w) => s + w.wrong, 0);
+  const [rank] = await db.execute<{ rank: number; of: number }>(dsql`
+    with t as (
+      select p.user_id, count(*) filter (where p.pick = g.winner)::int as won, count(*) filter (where g.winner is not null)::int as made
+      from pickem_picks p join pickem_games g on g.id = p.game_id join user_accounts u on u.id = p.user_id
+      where g.season = ${season} and not u.lb_hidden group by p.user_id having count(*) filter (where g.winner is not null) > 0)
+    select (select count(*) from t t2 where t2.won > t.won or (t2.won = t.won and t2.made < t.made))::int + 1 as rank, (select count(*) from t)::int as of
+    from t where t.user_id = ${userId}`);
+  const best = weeks.filter((w) => w.right + w.wrong > 0).sort((a, b) => b.right / (b.right + b.wrong) - a.right / (a.right + a.wrong) || b.right - a.right)[0];
+  return { right, wrong, pct: right + wrong ? right / (right + wrong) : null, weeks, rank: rank?.rank ?? null, of: rank?.of ?? null, best: best ?? null };
+}

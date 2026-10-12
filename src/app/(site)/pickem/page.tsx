@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { and, eq, inArray } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { db, schema } from '@/db';
-import { PICKEM_POINTS, currentWeek, isLocked, standings } from '@/lib/server/pickem';
+import { PICKEM_POINTS, currentWeek, isLocked, myRecord, standings } from '@/lib/server/pickem';
 import { PickemBoard } from './PickemBoard';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +33,12 @@ export default async function PickemPage({ searchParams }: { searchParams: Promi
   const mine = session?.user?.id && games.length
     ? await db.select().from(schema.pickemPicks).where(and(eq(schema.pickemPicks.userId, session.user.id), inArray(schema.pickemPicks.gameId, games.map((g) => g.id))))
     : [];
-  const [weekTable, seasonTable] = await Promise.all([standings(cur.season, week, 10).catch(miss), standings(cur.season, undefined, 10).catch(miss)]);
+  const [weekTable, seasonTable, me] = await Promise.all([
+    standings(cur.season, week, 10).catch(miss), standings(cur.season, undefined, 10).catch(miss),
+    session?.user?.id ? myRecord(session.user.id, cur.season).catch(() => null) : Promise.resolve(null),
+  ]);
+  const thisWeek = me?.weeks.find((w) => w.week === week);
+  const pct = (r: number, w: number) => (r + w ? `${Math.round((r / (r + w)) * 100)}%` : '·');
   return (
     <div className="container section pickem">
       <span className="eyebrow">NFL Pick &apos;em · {cur.season} season</span>
@@ -44,6 +49,26 @@ export default async function PickemPage({ searchParams }: { searchParams: Promi
         {week !== cur.week && <Link className="btn btn-sm" href="/pickem">This week</Link>}
         <Link className="btn btn-sm" href={`/pickem?week=${week + 1}`}>Week {week + 1}</Link>
       </nav>
+      {me && (
+        <section className="pk-me" aria-label="Your record">
+          <div className="pk-me-main"><span className="pk-me-pct num">{me.pct === null ? '·' : `${Math.round(me.pct * 100)}%`}</span><span className="muted">right this season</span></div>
+          <dl className="pk-me-stats">
+            <div><dt>Right</dt><dd className="num pk-r">{me.right}</dd></div>
+            <div><dt>Wrong</dt><dd className="num pk-w">{me.wrong}</dd></div>
+            <div><dt>Week {week}</dt><dd className="num">{thisWeek ? `${thisWeek.right}-${thisWeek.wrong}` : '0-0'}{thisWeek?.pending ? <span className="muted"> · {thisWeek.pending} to play</span> : null}</dd></div>
+            <div><dt>Rank</dt><dd className="num">{me.rank ? `#${me.rank} of ${me.of}` : '·'}</dd></div>
+            {me.best && <div><dt>Best week</dt><dd className="num">Week {me.best.week} · {me.best.right}-{me.best.wrong}</dd></div>}
+          </dl>
+          {me.weeks.some((w) => w.right + w.wrong > 0) && (
+            <ol className="pk-me-weeks" aria-label="By week">
+              {me.weeks.filter((w) => w.right + w.wrong > 0).map((w) => {
+                const share = w.right / (w.right + w.wrong);
+                return <li key={w.week} title={`Week ${w.week}: ${w.right}-${w.wrong}`}><span className="pk-bar" style={{ height: `${Math.max(6, share * 100)}%` }} /><span className="num">{w.week}</span></li>;
+              })}
+            </ol>
+          )}
+        </section>
+      )}
       {!session?.user?.id && <div className="card" style={{ marginBottom: 16 }}><p style={{ margin: 0 }}><Link href="/login?next=/pickem">Sign in</Link> to make picks and earn points.</p></div>}
       {games.length ? (
         <PickemBoard signedIn={!!session?.user?.id} picks={Object.fromEntries(mine.map((p) => [p.gameId, p.pick]))}
@@ -54,8 +79,8 @@ export default async function PickemPage({ searchParams }: { searchParams: Promi
           <section key={tb.t}>
             <h2>{tb.t} standings</h2>
             {tb.rows.length ? (
-              <table className="lb-table"><thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Right</th></tr></thead>
-                <tbody>{tb.rows.map((r, i) => <tr key={r.username}><td className="num">{i + 1}</td><td>{r.username}</td><td className="num">{r.won}/{r.made}</td></tr>)}</tbody></table>
+              <table className="lb-table"><thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Right</th><th scope="col" className="num">Wrong</th><th scope="col" className="num">%</th></tr></thead>
+                <tbody>{tb.rows.map((r, i) => <tr key={r.username}><td className="num">{i + 1}</td><td>{r.username}</td><td className="num">{r.won}</td><td className="num">{r.made - r.won}</td><td className="num">{pct(r.won, r.made - r.won)}</td></tr>)}</tbody></table>
             ) : <p className="muted">No finished games with picks yet.</p>}
           </section>
         ))}

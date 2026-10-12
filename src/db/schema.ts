@@ -540,6 +540,16 @@ export const soccerPlayers = pgTable('soccer_players', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('soccer_players_club_idx').on(t.clubId)]);
 
+/** Soccer player photos: ESPN's headshot when it exists, else a free-licensed Wikimedia Commons photo with its credit. */
+export const soccerPhotos = pgTable('soccer_photos', {
+  playerId: integer('player_id').primaryKey(),
+  url: text('url'),
+  source: text('source').notNull(),
+  credit: text('credit'),
+  page: text('page'),
+  checkedAt: timestamp('checked_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** League goal and assist leaders for a season (ESPN's season leader lists), with matches played. */
 export const soccerLeaders = pgTable('soccer_leaders', {
   season: integer('season').notNull(),

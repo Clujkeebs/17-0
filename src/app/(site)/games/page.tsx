@@ -51,14 +51,15 @@ const FEATURED = [
 
 export default async function GamesHub({ searchParams }: { searchParams: Promise<{ sport?: string }> }) {
   const sport = (await searchParams).sport;
-  const nba = sport === 'nba', mlb = sport === 'mlb', puzzles = sport === 'puzzles', soccer = sport === 'soccer';
+  const nba = sport === 'nba', wnba = sport === 'wnba', mlb = sport === 'mlb', puzzles = sport === 'puzzles', soccer = sport === 'soccer';
   return (
     <div className="container section">
       <p className="eyebrow">Free · New puzzles at midnight ET</p>
       <h1 style={{ maxWidth: '16ch' }}>Every game, every day.</h1>
       <nav className="sport-tabs" aria-label="Sport">
-        <Link href="/games" aria-current={!nba && !mlb && !puzzles && !soccer ? 'page' : undefined}>Football</Link>
+        <Link href="/games" aria-current={!nba && !wnba && !mlb && !puzzles && !soccer ? 'page' : undefined}>Football</Link>
         <Link href="/games?sport=nba" aria-current={nba ? 'page' : undefined}>Basketball</Link>
+        <Link href="/games?sport=wnba" aria-current={wnba ? 'page' : undefined}>WNBA</Link>
         <Link href="/games?sport=mlb" aria-current={mlb ? 'page' : undefined}>Baseball</Link>
         <Link href="/games?sport=soccer" aria-current={soccer ? 'page' : undefined}>Soccer</Link>
         <Link href="/games?sport=puzzles" aria-current={puzzles ? 'page' : undefined}>Puzzles</Link>
@@ -91,18 +92,7 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </Link>
           ))}
         </div>
-        <h2 style={{ marginTop: 56 }}>WNBA</h2>
-        <p className="muted" style={{ maxWidth: '58ch' }}>The same stat games on every WNBA season since 1997, from ESPN.</p>
-        <div className="hub-grid">
-          {wnbaGames.map((g) => (
-            <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
-              <span className="eyebrow">New</span>
-              <h3>{g.name}</h3>
-              <p>{g.tagline}</p>
-              <span className="hub-cta">Play <ArrowIcon size={14} /></span>
-            </Link>
-          ))}
-        </div>
+        <p className="muted" style={{ marginTop: 24 }}><Link href="/games?sport=wnba">WNBA games</Link> have their own tab.</p>
         <TopCards lg="nba" />
         <h2 style={{ marginTop: 56 }}>Elsewhere</h2>
         <div className="hub-grid">
@@ -115,6 +105,18 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
               <a className="hub-cta" href="https://apps.apple.com/app/id1605197976" target="_blank" rel="noopener noreferrer">App Store <ArrowIcon size={14} /></a>
             </span>
           </div>
+        </div>
+      </>) : wnba ? (<>
+        <p className="muted" style={{ maxWidth: '58ch' }}>Stat games on every WNBA season since 1997, from ESPN.</p>
+        <div className="hub-grid">
+          {wnbaGames.map((g) => (
+            <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+              <span className="eyebrow">WNBA</span>
+              <h3>{g.name}</h3>
+              <p>{g.tagline}</p>
+              <span className="hub-cta">Play <ArrowIcon size={14} /></span>
+            </Link>
+          ))}
         </div>
       </>) : mlb ? (<>
         <h2 style={{ marginTop: 56 }}>Daily puzzles</h2>

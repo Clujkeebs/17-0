@@ -56,6 +56,18 @@ describe('Unbeaten Bowl GM mode', () => {
     expect(ratingsOf(L, myTeam(L)).qb.name).toBeTruthy();
   });
 
+  it('can always field a team, even when injuries leave a position short', () => {
+    const L = newLeague('inj', teams, players, 'AE0', 'Coach');
+    const t = myTeam(L);
+    // Everyone hurt except one receiver; the only QB, TE and kicker out too.
+    for (const p of t.roster) if (['WR', 'QB', 'TE', 'K', 'RB', 'CB'].includes(p.p)) p.inj = 3;
+    t.roster.find((p) => p.p === 'WR')!.inj = 0;
+    const r = ratingsOf(L, t);
+    expect(r.targets).toHaveLength(3);
+    expect(r.qb.name).toBeTruthy();
+    expect(r.k.name).toBeTruthy();
+  });
+
   it('plays seasons, playoffs, re-signing, the draft and free agency, year after year', () => {
     let L = newLeague('t2', teams, players, 'NW3', 'Coach');
     L = { ...L, cc: 200 };

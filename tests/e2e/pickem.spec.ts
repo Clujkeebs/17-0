@@ -42,7 +42,7 @@ test("pick 'em: pick, change, locked at kickoff, right or wrong when final", asy
   await page.reload();
   await expect(page.locator('.pk-game.right')).toHaveCount(1);
   await expect(page.locator('.pk-game.right')).toContainText('Right');
-  await expect(page.locator('#standings tr', { hasText: u }).first()).toContainText('1/1');
+  await expect(page.locator('#standings tr', { hasText: u }).first()).toContainText('100%');
   await sql`delete from user_accounts where username = ${u}`;
   await sql`delete from pickem_games where id like 'e2e%'`;
 });

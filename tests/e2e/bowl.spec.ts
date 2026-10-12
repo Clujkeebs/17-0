@@ -1,4 +1,28 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+/** A bot that plays one game start to finish: picks plays, snaps, throws or runs, kicks, clicks through every card. */
+async function botPlays(page: Page, done: RegExp) {
+  const btn = (re: RegExp) => page.getByRole('button', { name: re }).first();
+  let plays = 0;
+  for (let i = 0; i < 900; i++) {
+    await page.waitForTimeout(200);
+    if (await btn(done).isVisible()) { await btn(done).click(); return plays; }
+    for (const re of [/^Your ball|^Final$|^Halftime$/, /^Second half/, /^Kick the extra point/, /^Punt/]) {
+      if (await btn(re).isVisible()) { await btn(re).click(); break; }
+    }
+    const cards = page.locator('.bw-play');
+    if (await cards.first().isVisible()) {
+      plays++;
+      const run = plays % 3 === 0;
+      await (run ? page.locator('.bw-play.bw-run') : page.locator('.bw-play.bw-pass')).first().click();
+      await btn(/^Snap$/).click();
+      if (!run) { await page.waitForTimeout(1300); await page.keyboard.press(String(1 + (plays % 3))); }
+    }
+  }
+  return plays;
+}
+
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
@@ -15,21 +39,7 @@ test('Unbeaten Bowl: pick a team, play six drives, post the score', async ({ pag
   await page.locator('.bw-team').first().click();
   await expect(page.locator('.bw-canvas')).toBeVisible();
   await page.getByRole('button', { name: 'Kick off' }).click();
-  const btn = (re: RegExp) => page.getByRole('button', { name: re }).first();
-  let plays = 0;
-  for (let i = 0; i < 500; i++) {
-    await page.waitForTimeout(200);
-    if (await btn(/^Post the score/).isVisible()) { await btn(/^Post the score/).click(); break; }
-    for (const re of [/^Your ball|^Final$|^Halftime$/, /^Second half/, /^Kick the extra point/, /^Punt/]) {
-      if (await btn(re).isVisible()) { await btn(re).click(); break; }
-    }
-    if (await btn(/^Pass$/).isVisible()) {
-      plays++;
-      const run = plays % 3 === 0;
-      await btn(run ? /^Run/ : /^Pass$/).click();
-      if (!run) { await page.waitForTimeout(1200); await page.keyboard.press(String(1 + (plays % 3))); }
-    }
-  }
+  const plays = await botPlays(page, /^Post the score/);
   await expect(page.locator('.bw-lines')).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.bw-lines tbody tr')).toHaveCount(2);
   expect(plays).toBeGreaterThan(5);
@@ -39,7 +49,7 @@ test('Unbeaten Bowl: pick a team, play six drives, post the score', async ({ pag
 // and into next season. Then spend credits, check it survives a reload, and play one game on the field.
 test('Unbeaten Bowl GM mode: a full season and offseason, then a game', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop');
-  test.setTimeout(300_000);
+  test.setTimeout(420_000);
   await page.goto('/games/unbeaten-bowl?mode=gm');
   await page.getByLabel('Coach name').fill('Coach E2E');
   await page.locator('.bw-team').first().click();
@@ -48,7 +58,9 @@ test('Unbeaten Bowl GM mode: a full season and offseason, then a game', async ({
   const year = Number((await head.textContent())!.match(/(\d{4}) season/)![1]);
   const btn = (re: RegExp) => page.getByRole('button', { name: re }).first();
   const steps = [/^Sim it$/, /^Next week$/, /^Play out the playoffs$/, /^Start the offseason$/, /^On to the draft$/, /^Best available$/, /^Start the \d{4} season$/];
-  for (let i = 0; i < 120; i++) {
+  // Time-bound, not count-bound: under load many passes land mid-render and click nothing.
+  const deadline = Date.now() + 180_000;
+  while (Date.now() < deadline) {
     if ((await head.textContent())!.includes(`${year + 1} season`)) break;
     const press = page.locator('.gm-answers button').first();
     if (await press.isVisible()) { await press.click(); continue; }
@@ -89,19 +101,7 @@ test('Unbeaten Bowl GM mode: a full season and offseason, then a game', async ({
   }
   await btn(/^Play the game$/).click();
   await page.getByRole('button', { name: 'Kick off' }).click();
-  let plays = 0;
-  for (let i = 0; i < 500; i++) {
-    await page.waitForTimeout(200);
-    if (await btn(/^Continue$/).isVisible()) { await btn(/^Continue$/).click(); break; }
-    for (const re of [/^Your ball|^Final$|^Halftime$/, /^Second half/, /^Kick the extra point/, /^Punt/]) {
-      if (await btn(re).isVisible()) { await btn(re).click(); break; }
-    }
-    if (await btn(/^Pass$/).isVisible()) {
-      plays++;
-      await btn(/^Pass$/).click();
-      await page.waitForTimeout(1200); await page.keyboard.press(String(1 + (plays % 3)));
-    }
-  }
+  await botPlays(page, /^Continue$/);
   await expect(page.locator('.gm-news li').first()).toContainText(/^(Won|Lost|Tied) \d+-\d+/);
   await expect(page.locator('.gm-name')).toContainText(/ (1-0|0-1|0-0-1)$/);
 });
