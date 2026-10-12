@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FBS_PROGRAMS, FOOTBALL_CATEGORIES, MBB_PROGRAMS, WBB_PROGRAMS, latestCollegeSeason, listPrograms, parseFootballLeaders, parseScorers } from '@/lib/server/college-sync';
+import { FBS_PROGRAMS, FOOTBALL_CATEGORIES, MBB_PROGRAMS, WBB_PROGRAMS, latestCollegeSeason, listPrograms, minGames, parseFootballLeaders, parseScorers } from '@/lib/server/college-sync';
 
 const athlete = (id: number) => ({ $ref: `http://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2025/athletes/${id}?lang=en&region=us` });
 const leader = (id: number, value: number, displayValue: string) => ({ athlete: athlete(id), value, displayValue, team: { $ref: 'http://x/teams/333?lang=en' } });
@@ -49,6 +49,10 @@ describe('seasons and programs', () => {
     expect(latestCollegeSeason('mbb', new Date('2026-10-12T12:00:00Z'))).toBe(2026);
     expect(latestCollegeSeason('mbb', new Date('2026-11-20T12:00:00Z'))).toBe(2027);
     expect(latestCollegeSeason('wbb', new Date('2027-03-01T12:00:00Z'))).toBe(2027);
+  });
+  it("women's season lines need 15 games (ESPN's newest women's lines stop after a few), men's need 8", () => {
+    expect(minGames('wbb')).toBe(15);
+    expect(minGames('mbb')).toBe(8);
   });
   it('program lists have no duplicates', () => {
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');

@@ -32,6 +32,11 @@ export const FOOTBALL_CATEGORIES: Record<string, number> = {
 };
 /** How many of a program's top scorers get a full basketball line each season. */
 const HOOPS_DEEP = 8;
+/**
+ * Fewest games a basketball season line needs. ESPN's women's lines for the two newest seasons stop after a few games
+ * (a star with 4 or 8 of 35), so women's seasons need 15: a partial line would answer a trivia question wrongly.
+ */
+export const minGames = (lg: CollegeLeague) => (lg === 'wbb' ? 15 : 8);
 
 /** Programs whose names are known to everyone. Matched against ESPN's school name (case, spaces and punctuation ignored). */
 const key = (s: string) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -60,7 +65,7 @@ export const FBS_PROGRAMS: (string | string[])[] = [
   // SEC
   'Alabama', 'Arkansas', 'Auburn', 'Florida', 'Georgia', 'Kentucky', 'LSU', 'Mississippi State', 'Missouri', 'Oklahoma', 'Ole Miss', 'South Carolina', 'Tennessee', 'Texas', 'Texas A&M', 'Vanderbilt',
   // Pac-12 and independents
-  'Oregon State', 'Washington State', 'Notre Dame', 'UConn', 'UMass',
+  'Oregon State', 'Washington State', 'Notre Dame', 'UConn', ['UMass', 'Massachusetts'],
   // American
   'Army', 'Charlotte', 'East Carolina', 'Florida Atlantic', 'Memphis', 'Navy', 'North Texas', 'Rice', 'South Florida', 'Temple', 'Tulane', 'Tulsa', 'UAB', ['UT San Antonio', 'UTSA'],
   // Conference USA
@@ -158,6 +163,7 @@ export async function syncCollege(opts: { leagues?: CollegeLeague[]; from?: numb
           and not exists (select 1 from college_leaders l where l.league = p.league and l.player_id = p.id)
           and not exists (select 1 from college_hoops h where h.league = p.league and h.player_id = p.id)`);
       } else console.warn(`[college] ${lg}: ${missing.length} of ${programs.length + missing.length} programs missing from the feed, not purging`);
+      if (lg !== 'cfb') await db.delete(schema.collegeHoops).where(and(eq(schema.collegeHoops.league, lg), dsql`${schema.collegeHoops.gp} < ${minGames(lg)}`));
       const known = new Set((await db.select({ id: schema.collegePlayers.id }).from(schema.collegePlayers).where(eq(schema.collegePlayers.league, lg))).map((r) => r.id));
       /** Name, position and photo of one athlete, stored once. */
       const ensure = async (pid: number, season: number): Promise<boolean> => {
@@ -201,7 +207,7 @@ export async function syncCollege(opts: { leagues?: CollegeLeague[]; from?: numb
             await pool(parseScorers(feed), 4, async (pid) => {
               if (!(await ensure(pid, season))) { unnamed++; return; }
               const line = lineFrom(readStats(await get(`${core(lg)}/seasons/${season}/types/2/athletes/${pid}/statistics`, fetchImpl)));
-              if (line.gp < 8 || line.mpg < 8) { noStats++; return; }
+              if (line.gp < minGames(lg) || line.mpg < 8) { noStats++; return; }
               const row = { league: lg, playerId: pid, teamId: team.id, season, gp: line.gp, mpg: line.mpg, ppg: line.ppg, rpg: line.rpg, apg: line.apg, spg: line.spg, bpg: line.bpg, value: seasonValue(line) };
               await db.insert(schema.collegeHoops).values(row)
                 .onConflictDoUpdate({ target: [schema.collegeHoops.league, schema.collegeHoops.playerId, schema.collegeHoops.teamId, schema.collegeHoops.season], set: row });
