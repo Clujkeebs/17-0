@@ -7,6 +7,7 @@ import { createRng } from '@/lib/game/prng';
 import { eq } from 'drizzle-orm';
 import { getRedis } from './redis';
 import { groupCeilings } from './data';
+import { describeStats, statsFromDist } from '@/lib/game/difficulty';
 
 type Mode = 'greedy' | 'reroll' | 'random';
 // greedy: best player on each team, no re-rolls (Hard mode). reroll: the same, but spends both re-rolls on any
@@ -197,4 +198,24 @@ export async function tune53Floors(games = 1200): Promise<Record<string, number>
 export async function get53Floor(pool: PoolKey): Promise<number> {
   try { const v = Number(await getRedis().get(FLOOR_53_KEY(pool))); return Number.isFinite(v) && v > 0 ? v : FORMATS['53'].winFloor; }
   catch { return FORMATS['53'].winFloor; }
+}
+
+/**
+ * Difficulty review: how a careful drafter (spends the re-rolls), a Hard drafter (no re-rolls) and a random drafter
+ * finish in every 17-0 mode at the lines players actually get. One log line per mode and policy.
+ */
+export async function reportDifficulty(games = 800) {
+  const modes: [string, FormatKey, PoolKey, number | undefined][] = [
+    ['6-man current', '6', 'current', undefined], ['12-man current', '12', 'current', undefined], ['16-man current', '16', 'current', undefined],
+    ['6-man all-time', '6', 'all-time', await getAllTimeFloor('6')], ['12-man all-time', '12', 'all-time', await getAllTimeFloor('12')], ['16-man all-time', '16', 'all-time', await getAllTimeFloor('16')],
+    ['fantasy', 'fantasy', 'current', await getFantasyFloor()],
+  ];
+  const policies: [string, Mode][] = [['careful', 'reroll'], ['hard', 'greedy'], ['random', 'random']];
+  for (const [label, format, pool, floor] of modes) {
+    const b = await boards(format, pool);
+    for (const [name, mode] of policies) {
+      const r = simulate(format, b, mode, games, floor);
+      console.log('[difficulty] sim 17-0', label, name, describeStats(statsFromDist(r.dist, 17)));
+    }
+  }
 }

@@ -561,3 +561,55 @@ export const soccerLeaders = pgTable('soccer_leaders', {
   assists: integer('assists').notNull(),
   matches: integer('matches').notNull(),
 }, (t) => [primaryKey({ columns: [t.season, t.league, t.playerId] })]);
+
+/**
+ * College sports from ESPN. League keys: 'cfb' (football), 'mbb' (men's basketball), 'wbb' (women's basketball).
+ * Teams are programs (a school keeps one id across seasons). Football keeps each team-season's stat leaders as ESPN
+ * lists them; basketball keeps full per-game lines for each program's top scorers.
+ */
+export const collegeTeams = pgTable('college_teams', {
+  league: text('league').notNull(),
+  id: integer('id').notNull(),
+  name: text('name').notNull(),
+  location: text('location').notNull(),
+  abbreviation: text('abbreviation').notNull(),
+  color: text('color'),
+  logoUrl: text('logo_url'),
+}, (t) => [primaryKey({ columns: [t.league, t.id] })]);
+
+export const collegePlayers = pgTable('college_players', {
+  league: text('league').notNull(),
+  id: integer('id').notNull(),
+  name: text('name').notNull(),
+  position: text('position'),
+  headshot: text('headshot'),
+}, (t) => [primaryKey({ columns: [t.league, t.id] })]);
+
+/** Football: one player's number in one stat category for a team's season ("3268 yds", "275/428, 3268 YDS, 26 TD, 5 INT"). */
+export const collegeLeaders = pgTable('college_leaders', {
+  league: text('league').notNull(),
+  season: integer('season').notNull(),
+  teamId: integer('team_id').notNull(),
+  category: text('category').notNull(),
+  playerId: integer('player_id').notNull(),
+  rank: integer('rank').notNull(),
+  value: real('value').notNull(),
+  display: text('display'),
+}, (t) => [primaryKey({ columns: [t.league, t.season, t.teamId, t.category, t.playerId] }), index('college_leaders_season_idx').on(t.league, t.season, t.category)]);
+
+/** Basketball: a player's per-game line for a season with one program. Same columns as the NBA and WNBA tables. */
+export const collegeHoops = pgTable('college_hoops', {
+  league: text('league').notNull(),
+  playerId: integer('player_id').notNull(),
+  teamId: integer('team_id').notNull(),
+  season: integer('season').notNull(),
+  gp: integer('gp').notNull(),
+  mpg: real('mpg').notNull(),
+  ppg: real('ppg').notNull(),
+  rpg: real('rpg').notNull(),
+  apg: real('apg').notNull(),
+  spg: real('spg').notNull(),
+  bpg: real('bpg').notNull(),
+  value: real('value').notNull(),
+}, (t) => [primaryKey({ columns: [t.league, t.playerId, t.teamId, t.season] }), index('college_hoops_team_season_idx').on(t.league, t.teamId, t.season)]);
+

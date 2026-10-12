@@ -396,6 +396,14 @@ html[data-rules=hidden] .rules-card { display: none; }
 /* Games hub */
 .hub-featured { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-top: 32px; }
 @media (max-width: 800px) { .hub-featured { grid-template-columns: 1fr; } }
+/* New games row on the games hub */
+.hub-new { margin: 20px 0 4px; }
+.hub-new h2 { margin: 0 0 8px; }
+.hub-new ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.hub-new a { display: inline-flex; align-items: baseline; gap: 8px; min-height: 40px; padding: 8px 14px; border: 1px solid var(--steel-hi); border-radius: 999px; background: var(--surface); color: var(--bone); text-decoration: none; }
+.hub-new strong { font-weight: 650; }
+.hub-new small { color: var(--bone-dim); font-size: .78rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+@media (hover: hover) and (pointer: fine) { .hub-new a:hover { border-color: var(--bone); } }
 .hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-top: 16px; }
 .hub-card { display: flex; flex-direction: column; gap: 6px; padding: 22px; border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); color: var(--bone); text-decoration: none; transition: border-color .15s, transform .15s; min-height: 170px; }
 .hub-card h2, .hub-card h3 { margin: 0; letter-spacing: -0.03em; }

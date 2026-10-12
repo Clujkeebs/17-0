@@ -3,7 +3,8 @@ import { db, schema } from '@/db';
 import { MLB_ERAS, MLB_ERA_PICKS_MAX, MLB_ERA_RESPINS, MLB_SLOTS, MLB_TEAM_RESPINS, draftSlots, gradeMlbRoster, mlbFit, type MlbKind, type MlbMode, type MlbPick, type MlbSlot } from '@/lib/game/onesixtytwo';
 import { createRng } from '@/lib/game/prng';
 import { getRedis } from './redis';
-import { mlbFloorKey } from './mlb-floor';
+import { getMlbFloor, mlbFloorKey } from './mlb-floor';
+import { describeStats, statsFromWins } from '@/lib/game/difficulty';
 import { latestMlbSeason } from './mlb-sync';
 
 type Cand = { name: string; position: string; kind: MlbKind; teamId: number; season: number; value: number };
@@ -38,10 +39,10 @@ function bestFor(list: Cand[], open: Set<MlbSlot>): { c: Cand; slot: MlbSlot; v:
   return best;
 }
 
-function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respin' | 'random', games: number, floor: number) {
+function simulateWins(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respin' | 'random', games: number, floor: number): number[] {
   const eras = [...b.keys()].filter((k) => (b.get(k)?.size ?? 0) > 0);
   const oneEra = eras.length === 1;
-  let perfect = 0, n = 0;
+  const wins: number[] = [];
   for (let g = 0; g < games; g++) {
     const rng = createRng(`mlbcal:${mode}:${g}`);
     let eraLeft = mode === 'respin' && !oneEra ? MLB_ERA_RESPINS : 0, teamLeft = mode === 'respin' ? MLB_TEAM_RESPINS : 0;
@@ -63,9 +64,15 @@ function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respi
       picks.push({ ...pick.c, slot: pick.slot }); open.delete(pick.slot); used.add(t); perEra.set(e, (perEra.get(e) ?? 0) + 1);
     }
     if (picks.length < MLB_SLOTS.length) continue;
-    n++; if (gradeMlbRoster(`c${g}`, picks, floor).wins === 162) perfect++;
+    wins.push(gradeMlbRoster(`c${g}`, picks, floor).wins);
   }
-  return n ? perfect / n : 0;
+  return wins;
+}
+
+/** The share of simulated seasons that go 162-0. */
+function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respin' | 'random', games: number, floor: number) {
+  const wins = simulateWins(b, mode, games, floor);
+  return wins.length ? wins.filter((w) => w === 162).length / wins.length : 0;
 }
 
 /** Re-fits the 162-0 win lines (Eras, and Right now on this season alone) after each sync and stores them for grading. */
@@ -84,4 +91,15 @@ export async function tuneMlbFloor(games = 1200): Promise<Record<string, number>
     out[mode] = floor;
   }
   return out;
+}
+
+/** Difficulty review for 162-0: a careful (re-spinning), a Hard (no re-spins) and a random drafter at the live lines. */
+export async function reportMlbDifficulty(games = 600) {
+  const policies: [string, 'respin' | 'greedy' | 'random'][] = [['careful', 'respin'], ['hard', 'greedy'], ['random', 'random']];
+  for (const mode of ['eras', 'now'] as const) {
+    const b = await boards(mode);
+    if (mode === 'eras' ? [...b.values()].some((m) => m.size < 12) : (b.get('now')?.size ?? 0) < 20) continue;
+    const floor = await getMlbFloor(mode);
+    for (const [name, policy] of policies) console.log('[difficulty] sim 162-0', mode, name, describeStats(statsFromWins(simulateWins(b, policy, games, floor), 162)));
+  }
 }

@@ -7,7 +7,7 @@ import { SiteNav, type NavItem, type NavSection } from './SiteNav';
 import { SPORTS, gamesFor } from '@/lib/game-registry';
 
 /** The big draft games lead each sport; the rest of the list follows in hub order. */
-const FEATURED: Record<string, string[]> = { nfl: ['17-0', 'build-a-player', 'unbeaten-bowl'], nba: ['82-0'], wnba: [], mlb: ['162-0'], soccer: [], puzzles: [] };
+const FEATURED: Record<string, string[]> = { nfl: ['17-0', 'build-a-player', 'unbeaten-bowl'], nba: ['82-0'], wnba: [], college: [], mlb: ['162-0'], soccer: [], puzzles: [] };
 
 /** The column heading already names the sport, so "Who Led? Baseball" reads "Who Led?" in the menu. */
 const menuName = (n: string) => n.replace(/(:\s*(Hoops|Baseball|Soccer|WNBA)|\s+(Baseball|Soccer|WNBA))$/, '');
@@ -17,6 +17,8 @@ function menus(): NavItem[] {
     label: 'Games', href: '/games',
     sections: SPORTS.filter((s) => gamesFor(s.key).length).map((s) => {
       const list = gamesFor(s.key);
+      // Twelve games with three leagues' names: the menu points at each league instead of listing look-alikes.
+      if (s.key === 'college') return { title: s.label, href: '/games?sport=college', links: [{ label: 'College football', href: '/games?sport=college#cfb' }, { label: "Men's college hoops", href: '/games?sport=college#cbb' }, { label: "Women's college hoops", href: '/games?sport=college#wcbb' }] };
       const lead = list.filter((g) => FEATURED[s.key]?.includes(g.slug));
       const rest = list.filter((g) => !FEATURED[s.key]?.includes(g.slug)).slice(0, 6 - lead.length);
       return { title: s.label, href: `/games?sport=${s.key}`, links: [...lead, ...rest].map((g) => ({ label: menuName(g.name), href: `/games/${g.slug}`, strong: lead.includes(g) })), more: list.length > lead.length + rest.length ? `All ${list.length}` : undefined };

@@ -3,7 +3,8 @@ import { db, schema } from '@/db';
 import { ERAS, ERA_PICKS_MAX, ERA_RESPINS, NBA_SLOTS, TEAM_RESPINS, fitMultiplier, gradeNbaRoster, type EraKey, type NbaPick, type NbaSlot } from '@/lib/game/eightytwo';
 import { createRng } from '@/lib/game/prng';
 import { getRedis } from './redis';
-import { NBA_FLOOR_KEY, NBA_FLOOR_KEY_2K } from './nba-floor';
+import { NBA_FLOOR_KEY, NBA_FLOOR_KEY_2K, getNbaFloor } from './nba-floor';
+import { describeStats, statsFromWins } from '@/lib/game/difficulty';
 
 type Cand = { name: string; position: string; teamId: number; season: number; value: number; apg?: number };
 /** A careful drafter using both re-spins goes 82-0 about this often (was 6 percent; owners asked for harder). */
@@ -42,9 +43,9 @@ async function boards() {
   return out;
 }
 
-function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respin' | 'random', games: number, floor: number) {
+function simulateWins(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respin' | 'random', games: number, floor: number): number[] {
   const eras = ERAS.map((e) => e.key).filter((k) => (b.get(k)?.size ?? 0) > 0);
-  let perfect = 0, n = 0;
+  const wins: number[] = [];
   for (let g = 0; g < games; g++) {
     const rng = createRng(`nbacal:${mode}:${g}`);
     let eraLeft = mode === 'respin' && eras.length > 1 ? ERA_RESPINS : 0, teamLeft = mode === 'respin' ? TEAM_RESPINS : 0;
@@ -69,9 +70,15 @@ function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respi
       used.add(t); perEra.set(e, (perEra.get(e) ?? 0) + 1);
     }
     const r = gradeNbaRoster(`c${g}`, mode === 'random' ? picks.map((c, i) => ({ ...c, slot: NBA_SLOTS[i] })) : bestLineup(picks), floor);
-    n++; if (r.wins === 82) perfect++;
+    wins.push(r.wins);
   }
-  return perfect / n;
+  return wins;
+}
+
+/** The share of simulated seasons that go 82-0. */
+function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respin' | 'random', games: number, floor: number) {
+  const wins = simulateWins(b, mode, games, floor);
+  return wins.length ? wins.filter((w) => w === 82).length / wins.length : 0;
 }
 
 /** Standard boards: each franchise's current roster on NBA 2K overalls, as one era. */
@@ -111,4 +118,19 @@ export async function tuneNbaFloor(games = 1500): Promise<number | null> {
   await getRedis().set(NBA_FLOOR_KEY, String(floor));
   console.log('[nba] win floor', floor, 'P82', Object.entries(check).map(([k, v]) => `${k} ${(v * 100).toFixed(1)}%`).join(' '));
   return floor;
+}
+
+/** Difficulty review for 82-0: a careful (re-spinning), a Hard (no re-spins) and a random drafter at the live lines. */
+export async function reportNbaDifficulty(games = 800) {
+  const policies: [string, 'respin' | 'greedy' | 'random'][] = [['careful', 'respin'], ['hard', 'greedy'], ['random', 'random']];
+  const classic = await boards();
+  if (!ERAS.some((e) => (classic.get(e.key)?.size ?? 0) < 10)) {
+    const floor = await getNbaFloor('classic');
+    for (const [name, mode] of policies) console.log('[difficulty] sim 82-0 classic', name, describeStats(statsFromWins(simulateWins(classic, mode, games, floor), 82)));
+  }
+  const standard = await boards2k();
+  if ((standard.get('2020s')?.size ?? 0) >= 20) {
+    const floor = await getNbaFloor('standard');
+    for (const [name, mode] of policies) console.log('[difficulty] sim 82-0 standard', name, describeStats(statsFromWins(simulateWins(standard, mode, games, floor), 82)));
+  }
 }

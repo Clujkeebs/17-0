@@ -64,3 +64,73 @@ test('Sports Crossword casual: checks count mistakes, a full solve scores a time
   await expect(page.locator('.m-score')).toHaveText(/^\d+:\d\d/, { timeout: 20_000 });
   await expect(page.locator('.m-result .xw-grid')).toBeVisible();
 });
+
+test('Sports Strands casual: drag one word, tap the rest, take a hint, clear the board', async ({ page }) => {
+  const seeds: string[] = [];
+  page.on('response', async (r) => { if (r.url().includes('/api/mini/sports-strands?mode=casual')) seeds.push((await r.json().catch(() => ({}))).seed); });
+  await page.goto('/games/sports-strands');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  await expect(page.locator('.sx-cell')).toHaveCount(48, { timeout: 20_000 });
+  const { buildStrands, wordAt, NEIGHBOURS } = await import('../../src/lib/minigames/puzzles/strands');
+  const letters = await page.locator('.sx-cell').evaluateAll((els) => els.map((e) => e.textContent ?? '').join(''));
+  const match = () => seeds.filter(Boolean).map((sd) => buildStrands(sd)).find((p) => p.letters.join('') === letters);
+  await expect.poll(() => !!match(), { timeout: 10_000 }).toBe(true);
+  const puzzle = match()!;
+  const cell = (i: number) => page.locator(`.sx-cell[data-cell="${i}"]`);
+  const tap = async (cells: number[]) => { for (const c of cells) await cell(c).click(); await cell(cells[cells.length - 1]).click(); };
+  await expect(page.locator('.sx-theme')).toContainText(puzzle.theme);
+  await expect(page.locator('.sx-count')).toContainText(`0 of ${puzzle.words.length} theme words found`);
+
+  // Four letters that touch but are not a theme word are turned down, and the board stays as it was.
+  let wrong: number[] = [];
+  for (let a = 0; a < 48 && !wrong.length; a++) for (const b of NEIGHBOURS[a]) for (const c of NEIGHBOURS[b]) for (const d of NEIGHBOURS[c]) {
+    const chain = [a, b, c, d];
+    if (!wrong.length && new Set(chain).size === 4 && wordAt(puzzle, chain) < 0) wrong = chain;
+  }
+  expect(wrong).toHaveLength(4);
+  await tap(wrong);
+  await expect(page.locator('.sx-toast')).toContainText('Not a theme word');
+  await expect(page.locator('.sx-count')).toContainText(`0 of ${puzzle.words.length}`);
+
+  // Drag across the first word with the mouse: it counts as soon as the button is released.
+  // On a phone the board can reach below the fold, and a mouse drag does not scroll: bring the whole board into view first.
+  await page.locator('.sx-board').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  const [first, ...rest] = puzzle.words;
+  const centre = async (i: number) => { const b = (await cell(i).boundingBox())!; return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
+  const start = await centre(first.cells[0]);
+  await page.mouse.move(start.x, start.y); await page.mouse.down();
+  for (const c of first.cells.slice(1)) { const p = await centre(c); await page.mouse.move(p.x, p.y, { steps: 4 }); }
+  await page.mouse.up();
+  await expect(page.locator('.sx-count')).toContainText(`1 of ${puzzle.words.length}`);
+
+  // A hint lights the letters of one unfound word and counts against you.
+  await page.getByRole('button', { name: 'Hint' }).click();
+  await expect(page.locator('.sx-hint').first()).toBeVisible();
+  await expect(page.locator('.sx-count')).toContainText('1 hint');
+  const lit = await page.locator('.sx-hint').count();
+  expect(lit).toBeGreaterThanOrEqual(4);
+  expect(rest.some((w) => w.cells.length === lit)).toBe(true);
+
+  // Tap out the rest, one word at a time.
+  for (const [k, w] of rest.entries()) {
+    await tap(w.cells);
+    if (k < rest.length - 1) await expect(page.locator('.sx-count')).toContainText(`${k + 2} of ${puzzle.words.length}`);
+  }
+  await expect(page.locator('.m-score')).toHaveText(/^Cleared · 1 hint · \d+:\d\d$/, { timeout: 20_000 });
+  await expect(page.locator('.m-result .sx-board')).toBeVisible();
+  await expect(page.locator('.m-result .sx-list li')).toHaveCount(puzzle.words.length);
+});
+
+test('Sports Strands: giving up shows every word, and ranked checks are recorded by the server', async ({ page, request }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  await page.goto('/games/sports-strands');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  await expect(page.locator('.sx-cell')).toHaveCount(48, { timeout: 20_000 });
+  await page.getByRole('button', { name: 'Give up and see the answers' }).click();
+  await expect(page.locator('.m-score')).toHaveText(/^0\/\d+ words$/, { timeout: 20_000 });
+  await expect(page.locator('.m-result .sx-list li.miss').first()).toBeVisible();
+  // The public puzzle never contains the answers, and Today needs an account.
+  const casual = await (await request.get('/api/mini/sports-strands?mode=casual')).json();
+  expect(Object.keys(casual.puzzle).sort()).toEqual(['cols', 'letters', 'rows', 'theme', 'total']);
+  expect((await request.get('/api/mini/sports-strands?mode=today')).status()).toBe(401);
+});

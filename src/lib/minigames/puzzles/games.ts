@@ -3,6 +3,7 @@ import type { MiniGame } from '../types';
 import { WORDS, type PName, type PuzzleData } from './data';
 import { BANK, tileKey, tileKeys } from './connections-bank';
 import { buildCrossword, solutionRows, type Crossword } from './crossword';
+import { buildStrands, hintCells, validChain, wordAt, COLS, ROWS, type StrandsPuzzle } from './strands';
 
 /**
  * Word and logic puzzles. Both are scored on the server from the guesses you made (ranked play records every
@@ -212,4 +213,71 @@ export const sportsCrossword: MiniGame<XwPuzzle, XwAnswer, PuzzleData> = {
   },
 };
 
-export const puzzleGames = [sportsConnections, sportsWordle, sportsCrossword];
+/* ------------------------------------------------------------------ Sports Strands */
+
+/** One step: either a chain of squares the player traced, or a request for a hint on one word. */
+export type StrandsGuess = { cells: number[] } | { hint: number };
+export interface StrandsAnswer { guesses: StrandsGuess[] }
+const STRANDS_HINT_COST = 10_000;
+const STRANDS_MAX_HINTS = 9;
+
+/** Replays the steps against the board: which words were found, in what order, and how many hints were used. */
+function strandsReplay(p: StrandsPuzzle, answer: StrandsAnswer) {
+  if (!answer || !Array.isArray(answer.guesses)) throw new Error('No guesses.');
+  const found: number[] = [];
+  const order: ('w' | 's' | 'h')[] = [];
+  let hints = 0;
+  for (const g of answer.guesses.slice(0, 200)) {
+    if (g && typeof g === 'object' && 'hint' in g) { hints++; order.push('h'); continue; }
+    const cells = (g as { cells?: unknown })?.cells;
+    const i = validChain(cells) ? wordAt(p, cells) : -1;
+    if (i >= 0 && !found.includes(i)) { found.push(i); order.push(p.words[i].spangram ? 's' : 'w'); }
+  }
+  return { found, order, hints };
+}
+
+export const sportsStrands: MiniGame<StrandsPuzzle, StrandsAnswer, PuzzleData> = {
+  slug: 'sports-strands', sport: 'puzzles',
+  name: 'Sports Strands',
+  tagline: 'A grid of letters hides a sports theme. Trace the words, then find the spangram that runs from one side to the other.',
+  howTo: [
+    'Every letter belongs to one hidden word. Drag across touching letters (sideways, up, down or diagonal) to spell a word, or tap letters one at a time and tap the last one again to submit.',
+    'The theme above the board tells you what the words have in common. The spangram names the theme and stretches from one edge of the board to the opposite edge.',
+    'Words are four letters or more. A letter is used once. Every letter on the board is part of a theme word, so when you find them all, the board is clear.',
+    'Stuck? A hint lights up the letters of one word (you still have to trace it). Ranked by words found, then fewest hints, then fastest time.',
+  ],
+  generate: (seed) => buildStrands(seed),
+  publicView: (p) => ({ theme: p.theme, letters: p.letters, cols: COLS, rows: ROWS, total: p.words.length }),
+  /** One step. A traced chain says whether it is a theme word (and shows its path); a hint lights up one word. */
+  check(p, guess) {
+    const g = guess as { cells?: unknown; hint?: unknown } | null;
+    if (typeof g?.hint === 'number') {
+      const i = Math.floor(g.hint);
+      if (!(i >= 0 && i < p.words.length)) throw new Error('No such word.');
+      return { hint: true, cells: hintCells(p, i) };
+    }
+    if (!validChain(g?.cells)) throw new Error('Trace letters that touch one another.');
+    if (g!.cells.length < 4) return { found: false, short: true };
+    const i = wordAt(p, g!.cells);
+    if (i < 0) return { found: false };
+    return { found: true, index: i, spangram: p.words[i].spangram, cells: p.words[i].cells };
+  },
+  maxChecks: 140,
+  applyChecks: (_answer, checks) => ({ guesses: checks.map((c) => (c && typeof c === 'object' && 'hint' in (c as object) ? { hint: Number((c as { hint: unknown }).hint) || 0 } : { cells: ((c as { cells?: number[] })?.cells ?? []) })) }),
+  score(p, answer, ctx) {
+    const { found, order, hints } = strandsReplay(p, answer);
+    const won = found.length === p.words.length;
+    const used = Math.min(hints, STRANDS_MAX_HINTS);
+    return {
+      score: found.length * 100_000 + (won ? (STRANDS_MAX_HINTS - used) * STRANDS_HINT_COST + timeBonus(ctx?.elapsedMs) : 0),
+      perfect: won && hints === 0,
+      summary: won ? `Cleared · ${hints} hint${hints === 1 ? '' : 's'} · ${clock(ctx?.elapsedMs)}` : `${found.length}/${p.words.length} words`,
+      detail: {
+        theme: p.theme, letters: p.letters, hints, order, ms: ctx?.elapsedMs ?? null,
+        words: p.words.map((w, i) => ({ word: w.word, cells: w.cells, spangram: w.spangram, found: found.includes(i) })),
+      },
+    };
+  },
+};
+
+export const puzzleGames = [sportsConnections, sportsWordle, sportsCrossword, sportsStrands];

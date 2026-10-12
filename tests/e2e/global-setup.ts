@@ -135,10 +135,49 @@ async function seedSoccer() {
   await sql.end();
 }
 
+/**
+ * College: twenty stand-in schools with six football seasons of stat leaders, and 24 programs with five seasons of
+ * basketball lines for each of the men's and women's games (ids from 9,100,000, names marked "Test").
+ */
+async function seedCollege() {
+  const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
+  const [{ n }] = await sql`select count(*)::int as n from college_players where id >= 9100000`;
+  if (n === 0) {
+    const caps: [string, number, number][] = [['passingYards', 3, 3000], ['rushingYards', 4, 1500], ['receivingYards', 5, 1300], ['sacks', 3, 12], ['interceptions', 3, 7], ['totalTackles', 4, 120]];
+    const teams = (league: string, count: number) => Array.from({ length: count }, (_, i) => ({ league, id: 9100 + i + 1, name: `Test School ${i + 1}`, location: `Test School ${i + 1}`, abbreviation: `TS${i + 1}`, color: '#336699', logo_url: null }));
+    await sql`insert into college_teams ${sql(teams('cfb', 20))} on conflict do nothing`;
+    await sql`insert into college_teams ${sql(teams('mbb', 24))} on conflict do nothing`;
+    await sql`insert into college_teams ${sql(teams('wbb', 24))} on conflict do nothing`;
+    const players: object[] = [], leaders: object[] = [];
+    for (let t = 1; t <= 20; t++) for (let season = 2018; season <= 2023; season++) for (const [ci, [category, cap, top]] of caps.entries()) {
+      for (let rank = 1; rank <= cap; rank++) {
+        const id = 9100000 + t * 10000 + (season - 2018) * 1000 + ci * 10 + rank;
+        const value = Math.round((top * (1 - (rank - 1) * 0.17) + ((t * 7 + season + ci) % 5) * 3) * 10) / 10;
+        players.push({ league: 'cfb', id, name: `Test ${category} ${t}-${season}-${rank}`, position: 'RB', headshot: null });
+        leaders.push({ league: 'cfb', season, team_id: 9100 + t, category, player_id: id, rank, value, display: category.endsWith('Yards') ? `${Math.round(value / 5)} ATT, ${Math.round(value)} YDS, 5 TD` : String(value) });
+      }
+    }
+    for (let i = 0; i < players.length; i += 1000) await sql`insert into college_players ${sql(players.slice(i, i + 1000))} on conflict do nothing`;
+    for (let i = 0; i < leaders.length; i += 1000) await sql`insert into college_leaders ${sql(leaders.slice(i, i + 1000))} on conflict do nothing`;
+    for (const [league, base] of [['mbb', 9200000], ['wbb', 9300000]] as const) {
+      const ps: object[] = [], hs: object[] = [];
+      for (let t = 1; t <= 24; t++) for (const season of [2016, 2018, 2020, 2022, 2024]) for (let i = 0; i < 8; i++) {
+        const id = base + t * 1000 + (season - 2010) * 10 + i;
+        ps.push({ league, id, name: `Test Hooper ${league} ${t}-${season}-${i}`, position: 'G', headshot: null });
+        hs.push({ league, player_id: id, team_id: 9100 + t, season, gp: 30, mpg: 28, ppg: 6 + (8 - i) * 2 + (t % 4) * 0.3, rpg: 3 + (i % 4), apg: 2 + (t % 3), spg: 1, bpg: 0.5, value: 60 + (8 - i) * 4 + (t % 5) * 0.4 });
+      }
+      await sql`insert into college_players ${sql(ps)} on conflict do nothing`;
+      await sql`insert into college_hoops ${sql(hs)} on conflict do nothing`;
+    }
+  }
+  await sql.end();
+}
+
 export default async function globalSetup() {
   await seedSoccer();
   await seedNba();
   await seedWnba();
   await seedMlb();
   await seedFantasy();
+  await seedCollege();
 }

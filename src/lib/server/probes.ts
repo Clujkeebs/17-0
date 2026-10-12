@@ -99,3 +99,32 @@ export async function probeMlbHeadshots() {
   }
   console.log('[probe] mlb headshots\n' + out.join('\n'));
 }
+
+/** What the college sync will read, sampled once: the site API team lists, a football leader and a basketball scorer's stats. */
+export async function probeCollegeShapes() {
+  const out: string[] = [];
+  const site = async (sport: string, league: string, group: number) => {
+    const r = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/teams?groups=${group}&limit=500`, { 'user-agent': 'Mozilla/5.0' });
+    const teams = ((r.j?.sports as { leagues?: { teams?: { team: { id: string; location: string } }[] }[] }[] | undefined)?.[0]?.leagues?.[0]?.teams ?? []);
+    return { status: r.status, n: teams.length, sample: teams.slice(0, 3).map((t) => `${t.team.id}:${t.team.location}`).join(',') };
+  };
+  const fbTeams = await site('football', 'college-football', 80), mTeams = await site('basketball', 'mens-college-basketball', 50), wTeams = await site('basketball', 'womens-college-basketball', 50);
+  out.push(`teams: cfb ${fbTeams.status}/${fbTeams.n} [${fbTeams.sample}]; mbb ${mTeams.status}/${mTeams.n} [${mTeams.sample}]; wbb ${wTeams.status}/${wTeams.n} [${wTeams.sample}]`);
+  const fb = 'https://sports.core.api.espn.com/v2/sports/football/leagues/college-football';
+  const lead = await fetchJson(`${fb}/seasons/2025/types/2/teams/333/leaders`);
+  const rush = ((lead.j?.categories as { name: string; leaders?: Json[] }[] | undefined) ?? []).find((c) => c.name === 'rushingYards');
+  out.push(`cfb rushingYards leaders (${rush?.leaders?.length ?? 0}): ${JSON.stringify(rush?.leaders?.[0] ?? null).slice(0, 380)}`);
+  const ref = (rush?.leaders?.[0] as { athlete?: { $ref?: string } } | undefined)?.athlete?.$ref;
+  if (ref) { const a = await fetchJson(ref.replace(/^http:/, 'https:')); out.push(`cfb athlete: ${a.status} name ${String(a.j?.fullName)} position ${JSON.stringify(a.j?.position ?? null).slice(0, 120)} headshot ${JSON.stringify(a.j?.headshot ?? null).slice(0, 120)}`); }
+  const bb = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball';
+  const bl = await fetchJson(`${bb}/seasons/2025/types/2/teams/150/leaders`);
+  const pts = ((bl.j?.categories as { name: string; leaders?: Json[] }[] | undefined) ?? []).find((c) => c.name === 'pointsPerGame');
+  const pid = String(((pts?.leaders?.[0] as { athlete?: { $ref?: string } } | undefined)?.athlete?.$ref ?? '').match(/athletes\/(\d+)/)?.[1] ?? '');
+  out.push(`mbb Duke 2025 pointsPerGame (${pts?.leaders?.length ?? 0}): first athlete ${pid}`);
+  if (pid) {
+    const st = await fetchJson(`${bb}/seasons/2025/types/2/athletes/${pid}/statistics`);
+    const names = ((st.j?.splits as { categories?: { name: string; stats?: { name: string; value: number }[] }[] } | undefined)?.categories ?? []).flatMap((c) => (c.stats ?? []).map((s) => `${s.name}=${s.value}`)).slice(0, 40);
+    out.push(`mbb athlete stats ${st.status}: ${names.join(' ')}`);
+  }
+  console.log('[probe] college shapes\n' + out.join('\n'));
+}

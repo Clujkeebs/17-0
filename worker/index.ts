@@ -17,20 +17,24 @@ import { tuneFantasyFloor } from '@/lib/server/calibrate';
 const refreshNba = (recentOnly: boolean) => import('@/lib/server/nba-sync')
   .then(async (m) => { await m.rescoreNba(); await m.syncNba(recentOnly ? { from: m.latestSeason() - 1 } : {}); await m.nbaSpotCheck(); await m.nbaStarCheck(); })
   .then(() => import('@/lib/server/nba2k')).then((k) => k.sync2k().catch((e) => console.warn('[2k] sync failed', (e as Error).message)))
-  .then(() => import('@/lib/server/nba-calibrate')).then(async (c) => { await c.tuneNbaFloor(); await c.tune2kFloor(); })
+  .then(() => import('@/lib/server/nba-calibrate')).then(async (c) => { await c.tuneNbaFloor(); await c.tune2kFloor(); await c.reportNbaDifficulty(); })
+  .then(() => import('@/lib/server/difficulty')).then((d) => d.logPlayerDifficulty())
   .catch((e) => console.warn('[nba] refresh failed', (e as Error).message));
 /** All-time: NFL history backfill (only missing seasons are fetched), legends rebuilt against today's grades, then fresh All-time win lines. */
 const refreshLegends = (fetchHistory: boolean) => import('@/lib/server/nfl-history')
   .then(async (m) => { if (fetchHistory) await m.syncNflHistory(); await m.buildLegends(); await m.legendsSpotCheck('SF'); await m.legendsSpotCheck('DET'); })
-  .then(() => import('@/lib/server/calibrate')).then(async (c) => { await c.tuneAllTimeFloors(); await c.tune53Floors(); })
+  .then(() => import('@/lib/server/calibrate')).then(async (c) => { await c.tuneAllTimeFloors(); await c.tune53Floors(); await c.reportDifficulty(); })
   .catch((e) => console.warn('[nfl-history] refresh failed', (e as Error).message));
 /** 162-0: MLB history backfill (only missing seasons; the latest two always refresh) and a spot check. */
 const refreshMlb = () => import('@/lib/server/mlb-sync').then(async (m) => { await m.syncMlb(); await m.mlbSpotCheck(); })
-  .then(() => import('@/lib/server/mlb-calibrate')).then((c) => c.tuneMlbFloor())
+  .then(() => import('@/lib/server/mlb-calibrate')).then(async (c) => { await c.tuneMlbFloor(); await c.reportMlbDifficulty(); })
   .catch((e) => console.warn('[mlb] refresh failed', (e as Error).message));
 /** WNBA history backfill (only missing seasons; the latest two always refresh) and a spot check. */
 const refreshWnba = () => import('@/lib/server/wnba-sync').then(async (m) => { await m.syncWnba(); await m.wnbaSpotCheck(); })
   .catch((e) => console.warn('[wnba] refresh failed', (e as Error).message));
+/** College football and basketball from ESPN (resumes where it stopped; the latest two seasons always refresh). */
+const refreshCollege = () => import('@/lib/server/college-sync').then(async (m) => { await m.syncCollege(); await m.collegeSpotCheck(); })
+  .catch((e) => console.warn('[college] refresh failed', (e as Error).message));
 const refreshFantasy = () => syncFantasy().then(() => tuneFantasyFloor()).catch((e) => console.warn('[fantasy] refresh failed', (e as Error).message));
 
 if (process.env.SENTRY_DSN) Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0 });
@@ -46,6 +50,7 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
     if (job.name === 'legends') return refreshLegends(true);
     if (job.name === 'mlb') return refreshMlb();
     if (job.name === 'wnba') return refreshWnba();
+    if (job.name === 'college') return refreshCollege();
     if (job.name === 'pickem') return import('@/lib/server/pickem').then((m) => m.syncPickem());
     const summary = await runSync({ dryRun: false });
     await backfillEspnHeadshots().catch((e) => console.warn('[espn] backfill failed', e.message));
@@ -89,14 +94,17 @@ void (async () => {
   await recomputeCoachImpact().catch((e) => console.warn('[coaches] recompute failed', e.message));
   await refreshFantasy();
   // One worker runs at a time, so a sync lock that exists at boot was left by the container this one replaced.
-  await connection.del('nba:sync-lock', 'mlb:sync-lock', 'wnba:sync-lock').catch(() => 0);
+  await connection.del('nba:sync-lock', 'mlb:sync-lock', 'wnba:sync-lock', 'college:sync-lock').catch(() => 0);
   // 82-0: backfill NBA seasons in the background (resumes where it stopped; the newest seasons always refresh), then re-fit the win line.
   void refreshNba(false);
   void refreshLegends(true);
   void refreshMlb();
   void refreshWnba();
+  // College: football leaders and basketball lines, at boot and daily (finished seasons are skipped).
+  void refreshCollege();
+  setInterval(() => void refreshCollege(), 24 * 3600_000);
   // Data probes for '60s/'70s 82-0 and college games (logged once per boot; removed when those ship).
-  void import('@/lib/server/probes').then(async (m) => { await m.probeOldNba(); await m.probeCollege(); await m.probeBird(); await m.probeMlbHeadshots(); }).catch((e) => console.warn('[probe] failed', (e as Error).message));
+  void import('@/lib/server/probes').then(async (m) => { await m.probeOldNba(); await m.probeCollege(); await m.probeCollegeShapes(); await m.probeBird(); await m.probeMlbHeadshots(); }).catch((e) => console.warn('[probe] failed', (e as Error).message));
   // Soccer: clubs, rosters and season leaders from ESPN, at boot and daily.
   const soccer = () => import('@/lib/server/soccer-sync').then(async (m) => { await m.syncSoccer(); await m.soccerSpotCheck(); await m.syncSoccerPhotos(); }).catch((e) => console.warn('[soccer] sync failed', (e as Error).message));
   void soccer();

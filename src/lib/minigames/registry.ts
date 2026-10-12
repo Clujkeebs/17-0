@@ -9,12 +9,16 @@ import { top100Games } from './top100/games';
 import { soccerGames } from './soccer/games';
 import { mlbGames } from './mlb/games';
 import { fantasyGames } from './fantasy/games';
+import { collegeGames } from './college/games';
 
-export const MINI_GAMES: Record<string, MiniGame<unknown, unknown, any>> = Object.fromEntries([...games, ...nbaGames, ...wnbaGames, ...puzzleGames, ...top100Games, ...soccerGames, ...mlbGames, ...fantasyGames].map((g) => [g.slug, g]));
+export const MINI_GAMES: Record<string, MiniGame<unknown, unknown, any>> = Object.fromEntries([...games, ...nbaGames, ...wnbaGames, ...puzzleGames, ...collegeGames, ...top100Games, ...soccerGames, ...mlbGames, ...fantasyGames].map((g) => [g.slug, g]));
 export const getMiniGame = (slug: string): MiniGame<unknown, unknown, any> | null => MINI_GAMES[slug] ?? null;
 
 /** Loads whichever data set the game draws on. */
-export async function dataFor(game: { sport?: 'nba' | 'wnba' | 'mlb' | 'fantasy' | 'puzzles' | 'top100' | 'soccer' }) {
+export async function dataFor(game: { sport?: 'nba' | 'wnba' | 'cbb' | 'wcbb' | 'cfb' | 'mlb' | 'fantasy' | 'puzzles' | 'top100' | 'soccer' }) {
+  if (game.sport === 'cfb') return (await import('./college/data')).loadCollegeFootball();
+  if (game.sport === 'cbb') return (await import('./college/data')).loadCollegeHoops('mbb');
+  if (game.sport === 'wcbb') return (await import('./college/data')).loadCollegeHoops('wbb');
   if (game.sport === 'fantasy') return { players: await (await import('@/lib/server/fantasy-data')).loadFantasyPlayers() };
   if (game.sport === 'mlb') return (await import('./mlb/data')).loadMlbGameData();
   if (game.sport === 'soccer') return (await import('./soccer/data')).loadSoccerGameData();

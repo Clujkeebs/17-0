@@ -20,7 +20,7 @@ export const BADGES: (Badge & { earned: (f: BadgeFacts) => boolean })[] = [
   { key: 'eighty-two', label: '82-0', desc: 'A perfect NBA season', earned: (f) => (f.perfect['82-0'] ?? 0) > 0 },
   { key: 'one-sixty-two', label: '162-0', desc: 'A perfect MLB season', earned: (f) => (f.perfect['162-0'] ?? 0) > 0 },
   { key: 'hall-of-famer', label: 'Hall of Famer', desc: 'Built a player rated 97 or better', earned: (f) => (f.perfect['build-a-player'] ?? 0) > 0 },
-  { key: 'wordsmith', label: 'Wordsmith', desc: 'A perfect Wordle, Connections or Crossword', earned: (f) => ['sports-wordle', 'sports-connections', 'sports-crossword'].some((g) => (f.perfect[g] ?? 0) > 0) },
+  { key: 'wordsmith', label: 'Wordsmith', desc: 'A perfect Wordle, Connections, Strands or Crossword', earned: (f) => ['sports-wordle', 'sports-connections', 'sports-strands', 'sports-crossword'].some((g) => (f.perfect[g] ?? 0) > 0) },
   { key: 'on-fire', label: 'On Fire', desc: 'A 7-day streak', earned: (f) => f.longestStreak >= 7 },
   { key: 'iron-man', label: 'Iron Man', desc: 'A 30-day streak', earned: (f) => f.longestStreak >= 30 },
   { key: 'century', label: 'Century', desc: 'A 100-day streak', earned: (f) => f.longestStreak >= 100 },

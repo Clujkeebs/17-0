@@ -14,25 +14,25 @@ const STATS: { key: Stat; label: string; short: string }[] = [
   { key: 'apg', label: 'Assists per game', short: 'assists' }, { key: 'spg', label: 'Steals per game', short: 'steals' },
   { key: 'bpg', label: 'Blocks per game', short: 'blocks' },
 ];
-const r1 = (n: number) => Math.round(n * 10) / 10;
+export const r1 = (n: number) => Math.round(n * 10) / 10;
 const line = (s: NSeason) => `${r1(s.ppg)} pts, ${r1(s.rpg)} reb, ${r1(s.apg)} ast`;
 
-function tries<T>(n: number, make: () => T | null, what = 'NBA'): T[] {
+export function tries<T>(n: number, make: () => T | null, what = 'NBA'): T[] {
   const out: T[] = [];
   for (let i = 0; out.length < n && i < n * 400; i++) { const x = make(); if (x) out.push(x); }
   if (out.length < n) throw new Error(`Not enough ${what} history to build this puzzle.`);
   return out;
 }
-const distinctBy = <T>(xs: T[], key: (x: T) => string | number) => xs.filter((x, i) => xs.findIndex((y) => key(y) === key(x)) === i);
+export const distinctBy = <T>(xs: T[], key: (x: T) => string | number) => xs.filter((x, i) => xs.findIndex((y) => key(y) === key(x)) === i);
 /** Puts the answer among the decoys in seeded order and remembers where it went. */
-function deal<T>(rng: Rng, answer: T, decoys: T[]): { list: T[]; correct: number } {
+export function deal<T>(rng: Rng, answer: T, decoys: T[]): { list: T[]; correct: number } {
   const list = rng.shuffle([answer, ...decoys]);
   return { list, correct: list.indexOf(answer) };
 }
 
 /** What differs between the NBA and WNBA versions of the stat games. */
 export interface HoopsLeague {
-  sport: 'nba' | 'wnba'; prefix: string; league: string; she: 'he' | 'she';
+  sport: 'nba' | 'wnba' | 'cbb' | 'wcbb'; prefix: string; league: string; she: 'he' | 'she';
   names: { hl: string; br: string; led: string; team: string };
   /** How many all-time best players Higher or Lower draws from. */
   stars: number;

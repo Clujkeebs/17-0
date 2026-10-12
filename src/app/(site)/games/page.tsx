@@ -7,8 +7,11 @@ import { wnbaGames } from '@/lib/minigames/wnba/games';
 import { soccerGames } from '@/lib/minigames/soccer/games';
 import { mlbGames } from '@/lib/minigames/mlb/games';
 import { puzzleGames } from '@/lib/minigames/puzzles/games';
+import { collegeGames } from '@/lib/minigames/college/games';
+import { COLLEGE_MIN, collegeCounts } from '@/lib/server/college-ready';
 import { top100Games } from '@/lib/minigames/top100/games';
 import { ArrowIcon } from '@/components/Icons';
+import { SPORTS, recentGames, type Sport } from '@/lib/game-registry';
 
 export const metadata: Metadata = {
   title: 'Games',
@@ -43,6 +46,68 @@ function TopCards({ lg }: { lg: 'nfl' | 'nba' | 'mlb' }) {
   );
 }
 
+/** Games from the last three weeks, one pill each, with a sport's worth of new games folded into a link to its tab. */
+function NewRow() {
+  const label = (k: Sport) => SPORTS.find((x) => x.key === k)?.label ?? k;
+  const bySport = new Map<Sport, ReturnType<typeof recentGames>>();
+  for (const g of recentGames()) bySport.set(g.sport, [...(bySport.get(g.sport) ?? []), g]);
+  const pills = [...bySport.entries()].flatMap(([sport, list]) => (list.length > 2
+    ? [{ key: sport, href: sport === 'nfl' ? '/games' : `/games?sport=${sport}`, name: `${label(sport)} games`, sub: `${list.length} new`, added: list[0].added }]
+    : list.map((g) => ({ key: g.slug, href: `/games/${g.slug}`, name: g.name, sub: label(sport), added: g.added }))))
+    .sort((a, b) => (a.added < b.added ? 1 : -1));
+  if (!pills.length) return null;
+  return (
+    <section className="hub-new" aria-labelledby="hub-new-h">
+      <h2 id="hub-new-h" className="eyebrow">New</h2>
+      <ul>
+        {pills.map((p) => <li key={p.key}><Link href={p.href}><strong>{p.name}</strong><small>{p.sub}</small></Link></li>)}
+      </ul>
+    </section>
+  );
+}
+
+/** College football, then men's and women's basketball. A league's games show once the sync has its data. */
+async function CollegeTab() {
+  const counts = await collegeCounts();
+  const leagues = [
+    { id: 'cfb', anchor: 'cfb', title: 'College football', blurb: 'Every FBS team since 2010: passing, rushing, receiving and defensive leaders, from ESPN.', prefix: 'cfb-' },
+    { id: 'mbb', anchor: 'cbb', title: "Men's college basketball", blurb: 'Well-known programs since 2008: the scorers, with full per-game lines, from ESPN.', prefix: 'cbb-' },
+    { id: 'wbb', anchor: 'wcbb', title: "Women's college basketball", blurb: 'The same for the women\'s game, for every season ESPN has stats.', prefix: 'wcbb-' },
+  ];
+  return (
+    <>
+      {leagues.map((lg) => {
+        const list = collegeGames.filter((g) => g.slug.startsWith(lg.prefix));
+        const ready = (counts[lg.id] ?? 0) >= COLLEGE_MIN;
+        return (
+          <section key={lg.id} id={lg.anchor} style={{ marginTop: 40, scrollMarginTop: 90 }}>
+            <h2>{lg.title}</h2>
+            <p className="muted" style={{ maxWidth: '58ch' }}>{lg.blurb}</p>
+            {ready ? (
+              <div className="hub-grid">
+                {list.map((g) => (
+                  <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card">
+                    <span className="eyebrow">New</span>
+                    <h3>{g.name}</h3>
+                    <p>{g.tagline}</p>
+                    <span className="hub-cta">Play <ArrowIcon size={14} /></span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="hub-card" style={{ maxWidth: 520 }}>
+                <span className="eyebrow">Loading</span>
+                <h3>The first sync is running</h3>
+                <p>Four games are built and waiting on {lg.title.toLowerCase()} stats from ESPN. The first full pull takes a few hours. Check back tomorrow.</p>
+              </div>
+            )}
+          </section>
+        );
+      })}
+    </>
+  );
+}
+
 const FEATURED = [
   { slug: '17-0', name: '17-0', tagline: 'Six spins, one roster, one season. Can it go unbeaten?', meta: 'Draft · 2 min' },
   { slug: 'build-a-player', name: 'Build a Player', tagline: 'Five spins. Take one trait from each. Grade the player you built.', meta: 'Draft · 1 min' },
@@ -51,15 +116,16 @@ const FEATURED = [
 
 export default async function GamesHub({ searchParams }: { searchParams: Promise<{ sport?: string }> }) {
   const sport = (await searchParams).sport;
-  const nba = sport === 'nba', wnba = sport === 'wnba', mlb = sport === 'mlb', puzzles = sport === 'puzzles', soccer = sport === 'soccer';
+  const nba = sport === 'nba', wnba = sport === 'wnba', college = sport === 'college', mlb = sport === 'mlb', puzzles = sport === 'puzzles', soccer = sport === 'soccer';
   return (
     <div className="container section">
       <p className="eyebrow">Free · New puzzles at midnight ET</p>
       <h1 style={{ maxWidth: '16ch' }}>Every game, every day.</h1>
       <nav className="sport-tabs" aria-label="Sport">
-        <Link href="/games" aria-current={!nba && !wnba && !mlb && !puzzles && !soccer ? 'page' : undefined}>Football</Link>
+        <Link href="/games" aria-current={!nba && !wnba && !college && !mlb && !puzzles && !soccer ? 'page' : undefined}>Football</Link>
         <Link href="/games?sport=nba" aria-current={nba ? 'page' : undefined}>Basketball</Link>
         <Link href="/games?sport=wnba" aria-current={wnba ? 'page' : undefined}>WNBA</Link>
+        <Link href="/games?sport=college" aria-current={college ? 'page' : undefined}>College</Link>
         <Link href="/games?sport=mlb" aria-current={mlb ? 'page' : undefined}>Baseball</Link>
         <Link href="/games?sport=soccer" aria-current={soccer ? 'page' : undefined}>Soccer</Link>
         <Link href="/games?sport=puzzles" aria-current={puzzles ? 'page' : undefined}>Puzzles</Link>
@@ -68,6 +134,7 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
         Each game has two modes. <strong>Today</strong> is the same puzzle for everyone, one attempt, ranked on the leaderboard (free account needed). <strong>Casual</strong> is unlimited and open to anyone.
       </p>
       <DoubleNote />
+      <NewRow />
 
       {nba || mlb ? (
         <div className="hub-featured">
@@ -106,7 +173,7 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
             </span>
           </div>
         </div>
-      </>) : wnba ? (<>
+      </>) : college ? (<CollegeTab />) : wnba ? (<>
         <p className="muted" style={{ maxWidth: '58ch' }}>Stat games on every WNBA season since 1997, from ESPN.</p>
         <div className="hub-grid">
           {wnbaGames.map((g) => (
