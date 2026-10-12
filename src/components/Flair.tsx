@@ -3,7 +3,7 @@
  * Each mark is a few layered shapes on a 24 grid: a base color, a darker edge and a light highlight,
  * so they read as little enamel pins rather than flat icons.
  */
-type Shape = { d: string; fill: string; stroke?: string; sw?: number; even?: boolean };
+type Shape = { d: string; fill: string; stroke?: string; sw?: number; even?: boolean; t?: string; dash?: string };
 
 const MARKS: Record<string, Shape[]> = {
   'flair-star': [
@@ -81,9 +81,9 @@ const MARKS: Record<string, Shape[]> = {
     { d: 'M9.5 3.8 12 6l2.5-2.2M9.5 20.2 12 18l2.5 2.2M4.2 10l3.2-1 .7-3.2M19.8 14l-3.2 1-.7 3.2M4.2 14l3.2 1 .7 3.2M19.8 10l-3.2-1-.7-3.2', fill: 'none', stroke: '#38BDF8', sw: 1.3 },
   ],
   'flair-mic': [
-    { d: 'M12 2.2a4 4 0 0 1 4 4v5.6a4 4 0 0 1-8 0V6.2a4 4 0 0 1 4-4z', fill: '#3F3F46', stroke: '#18181B', sw: .9 },
-    { d: 'M9.4 5.2h5.2M9.2 7.4h5.6M9.2 9.6h5.6', fill: 'none', stroke: '#A1A1AA', sw: .8 },
-    { d: 'M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.8M8.5 21.8h7', fill: 'none', stroke: '#18181B', sw: 1.6 },
+    { d: 'M12 2.2a4 4 0 0 1 4 4v5.6a4 4 0 0 1-8 0V6.2a4 4 0 0 1 4-4z', fill: '#71717A', stroke: '#27272A', sw: .9 },
+    { d: 'M9.4 5.2h5.2M9.2 7.4h5.6M9.2 9.6h5.6', fill: 'none', stroke: '#E4E4E7', sw: .8 },
+    { d: 'M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.8M8.5 21.8h7', fill: 'none', stroke: '#52525B', sw: 1.6 },
   ],
   'flair-trophy': [
     { d: 'M6.5 3h11v5.5a5.5 5.5 0 0 1-11 0z', fill: '#D4A017', stroke: '#8A6400', sw: .9 },
@@ -100,6 +100,89 @@ const MARKS: Record<string, Shape[]> = {
     { d: 'M7.5 3a5.5 5.5 0 0 1 5.2 7.3L22 19.6V22h-3.6v-2h-2v-2h-2l-2.7-2.7A5.5 5.5 0 1 1 7.5 3zm-1 3a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2z', fill: '#D4A017', stroke: '#8A6400', sw: .9, even: true },
     { d: 'M14 13.4l6.6 6.6', fill: 'none', stroke: '#B91C1C', sw: 1.2 },
   ],
+  'flair-helmet': [
+    { d: 'M3.4 13.6C3.4 7.8 7.5 4 12.6 4c4.2 0 7.3 2.6 8 6.4l.3 3.6h-4.2l-.7 2.4H12.3v3.4H7.9L6.4 17.9C4.6 16.9 3.4 15.5 3.4 13.6z', fill: '#1D4ED8', stroke: '#1E3A8A', sw: .9 },
+    { d: 'M6.6 8.4C8.6 5.9 12 5.2 15.4 6.2', fill: 'none', stroke: '#F8FAFC', sw: 1.7 },
+    { d: 'M9 6.4c1.2-.6 2.6-.9 4-.8', fill: 'none', stroke: '#93C5FD', sw: .9 },
+    { d: 'M10.2 11.9a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6z', fill: '#1E3A8A' },
+    { d: 'M17 11.2h4.2M17 14.2h4.2M17.2 11v7.4', fill: 'none', stroke: '#D4D4D8', sw: 1.2 },
+  ],
+  'flair-glove': [
+    { d: 'M4.4 14.2c-.1-4.2 2.1-9.6 5-10.6 1.2-.4 2 .3 2.2 1.4.6-1.3 1.9-1.6 2.7-.8.4.4.5 1 .4 1.6 1-.7 2.1-.3 2.4.7.2.7 0 1.4-.4 2 1.3-.4 2.2.5 2.2 1.6 0 3.9-1.8 8.2-5.1 10.2-3.2 1.9-7.6 1.1-9.1-1.4-.7-1.1-.9-2.4-.6-4.7z', fill: '#B45309', stroke: '#78350F', sw: .9 },
+    { d: 'M8 11.4c1.7 1.2 3.7 1.4 5.8.8', fill: 'none', stroke: '#78350F', sw: 1.1 },
+    { d: 'M9 17.2c2 .9 4.1.7 5.8-.4', fill: 'none', stroke: '#FDE68A', sw: .9, dash: '1.2 1.2' },
+    { d: 'M8.4 6.6c.4-1 1-1.6 1.6-1.9', fill: 'none', stroke: '#F59E0B', sw: 1.2 },
+  ],
+  'flair-soccer': [
+    { d: 'M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19z', fill: '#FAFAF9', stroke: '#3F3F46', sw: .9 },
+    { d: 'M12 8l3.3 2.4-1.3 3.9h-4l-1.3-3.9z', fill: '#1C1917' },
+    { d: 'M12 8V3M15.3 10.4l4.7-1.6M14 14.3l2.9 4M10 14.3l-2.9 4M8.7 10.4L4 8.8', fill: 'none', stroke: '#1C1917', sw: 1 },
+  ],
+  'flair-hockey': [
+    { d: 'M4.2 3.4l10.8 13.9', fill: 'none', stroke: '#92400E', sw: 2.2 },
+    { d: 'M14.6 17.4h6', fill: 'none', stroke: '#92400E', sw: 2.8 },
+    { d: 'M16.4 17.4h3.6', fill: 'none', stroke: '#E5E7EB', sw: 1.4 },
+    { d: 'M13 7.6v-2.1a3.9 1.7 0 0 1 7.8 0v2.1a3.9 1.7 0 0 1-7.8 0z', fill: '#27272A', stroke: '#09090B', sw: .8 },
+    { d: 'M16.9 3.8a3.9 1.7 0 1 1 0 3.4 3.9 1.7 0 0 1 0-3.4z', fill: '#52525B' },
+  ],
+  'flair-jersey': [
+    { d: 'M8.5 3.2L3 6l1.8 4.3 2.3-.9v11.1h9.8V9.4l2.3.9L21 6l-5.5-2.8c-.5 1.4-1.9 2.3-3.5 2.3s-3-.9-3.5-2.3z', fill: '#DC2626', stroke: '#7F1D1D', sw: .9 },
+    { d: 'M8.5 3.2c.5 1.4 1.9 2.3 3.5 2.3s3-.9 3.5-2.3', fill: 'none', stroke: '#7F1D1D', sw: 1 },
+    { d: 'M10.6 11.4l1.8-1v7.6', fill: 'none', stroke: '#FAFAF9', sw: 1.9 },
+    { d: 'M4.3 8.6l2.8-1.1M19.7 8.6l-2.8-1.1', fill: 'none', stroke: '#FAFAF9', sw: 1.2 },
+  ],
+  'flair-megaphone': [
+    { d: 'M3.6 9.2h3.8l8.8-5v15.6l-8.8-5H3.6z', fill: '#F59E0B', stroke: '#B45309', sw: .9 },
+    { d: 'M7.6 14.8l1.2 5.2h2.7l-1.1-4.6z', fill: '#78350F' },
+    { d: 'M5.2 10.6h2.2v3H5.2z', fill: '#FDE68A' },
+    { d: 'M18.7 8.4c1.5 1.1 2.3 2.6 2.3 4.4s-.8 3.3-2.3 4.4', fill: 'none', stroke: '#B45309', sw: 1.5 },
+    { d: 'M19.2 10.9c.6.5.9 1.1.9 1.9s-.3 1.4-.9 1.9', fill: 'none', stroke: '#F59E0B', sw: 1.2 },
+  ],
+  'flair-medal': [
+    { d: 'M6.6 2.4h3.6l1.8 6.4L13.8 2.4h3.6l-3.9 9.6h-3z', fill: '#DC2626', stroke: '#991B1B', sw: .7 },
+    { d: 'M10.2 2.4h3.6L12 8.8z', fill: '#1D4ED8' },
+    { d: 'M12 10.3a6.1 6.1 0 1 1 0 12.2 6.1 6.1 0 0 1 0-12.2z', fill: '#D4A017', stroke: '#8A6400', sw: .9 },
+    { d: 'M12 12.6a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6z', fill: 'none', stroke: '#8A6400', sw: .8 },
+    { d: 'M12 13.9l.95 1.95 2.15.3-1.55 1.5.37 2.1-1.92-1-1.92 1 .37-2.1-1.55-1.5 2.15-.3z', fill: '#FDE68A' },
+  ],
+  'flair-clover': [
+    { d: 'M12 11.2C8.6 9.4 8.6 4.6 12 3.2c3.4 1.4 3.4 6.2 0 8z', fill: '#22C55E', stroke: '#166534', sw: .8 },
+    { d: 'M12 11.2C8.6 9.4 8.6 4.6 12 3.2c3.4 1.4 3.4 6.2 0 8z', fill: '#22C55E', stroke: '#166534', sw: .8, t: 'rotate(90 12 12)' },
+    { d: 'M12 11.2C8.6 9.4 8.6 4.6 12 3.2c3.4 1.4 3.4 6.2 0 8z', fill: '#22C55E', stroke: '#166534', sw: .8, t: 'rotate(180 12 12)' },
+    { d: 'M12 11.2C8.6 9.4 8.6 4.6 12 3.2c3.4 1.4 3.4 6.2 0 8z', fill: '#22C55E', stroke: '#166534', sw: .8, t: 'rotate(270 12 12)' },
+    { d: 'M12 5.4v5.4M5.4 12h5.4M12 13.2v5.4M13.2 12h5.4', fill: 'none', stroke: '#86EFAC', sw: .7, t: 'rotate(0 12 12)' },
+    { d: 'M12.6 13.4c.5 3 1.6 5 3.4 6.8', fill: 'none', stroke: '#166534', sw: 1.5 },
+  ],
+  'flair-heart': [
+    { d: 'M12 21.2C5.2 16.5 2.6 12.6 2.6 9.2a4.9 4.9 0 0 1 9.4-2 4.9 4.9 0 0 1 9.4 2c0 3.4-2.6 7.3-9.4 12z', fill: '#E11D48', stroke: '#9F1239', sw: .9 },
+    { d: 'M5.9 8.6c.2-1.4 1.2-2.3 2.6-2.5', fill: 'none', stroke: '#FDA4AF', sw: 1.7 },
+  ],
+  'flair-scoreboard': [
+    { d: 'M2.6 4.6h18.8a.9.9 0 0 1 .9.9v10a.9.9 0 0 1-.9.9H2.6a.9.9 0 0 1-.9-.9v-10a.9.9 0 0 1 .9-.9z', fill: '#1F2937', stroke: '#030712', sw: .9 },
+    { d: 'M6.2 7.8v5.6M9.6 7.8h3.6l-1.7 5.6', fill: 'none', stroke: '#FBBF24', sw: 1.7 },
+    { d: 'M15 10.6h1.8', fill: 'none', stroke: '#FBBF24', sw: 1.4 },
+    { d: 'M18.2 7.8h2.4v5.6h-2.4z', fill: 'none', stroke: '#FBBF24', sw: 1.5 },
+    { d: 'M6.4 16.4v4.8M17.6 16.4v4.8', fill: 'none', stroke: '#6B7280', sw: 2 },
+  ],
+  'flair-laurel': [
+    { d: 'M8.4 20.4C4.4 17.8 3.2 12.4 5.4 7', fill: 'none', stroke: '#8A6400', sw: 1.2 },
+    { d: 'M15.6 20.4c4-2.6 5.2-8 3-13.4', fill: 'none', stroke: '#8A6400', sw: 1.2 },
+    { d: 'M0 0c1.7-1 2.7-3 2.5-4.9-2 .5-3.4 2.3-2.5 4.9z', fill: '#D4A017', stroke: '#8A6400', sw: .5, t: 'translate(5.6 7.4) rotate(-25)' },
+    { d: 'M0 0c1.7-1 2.7-3 2.5-4.9-2 .5-3.4 2.3-2.5 4.9z', fill: '#E8C547', stroke: '#8A6400', sw: .5, t: 'translate(4.5 11.6) rotate(-62)' },
+    { d: 'M0 0c1.7-1 2.7-3 2.5-4.9-2 .5-3.4 2.3-2.5 4.9z', fill: '#D4A017', stroke: '#8A6400', sw: .5, t: 'translate(5.4 15.6) rotate(-95)' },
+    { d: 'M0 0c1.7-1 2.7-3 2.5-4.9-2 .5-3.4 2.3-2.5 4.9z', fill: '#E8C547', stroke: '#8A6400', sw: .5, t: 'translate(8.2 19) rotate(-125)' },
+    { d: 'M0 0c-1.7-1-2.7-3-2.5-4.9 2 .5 3.4 2.3 2.5 4.9z', fill: '#D4A017', stroke: '#8A6400', sw: .5, t: 'translate(18.4 7.4) rotate(25)' },
+    { d: 'M0 0c-1.7-1-2.7-3-2.5-4.9 2 .5 3.4 2.3 2.5 4.9z', fill: '#E8C547', stroke: '#8A6400', sw: .5, t: 'translate(19.5 11.6) rotate(62)' },
+    { d: 'M0 0c-1.7-1-2.7-3-2.5-4.9 2 .5 3.4 2.3 2.5 4.9z', fill: '#D4A017', stroke: '#8A6400', sw: .5, t: 'translate(18.6 15.6) rotate(95)' },
+    { d: 'M0 0c-1.7-1-2.7-3-2.5-4.9 2 .5 3.4 2.3 2.5 4.9z', fill: '#E8C547', stroke: '#8A6400', sw: .5, t: 'translate(15.8 19) rotate(125)' },
+    { d: 'M10.2 20.8l1.8-1.2 1.8 1.2-.6 1.6h-2.4z', fill: '#B91C1C' },
+  ],
+  'flair-comet': [
+    { d: 'M17.4 7.2L3 20.6c6.4-.6 12.6-5.2 14.8-11.2z', fill: '#FB923C', stroke: '#C2410C', sw: .6 },
+    { d: 'M17.2 7.6L7.6 17.4c4.4-1.4 8.4-4.8 9.8-10.2z', fill: '#FDE68A' },
+    { d: 'M17.6 4.2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z', fill: '#FEF3C7', stroke: '#F59E0B', sw: .9 },
+    { d: 'M16.4 5.8a1.4 1.4 0 0 1 1.6-.4', fill: 'none', stroke: '#fff', sw: 1.1 },
+  ],
 };
 
 export const FLAIR_KEYS = Object.keys(MARKS);
@@ -110,7 +193,7 @@ export function Flair({ k }: { k?: string | null }) {
   return (
     <span className={`nm-flair ${k}`} aria-hidden="true">
       <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-        {shapes.map((s, i) => <path key={i} d={s.d} fill={s.fill} stroke={s.stroke} strokeWidth={s.sw} fillRule={s.even ? 'evenodd' : undefined} />)}
+        {shapes.map((s, i) => <path key={i} d={s.d} fill={s.fill} stroke={s.stroke} strokeWidth={s.sw} fillRule={s.even ? 'evenodd' : undefined} transform={s.t} strokeDasharray={s.dash} />)}
       </svg>
     </span>
   );

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { KIND_LABELS, KIND_ORDER, RARITY_LABEL, itemsOf, rarity, type ItemKind, type Rarity, type ShopItem } from '@/lib/shop';
 import { StyledName } from '@/components/StyledName';
 import { Avatar } from '@/components/HeaderProfile';
+import '@/components/shop.css';
 
 type Equipped = { font: string; color: string; border: string | null; banner: string | null; title: string | null; flair: string | null; effect: string | null };
 type Sort = 'price' | 'rarest' | 'owned';
@@ -35,10 +36,13 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
 
   const isOn = (i: ShopItem) => (i.kind === 'font' ? base.font : i.kind === 'color' ? base.color : base[i.kind]) === i.key;
   const withItem = (i: ShopItem | null) => ({ ...base, owner: false, ...(i ? { [i.kind]: i.key } : {}) }) as Equipped & { owner: boolean };
+  // Every card shows only its own item on a plain name and picture, so the cards compare like for like.
+  // The look bar above shows the item on you, together with everything else you wear.
+  const plain = { font: 'classic', color: 'ink', owner: false };
   const preview = (i: ShopItem) => {
-    const s = withItem(i);
-    if (i.kind === 'border') return <Avatar name={name} src={image} size={56} ring={i.key} />;
-    if (i.kind === 'effect') return <Avatar name={name} src={image} size={56} ring={base.border} effect={i.key} />;
+    if (i.kind === 'border') return <Avatar name={name} src={image} size={64} ring={i.key} />;
+    if (i.kind === 'effect') return <Avatar name={name} src={image} size={64} effect={i.key} />;
+    const s = { ...plain, [i.kind === 'font' ? 'font' : i.kind === 'color' ? 'color' : i.kind]: i.key };
     if (i.kind === 'banner') return <div className={`banner ${i.key} shop-banner`}><StyledName name={name} style={s} showTitle={false} /></div>;
     return <span className="shop-name"><StyledName name={name} style={s} showTitle={i.kind === 'title'} /></span>;
   };
@@ -55,11 +59,11 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
   const countIn = (k: ItemKind) => itemsOf(k).filter(visible).length;
 
   return (
-    <>
+    <div className="shop-scope">
       <div className={`shop-look${look.banner ? ` banner ${look.banner}` : ''}`} aria-label="Your look">
         <Avatar name={name} src={image} size={44} ring={look.border} effect={look.effect} />
         <span className="shop-look-name"><StyledName name={name} style={look} /></span>
-        <span className="shop-look-meta">
+        <span className={`shop-look-meta${trying ? '' : ' idle'}`}>
           {trying ? <><span>Trying on {trying.label}</span><button type="button" className="btn btn-sm" onClick={() => setTrying(null)}>Back to mine</button></>
             : <span className="muted">Tap any preview to try it on</span>}
         </span>
@@ -85,7 +89,7 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
           const on = isOn(i);
           const r = rarity(i);
           return (
-            <li key={i.key} className={`shop-card r-${r}${trying?.key === i.key ? ' trying' : ''}`}>
+            <li key={i.key} className={`shop-card k-${i.kind} r-${r}${trying?.key === i.key ? ' trying' : ''}`}>
               <button type="button" className="shop-prev-btn" aria-label={`Try on ${i.label}`} aria-pressed={trying?.key === i.key}
                 onClick={() => setTrying(trying?.key === i.key ? null : i)}>{preview(i)}</button>
               <div className="shop-meta">
@@ -112,6 +116,6 @@ export function ShopClient({ signedIn, points, owned, sold, name, image, equippe
           );
         })}
       </ul>
-    </>
+    </div>
   );
 }

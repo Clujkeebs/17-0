@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { NameStyle } from '@/lib/cosmetics';
-import { Effect } from './Effect';
+import { Effect, FRAMED, Frame } from './Effect';
 import { NotificationBell } from './NotificationBell';
 
 type Me = { signedIn: false } | { signedIn: true; username: string | null; name: string; image: string | null; style: NameStyle };
@@ -38,8 +38,9 @@ export function Avatar({ name, src, size = 40, ring, effect }: { name: string; s
     : <span className="avatar avatar-i" aria-hidden="true" style={{ width: size, height: size, fontSize: size * 0.4 }}>{initials || '?'}</span>;
   // An equipped avatar border (shop item) wraps the picture in a ring.
   const pic = ring ? <span className={`ring ${ring}`}>{img}</span> : img;
-  // An equipped effect (shop item) animates around the picture.
-  // Fire rings burn for real: small flames rise off them even without an effect equipped.
+  // An equipped effect (shop item) animates around the picture, and ornate borders add a frame over it.
+  // Fire rings burn for real: flames rise off them even without an effect equipped.
   const fx = effect ?? (ring === 'ring-flame' || ring === 'ring-lava' ? 'fx-ringfire' : null);
-  return fx ? <span className="fx-wrap" style={{ ['--fx-size' as string]: `${size}px` }}>{pic}<Effect k={fx} /></span> : pic;
+  const framed = !!ring && FRAMED.has(ring);
+  return fx || framed ? <span className="fx-wrap">{pic}<Frame k={ring} /><Effect k={fx} /></span> : pic;
 }

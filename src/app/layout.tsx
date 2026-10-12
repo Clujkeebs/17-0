@@ -3,6 +3,7 @@ import { ADSENSE_CLIENT } from '@/lib/ads';
 import { nameFontVariables } from '@/lib/name-fonts';
 import localFont from 'next/font/local';
 import './globals.css';
+import '@/components/cosmetics.css';
 import { SITE } from '@/lib/site';
 import { SiteFooter } from '@/components/SiteFooter';
 import { CookieBanner } from '@/components/CookieBanner';

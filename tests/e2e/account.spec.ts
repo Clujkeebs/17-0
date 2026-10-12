@@ -111,7 +111,7 @@ test('owner account gets the owner style; nobody else can', async ({ page, reque
   await page.goto('/profile');
   await expect(page.locator('h1 .owner-tag')).toHaveText('[OWNER]');
   await expect(page.locator('h1 .nm-text')).toHaveClass(/nm-f-neon/);
-  await expect(page.locator('h1 .nm-text')).toHaveClass(/nm-c-rainbow/);
+  await expect(page.locator('h1 .nm-text .nm-cn')).toHaveClass(/nm-c-rainbow/);
   // Even the owner cannot "equip" the owner keys through the API, and nobody can name themselves [OWNER].
   expect((await page.request.patch('/api/user/profile', { data: { nameFont: 'neon' } })).status()).toBe(403);
   expect((await page.request.patch('/api/user/profile', { data: { displayName: '[OWNER]' } })).status()).toBe(400);

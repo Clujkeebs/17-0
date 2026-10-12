@@ -80,3 +80,36 @@ test('the owner owns every item, including exclusives nobody else can see', asyn
   await expect(page.locator('h1 .nm-title')).toHaveText('Day One');
   await sql`delete from user_accounts where email = ${owner}`;
 });
+
+test('frames, effects and banners draw their art, and colors have a dark palette', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  const u = `art_${String(Date.now()).slice(-9)}`;
+  await signUp(page, u);
+  await sql`update user_accounts set points = 20000 where username = ${u}`;
+  const kit: [string, string][] = [['border', 'ring-rays'], ['effect', 'fx-aura-blue'], ['banner', 'banner-synthwave'], ['color', 'forest'], ['font', 'extrude'], ['title', 'two-way'], ['flair', 'flair-medal']];
+  for (const [kind, item] of kit) {
+    expect((await page.request.post('/api/shop', { data: { action: 'buy', item } })).status(), `buy ${item}`).toBe(200);
+    expect((await page.request.post('/api/shop', { data: { action: 'equip', kind, item } })).status(), `equip ${item}`).toBe(200);
+  }
+  await page.goto('/profile');
+  const head = page.locator('.profile-head');
+  await expect(head).toHaveClass(/banner-synthwave/);
+  // The frame, and both layers of the aura, are real images that load.
+  // (The effect also rides beside the name as a small badge, which the avatar selector skips.)
+  const art = head.locator('.fx-wrap:not(.nm-fx) img.fx-img');
+  await expect(art).toHaveCount(3);
+  await expect.poll(() => art.evaluateAll((els) => els.every((e) => (e as HTMLImageElement).complete && (e as HTMLImageElement).naturalWidth > 0))).toBe(true);
+  await expect(art.and(page.locator('.fx-back'))).toHaveCount(1);
+  await expect(art.and(page.locator('.fx-frame'))).toHaveCount(1);
+  await expect(page.locator('h1 .nm-text')).toHaveClass(/nm-f-extrude/);
+  await expect(page.locator('h1 .nm-cn')).toHaveClass(/nm-c-forest/);
+  await expect(page.locator('h1 .nm-title')).toHaveText('Two-way');
+  expect((await page.request.get('/cosmetics/banners/banner-synthwave.svg')).status()).toBe(200);
+  // Light and dark palettes: Forest is deep green on white and a light green on the dark page.
+  const color = () => page.locator('h1 .nm-cn').evaluate((el) => getComputedStyle(el).color);
+  expect(await color()).toBe('rgb(22, 101, 52)');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/profile');
+  await expect.poll(color).toBe('rgb(110, 231, 154)');
+  await sql`delete from user_accounts where username = ${u}`;
+});
