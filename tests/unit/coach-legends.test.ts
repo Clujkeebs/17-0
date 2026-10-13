@@ -28,9 +28,9 @@ describe('all-time head coaches', () => {
     }
   });
 
-  it('cover nearly every franchise', () => {
+  it('cover every franchise', () => {
     const covered = new Set(COACH_LEGENDS.map((c) => c.team));
-    expect(covered.size).toBeGreaterThanOrEqual(30);
+    expect([...covered].sort()).toEqual([...TEAMS].sort());
     expect(coachLegendsFor('SF').map((c) => c.name)).toEqual(expect.arrayContaining(['Bill Walsh', 'George Seifert']));
     expect(coachLegendsFor('NOPE')).toEqual([]);
   });
@@ -53,10 +53,11 @@ describe('all-time head coaches', () => {
   });
 
   it('describe themselves on a board row without repeating "Legend"', () => {
-    expect(coachLegendLine(coachLegendByKey('shula-mia')!)).toBe('1970-95 · 2 titles');
-    expect(coachLegendLine(coachLegendByKey('levy-buf')!)).toBe('1986-97 · 4 title games');
-    expect(coachLegendLine(coachLegendByKey('smith-atl')!)).toBe('2008-14');
-    expect(coachLegendLine(coachLegendByKey('gibbs-was')!)).toBe('1981-07 · 3 titles');
+    expect(coachLegendLine(coachLegendByKey('shula-mia')!)).toBe('1970-95 · 257-133-2 · 2 titles');
+    expect(coachLegendLine(coachLegendByKey('levy-buf')!)).toBe('1987-97 · 110-65 · 4 title games');
+    expect(coachLegendLine(coachLegendByKey('smith-atl')!)).toBe('2008-14 · 66-46');
+    expect(coachLegendLine(coachLegendByKey('gibbs-was')!)).toBe('1981-07 · 154-94 · 3 titles');
+    expect(coachLegendLine(coachLegendByKey('brown-cle')!)).toBe('1950-62 · 111-44-5 · 3 titles');
   });
 
   it('have their own pick ids', () => {

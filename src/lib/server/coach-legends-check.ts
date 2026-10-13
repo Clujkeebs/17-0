@@ -12,9 +12,16 @@ async function seasonRecord(season: number, espnId: number, fetchImpl: typeof fe
 }
 
 /**
+ * ESPN's own season records for these coaches add up to a different total than the coach's documented record, which was
+ * summed season by season; the written numbers stand and the line logs `known` while ESPN keeps sending the same thing.
+ */
+const ESPN_QUIRKS: Record<string, string> = { 'johnson-dal': '44-34-0', 'cowher-pit': '148-90-1' };
+
+/**
  * Checks each legendary coach's written record against ESPN's franchise records for the seasons he ran the team, and logs
- * one line each (`ok`, or `CHECK` with both records). Nothing is written. It runs once for each version of the list, so
- * editing the list in coach-legends.ts re-checks it on the next worker start.
+ * one line each: `ok` (same), `partial` (ESPN lacks some seasons, so it can only rule out a record smaller than its own),
+ * `known` (a quirk listed above) or `CHECK` (a real difference to fix in coach-legends.ts). Nothing is written. It runs
+ * once for each version of the list, so editing the list re-checks it on the next worker start.
  */
 export async function checkCoachLegends(fetchImpl: typeof fetch = fetch) {
   const version = createHash('md5').update(JSON.stringify(COACH_LEGENDS)).digest('hex').slice(0, 8);
@@ -23,16 +30,17 @@ export async function checkCoachLegends(fetchImpl: typeof fetch = fetch) {
   const [map, teams] = await Promise.all([franchiseMap(fetchImpl), db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation }).from(schema.teams)]);
   const espnOf = new Map<string, number>();
   for (const [espn, ours] of map) { const t = teams.find((x) => x.id === ours); if (t) espnOf.set(t.abbr, espn); }
-  let ok = 0, off = 0, none = 0;
+  let ok = 0, partial = 0, known = 0, off = 0, none = 0;
   for (const c of COACH_LEGENDS) {
     const espn = espnOf.get(c.team);
     if (!espn) { none++; console.log(`[coach-legends] no ESPN franchise for ${c.team} (${c.key})`); continue; }
     const seasons = c.years.flatMap(([a, b]) => Array.from({ length: b - a + 1 }, (_, i) => a + i));
     let w = 0, l = 0, t = 0, got = 0;
     await pool(seasons, 6, async (y) => { const r = await seasonRecord(y, espn, fetchImpl); if (r) { w += r.w; l += r.l; t += r.t; got++; } });
-    const same = got === seasons.length && w === c.w && l === c.l && t === c.t;
-    if (same) ok++; else off++;
-    console.log(`[coach-legends] ${same ? 'ok' : 'CHECK'} ${c.key} mine ${c.w}-${c.l}-${c.t} espn ${w}-${l}-${t} (${got}/${seasons.length} seasons)`);
+    const mine = `${c.w}-${c.l}-${c.t}`, theirs = `${w}-${l}-${t}`;
+    const status = got === seasons.length ? (mine === theirs ? 'ok' : ESPN_QUIRKS[c.key] === theirs ? 'known' : 'CHECK') : w > c.w || l > c.l || t > c.t ? 'CHECK' : 'partial';
+    if (status === 'ok') ok++; else if (status === 'partial') partial++; else if (status === 'known') known++; else off++;
+    console.log(`[coach-legends] ${status} ${c.key} mine ${mine} espn ${theirs} (${got}/${seasons.length} seasons)`);
   }
-  console.log(`[coach-legends] checked ${COACH_LEGENDS.length}: ${ok} match, ${off} differ, ${none} without a franchise`);
+  console.log(`[coach-legends] checked ${COACH_LEGENDS.length}: ${ok} match, ${known} known ESPN quirks, ${partial} partial (ESPN lacks seasons), ${off} differ, ${none} without a franchise`);
 }
