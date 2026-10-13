@@ -5,13 +5,18 @@ const PAGES = ['/', '/games', '/games/higher-lower', '/games/grid', '/games/myst
   '/games/sports-strands', '/games?sport=college', '/games/cfb-higher-lower', '/games/cbb-who-led', '/games/wcbb-whose-team', '/games/cfb-build-a-player', '/games/cbb-build-a-player', '/games/wcbb-build-a-player',
   '/legal/terms', '/legal/privacy', '/legal/cookies', '/legal/disclaimer', '/legal/dmca', '/legal/accessibility', '/login', '/register'];
 
+const OWN_ORIGIN = new URL(process.env.E2E_BASE_URL ?? 'http://localhost:3000').origin;
+
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); localStorage.setItem('gl-17-0-rules', '1'); }); });
 
 for (const path of PAGES) {
   test(`renders ${path} without errors and passes axe`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => { if (m.type() === 'error' && !/adsbygoogle|favicon|ERR_TUNNEL|ERR_NAME|ERR_CONNECTION|frame-ancestors/.test(m.text())) errors.push(m.text()); });
+    // Any of our own URLs answering 400 or more fails the page. A third party's 404 is not ours to fix: a runner with internet
+    // really gets one for the made-up player ids in the test data (MLB headshots), where this sandbox has no route out.
+    page.on('response', (r) => { if (r.status() >= 400 && r.url().startsWith(OWN_ORIGIN) && !/favicon/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
+    page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|adsbygoogle|favicon|ERR_TUNNEL|ERR_NAME|ERR_CONNECTION|frame-ancestors/.test(m.text())) errors.push(m.text()); });
     const res = await page.goto(path);
     expect(res?.status()).toBeLessThan(400);
     await expect(page.locator('h1').first()).toBeVisible();
