@@ -12,8 +12,8 @@ import { wnbaReady } from '@/lib/server/wnba-game';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
-  title: '44-0: Spin an era, spin a team, draft a perfect WNBA season',
-  description: 'Five spins. Each lands on a WNBA era and a franchise. Draft one player from each, graded on her real stats, set your lineup and see if it goes 44-0. Or draft only from this season.',
+  title: '44-0: Spin a team, draft a perfect WNBA season',
+  description: 'Five spins. Each lands on a WNBA franchise. Draft one player from each, graded on her real stats from this season, set your lineup and see if it goes 44-0.',
   alternates: { canonical: '/games/44-0' },
 };
 

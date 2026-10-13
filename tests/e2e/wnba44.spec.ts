@@ -8,17 +8,13 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
 });
 
-test('44-0: era and team spins, five picks, move a player, play the season', async ({ page }) => {
+test('44-0: five picks, move a player, play the season', async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto('/games/44-0?mode=casual');
   const sheet = page.getByRole('dialog', { name: 'Game setup' });
   await sheet.getByRole('group', { name: 'Mode' }).locator('label', { hasText: /^Casual/ }).click();
   await sheet.getByRole('button', { name: 'Start' }).click();
-  // One era re-spin, then picks.
-  const newEra = page.getByRole('button', { name: /New era/ });
-  await expect(newEra).toBeEnabled({ timeout: 20_000 });
-  await newEra.click();
-  await expect(newEra).toBeDisabled();
+  await expect(page.getByRole('button', { name: /New era/ })).toHaveCount(0);
   for (let i = 0; i < 5; i++) {
     const btn = page.locator('.g-player:not([disabled])').first();
     await expect(btn).toBeVisible({ timeout: 20_000 });
@@ -34,7 +30,7 @@ test('44-0: era and team spins, five picks, move a player, play the season', asy
   await page.getByRole('button', { name: 'Play the season' }).first().click();
   await page.waitForURL(/\/results\//);
   await expect(page.locator('.eyebrow').first()).toContainText('44-0');
-  await expect(page.locator('.eyebrow').first()).toContainText('All-time');
+  await expect(page.locator('.eyebrow').first()).toContainText('Current');
   await expect(page.locator('.big-num')).toHaveText(/^\d+-\d+$/);
   await expect(page.locator('.grade-table tbody tr')).toHaveCount(5);
   const og = await page.request.get(await page.locator('figure img').first().getAttribute('src') as string);
@@ -45,7 +41,6 @@ test('44-0 Current: this season only, no era spin', async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto('/games/44-0?mode=casual');
   const sheet = page.getByRole('dialog', { name: 'Game setup' });
-  await sheet.getByRole('group', { name: 'Pool' }).locator('label', { hasText: /^Current/ }).click();
   await sheet.getByRole('button', { name: 'Start' }).click();
   await expect(page.getByText(/^Current · 2024 season$/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('button', { name: /New era/ })).toHaveCount(0);
@@ -80,8 +75,8 @@ test('44-0 API: Today needs an account, a draft cannot be graded early, and it s
   expect(start.status()).toBe(200);
   const s = await start.json();
   expect(s.total).toBe(5);
-  expect(s.mode).toBe('eras');
-  expect(s.team.era).toMatch(/^\d{4}-(\d{4}|now)$/);
+  expect(s.mode).toBe('now');
+  expect(s.team.era).toBe('now');
   expect((await request.post('/api/wnba/44-0', { data: { action: 'grade', sessionId: s.sessionId, token: s.token } })).status()).toBe(400);
   await page.goto('/games?sport=wnba');
   await expect(page.getByRole('link', { name: /44-0/ }).first()).toBeVisible();

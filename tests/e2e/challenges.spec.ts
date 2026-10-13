@@ -150,7 +150,7 @@ test('44-0 challenge: a friend draws the same board, the game page skips setup, 
   await page.getByRole('button', { name: 'Challenge friends' }).click();
   await page.waitForURL(/\/c\/[A-Za-z0-9_-]+$/);
   const id = new URL(page.url()).pathname.split('/').pop()!;
-  await expect(page.locator('.ch-chips li')).toHaveText(['All-time']);
+  await expect(page.locator('.ch-chips li')).toHaveText(['Current']);
 
   // The game page skips the setup sheet, says whose spins these are, and opens on the same board.
   await page.goto(`/games/44-0?challenge=${id}`);

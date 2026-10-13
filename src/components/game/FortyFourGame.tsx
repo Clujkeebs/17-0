@@ -32,7 +32,7 @@ export function FortyFourGame({ franchises, signedIn, playedTodayId = null, init
   const [game, setGame] = useState<Game | null>(null);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [hard, setHard] = useState(false);
-  const [spinMode, setSpinMode] = useState<WnbaMode>('eras');
+  const [spinMode, setSpinMode] = useState<WnbaMode>('now');
   const [sheet, setSheet] = useState(false);
   const [playedId, setPlayedId] = useState<string | null>(playedTodayId);
   const [spinKey, setSpinKey] = useState(0);
@@ -98,9 +98,9 @@ export function FortyFourGame({ franchises, signedIn, playedTodayId = null, init
     setBusy('start'); setError(''); setSheet(false); setGame(null);
     try { sessionStorage.removeItem(STATE_KEY); localStorage.setItem(SETUP_KEY, JSON.stringify({ mode, hard, spin: spinMode })); } catch {}
     try {
-      const d = await call({ action: 'start', daily: mode === 'today', hard, mode: mode === 'today' ? 'eras' : spinMode });
+      const d = await call({ action: 'start', daily: mode === 'today', hard, mode: 'now' });
       spun(d);
-      track('game_started', { game: '44-0', daily: mode === 'today', hard, spin: mode === 'today' ? 'eras' : spinMode });
+      track('game_started', { game: '44-0', daily: mode === 'today', hard, spin: 'now' });
     } catch (e) {
       const err = e as Error & { status?: number; data?: { resultId?: string } };
       if (err.status === 409 && err.data?.resultId) { setPlayedId(err.data.resultId); setMode('casual'); setSheet(true); } else setError(err.message);
@@ -152,10 +152,8 @@ export function FortyFourGame({ franchises, signedIn, playedTodayId = null, init
         <button type="button" className="sheet-x" aria-label="Close setup" onClick={() => setSheet(false)}>×</button>
         <h2 id="wnba-setup-h" className="sheet-h">Game setup</h2>
         <Choice label="Mode" name="mode" value={mode} onChange={(v) => setMode(v as Mode)} options={[{ v: 'today', t: 'Today', d: 'Ranked, one try' }, { v: 'casual', t: 'Casual', d: 'Unlimited' }]} />
-        <Choice label="Pool" name="pool" value={mode === 'today' ? 'eras' : spinMode} disabled={mode === 'today'} onChange={(v) => setSpinMode(v as WnbaMode)}
-          options={[{ v: 'eras', t: 'All-time', d: 'Real stats, every era since 1997' }, { v: 'now', t: 'Current', d: nowReady ? 'This season only' : 'Loading this season', off: !nowReady }]} />
         <Choice label="Difficulty" name="hard" value={hard ? 'hard' : 'easy'} onChange={(v) => setHard(v === 'hard')}
-          options={[{ v: 'easy', t: 'Easy', d: 'Stats shown, 2 era and 2 team re-spins' }, { v: 'hard', t: 'Hard', d: 'Type names, no stats, no re-spins' }]} />
+          options={[{ v: 'easy', t: 'Easy', d: 'Stats shown, 2 team re-spins' }, { v: 'hard', t: 'Hard', d: 'Type names, no stats, no re-spins' }]} />
         {mode === 'today' && !signedIn && <p className="hint">Today is ranked and needs an account. <a href="/login?next=/games/44-0">Sign in</a> or <a href="/register?next=/games/44-0">create one</a>.</p>}
         {playedId && <p className="hint">You already played Today. <a href={`/results/${playedId}`}>See your result</a>. {mode === 'today' ? 'A new board drops at midnight ET. Casual is unlimited.' : 'Casual is unlimited: press Start.'}</p>}
         <div className="sheet-actions">

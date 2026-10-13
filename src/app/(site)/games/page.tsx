@@ -24,7 +24,7 @@ const NBA = [
 ];
 
 const WNBA = [
-  { slug: '44-0', name: '44-0', tagline: 'Spin an era since 1997, spin a franchise, draft five. Or draft from this season only. Then play 44.', meta: 'Draft · 3 min' },
+  { slug: '44-0', name: '44-0', tagline: 'Spin a franchise, draft five from this season, set your lineup. Then play 44.', meta: 'Draft · 3 min' },
 ];
 
 const MLB = [

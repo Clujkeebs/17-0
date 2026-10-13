@@ -102,18 +102,6 @@ void (async () => {
   void refreshLegends(true);
   void refreshMlb();
   void refreshWnba();
-  // Temporary probe: does nba2klab publish WNBA 2K ratings? Logged once per boot; removed when the WNBA 2K edition ships or is dropped.
-  void (async () => {
-    for (const u of ['https://www.nba2klab.com/wnba2k-player-ratings', 'https://www.nba2klab.com/wnba-2k-player-ratings', 'https://www.nba2klab.com/wnba-player-ratings', 'https://www.nba2klab.com/wnba2k26-player-ratings', 'https://www.nba2klab.com/wnba']) {
-      try {
-        const r = await fetch(u, { signal: AbortSignal.timeout(30_000), headers: { 'user-agent': 'Mozilla/5.0 (compatible; UnbeatenBot/1.0; +https://playunbeaten.com)' } });
-        const t = r.ok ? await r.text() : '';
-        const m = t.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)?.[1];
-        const data = m ? ((JSON.parse(m)?.props?.pageProps?.data ?? []) as { Player?: string; Team?: string; Overall?: number }[]) : [];
-        console.log(`[wnba2k-probe] ${u} http ${r.status} bytes ${t.length} rows ${data.length} sample ${JSON.stringify(data.slice(0, 4))}`);
-      } catch (e) { console.log(`[wnba2k-probe] ${u} failed ${(e as Error).message}`); }
-    }
-  })();
   // College: football leaders and basketball lines, at boot and daily (finished seasons are skipped).
   void refreshCollege();
   setInterval(() => void refreshCollege(), 24 * 3600_000);

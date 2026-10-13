@@ -153,9 +153,9 @@ async function open(sessionId: string, tok: string) {
 const save = (id: string, p: WnbaPayload) => db.update(schema.gameSessions).set({ spinPayload: p }).where(eq(schema.gameSessions.id, id));
 
 export async function startWnba(opts: { userId?: string | null; daily?: boolean; hard?: boolean; mode?: WnbaMode; challenge?: { seed: string; challengeId: string } }) {
-  // Today is one shared Eras board; Right now is a Casual option.
-  const mode: WnbaMode = opts.daily ? 'eras' : opts.mode ?? 'eras';
-  if (!(await wnbaReady(mode))) throw new WnbaError(mode === 'now' ? 'Right now needs a few more weeks of this season. Try Eras.' : '44-0 is still loading the league history. Try again in a few minutes.', 503);
+  // 44-0 drafts from the current season only (the All-time eras were retired); sessions already under way keep their mode.
+  const mode: WnbaMode = 'now';
+  if (!(await wnbaReady(mode))) throw new WnbaError(mode === 'now' ? '44-0 needs a few more weeks of this season before it can open.' : '44-0 is still loading the league history. Try again in a few minutes.', 503);
   const date = dailyDateET();
   const seed = opts.daily ? dailySeed(`${WNBA_GAME}:`, date) : opts.challenge?.seed ?? newToken(12);
   const p: WnbaPayload = { mode, hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [], ...(opts.challenge && !opts.daily ? { challengeId: opts.challenge.challengeId } : {}) };
