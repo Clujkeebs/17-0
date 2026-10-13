@@ -1,6 +1,6 @@
 /**
  * Side-by-side rosters for a challenge. Every draft game stores `slots` with a name and a letter grade, so one
- * adapter covers 17-0, 82-0 and 162-0. Pure, no data access.
+ * adapter covers 17-0, 82-0, 162-0 and 44-0. Pure, no data access.
  */
 export interface RosterLine { slot: string; name: string; grade: number; letter: string }
 
@@ -24,7 +24,7 @@ export function faceOff(a: RosterLine[], b: RosterLine[]) {
 
 export const recordOf = (d: unknown) => { const r = d as { wins?: number; losses?: number }; return `${Number(r?.wins ?? 0)}-${Number(r?.losses ?? 0)}`; };
 
-export const CHALLENGE_GAME_NAMES: Record<string, string> = { '17-0': '17-0', '82-0': '82-0', '162-0': '162-0' };
+export const CHALLENGE_GAME_NAMES: Record<string, string> = { '17-0': '17-0', '82-0': '82-0', '162-0': '162-0', '44-0': '44-0' };
 
 /** Short chips describing the setup everyone plays. */
 export function setupChips(gameType: string, s: { hard?: boolean; format?: string; pool?: string; edition?: string; mode?: string }): string[] {
@@ -35,6 +35,7 @@ export function setupChips(gameType: string, s: { hard?: boolean; format?: strin
   }
   if (gameType === '82-0') out.push(s.edition === 'standard' ? 'Standard (2K)' : 'Classic eras');
   if (gameType === '162-0') out.push(s.mode === 'now' ? 'Right now' : 'Eras');
+  if (gameType === '44-0') out.push(s.mode === 'now' ? 'Current' : 'All-time');
   if (s.hard) out.push('Hard mode');
   return out;
 }

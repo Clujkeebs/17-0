@@ -8,7 +8,7 @@ import { grant } from './points';
  * included, since every draw is a function of the seed and the re-spins used). Grading for challenge sessions
  * is seeded from the challenge and the roster, so the same picks always give the same record.
  */
-export const CHALLENGE_GAMES = ['17-0', '82-0', '162-0'] as const;
+export const CHALLENGE_GAMES = ['17-0', '82-0', '162-0', '44-0'] as const;
 export type ChallengeGame = (typeof CHALLENGE_GAMES)[number];
 export const isChallengeGame = (g: string): g is ChallengeGame => (CHALLENGE_GAMES as readonly string[]).includes(g);
 
@@ -29,7 +29,7 @@ function setupOf(gameType: ChallengeGame, p: Record<string, unknown>): Challenge
 export async function createChallenge(resultId: string): Promise<{ id: string }> {
   const [r] = await db.select().from(schema.gameResults).where(eq(schema.gameResults.id, resultId)).limit(1);
   if (!r) throw new ChallengeError('That result does not exist.', 404);
-  if (!isChallengeGame(r.gameType)) throw new ChallengeError('Challenges are for 17-0, 82-0 and 162-0.');
+  if (!isChallengeGame(r.gameType)) throw new ChallengeError('Challenges are for 17-0, 82-0, 162-0 and 44-0.');
   if (r.isDaily) throw new ChallengeError('Today is ranked and the same for everyone already. Challenge a Casual game.');
   const [existing] = await db.select({ id: schema.challenges.id }).from(schema.challenges).where(eq(schema.challenges.creatorResultId, r.id)).limit(1);
   if (existing) return existing;

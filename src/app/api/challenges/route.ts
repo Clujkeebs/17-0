@@ -6,7 +6,7 @@ import { limitByIp } from '@/lib/server/rate-limit';
 export const runtime = 'nodejs';
 const Body = z.object({ resultId: z.string().uuid() });
 
-/** Turns a Casual 17-0, 82-0 or 162-0 result into a challenge link (the same link every time for one result). */
+/** Turns a Casual 17-0, 82-0, 162-0 or 44-0 result into a challenge link (the same link every time for one result). */
 export async function POST(req: Request) {
   const limited = await limitByIp(req, 'challenge');
   if (limited) return limited;

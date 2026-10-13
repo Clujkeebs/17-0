@@ -125,3 +125,50 @@ test('162-0 challenge: two starts from one challenge draw the same board', async
   }
   expect(xr.team.era).toBe(x1.team.era);
 });
+
+test('44-0 challenge: a friend draws the same board, the game page skips setup, and the head-to-head works', async ({ request, page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  test.setTimeout(120_000);
+  await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const call = async (body: object) => { const r = await request.post('/api/wnba/44-0', { data: body }); return { status: r.status(), d: await r.json() }; };
+  // Takes the top player on every board, then grades the roster: the same picks in the same order.
+  const playOut = async (start: Record<string, any>) => {
+    let s = start;
+    const auth = { sessionId: s.sessionId, token: s.token };
+    while (!s.done) s = { ...s, ...(await call({ action: 'pick', playerId: s.team.players[0].id, ...auth })).d };
+    const graded = await call({ action: 'grade', ...auth });
+    expect(graded.status).toBe(200);
+    return graded.d.id as string;
+  };
+  const first = await call({ action: 'start', mode: 'eras' });
+  expect(first.status).toBe(200);
+  const resultA = await playOut(first.d);
+
+  // The result page offers the challenge, and one tap makes the link.
+  await page.goto(`/results/${resultA}`);
+  await page.getByRole('button', { name: 'Challenge friends' }).click();
+  await page.waitForURL(/\/c\/[A-Za-z0-9_-]+$/);
+  const id = new URL(page.url()).pathname.split('/').pop()!;
+  await expect(page.locator('.ch-chips li')).toHaveText(['All-time']);
+
+  // The game page skips the setup sheet, says whose spins these are, and opens on the same board.
+  await page.goto(`/games/44-0?challenge=${id}`);
+  await expect(page.getByRole('dialog', { name: 'Game setup' })).toBeHidden();
+  await expect(page.locator('.g-challenge')).toContainText('same spins as a friend');
+  await expect(page.locator('.g-player').first()).toContainText(first.d.team.players[0].name, { timeout: 20_000 });
+
+  // Two starts from one challenge draw the same board; an unknown challenge is a 404.
+  const x = (await call({ action: 'start', challenge: id })).d;
+  expect([x.team.id, x.team.era]).toEqual([first.d.team.id, first.d.team.era]);
+  expect(x.team.players.map((p: { id: number }) => p.id)).toEqual(first.d.team.players.map((p: { id: number }) => p.id));
+  expect((await call({ action: 'start', challenge: 'nope-not-real' })).status).toBe(404);
+
+  // Finishing it links the result to the head-to-head, five spots side by side.
+  const resultB = await playOut(x);
+  await page.goto(`/results/${resultB}`);
+  await page.getByRole('link', { name: 'See the head-to-head' }).click();
+  await page.waitForURL(/\/c\/.+\?r=/);
+  await expect(page.locator('.ch-verdict')).toBeVisible();
+  await expect(page.locator('.ch-table tbody tr')).toHaveCount(5);
+});

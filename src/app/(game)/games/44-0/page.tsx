@@ -3,6 +3,7 @@ import { GameFaq } from '@/components/seo/GameFaq';
 import { GAME_FAQ } from '@/content/game-faq';
 import { desc } from 'drizzle-orm';
 import { auth } from '@/auth';
+import { challengeInfo } from '@/lib/server/challenges';
 import { todaysResult } from '@/lib/server/games';
 import { db, schema } from '@/db';
 import type { ReelTeam } from '@/components/game/Reel';
@@ -26,7 +27,7 @@ async function franchises(): Promise<ReelTeam[]> {
   } catch { return []; }
 }
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ mode?: string; challenge?: string }> }) {
   const sp = await searchParams;
   const session = await auth().catch(() => null);
   const signedIn = !!session?.user?.id;
@@ -36,7 +37,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ m
   const nowReady = await wnbaReady('now').catch(() => false);
   return (
     <>
-      <FortyFourGame nowReady={nowReady} franchises={await franchises()} signedIn={signedIn} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} />
+      <FortyFourGame nowReady={nowReady} franchises={await franchises()} signedIn={signedIn} playedTodayId={playedTodayId} initialMode={initialMode} modeFromLink={sp.mode === 'today' || sp.mode === 'casual'} challenge={await challengeInfo(sp.challenge, '44-0')} />
       <GameFaq faq={GAME_FAQ['44-0']} />
     </>
   );

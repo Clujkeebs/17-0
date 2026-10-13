@@ -25,6 +25,8 @@ export interface WnbaPayload {
   /** Re-spins used in the current round; with the seed and round they fix the next draw (see spin-order.ts). */
   roundEra?: number;
   roundTeam?: number;
+  /** Set when this game is someone's challenge: same seed, same setup, graded from the roster (see challenges.ts). */
+  challengeId?: string;
   /** The board on the clock. Decided server-side from the seed, never by the client. */
   current: { era: WnbaSpin; teamId: number } | null;
   picks: { playerId: number; teamId: number; season: number; slot: WnbaSlot; era: WnbaSpin }[];
@@ -150,13 +152,13 @@ async function open(sessionId: string, tok: string) {
 }
 const save = (id: string, p: WnbaPayload) => db.update(schema.gameSessions).set({ spinPayload: p }).where(eq(schema.gameSessions.id, id));
 
-export async function startWnba(opts: { userId?: string | null; daily?: boolean; hard?: boolean; mode?: WnbaMode }) {
+export async function startWnba(opts: { userId?: string | null; daily?: boolean; hard?: boolean; mode?: WnbaMode; challenge?: { seed: string; challengeId: string } }) {
   // Today is one shared Eras board; Right now is a Casual option.
   const mode: WnbaMode = opts.daily ? 'eras' : opts.mode ?? 'eras';
   if (!(await wnbaReady(mode))) throw new WnbaError(mode === 'now' ? 'Right now needs a few more weeks of this season. Try Eras.' : '44-0 is still loading the league history. Try again in a few minutes.', 503);
   const date = dailyDateET();
-  const seed = opts.daily ? dailySeed(`${WNBA_GAME}:`, date) : newToken(12);
-  const p: WnbaPayload = { mode, hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [] };
+  const seed = opts.daily ? dailySeed(`${WNBA_GAME}:`, date) : opts.challenge?.seed ?? newToken(12);
+  const p: WnbaPayload = { mode, hard: !!opts.hard, eraRespinsUsed: 0, teamRespinsUsed: 0, current: null, picks: [], ...(opts.challenge && !opts.daily ? { challengeId: opts.challenge.challengeId } : {}) };
   p.current = await draw(seed, 0, p);
   const tok = newToken();
   const [row] = await db.insert(schema.gameSessions).values({
@@ -224,7 +226,7 @@ export async function gradeWnba(ctx: { sessionId: string; token: string; userId?
     return { slot: x.slot, name: r.p.fullName, position: r.p.position, teamId: x.teamId, season: x.season, value: lineValue(r.ps, games), apg: r.ps.apg };
   });
   // Today (and any shared board) grades the roster, so identical picks always play out the same season.
-  const seed = s.isDaily ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
+  const seed = s.isDaily || p.challengeId ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;
   const mode = p.mode ?? 'eras';
   const result = gradeWnbaRoster(seed, picks, (await getWnbaFloor(mode)) + (await getOffset(modeKey(WNBA_GAME, { mode }))));
   const { nowSeason } = await eraTeams();

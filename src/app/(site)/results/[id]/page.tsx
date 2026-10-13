@@ -266,6 +266,7 @@ function WnbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: s
           <Link className="btn btn-primary" href="/games/44-0">Play again</Link>
           <Link className="btn" href="/games?sport=wnba">More WNBA</Link>
         </div>
+        <ChallengeBlock r={r} />
         <hr className="divider" />
         <h2>The season</h2>
         <div className="prose">{d.narrative.map((x, i) => <p key={i}>{x}</p>)}</div>
@@ -341,7 +342,7 @@ function MlbResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
 
 /**
  * Challenges on a result: a game played from a challenge links back to the head-to-head; any other Casual
- * 17-0, 82-0 or 162-0 game can become one. Today is the same for everyone already, so it has neither.
+ * 17-0, 82-0, 162-0 or 44-0 game can become one. Today is the same for everyone already, so it has neither.
  */
 async function ChallengeBlock({ r }: { r: { id: string; isDaily: boolean } }) {
   if (r.isDaily) return null;
