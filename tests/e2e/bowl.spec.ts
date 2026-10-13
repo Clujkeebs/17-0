@@ -105,3 +105,57 @@ test('Unbeaten Bowl GM mode: a full season and offseason, then a game', async ({
   await expect(page.locator('.gm-news li').first()).toContainText(/^(Won|Lost|Tied) \d+-\d+/);
   await expect(page.locator('.gm-name')).toContainText(/ (1-0|0-1|0-0-1)$/);
 });
+
+/** Gets past the kickoff and any opening drive by the other team, to the first play call. */
+async function toFirstPlayCall(page: Page) {
+  await page.goto('/games/unbeaten-bowl');
+  await page.getByRole('tab', { name: 'Quick play' }).click();
+  await page.locator('.bw-team').first().click();
+  await page.getByRole('button', { name: 'Kick off' }).click();
+  for (let i = 0; i < 60; i++) {
+    if (await page.locator('.bw-play').first().isVisible()) return;
+    const ball = page.getByRole('button', { name: /^Your ball/ });
+    if (await ball.isVisible()) await ball.click();
+    await page.waitForTimeout(200);
+  }
+  throw new Error('never reached a play call');
+}
+
+// Quick sim: the kickoff card offers it, and it plays all six of your drives from the ratings, straight to the final.
+test('Unbeaten Bowl quick sim from the kickoff card goes straight to a final and posts the score', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  test.setTimeout(90_000);
+  await page.goto('/games/unbeaten-bowl');
+  await page.getByRole('tab', { name: 'Quick play' }).click();
+  await page.locator('.bw-team').first().click();
+  await page.getByRole('button', { name: 'Quick sim' }).click();
+  await expect(page.locator('.bw-big').filter({ hasText: /^(You win\.|You lose\.|A tie\.)$/ })).toBeVisible();
+  await page.getByRole('button', { name: /^Post the score/ }).click();
+  await expect(page.locator('.bw-lines')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.bw-lines tbody tr')).toHaveCount(2);
+});
+
+// The playbook: dozens of plays in groups, with chalkboard art, and one from the book lines up for the snap.
+test('Unbeaten Bowl: the playbook holds dozens of plays in groups and any of them lines up', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  test.setTimeout(90_000);
+  await toFirstPlayCall(page);
+  await page.getByRole('button', { name: 'Playbook' }).click();
+  expect(await page.locator('.bw-book .bw-play').count()).toBeGreaterThanOrEqual(45);
+  for (const h of ['Quick game', 'Mid range', 'Deep shots', 'Screens', 'Play action', 'Runs']) await expect(page.locator('.bw-book-h', { hasText: h })).toBeVisible();
+  await expect(page.locator('.bw-book .bw-play svg path').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Play-action post' }).click();
+  await expect(page.getByRole('button', { name: /^Snap$/ })).toBeVisible();
+  await expect(page.locator('.bw-canvas')).toBeVisible();
+});
+
+// Sim the rest: from the first play call, the rest of the game is simulated and the game goes to its final.
+test('Unbeaten Bowl: Sim the rest finishes the game from any play call', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  test.setTimeout(90_000);
+  await toFirstPlayCall(page);
+  page.once('dialog', (d) => void d.accept());
+  await page.getByRole('button', { name: 'Sim the rest' }).click();
+  await expect(page.locator('.bw-big').filter({ hasText: /^(You win\.|You lose\.|A tie\.)$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Post the score/ })).toBeVisible();
+});

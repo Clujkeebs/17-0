@@ -15,9 +15,11 @@ export const unbeatenBowl: MiniGame<Puzzle, Answer, GameData> = {
   tagline: 'Retro football on real NFL rosters. Play the daily match, a quick game, or run a franchise as GM.',
   howTo: [
     'Pick a team (Today, everyone plays the same matchup). You get six drives; the other team gets six, played out from the real rosters.',
-    'Before the snap, choose Pass or Run. On a pass, tap a receiver to throw to him; the ball leads him. Throw before the rush gets home.',
+    'Before the snap, pick one of the three plays, or open the playbook: over forty pass plays (quick game, mid range, deep shots, screens, play action) and six runs.',
+    'On a pass, tap a receiver to throw to him; the ball leads him. Green rings are open, red are covered. Or pull back and let go: the throw locks onto whoever you point at. Throw before the rush gets home.',
     'With the ball, steer by holding above or below your runner (or the arrow keys) and tap him (or Space) to juke past a tackler.',
-    'Fourth down: go for it, kick a field goal or punt. Ratings matter: arm, accuracy, speed, hands, blocking, the pass rush, coverage and your kicker\'s leg.',
+    'Fourth down: go for it, punt, or kick a field goal by tapping when the marker is in the green. Ratings matter: arm, accuracy, speed, hands, blocking, the pass rush, coverage and your kicker\'s leg.',
+    'Short on time? Quick sim plays your drives for you from the ratings, from the kickoff card or any play call. Playing is always worth a little more.',
     'GM mode: take over a team and play season after season. Win credits to train players, upgrade facilities and hire coordinators; handle the press, injuries, contracts and the cap; draft rookies, sign free agents and chase the Unbeaten Bowl.',
   ],
   generate(seed, data) {

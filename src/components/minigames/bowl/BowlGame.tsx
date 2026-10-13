@@ -1,8 +1,8 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { BOWL_DRIVES, fgChance, type BowlTeam, type OppDrive } from '@/lib/game/bowl';
+import { BOWL_DRIVES, fgChance, simMyDrives, type BowlTeam, type OppDrive } from '@/lib/game/bowl';
 import { createRng } from '@/lib/game/prng';
-import { RES_H, RES_W, aimFrom, dive, draw, fieldY, juke, onSprite, playOptions, playStats, receivers, scramble, setupPlay, snap, steer, step, throwAt, throwTo, type Play, type PlayState, type StatLine } from './engine';
+import { CATS, CAT_LABELS, PLAYBOOK, RES_H, RES_W, ROUTES, aimFrom, dive, draw, fieldY, juke, magnetAim, onSprite, playOptions, playStats, receiverAtPoint, receivers, scramble, setupPlay, snap, steer, step, throwAt, throwTo, type Play, type PlayState, type StatLine } from './engine';
 import { click, swell, thud } from '@/components/game/sound';
 import '../bowl.css';
 
@@ -10,6 +10,7 @@ export interface GameOver { pf: number; pa: number; drives: number[]; stats: Rec
 
 type Stage = 'intro' | 'pre' | 'play' | 'result' | 'fourth' | 'pat' | 'kick' | 'opp' | 'half' | 'final';
 const yardLine = (los: number) => (los === 50 ? '50' : los < 50 ? `OWN ${Math.round(los)}` : `OPP ${Math.round(100 - los)}`);
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const ord = (n: number) => ['1st', '2nd', '3rd', '4th'][n - 1] ?? `${n}th`;
 
 /**
@@ -48,6 +49,7 @@ export function BowlGame({ you, opp, theirs, youFirst, luckSeed, label, onDrive,
   const [options, setOptions] = useState<Play[] | null>(null);
   const [chosen, setChosen] = useState<Play | null>(null);
   const [two, setTwo] = useState(false);
+  const [book, setBook] = useState(false);
   const drag = useRef<{ px: number; py: number; t: number; moved: boolean } | null>(null);
   const [phase, setPhase] = useState<PlayState['phase']>('pre');
   const pf = mine.reduce((s, x) => s + x, 0);
@@ -71,14 +73,33 @@ export function BowlGame({ you, opp, theirs, youFirst, luckSeed, label, onDrive,
 
   const begin = () => { click(); goTo(0); };
 
+  /**
+   * Quick sim: your remaining drives are simulated from the two rosters (a notch below what a good player gets), the
+   * other team's are the ones already fixed, and the game goes straight to the final. Each simulated drive is
+   * reported like a played one, so Today records it the same way.
+   */
+  const simRest = (ask = true) => {
+    if (ask && !window.confirm(drive === 0 ? 'Sim the whole game? Your six drives are played out for you from the ratings.' : 'Sim the rest of the game? Your remaining drives are played out for you from the ratings.')) return;
+    click();
+    const rest = simMyDrives(rng, you, opp).slice(drive);
+    rest.forEach((d, k) => {
+      onDrive?.(drive + k, d.points);
+      for (const [n, l] of Object.entries(d.stats)) { const c = (box.current[n] ??= {}); for (const [key, v] of Object.entries(l)) c[key as keyof StatLine] = (c[key as keyof StatLine] ?? 0) + (v ?? 0); }
+    });
+    setMine((m) => [...m, ...rest.map((d) => d.points)]);
+    setOppIdx(BOWL_DRIVES); setPoss(BOWL_DRIVES * 2); setBook(false);
+    setLog(`Simmed: ${rest.map((d) => d.text).slice(-1)[0] ?? ''}`); setMsg('Quick sim.');
+    setStage('final');
+  };
+
   /** Pick a play: it lines up with its routes drawn; a tap on the field (or Space) snaps it. */
   const startPlay = (p: Play, isTwo = false) => {
     click(); setChosen(p); setTwo(isTwo);
     play.current = setupPlay(you, opp, isTwo ? 98 : los, isTwo ? 100 : firstAt, p, rng, isTwo);
     setStage('play');
-    setMsg(p.call === 'pass' ? 'Tap the field to snap. Then drag back and let go to throw.' : 'Tap the field to snap. Hold above or below the runner to steer.');
+    setMsg(p.call === 'pass' ? 'Tap the field to snap. Then tap a receiver to throw to him. Green rings are open.' : 'Tap the field to snap. Hold above or below the runner to steer.');
   };
-  const doSnap = () => { const s = play.current; if (s && s.phase === 'pre') { snap(s); click(); setMsg(s.call === 'pass' ? 'Drag back from anywhere and release to throw. Tap your QB to run.' : 'Steer: hold above or below the runner. Swipe to juke. Dive at the line.'); } };
+  const doSnap = () => { const s = play.current; if (s && s.phase === 'pre') { snap(s); click(); setMsg(s.call === 'pass' ? 'Tap a receiver to throw. Green is open, red is covered. Tap your QB to run.' : 'Steer: hold above or below the runner. Swipe to juke. Dive at the line.'); } };
 
   /** A play is over: keep the box score, move the chains, score, or end the drive. */
   const resolve = (s: PlayState) => {
@@ -100,13 +121,17 @@ export function BowlGame({ you, opp, theirs, youFirst, luckSeed, label, onDrive,
     setStage(down + 1 === 4 ? 'fourth' : 'pre');
   };
 
+  const clamp01 = (v: number) => Math.max(0, Math.min(0.99, v));
   const finish = (points: number) => { window.setTimeout(() => afterYourDrive(points), points ? 600 : 300); setStage('result'); };
 
-  const kickFg = () => {
-    const p = fgChance(100 - los, you.k);
-    const ok = rng() < p;
-    setStage('kick'); setLog(`${you.k.name} lines up from ${Math.round(100 - los + 17)}.`);
-    window.setTimeout(() => { setLog(ok ? `It is good from ${Math.round(100 - los + 17)}.` : `No good from ${Math.round(100 - los + 17)}.`); if (ok) swell(); else thud(); finish(ok ? 3 : 0); }, 1300);
+  const kickFg = () => { setStage('kick'); setLog(`${you.k.name} lines up from ${Math.round(100 - los + 17)} yards. Tap when the marker is in the green.`); };
+  /** The kick is struck: a clean strike keeps the kicker's odds (and a bit more), a mistimed one costs them. */
+  const onStrike = (q: 'clean' | 'ok' | 'poor') => {
+    const p = clamp01(fgChance(100 - los, you.k) * (q === 'clean' ? 1.12 : q === 'ok' ? 0.92 : 0.55));
+    const ok = rng() < p, yd = Math.round(100 - los + 17);
+    setLog(`${q === 'clean' ? 'Clean strike. ' : q === 'poor' ? 'Mishit. ' : ''}${ok ? `It is good from ${yd}.` : `No good from ${yd}.`}`);
+    if (ok) swell(); else thud();
+    window.setTimeout(() => finish(ok ? 3 : 0), 900);
   };
   const kickPat = () => { const ok = rng() < 0.9 + you.k.acc / 1000; setLog(ok ? 'Extra point is good.' : 'Extra point is no good.'); finish(ok ? 7 : 6); };
 
@@ -143,14 +168,18 @@ export function BowlGame({ you, opp, theirs, youFirst, luckSeed, label, onDrive,
     if (s.phase === 'live' && s.call === 'pass') {
       if (kind === 'down') {
         if (onSprite(s, s.bodies[s.qb], px, py)) { scramble(s); click(); return; }
+        // Tap a receiver and the ball goes to him, led the way a QB would. Pulling back from anywhere else is still the slingshot.
+        const hit = receiverAtPoint(s, px, py);
+        if (hit !== null) { throwTo(s, hit); click(); return; }
         drag.current = { px, py, t: performance.now(), moved: false };
         return;
       }
       if (!drag.current) return;
       const moved = Math.hypot(px - drag.current.px, py - drag.current.py) > 10;
-      if (kind === 'move') { if (moved) { drag.current.moved = true; s.aim = aimFrom(s, drag.current, { px, py }); } return; }
-      if (drag.current.moved && s.aim) { throwAt(s, s.aim); click(); }
-      s.aim = null; drag.current = null;
+      // A drag that points near a receiver locks onto him (a ring shows who), so it only has to be close.
+      if (kind === 'move') { if (moved) { drag.current.moved = true; const m = magnetAim(s, aimFrom(s, drag.current, { px, py })); s.aim = m.at; s.aimTarget = m.target; } return; }
+      if (drag.current.moved && s.aim) { if (s.aimTarget !== null) throwTo(s, s.aimTarget); else throwAt(s, s.aim); click(); }
+      s.aim = null; s.aimTarget = null; drag.current = null;
       return;
     }
     if (s.phase === 'run') {
@@ -219,7 +248,11 @@ export function BowlGame({ you, opp, theirs, youFirst, luckSeed, label, onDrive,
             <p className="bw-big">{you.city} {you.name}</p>
             <p className="bw-vs">vs {opp.city} {opp.name}</p>
             <p className="muted">{you.qb.name} to {you.targets.map((t) => t.name.split(' ').slice(-1)[0]).join(', ')}. {youFirst ? 'You receive.' : `${opp.abbr} receives.`}</p>
-            <button type="button" className="btn btn-primary btn-lg" onClick={begin}>Kick off</button>
+            <div className="bw-intro-actions">
+              <button type="button" className="btn btn-primary btn-lg" onClick={begin}>Kick off</button>
+              <button type="button" className="btn btn-lg" onClick={() => simRest(false)}>Quick sim</button>
+            </div>
+            <p className="bw-fine">Quick sim plays your six drives for you from the ratings.</p>
           </div>
         )}
         {stage === 'opp' && oppNow && (
@@ -233,6 +266,7 @@ export function BowlGame({ you, opp, theirs, youFirst, luckSeed, label, onDrive,
         {stage === 'half' && (
           <div className="bw-over"><p className="bw-big">Halftime</p><p className="num">{you.abbr} {pf}, {opp.abbr} {pa}</p><button type="button" className="btn btn-primary" onClick={() => goTo(BOWL_DRIVES)} autoFocus>Second half</button></div>
         )}
+        {stage === 'kick' && <KickMeter acc={you.k.acc} onStrike={onStrike} />}
         {stage === 'final' && (
           <div className="bw-over"><p className="bw-big">{pf > pa ? 'You win.' : pf < pa ? 'You lose.' : 'A tie.'}</p><p className="num bw-vs">{you.abbr} {pf}, {opp.abbr} {pa}</p>
             {final({ pf, pa, drives: mine, stats: box.current })}</div>
@@ -250,6 +284,24 @@ export function BowlGame({ you, opp, theirs, youFirst, luckSeed, label, onDrive,
             </button>
           ))}
         </div>}
+        {stage === 'pre' && options && <div className="bw-more">
+          <button type="button" className="btn btn-sm" aria-expanded={book} onClick={() => setBook((b) => !b)}>{book ? 'Hide playbook' : 'Playbook'}</button>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => simRest()}>Sim the rest</button>
+        </div>}
+        {stage === 'pre' && book && <div className="bw-book" role="group" aria-label="Playbook">
+          {CATS.map((cat) => (
+            <section key={cat}>
+              <h3 className="bw-book-h">{CAT_LABELS[cat]}</h3>
+              <div className="bw-book-grid">
+                {PLAYBOOK.filter((p) => p.cat === cat).map((p) => (
+                  <button key={p.name} type="button" className={`bw-play bw-${p.call}`} onClick={() => { setBook(false); startPlay(p.call === 'run' ? { ...p, side: rng() < 0.5 ? 1 : -1 } : p); }}>
+                    <PlayArt p={p} /><span>{p.name}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>}
         {stage === 'fourth' && <>
           <button type="button" className="btn btn-primary" onClick={() => setStage('pre')}>Go for it</button>
           <button type="button" className="btn" disabled={fg <= 0} onClick={kickFg}>Field goal ({Math.round(100 - los + 17)} yd, {Math.round(fg * 100)}%)</button>
@@ -261,29 +313,72 @@ export function BowlGame({ you, opp, theirs, youFirst, luckSeed, label, onDrive,
           {options?.slice(2, 3).map((p) => <button key={p.name} type="button" className="btn" onClick={() => startPlay(p, true)}>Go for two: {p.name}</button>)}
         </>}
         {stage === 'play' && <>
-          {phase === 'pre' && <button type="button" className="btn btn-primary btn-lg" onClick={doSnap}>Snap</button>}
+          {phase === 'pre' &&  <button type="button" className="btn btn-primary btn-lg" onClick={doSnap}>Snap</button>}
           {phase === 'run' && <button type="button" className="btn" onClick={() => play.current && dive(play.current)}>Dive</button>}
-          <p className="hint" style={{ margin: 0 }}>{chosen?.call === 'pass' ? 'Drag back and release to throw (or 1-4). Tap the QB (Q) to run.' : 'Hold above or below the runner to steer (arrows). Flick to juke (Space). Dive (D).'}{two ? ' Two-point try.' : ''}</p>
+          <p className="hint" style={{ margin: 0 }}>{chosen?.call === 'pass' ? 'Tap a receiver to throw (or press 1 to 4). Or pull back and let go: it locks onto whoever you point at. Tap the QB (Q) to run.' : 'Hold above or below the runner to steer (arrows). Flick to juke (Space). Dive (D).'}{two ? ' Two-point try.' : ''}</p>
         </>}
       </div>
     </div>
   );
 }
 
-/** A little chalkboard of the play: routes for a pass, the path for a run. */
+/** A little chalkboard of the play, drawn from the same route shapes the engine runs: routes for a pass, the path for a run. */
 function PlayArt({ p }: { p: Play }) {
-  const paths: Record<string, string> = {
-    slant: 'M4 26 L4 22 L14 12', go: 'M4 26 L4 4', out: 'M4 26 L4 16 L0 16', in: 'M4 26 L4 15 L16 15', post: 'M4 26 L4 16 L14 4', corner: 'M4 26 L4 16 L-4 6',
-    curl: 'M4 26 L4 14 L6 16', comeback: 'M4 26 L4 12 L0 15', hitch: 'M4 26 L4 19 L5 21', drag: 'M4 26 L6 24 L20 22', dig: 'M4 26 L4 13 L18 13',
-    seam: 'M4 26 L5 4', flat: 'M4 26 L2 24 L-6 22', wheel: 'M4 26 L-4 24 L-6 4', swing: 'M4 26 L-2 27 L-8 22', check: 'M4 26 L1 23', stick: 'M4 26 L4 20 L2 20',
+  // Where WR1, WR2, the tight end and the back line up across the card, and which way "toward the middle" points for each.
+  const spots: { x: number; toward: 1 | -1 }[] = [{ x: 8, toward: 1 }, { x: 52, toward: -1 }, { x: 40, toward: -1 }, { x: 30, toward: 1 }];
+  const K = 0.62;
+  const route = (r: string, i: number) => {
+    const o = spots[i], pts = ROUTES[r] ?? [];
+    return [`M${o.x} 27`, ...pts.map((q) => `L${Math.max(2, Math.min(58, o.x + q.y * o.toward * K)).toFixed(1)} ${Math.max(2, 27 - q.x * K).toFixed(1)}`)].join(' ');
   };
-  const xs = [8, 52, 38, 26];
+  const runPath = p.run === 'outside' ? 'M30 29 C30 22 44 22 50 8' : p.run === 'toss' ? 'M30 29 C34 27 48 27 54 9' : p.run === 'counter' ? 'M30 29 L34 24 L22 18 L20 6' : p.run === 'draw' ? 'M30 29 L30 25 L32 6' : p.run === 'power' ? 'M30 29 L33 18 L33 4' : 'M30 29 L32 18 L32 5';
   return (
-    <svg viewBox="0 0 60 30" width="60" height="30" aria-hidden="true" className="bw-art">
+    <svg viewBox="0 0 60 30" width="72" height="36" aria-hidden="true" className="bw-art">
       <line x1="2" y1="27" x2="58" y2="27" stroke="currentColor" strokeOpacity=".35" />
       {p.call === 'pass'
-        ? p.routes!.map((r, i) => <path key={i} d={paths[r]} transform={`translate(${xs[i] - 4} 0) scale(${xs[i] > 30 ? -1 : 1} 1) translate(${xs[i] > 30 ? -8 : 0} 0)`} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />)
-        : <path d={p.run === 'outside' ? 'M30 29 C30 22 44 22 50 8' : p.run === 'counter' ? 'M30 29 L34 24 L22 18 L20 6' : p.run === 'draw' ? 'M30 29 L30 25 L32 6' : 'M30 29 L32 18 L32 5'} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray={p.run === 'draw' ? '3 2' : undefined} />}
+        ? p.routes!.map((r, i) => <path key={i} d={route(r, i)} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />)
+        : <path d={runPath} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray={p.run === 'draw' ? '3 2' : undefined} />}
     </svg>
+  );
+}
+
+/**
+ * The field goal as a timing meter: a marker sweeps back and forth, tap (or press Space) to kick. Dead center is a
+ * clean strike; the green and yellow bands are wider for an accurate kicker.
+ */
+function KickMeter({ acc, onStrike }: { acc: number; onStrike: (q: 'clean' | 'ok' | 'poor') => void }) {
+  const marker = useRef<HTMLSpanElement>(null);
+  const pos = useRef(0);
+  const done = useRef(false);
+  const green = 0.06 + (clamp(acc, 40, 99) - 60) / 700, yellow = green * 2.4;
+  const [result, setResult] = useState<'clean' | 'ok' | 'poor' | null>(null);
+  const strike = useCallback(() => {
+    if (done.current) return;
+    done.current = true;
+    const off = Math.abs(pos.current - 0.5);
+    const q = off <= green ? 'clean' : off <= yellow ? 'ok' : 'poor';
+    setResult(q); onStrike(q);
+  }, [green, yellow, onStrike]);
+  useEffect(() => {
+    let raf = 0; const t0 = performance.now();
+    const tick = (now: number) => {
+      if (!done.current) { pos.current = (Math.sin(((now - t0) / 1000) * 3.4 - Math.PI / 2) + 1) / 2; if (marker.current) marker.current.style.left = `${pos.current * 100}%`; }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    const onKey = (e: KeyboardEvent) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); strike(); } };
+    window.addEventListener('keydown', onKey);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('keydown', onKey); };
+  }, [strike]);
+  return (
+    <div className="bw-over bw-kick">
+      <p className="m-kicker">Field goal</p>
+      <div className="bw-meter" role="img" aria-label="Kick meter: tap when the marker is in the green band at the center">
+        <span className="bw-band bw-yellow" style={{ left: `${(0.5 - yellow) * 100}%`, width: `${yellow * 200}%` }} />
+        <span className="bw-band bw-green" style={{ left: `${(0.5 - green) * 100}%`, width: `${green * 200}%` }} />
+        <span ref={marker} className="bw-marker" />
+      </div>
+      <button type="button" className="btn btn-primary btn-lg" onClick={strike} disabled={result !== null} autoFocus>{result ? (result === 'clean' ? 'Clean strike' : result === 'ok' ? 'Decent strike' : 'Mishit') : 'Kick'}</button>
+    </div>
   );
 }

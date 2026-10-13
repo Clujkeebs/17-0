@@ -9,7 +9,7 @@
 .bw-mid .muted { color: #A8A29E; }
 .bw-stage { position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, .18); background: #2A7230; }
 .bw-canvas { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; cursor: crosshair; }
-.bw-over { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 6px; text-align: center; padding: 16px; color: #FAFAF9; background: radial-gradient(ellipse at center, rgba(10, 10, 10, .72), rgba(10, 10, 10, .9)); animation: bw-in .25s ease-out; }
+.bw-over { z-index: 2; position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 6px; text-align: center; padding: 16px; color: #FAFAF9; background: radial-gradient(ellipse at center, rgba(10, 10, 10, .72), rgba(10, 10, 10, .9)); animation: bw-in .25s ease-out; }
 .bw-over p { margin: 0; max-width: 46ch; }
 .bw-over .muted { color: #D6D3D1; }
 .bw-big { font-family: var(--nf-arcade), ui-monospace, monospace; font-size: clamp(.9rem, 3.4vw, 1.4rem); line-height: 1.5; color: #FDE047; text-shadow: 2px 2px 0 #B45309; }
@@ -128,3 +128,26 @@
 .bw-kind { font-size: .68rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #A3E635; }
 .bw-run .bw-kind { color: #FDE047; }
 @media (max-width: 420px) { .bw-play { font-size: .76rem; } }
+
+/* A faint scanline pass over the field, behind the cards and text. */
+.bw-stage::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, .07) 0 1px, transparent 1px 3px); }
+.bw-intro-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+.bw-fine { font-size: .78rem; color: #D6D3D1; }
+/* Playbook and sim controls under the three suggested plays. */
+.bw-more { display: flex; gap: 8px; justify-content: center; width: 100%; }
+.bw-more .btn-ghost { color: var(--bone-dim); }
+.bw-book { display: grid; gap: 4px; width: 100%; max-height: 340px; overflow: auto; padding: 8px 10px 12px; border-radius: 12px; background: #0B2010; border: 1px solid #1D4D27; overscroll-behavior: contain; }
+.bw-book-h { margin: 8px 0 6px; font-family: inherit; font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #FDE047; }
+.bw-book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.bw-book .bw-play { padding: 6px 4px 8px; font-size: .72rem; }
+@media (max-width: 420px) { .bw-book-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* The field goal timing meter. */
+.bw-kick { gap: 14px; }
+.bw-meter { position: relative; width: clamp(220px, 62vw, 420px); height: 26px; border-radius: 13px; background: #1F2937; border: 2px solid #FAFAF9; overflow: hidden; }
+.bw-band { position: absolute; top: 0; bottom: 0; }
+.bw-yellow { background: #FACC15; }
+.bw-green { background: #22C55E; }
+.bw-marker { position: absolute; top: -2px; bottom: -2px; left: 0; width: 6px; margin-left: -3px; background: #FFFFFF; border-radius: 3px; box-shadow: 0 0 0 2px #0A0A0A; }
+/* The main button on a dark card is the arcade yellow, so it never sinks into the overlay. */
+.bw-over .btn-primary { background: #FDE047; color: #1C1917; border-color: #FDE047; }
+.bw-over .btn-primary:hover:not(:disabled) { background: #FACC15; border-color: #FACC15; color: #1C1917; }

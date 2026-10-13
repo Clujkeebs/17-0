@@ -97,6 +97,52 @@ export function oppDrives(seed: string, you: BowlTeam, opp: BowlTeam): OppDrive[
   });
 }
 
+
+/** One box-score line, keyed like the engine's `StatLine`. */
+export type SimStat = Partial<Record<'pa' | 'pc' | 'py' | 'ptd' | 'int' | 'ra' | 'ry' | 'rtd' | 'rec' | 'ryd' | 'rectd' | 'sk', number>>;
+/** A drive that was simulated instead of played: the points, what happened, and the box score it adds. */
+export interface SimDrive extends OppDrive { stats: Record<string, SimStat> }
+
+/**
+ * Your own drives, simulated: your offense against their defense, a notch below what a good player gets so playing
+ * is always worth it. Used by Quick sim (the whole game) and Sim the rest. `next` is the game's own luck, so a sim
+ * is never the same twice and cannot be rerolled into a known result.
+ */
+export function simMyDrives(next: () => number, you: BowlTeam, opp: BowlTeam, count = BOWL_DRIVES): SimDrive[] {
+  const edge = (you.offense - opp.defense) / 100;
+  const pTd = clamp(0.22 + edge * 1.4, 0.08, 0.48), pFg = 0.18;
+  const pick = <T,>(xs: T[]) => xs[Math.floor(next() * xs.length) % xs.length];
+  const add = (into: Record<string, SimStat>, name: string, line: SimStat) => { const c = (into[name] ??= {}); for (const [k, v] of Object.entries(line)) c[k as keyof SimStat] = (c[k as keyof SimStat] ?? 0) + (v ?? 0); };
+  return Array.from({ length: count }, () => {
+    const stats: Record<string, SimStat> = {};
+    const r = next();
+    if (r < pTd) {
+      const yards = 3 + Math.floor(next() * 45), passes = 2 + Math.floor(next() * 3);
+      const rbYards = 6 + Math.floor(next() * 14);
+      add(stats, you.rb.name, { ra: 2 + Math.floor(next() * 3), ry: rbYards });
+      const points = next() < 0.94 ? 7 : 6;
+      if (next() < 0.6) {
+        const t = pick(you.targets);
+        add(stats, you.qb.name, { pa: passes + 1, pc: passes, py: yards + 8 * (passes - 1), ptd: 1 });
+        add(stats, t.name, { rec: 1, ryd: yards, rectd: 1 });
+        return { points, text: `${last(you.qb.name)} to ${last(t.name)}, ${yards}-yard TD${points === 6 ? ' (kick missed)' : ''}`, stats };
+      }
+      add(stats, you.qb.name, { pa: 2, pc: 2, py: 13 });
+      add(stats, you.rb.name, { ra: 1, ry: Math.max(1, Math.round(yards / 4)), rtd: 1 });
+      return { points, text: `${last(you.rb.name)} ${Math.max(1, Math.round(yards / 4))}-yard TD run${points === 6 ? ' (kick missed)' : ''}`, stats };
+    }
+    if (r < pTd + pFg) {
+      add(stats, you.qb.name, { pa: 3, pc: 2, py: 17 });
+      add(stats, you.rb.name, { ra: 3, ry: 9 });
+      return { points: 3, text: `${last(you.k.name)} ${28 + Math.floor(next() * 25)}-yard field goal`, stats };
+    }
+    const turnover = next() < 0.18;
+    add(stats, you.qb.name, { pa: 3, pc: turnover ? 1 : 2, py: 6, ...(turnover ? { int: 1 } : {}) });
+    add(stats, you.rb.name, { ra: 1, ry: 2 });
+    return { points: 0, text: turnover ? `${last(you.qb.name)} is picked off.` : pick(['Three and out.', 'Punt.', 'Turnover on downs.', 'Stalled at midfield. Punt.']), stats };
+  });
+}
+
 const last = (n: string) => n.split(' ').slice(-1)[0];
 
 /** Field goal odds from the spot (yards from the goal line) and the kicker. */

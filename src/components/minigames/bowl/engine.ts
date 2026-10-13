@@ -30,10 +30,17 @@ export interface Body {
   /** A pass rusher's time to beat his block. */
   beatAt?: number;
   stunned?: number; lastTry?: number; stride: number;
+  /** Jersey number on the sprite. */
+  num?: number;
+  /** A pose that overrides the run cycle for a moment: arm up for a throw, hands up for a catch, down after a tackle. */
+  pose?: 'throw' | 'catch' | 'down' | 'tackle' | 'cheer'; poseT?: number;
 }
 
 export type PlayCall = 'pass' | 'run';
-export interface Play { name: string; call: PlayCall; routes?: string[]; run?: 'inside' | 'outside' | 'draw' | 'counter'; side?: 1 | -1 }
+/** How a play is shown in the playbook: quick and mid passes, deep shots, screens, play action, runs. */
+export type PlayCat = 'quick' | 'mid' | 'deep' | 'screen' | 'pa' | 'run';
+export type RunKind = 'inside' | 'outside' | 'draw' | 'counter' | 'power' | 'toss';
+export interface Play { name: string; call: PlayCall; cat?: PlayCat; routes?: string[]; run?: RunKind; side?: 1 | -1; /** Play action: the linebackers and safeties bite on the fake. */ pa?: boolean; /** A screen: the rush is let through and the ball goes out behind the line. */ screen?: boolean }
 export type Outcome =
   | { kind: 'gain'; yards: number; text: string }
   | { kind: 'td'; text: string }
@@ -57,12 +64,14 @@ export interface PlayState {
   cam: number; coverage: 'man' | 'zone'; blitz: boolean; flash: string | null; flashT: number;
   /** When the ball was caught (defenders need a beat to turn upfield). */
   catchAt: number;
+  /** The receiver a drag is locked onto (aim assist), for the ring and the throw. */
+  aimTarget: number | null;
 }
 
 // ------------------------------------------------------------------ playbook
 
 /** Route shapes, relative to where the receiver lines up: x downfield, y toward the middle of the field. */
-const ROUTES: Record<string, Vec[]> = {
+export const ROUTES: Record<string, Vec[]> = {
   go: [{ x: 3, y: 0 }, { x: 40, y: 0 }],
   slant: [{ x: 3, y: 0 }, { x: 16, y: 9 }],
   out: [{ x: 8, y: 0 }, { x: 8.6, y: -12 }],
@@ -80,31 +89,104 @@ const ROUTES: Record<string, Vec[]> = {
   swing: [{ x: -1, y: -6 }, { x: 3, y: -12 }],
   check: [{ x: 3, y: -3 }, { x: 5, y: -3 }],
   stick: [{ x: 6, y: 0 }, { x: 6.3, y: -1 }],
+  // More shapes: sideline and back-shoulder throws, crossers, double moves, screens and the short stuff.
+  fade: [{ x: 3, y: 0 }, { x: 38, y: -3.5 }],
+  backShoulder: [{ x: 13, y: 0 }, { x: 22, y: -3 }],
+  hook: [{ x: 10, y: 0 }, { x: 8.4, y: 1 }],
+  whip: [{ x: 4, y: 2 }, { x: 5, y: -1 }, { x: 12, y: -10 }],
+  shallow: [{ x: 1.5, y: 1.5 }, { x: 5, y: 19 }],
+  deepCross: [{ x: 6, y: 0 }, { x: 17, y: 25 }],
+  texas: [{ x: 3, y: -1 }, { x: 12, y: 9 }],
+  angle: [{ x: 4, y: -2 }, { x: 7, y: 6 }],
+  bubble: [{ x: -1.2, y: -3.2 }, { x: -0.8, y: -6 }],
+  jerk: [{ x: 6, y: 0 }, { x: 5, y: -0.6 }, { x: 14, y: 8 }],
+  sluggo: [{ x: 3, y: 0 }, { x: 8, y: 5 }, { x: 36, y: 5.5 }],
+  outUp: [{ x: 8, y: 0 }, { x: 9, y: -4 }, { x: 36, y: -5 }],
+  zIn: [{ x: 8, y: 0 }, { x: 9, y: -5 }, { x: 13, y: 13 }],
+  zOut: [{ x: 8, y: 0 }, { x: 9, y: 5 }, { x: 15, y: -11 }],
+  postCorner: [{ x: 10, y: 0 }, { x: 17, y: 6 }, { x: 33, y: -8 }],
+  flag: [{ x: 11, y: 0 }, { x: 31, y: -12 }],
+  fly: [{ x: 2, y: 0 }, { x: 46, y: 1.5 }],
+  spot: [{ x: 6, y: 0 }, { x: 6, y: 5 }],
+  skinnyPost: [{ x: 8, y: 0 }, { x: 33, y: 4.5 }],
+  flatUp: [{ x: 1, y: -3 }, { x: 3, y: -9 }, { x: 22, y: -10 }],
+  stutterGo: [{ x: 6, y: 0.4 }, { x: 8, y: 0.2 }, { x: 36, y: 0 }],
+  arrow: [{ x: 1, y: -1 }, { x: 3, y: -7 }],
+  sit: [{ x: 7, y: 0 }, { x: 7.3, y: 0 }],
+  deepOut: [{ x: 15, y: 0 }, { x: 15.6, y: -14 }],
+  deepIn: [{ x: 16, y: 0 }, { x: 16.6, y: 20 }],
+  deepCorner: [{ x: 14, y: 0 }, { x: 33, y: -11 }],
 };
-/** Pass concepts: routes for WR1, WR2, TE, RB. */
-const PASS_PLAYS: Play[] = [
-  { name: 'Slants', call: 'pass', routes: ['slant', 'slant', 'seam', 'flat'] },
-  { name: 'Four verticals', call: 'pass', routes: ['go', 'go', 'seam', 'check'] },
-  { name: 'Curl flat', call: 'pass', routes: ['curl', 'curl', 'flat', 'swing'] },
-  { name: 'Mesh', call: 'pass', routes: ['drag', 'drag', 'corner', 'flat'] },
-  { name: 'Post dig', call: 'pass', routes: ['post', 'dig', 'out', 'check'] },
-  { name: 'Smash', call: 'pass', routes: ['hitch', 'corner', 'drag', 'swing'] },
-  { name: 'Outs', call: 'pass', routes: ['out', 'out', 'seam', 'check'] },
-  { name: 'Comeback post', call: 'pass', routes: ['comeback', 'post', 'stick', 'wheel'] },
-  { name: 'Ins and outs', call: 'pass', routes: ['in', 'out', 'stick', 'flat'] },
-];
-const RUN_PLAYS: Play[] = [
-  { name: 'Inside zone', call: 'run', run: 'inside' },
-  { name: 'Outside zone', call: 'run', run: 'outside' },
-  { name: 'Draw', call: 'run', run: 'draw' },
-  { name: 'Counter', call: 'run', run: 'counter' },
-];
 
-/** Three plays to choose from before each snap: two passes and a run, different each time. */
+const P = (name: string, cat: PlayCat, routes: string[], extra: Partial<Play> = {}): Play => ({ name, call: 'pass', cat, routes, ...extra });
+/** Pass concepts: routes for WR1, WR2, TE, RB. */
+export const PASS_PLAYS: Play[] = [
+  // Quick game: the ball is out in a second and a half.
+  P('Slants', 'quick', ['slant', 'slant', 'seam', 'flat']),
+  P('Hitches', 'quick', ['hitch', 'hitch', 'seam', 'arrow']),
+  P('Quick outs', 'quick', ['out', 'out', 'sit', 'check']),
+  P('Stick', 'quick', ['hitch', 'sit', 'stick', 'flat']),
+  P('Snag', 'quick', ['hitch', 'corner', 'spot', 'flat']),
+  P('Spot', 'quick', ['spot', 'sit', 'curl', 'flat']),
+  P('Double slants', 'quick', ['slant', 'slant', 'drag', 'check']),
+  P('Option', 'quick', ['hitch', 'spot', 'stick', 'arrow']),
+  P('Rub', 'quick', ['drag', 'slant', 'sit', 'flat']),
+  // Mid game: ten to eighteen yards, the bread and butter.
+  P('Curl flat', 'mid', ['curl', 'curl', 'flat', 'swing']),
+  P('Mesh', 'mid', ['drag', 'drag', 'corner', 'flat']),
+  P('Post dig', 'mid', ['post', 'dig', 'out', 'check']),
+  P('Smash', 'mid', ['hitch', 'corner', 'drag', 'swing']),
+  P('Outs', 'mid', ['out', 'out', 'seam', 'check']),
+  P('Ins and outs', 'mid', ['in', 'out', 'stick', 'flat']),
+  P('Levels', 'mid', ['dig', 'in', 'hook', 'check']),
+  P('Shallow cross', 'mid', ['shallow', 'deepCross', 'sit', 'flat']),
+  P('Y-cross', 'mid', ['out', 'corner', 'deepCross', 'arrow']),
+  P('Texas', 'mid', ['hook', 'dig', 'sit', 'texas']),
+  P('Drive', 'mid', ['shallow', 'dig', 'sit', 'check']),
+  P('Hi-lo', 'mid', ['hook', 'spot', 'curl', 'swing']),
+  P('Whips', 'mid', ['whip', 'curl', 'deepIn', 'flat']),
+  P('Z in and out', 'mid', ['zIn', 'zOut', 'sit', 'check']),
+  P('Jerks', 'mid', ['jerk', 'jerk', 'stick', 'flat']),
+  // Deep shots: bigger gains, bigger risk.
+  P('Four verticals', 'deep', ['go', 'go', 'seam', 'check']),
+  P('Comeback post', 'deep', ['comeback', 'post', 'stick', 'wheel']),
+  P('Fades', 'deep', ['fade', 'fade', 'seam', 'check']),
+  P('Post-corner', 'deep', ['postCorner', 'skinnyPost', 'seam', 'flat']),
+  P('Slant and go', 'deep', ['sluggo', 'sluggo', 'seam', 'check']),
+  P('Out and up', 'deep', ['outUp', 'outUp', 'seam', 'swing']),
+  P('Flood', 'deep', ['flag', 'deepOut', 'flat', 'swing']),
+  P('Dagger', 'deep', ['seam', 'dig', 'deepIn', 'check']),
+  P('Double moves', 'deep', ['stutterGo', 'sluggo', 'seam', 'arrow']),
+  P('Bomb', 'deep', ['fly', 'fly', 'seam', 'wheel']),
+  P('Back shoulder', 'deep', ['backShoulder', 'backShoulder', 'seam', 'check']),
+  P('Deep crossers', 'deep', ['deepCross', 'deepCorner', 'fly', 'flat']),
+  // Screens: the rush is let through and the ball goes out behind the line with blockers in front.
+  P('Bubble screen', 'screen', ['bubble', 'slant', 'flat', 'check'], { screen: true }),
+  P('Back screen', 'screen', ['go', 'go', 'seam', 'swing'], { screen: true }),
+  P('Slip screen', 'screen', ['go', 'fade', 'hitch', 'arrow'], { screen: true }),
+  // Play action: sell the run, then throw over the linebackers.
+  P('Play-action post', 'pa', ['post', 'dig', 'out', 'check'], { pa: true }),
+  P('Play-action crossers', 'pa', ['shallow', 'deepCross', 'corner', 'flat'], { pa: true }),
+  P('Play-action bomb', 'pa', ['fly', 'fly', 'seam', 'check'], { pa: true }),
+  P('Play-action flood', 'pa', ['flag', 'deepOut', 'flat', 'swing'], { pa: true }),
+  P('Play-action boot', 'pa', ['out', 'dig', 'flat', 'check'], { pa: true }),
+];
+const R = (name: string, run: RunKind): Play => ({ name, call: 'run', cat: 'run', run });
+export const RUN_PLAYS: Play[] = [
+  R('Inside zone', 'inside'), R('Outside zone', 'outside'), R('Draw', 'draw'), R('Counter', 'counter'), R('Power', 'power'), R('Toss sweep', 'toss'),
+];
+/** Every play, grouped by category in this order, for the playbook. */
+export const PLAYBOOK: Play[] = [...PASS_PLAYS, ...RUN_PLAYS];
+export const CAT_LABELS: Record<PlayCat, string> = { quick: 'Quick game', mid: 'Mid range', deep: 'Deep shots', screen: 'Screens', pa: 'Play action', run: 'Runs' };
+export const CATS = Object.keys(CAT_LABELS) as PlayCat[];
+
+/** Three plays to choose from before each snap: a short or mid pass, a different kind of pass, and a run, new each time. */
 export function playOptions(rng: () => number): Play[] {
   const pick = <T,>(xs: T[], n: number) => { const a = [...xs]; const out: T[] = []; while (out.length < n && a.length) out.push(a.splice(Math.floor(rng() * a.length), 1)[0]); return out; };
   const side: 1 | -1 = rng() < 0.5 ? 1 : -1;
-  return [...pick(PASS_PLAYS, 2), { ...pick(RUN_PLAYS, 1)[0], side }];
+  const a = pick(PASS_PLAYS.filter((p) => p.cat === 'quick' || p.cat === 'mid'), 1)[0];
+  const b = pick(PASS_PLAYS.filter((p) => p.cat === 'deep' || p.cat === 'pa' || p.cat === 'screen'), 1)[0];
+  return [a, b, { ...pick(RUN_PLAYS, 1)[0], side }];
 }
 
 // ------------------------------------------------------------------ setup
@@ -112,6 +194,20 @@ export function playOptions(rng: () => number): Play[] {
 const SKINS = ['#F3CDA6', '#E2B07A', '#C88A55', '#A86B3C', '#80502C', '#5C3820'];
 const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
 const skinFor = (key: string) => SKINS[hash(key) % SKINS.length];
+/** A jersey number in a position's usual range, the same for the same player every time. */
+const numFor = (key: string, lo: number, hi: number) => lo + (hash(key) % (hi - lo + 1));
+
+/** Where a run is aimed: the hole the line opens, the runner's first path to it, and the end of the chalk line. */
+function holeFor(s: PlayState, mode: 'line' | 'carry' | 'art'): number {
+  const side = s.play.side ?? 1;
+  switch (s.play.run) {
+    case 'outside': return MID + 9 * side;
+    case 'toss': return MID + 14 * side;
+    case 'counter': return mode === 'carry' && s.t < 1 ? MID + 2 * side : MID - 4 * side;
+    case 'power': return MID + 2.6 * side;
+    default: return MID + 1.4 * side;
+  }
+}
 
 /** Sets up a snap: formation, routes, the defense's call and who covers whom. */
 export function setupPlay(you: BowlTeam, opp: BowlTeam, los: number, firstAt: number, play: Play, rng: () => number, twoPoint = false): PlayState {
@@ -119,10 +215,10 @@ export function setupPlay(you: BowlTeam, opp: BowlTeam, los: number, firstAt: nu
   const add = (b: Omit<Body, 'vx' | 'vy' | 'stride'>) => { bodies.push({ ...b, vx: 0, vy: 0, stride: 0 }); return bodies.length - 1; };
   const run = play.call === 'run';
   const ol: number[] = [];
-  for (const dy of [-4.4, -2.2, 0, 2.2, 4.4]) ol.push(add({ role: 'OL', side: 'off', x: los - 0.9, y: MID + dy, skin: skinFor(`ol${dy}${you.abbr}`) }));
-  const qb = add({ role: 'QB', side: 'off', x: los - (run ? 1.6 : 5), y: MID, name: you.qb.name, skin: skinFor(you.qb.name) });
+  for (const dy of [-4.4, -2.2, 0, 2.2, 4.4]) ol.push(add({ role: 'OL', side: 'off', x: los - 0.9, y: MID + dy, skin: skinFor(`ol${dy}${you.abbr}`), num: numFor(`olnum${dy}${you.abbr}`, 60, 79) }));
+  const qb = add({ role: 'QB', side: 'off', x: los - (run ? 1.6 : 5), y: MID, name: you.qb.name, skin: skinFor(you.qb.name), num: you.qb.num ?? numFor(you.qb.name, 1, 19) });
   const rbY = run ? MID : MID + 2;
-  const rb = add({ role: 'RB', side: 'off', x: los - (run ? 4.2 : 6.5), y: rbY, skill: you.rb, name: you.rb.name, skin: skinFor(you.rb.name), label: '4' });
+  const rb = add({ role: 'RB', side: 'off', x: los - (run ? 4.2 : 6.5), y: rbY, skill: you.rb, name: you.rb.name, skin: skinFor(you.rb.name), label: '4', num: you.rb.num ?? numFor(you.rb.name, 20, 49) });
   // WR1 wide left, WR2 wide right, TE off the right tackle.
   const spots = [MID - 15, MID + 15, MID + 7];
   const recv: number[] = [];
@@ -130,7 +226,7 @@ export function setupPlay(you: BowlTeam, opp: BowlTeam, los: number, firstAt: nu
     const y = spots[i], toward = y < MID ? 1 : -1;
     const shape = play.call === 'pass' ? ROUTES[play.routes![i]] : i === 2 ? [] : [{ x: 6, y: 0 }, { x: 14, y: 0 }];
     const route = shape.map((p) => ({ x: los - 0.9 + p.x, y: clamp(y + p.y * toward, 1.2, FIELD_W - 1.2) }));
-    recv.push(add({ role: i === 2 ? 'TE' : 'WR', side: 'off', x: los - (i === 2 ? 0.9 : 0.6), y, route, leg: 0, skill: sk, name: sk.name, label: String(i + 1), skin: skinFor(sk.name) }));
+    recv.push(add({ role: i === 2 ? 'TE' : 'WR', side: 'off', x: los - (i === 2 ? 0.9 : 0.6), y, route, leg: 0, skill: sk, name: sk.name, label: String(i + 1), skin: skinFor(sk.name), num: sk.num ?? (i === 2 ? numFor(sk.name, 80, 89) : numFor(sk.name, 10, 19)) }));
   });
   if (play.call === 'pass') {
     const toward = rbY < MID ? 1 : -1;
@@ -141,19 +237,19 @@ export function setupPlay(you: BowlTeam, opp: BowlTeam, los: number, firstAt: nu
   const coverage: 'man' | 'zone' = rng() < 0.55 ? 'man' : 'zone';
   const blitz = !twoPoint && rng() < 0.22;
   const dl: number[] = [];
-  for (const dy of [-4.8, -1.6, 1.6, 4.8]) dl.push(add({ role: 'DL', side: 'def', x: los + 0.9, y: MID + dy, skin: skinFor(`dl${dy}${opp.abbr}`) }));
+  for (const dy of [-4.8, -1.6, 1.6, 4.8]) dl.push(add({ role: 'DL', side: 'def', x: los + 0.9, y: MID + dy, skin: skinFor(`dl${dy}${opp.abbr}`), num: numFor(`ndl${dy}${opp.abbr}`, 90, 99) }));
   const cbOff = coverage === 'man' ? 2 + rng() * 2 : 6 + rng() * 2;
-  add({ role: 'CB', side: 'def', x: los + cbOff, y: spots[0] + 0.6, man: recv[0], skin: skinFor(`cb1${opp.abbr}`) });
-  add({ role: 'CB', side: 'def', x: los + cbOff, y: spots[1] - 0.6, man: recv[1], skin: skinFor(`cb2${opp.abbr}`) });
-  const lbTE = add({ role: 'LB', side: 'def', x: los + 4.5, y: spots[2] + 1, man: recv[2], skin: skinFor(`lb1${opp.abbr}`) });
-  const lbRB = add({ role: 'LB', side: 'def', x: los + 5, y: MID - 2.5, man: rb, blitz, skin: skinFor(`lb2${opp.abbr}`) });
-  const lbMid = add({ role: 'LB', side: 'def', x: los + 5, y: MID + 1.5, skin: skinFor(`lb3${opp.abbr}`) });
+  add({ role: 'CB', side: 'def', x: los + cbOff, y: spots[0] + 0.6, man: recv[0], skin: skinFor(`cb1${opp.abbr}`), num: numFor(`ncb1${opp.abbr}`, 20, 29) });
+  add({ role: 'CB', side: 'def', x: los + cbOff, y: spots[1] - 0.6, man: recv[1], skin: skinFor(`cb2${opp.abbr}`), num: numFor(`ncb2${opp.abbr}`, 20, 29) });
+  const lbTE = add({ role: 'LB', side: 'def', x: los + 4.5, y: spots[2] + 1, man: recv[2], skin: skinFor(`lb1${opp.abbr}`), num: numFor(`nlb1${opp.abbr}`, 50, 59) });
+  const lbRB = add({ role: 'LB', side: 'def', x: los + 5, y: MID - 2.5, man: rb, blitz, skin: skinFor(`lb2${opp.abbr}`), num: numFor(`nlb2${opp.abbr}`, 50, 59) });
+  const lbMid = add({ role: 'LB', side: 'def', x: los + 5, y: MID + 1.5, skin: skinFor(`lb3${opp.abbr}`), num: numFor(`nlb3${opp.abbr}`, 50, 59) });
   if (coverage === 'man') {
-    add({ role: 'S', side: 'def', x: los + 13, y: MID, zone: 'deep-m', skin: skinFor(`s1${opp.abbr}`) });
-    add({ role: 'S', side: 'def', x: los + 9, y: MID + 7, skin: skinFor(`s2${opp.abbr}`) });
+    add({ role: 'S', side: 'def', x: los + 13, y: MID, zone: 'deep-m', skin: skinFor(`s1${opp.abbr}`), num: numFor(`ns1${opp.abbr}`, 30, 39) });
+    add({ role: 'S', side: 'def', x: los + 9, y: MID + 7, skin: skinFor(`s2${opp.abbr}`), num: numFor(`ns2${opp.abbr}`, 30, 39) });
   } else {
-    add({ role: 'S', side: 'def', x: los + 13, y: MID - 9, zone: 'deep-l', skin: skinFor(`s1${opp.abbr}`) });
-    add({ role: 'S', side: 'def', x: los + 13, y: MID + 9, zone: 'deep-r', skin: skinFor(`s2${opp.abbr}`) });
+    add({ role: 'S', side: 'def', x: los + 13, y: MID - 9, zone: 'deep-l', skin: skinFor(`s1${opp.abbr}`), num: numFor(`ns1${opp.abbr}`, 30, 39) });
+    add({ role: 'S', side: 'def', x: los + 13, y: MID + 9, zone: 'deep-r', skin: skinFor(`s2${opp.abbr}`), num: numFor(`ns2${opp.abbr}`, 30, 39) });
   }
   // Blocking. Pass: the line takes the four rushers (the center helps), and on a blitz the back stays in.
   // Run: the guards and tackles take the down linemen, the center climbs to the middle linebacker, the tight end
@@ -168,11 +264,11 @@ export function setupPlay(you: BowlTeam, opp: BowlTeam, los: number, firstAt: nu
   void lbTE;
   // How long each man takes to beat his block: the line's blocking against the rush (or the tackling), with luck.
   const pb = run ? you.ol.run : you.ol.pass;
-  for (const d of dl) bodies[d].beatAt = clamp((run ? 2.1 : 2.9) * (1 + (pb - opp.def.rush) / 55) * (0.75 + rng() * 0.6), run ? 0.9 : 1.6, run ? 3.6 : 5.5);
+  for (const d of dl) bodies[d].beatAt = clamp((run ? 2.1 : 3.3) * (play.screen ? 0.5 : 1) * (1 + (pb - opp.def.rush) / 55) * (0.75 + rng() * 0.6), run ? 0.9 : play.screen ? 0.9 : 1.8, run ? 3.6 : 6.2);
   for (const d of [lbMid, lbRB]) bodies[d].beatAt = clamp(1.7 * (1 + (you.ol.run - opp.def.tackle) / 55) * (0.7 + rng() * 0.6), 0.8, 3);
   return {
     phase: 'pre', play, call: play.call, t: 0, los, firstAt, bodies, carrier: null, qb, ball: null, steerY: null, juke: 0, jukeDir: 0, jukeCd: 0, dive: 0,
-    outcome: null, shake: 0, particles: [], you, opp, rng, twoPoint, thrown: null, aim: null, cam: los + 8, coverage, blitz, flash: null, flashT: 0, catchAt: -1,
+    outcome: null, shake: 0, particles: [], you, opp, rng, twoPoint, thrown: null, aim: null, cam: los + 8, coverage, blitz, flash: null, flashT: 0, catchAt: -1, aimTarget: null,
   };
 }
 
@@ -192,11 +288,12 @@ export function throwAt(s: PlayState, at: Vec, assisted = false) {
   const target = { x: qb.x + Math.cos(dir) * d0, y: qb.y + Math.sin(dir) * d0 };
   const v = 15 + (clamp(s.you.qb.arm, 40, 99) / 99) * 12;
   const pressure = pressureOn(s);
-  const sigma = (0.5 + d0 * 0.05) * (1.28 - s.you.qb.acc / 100) * (pressure > 0.7 ? 1.8 : 1) * (assisted ? 1.25 : 1);
+  const sigma = (0.5 + d0 * 0.05) * (1.28 - s.you.qb.acc / 100) * (pressure > 0.7 ? 1.6 : 1) * (assisted ? 0.8 : 1);
   const g = () => (s.rng() + s.rng() + s.rng() - 1.5) * 1.35;
   const tx = target.x + g() * sigma, ty = target.y + g() * sigma;
   s.ball = { x: qb.x, y: qb.y, z: 2, sx: qb.x, sy: qb.y, tx, ty, t: 0, dur: Math.max(0.25, d0 / v), peak: clamp(d0 * 0.16, 1.2, 9) };
-  s.phase = 'air'; s.aim = null;
+  s.phase = 'air'; s.aim = null; s.aimTarget = null;
+  qb.pose = 'throw'; qb.poseT = 0.45;
   // Who the pass was meant for, for the box score: the receiver nearest the landing spot when it gets there.
   let best = -1, bd = 99;
   s.bodies.forEach((b, i) => { if (b.side === 'off' && (b.route || b.role === 'RB')) { const p = { x: b.x + b.vx * s.ball!.dur, y: b.y + b.vy * s.ball!.dur }; const dd = dist(p, { x: tx, y: ty }); if (dd < bd) { bd = dd; best = i; } } });
@@ -216,14 +313,41 @@ export function predict(r: Body, t: number): Vec {
   return pos;
 }
 
-/** Keyboard throw: lead a receiver the way a QB would (less precise than aiming yourself). */
-export function throwTo(s: PlayState, idx: number) {
-  if (s.phase !== 'live') return;
+/** Where to throw to meet a receiver in stride: the flight time is worked out against the rest of his route. */
+export function leadSpot(s: PlayState, idx: number): Vec {
   const qb = s.bodies[s.qb], r = s.bodies[idx];
   const v = 15 + (clamp(s.you.qb.arm, 40, 99) / 99) * 12;
   let t = dist(qb, r) / v, at = predict(r, t);
   for (let i = 0; i < 4; i++) { t = dist(qb, at) / v; at = predict(r, t); }
-  throwAt(s, at, true);
+  return at;
+}
+
+/** Throw to a receiver, leading him the way a QB would (tap him, or press 1 to 4). Steadier than aiming it yourself. */
+export function throwTo(s: PlayState, idx: number) {
+  if (s.phase !== 'live') return;
+  throwAt(s, leadSpot(s, idx), true);
+}
+
+/** The receiver whose sprite is under a canvas point (a tap), if any. */
+export function receiverAtPoint(s: PlayState, px: number, py: number, reach = 22): number | null {
+  const X = sxOf(s);
+  let best: number | null = null, bd = reach;
+  for (const r of receivers(s)) {
+    const d = Math.hypot((px - X(r.x)) * 0.9, py - (syOf(r.y) - 9));
+    if (d < bd) { bd = d; best = s.bodies.indexOf(r); }
+  }
+  return best;
+}
+
+/** Aim assist for a drag: when it points near where a receiver will be, it locks onto his lead spot (and remembers who). */
+export const MAGNET = 5.5;
+export function magnetAim(s: PlayState, aim: Vec): { at: Vec; target: number | null } {
+  let best: number | null = null, bd = MAGNET, at = aim;
+  for (const r of receivers(s)) {
+    const i = s.bodies.indexOf(r), spot = leadSpot(s, i), d = dist(spot, aim);
+    if (d < bd) { bd = d; best = i; at = spot; }
+  }
+  return { at, target: best };
 }
 
 /** The QB tucks it and runs. */
@@ -283,6 +407,8 @@ export function step(s: PlayState, dt: number) {
   s.cam += (clamp(focus, VIEW_W / 2 - 10, 110 - VIEW_W / 2 + 10) - s.cam) * Math.min(1, dt * 4);
   if (s.phase === 'pre' || s.phase === 'dead') return;
   s.t += dt;
+  if (s.play.pa && s.t - dt <= 0 && s.call === 'pass') { s.flash = 'PLAY ACTION'; s.flashT = 0.7; }
+  for (const b of s.bodies) if (b.poseT !== undefined && b.poseT > 0) { b.poseT -= dt; if (b.poseT <= 0 && b.pose !== 'down' && b.pose !== 'cheer') b.pose = undefined; }
   const qb = s.bodies[s.qb];
   const runPlay = s.call === 'run';
   const carrier = s.carrier !== null ? s.bodies[s.carrier] : null;
@@ -292,7 +418,7 @@ export function step(s: PlayState, dt: number) {
     if (b.side !== 'off' || i === s.carrier) return;
     if (b.role === 'QB') {
       if (runPlay) { if (s.t < 0.6) seek(b, { x: s.los - 2.6, y: MID - 0.4 }, 4, dt); else seek(b, { x: s.los - 4, y: MID - 3 * (s.play.side ?? 1) }, 5, dt); }
-      else seek(b, { x: s.los - 7, y: MID }, 5.5, dt, 18); // drop back
+      else seek(b, { x: s.los - (s.play.screen ? 4.5 : 7), y: MID }, 5.5, dt, 18); // drop back
       return;
     }
     if (b.role === 'RB' && runPlay && s.carrier === null) {
@@ -305,6 +431,8 @@ export function step(s: PlayState, dt: number) {
       const wp = b.route[b.leg ?? 0];
       const sk = b.skill;
       const v = speedOf(sk?.spd ?? 70) * (0.88 + (sk?.route ?? 70) / 900);
+      // The receiver the ball is going to adjusts to it, like a real one: a throw a little off still gets caught.
+      if (s.phase === 'air' && s.ball && s.thrown === i) { seek(b, { x: s.ball.tx, y: clamp(s.ball.ty, 0.8, FIELD_W - 0.8) }, v * 1.05, dt, 34); return; }
       // Once the ball is caught or handed off, everyone turns into a blocker.
       if (carrier) { const d = nearestDef(s, carrier, 9); if (d) { seek(b, { x: d.x - 0.6, y: d.y }, v * 0.8, dt); return; } }
       if (wp) { seek(b, wp, v, dt, 26 + (sk?.route ?? 70) / 8); if (dist(b, wp) < 0.5) b.leg = (b.leg ?? 0) + 1; }
@@ -334,6 +462,8 @@ export function step(s: PlayState, dt: number) {
   s.bodies.forEach((d, di) => {
     if (d.side !== 'def') return;
     if (d.stunned && d.stunned > 0) { d.stunned -= dt; hold(d, dt); return; }
+    // Play action: the linebackers and safeties step up to the line to stop the run that is not coming.
+    if (s.play.pa && s.t < 0.85 && !carrier && (d.role === 'LB' || d.role === 'S')) { seek(d, { x: s.los + 0.8, y: d.y + (qb.y - d.y) * 0.25 }, 5, dt, 14); return; }
     // A blocked man: held up by the lineman in front of him until he sheds (rushers) or the play goes past.
     const blocker = s.bodies.find((o) => o.side === 'off' && (o.role === 'OL' || o.role === 'TE') && dist(o, d) < 1.6 && o.x < d.x + 0.6);
     const mine = s.bodies.filter((o) => o.side === 'off' && o.block === di && engaged(s, o, d));
@@ -344,10 +474,9 @@ export function step(s: PlayState, dt: number) {
         // slowly, so the pocket bends instead of breaking.
         if (runPlay && s.carrier === null || runPlay && carrier && carrier.x < s.los + 3) {
           // The line drives its men off the ball and away from the hole, opening a lane.
-          const side = s.play.side ?? 1;
-          const holeY = s.play.run === 'outside' ? MID + 9 * side : s.play.run === 'counter' ? MID - 4 * side : MID + 1.4 * side;
+          const holeY = holeFor(s, 'line');
           const away = d.y === holeY ? 1 : Math.sign(d.y - holeY);
-          const win = clamp(0.35 + (s.you.ol.run - s.opp.def.rush) / 60, 0.1, 0.9);
+          const win = clamp(0.35 + (s.play.run === 'power' ? 0.12 : 0) + (s.you.ol.run - s.opp.def.rush) / 60, 0.1, 0.9);
           seek(d, { x: d.x - 0.2, y: d.y + away * 2 }, 1 + win * 3.2, dt, 12);
         } else seek(d, { x: d.x - 1, y: d.y + clamp(tgt.y - d.y, -1, 1) }, runPlay ? 0.9 : 0.75, dt, 8);
         mine.forEach((o, k) => {
@@ -413,7 +542,7 @@ export function step(s: PlayState, dt: number) {
       if (d.side !== 'def' || (d.stunned ?? 0) > 0 || dist(d, qb) > 0.85) continue;
       if ((d.lastTry ?? -9) < s.t - 0.5 && s.rng() < clamp(0.25 + (s.you.qb.spd - 70) / 200, 0.08, 0.4)) { d.lastTry = s.t; d.stunned = 0.6; burst(s, qb, '#A3E635', 6); continue; }
       const loss = Math.max(1, Math.round(s.los - qb.x + 1 + s.rng() * 2));
-      s.shake = 1; burst(s, qb, '#E7E5E4', 14);
+      s.shake = 1; burst(s, qb, '#E7E5E4', 14); qb.pose = 'down'; d.pose = 'tackle';
       return end(s, { kind: 'sack', yards: -loss, text: `Sacked. ${last(s.you.qb.name)} goes down for a loss of ${loss}.` });
     }
   }
@@ -439,13 +568,12 @@ export function step(s: PlayState, dt: number) {
     const top = speedOf(sk.spd, 5.6, 4.6) * (s.juke > 0 ? 1.18 : 1);
     if (s.dive > 0) {
       s.dive -= dt; carrier.x += 6 * dt; carrier.stride += 6 * dt;
-      if (s.dive <= 0) return end(s, carrier.x >= 100 ? { kind: 'td', text: `Touchdown! ${last(carrier.name)} dives in.` } : gained(s, carrier, 'Dives forward'));
+      if (s.dive <= 0) { carrier.pose = carrier.x >= 100 ? 'cheer' : 'down'; return end(s, carrier.x >= 100 ? { kind: 'td', text: `Touchdown! ${last(carrier.name)} dives in.` } : gained(s, carrier, 'Dives forward')); }
     } else {
       // Run plays aim for the hole first; then the player steers.
       let want = s.steerY ?? carrier.y;
       if (runPlay && carrier.role === 'RB' && s.steerY === null && carrier.x < s.los + 1.5) {
-        const side = s.play.side ?? 1;
-        want = s.play.run === 'outside' ? MID + 9 * side : s.play.run === 'counter' ? (s.t < 1 ? MID + 2 * side : MID - 4 * side) : MID + 1.4 * side;
+        want = holeFor(s, 'carry');
       }
       if (s.juke > 0) want = carrier.y + s.jukeDir * 6;
       const vy = clamp((want - carrier.y) * 3, -top * 0.8, top * 0.8);
@@ -454,7 +582,7 @@ export function step(s: PlayState, dt: number) {
       carrier.vx += (vx - carrier.vx) * acc; carrier.vy += (vy - carrier.vy) * acc;
       carrier.x += carrier.vx * dt; carrier.y += carrier.vy * dt; carrier.stride += Math.hypot(carrier.vx, carrier.vy) * dt;
     }
-    if (carrier.x >= 100) { burst(s, carrier, s.you.color, 34); s.shake = 0.6; return end(s, { kind: 'td', text: `Touchdown! ${last(carrier.name ?? s.you.qb.name)} takes it in.` }); }
+    if (carrier.x >= 100) { burst(s, carrier, s.you.color, 34); s.shake = 0.6; carrier.pose = 'cheer'; return end(s, { kind: 'td', text: `Touchdown! ${last(carrier.name ?? s.you.qb.name)} takes it in.` }); }
     if (carrier.y < 0.3 || carrier.y > FIELD_W - 0.3) return end(s, gained(s, carrier, 'Out of bounds'));
     for (const d of s.bodies) {
       if (d.side !== 'def' || (d.stunned ?? 0) > 0 || dist(d, carrier) > 0.8) continue;
@@ -468,7 +596,7 @@ export function step(s: PlayState, dt: number) {
       else {
         // Falls forward: bigger, stronger runners get an extra yard or two through the tackle.
         carrier.x += clamp(((sk.strength ?? 60) - 55) / 45, 0, 1) * 1.6 + s.rng() * 0.9;
-        s.shake = 0.7; burst(s, carrier, '#D6D3D1', 12); return end(s, gained(s, carrier, 'Tackled'));
+        s.shake = 0.7; burst(s, carrier, '#D6D3D1', 12); carrier.pose = 'down'; d.pose = 'tackle'; return end(s, gained(s, carrier, 'Tackled'));
       }
     }
   }
@@ -481,16 +609,16 @@ function catchBall(s: PlayState) {
   const d = s.bodies.filter((b) => b.side === 'def').sort((a, b) => dist(a, land) - dist(b, land))[0];
   const rd = r ? dist(r.b, land) : 99, dd = d ? dist(d, land) : 99;
   // A defender who gets there first can pick it.
-  if (dd < 1.1 && dd < rd + 0.3 && s.rng() < clamp(0.16 + (s.opp.def.cover - 60) / 200 - (rd < 1 ? 0.06 : 0), 0.08, 0.42)) {
+  if (dd < 1.1 && dd < rd + 0.3 && s.rng() < clamp(0.13 + (s.opp.def.cover - 60) / 220 - (rd < 1 ? 0.06 : 0), 0.05, 0.38)) {
     burst(s, land, s.opp.color, 14); s.shake = 0.6;
     return end(s, { kind: 'int', text: `Intercepted. ${r && rd < 3 ? `The pass for ${last(r.b.name)} is picked off.` : 'Thrown right to him.'}` });
   }
-  if (!r || rd > 1.7) { burst(s, land, '#F5F5F4', 6); return end(s, { kind: 'incomplete', text: `Incomplete. ${rd > 4 ? 'Nobody there.' : 'Off his fingertips.'}` }); }
+  if (!r || rd > 2.5) { burst(s, land, '#F5F5F4', 6); return end(s, { kind: 'incomplete', text: `Incomplete. ${rd > 4 ? 'Nobody there.' : 'Off his fingertips.'}` }); }
   const hands = r.b.skill?.hands ?? 70;
-  const contested = dd < 0.9 ? 0.45 : dd < 1.8 ? 0.72 : 1;
-  const p = (0.52 + hands / 220) * contested * (rd < 0.8 ? 1 : 0.72);
+  const contested = dd < 0.9 ? 0.5 : dd < 1.8 ? 0.78 : 1;
+  const p = (0.56 + hands / 250) * contested * (rd < 1 ? 1 : rd < 1.8 ? 0.88 : 0.74);
   if (s.rng() < p) {
-    s.carrier = r.i; s.phase = 'run'; s.ball = null; s.thrown = r.i; s.catchAt = s.t;
+    s.carrier = r.i; s.phase = 'run'; s.ball = null; s.thrown = r.i; s.catchAt = s.t; r.b.pose = 'catch'; r.b.poseT = 0.35;
     r.b.vx = Math.max(r.b.vx, 3);
     if (contested < 1) { s.flash = 'WHAT A CATCH'; s.flashT = 0.8; }
     return;
@@ -533,42 +661,107 @@ const lum = (hex: string) => { const [r, g, b] = rgb(hex); return (r * 0.3 + g *
 interface Kit { jersey: string; trim: string; helmet: string; pants: string; socks: string }
 function kits(s: PlayState): { off: Kit; def: Kit } {
   const off: Kit = { jersey: s.you.color, trim: '#F5F5F4', helmet: shade(s.you.color, 0.85), pants: '#E7E5E4', socks: s.you.color };
+  // Same colors on both sides: the defense switches to a clearly different kit (charcoal, or white against a very dark offense).
   const clash = Math.abs(lum(s.opp.color) - lum(s.you.color)) < 0.16;
   const def: Kit = clash
-    ? { jersey: '#F5F5F4', trim: s.opp.color, helmet: shade(s.opp.color, 0.85), pants: shade(s.opp.color, 0.9), socks: s.opp.color }
+    ? lum(s.you.color) >= 0.2
+      ? { jersey: '#2B2B30', trim: '#F5F5F4', helmet: shade(s.opp.color, 0.55), pants: '#3F3F46', socks: s.opp.color }
+      : { jersey: '#F5F5F4', trim: s.opp.color, helmet: shade(s.opp.color, 0.85), pants: '#E7E5E4', socks: s.opp.color }
     : { jersey: s.opp.color, trim: '#F5F5F4', helmet: shade(s.opp.color, 0.85), pants: '#D6D3D1', socks: s.opp.color };
   return { off, def };
 }
 
+type Rect = [number, number, number, number, string];
+/** What a sprite needs beyond his kit: build, jersey number, and what he is doing right now. */
+interface Look { big: boolean; num?: number; pose?: Body['pose']; crouch?: boolean; blocking?: boolean; stumble?: boolean; gloves?: boolean; carrier?: boolean }
+
+const DIGITS: Record<string, string> = { '0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001', '5': '111100111001111', '6': '111100111101111', '7': '111001010010010', '8': '111101111101111', '9': '111101111001111' };
+
+/** The rectangles of one pose, facing right with the feet on the origin (dy counts up as negative). */
+function playerRects(kit: Kit, skin: string, look: Look, f: number): Rect[] {
+  const out: Rect[] = [];
+  const add = (dx: number, dy: number, w: number, h: number, c: string) => { out.push([dx, dy, w, h, c]); };
+  const glove = kit.trim;
+  const big = look.big;
+  const tw = big ? 9 : 7, sw = big ? 11 : 9, hw = big ? 7 : 5;
+  const t0 = -Math.floor(tw / 2), s0 = -Math.floor(sw / 2), h0 = -Math.floor(hw / 2);
+  const pose = look.pose;
+
+  if (pose === 'down') {
+    // Lying flat after a tackle: legs, torso, one arm out, helmet on the ground.
+    add(-10, -3, 5, 2, kit.pants); add(-12, -3, 2, 2, kit.socks); add(-13, -3, 1, 2, '#111111');
+    add(-5, -5, 9, 4, kit.jersey); add(-5, -5, 9, 1, shade(kit.jersey, 1.2)); add(-5, -2, 9, 1, kit.trim);
+    add(4, -3, 3, 1, skin); add(6, -3, 1, 1, glove);
+    add(5, -6, hw, 4, kit.helmet); add(5, -6, hw, 1, shade(kit.helmet, 1.3)); add(5 + hw - 1, -5, 1, 3, '#D4D4D4');
+    return out;
+  }
+
+  const lift = pose === 'cheer' ? 2 : 0;
+  const lean = pose === 'tackle' ? 2 : look.crouch ? 2 : look.stumble ? -1 : 0;
+  const drop = pose === 'tackle' ? 2 : look.crouch ? 3 : 0;
+  const legA = look.crouch || pose === 'tackle' ? 0 : [0, 1, 0, -1][f], legB = -legA;
+  const legW = big ? 3 : 2, legH = 3 - (look.crouch ? 1 : 0);
+  // Legs (swinging) with socks and cleats.
+  add(-2 - (big ? 1 : 0) + legA, -5 + drop - lift, legW, legH, kit.pants); add(-2 - (big ? 1 : 0) + legA, -2 - lift, legW, 1, kit.socks); add(-2 - (big ? 1 : 0) + legA, -1 - lift, legW, 1, '#111111');
+  add(1 + legB, -5 + drop - lift, legW, legH, kit.pants); add(1 + legB, -2 - lift, legW, 1, kit.socks); add(1 + legB, -1 - lift, legW, 1, '#111111');
+  // Torso: jersey with pads on top and trim at the waist.
+  const ty = -11 + drop - lift;
+  add(t0 + lean, ty, tw, 6 - (look.crouch ? 1 : 0), kit.jersey);
+  add(s0 + lean, ty, sw, 2, kit.jersey);
+  add(s0 + lean, ty, sw, 1, shade(kit.jersey, 1.2));
+  add(t0 + lean, ty + 5 - (look.crouch ? 1 : 0), tw, 1, kit.trim);
+  // Arms: sleeve then skin, with gloves for the hands that catch.
+  const arm = look.crouch || look.blocking ? 0 : [0, -1, 0, 1][f];
+  const L = s0 + lean - 1, Rr = s0 + lean + sw;
+  if (pose === 'catch' || pose === 'cheer') {
+    add(L, ty - 5, 1, 5, skin); add(L, ty - 6, 2, 1, glove); add(Rr, ty - 5, 1, 5, skin); add(Rr - 1, ty - 6, 2, 1, glove);
+  } else if (pose === 'throw') {
+    add(L, ty + 1 + arm, 1, 2, kit.jersey); add(L, ty + 3 + arm, 1, 2, skin);
+    add(Rr, ty - 5, 1, 4, skin); add(Rr, ty - 1, 1, 2, kit.jersey); add(Rr - 1, ty - 6, 2, 2, '#7C3A12');
+  } else if (pose === 'tackle') {
+    add(Rr, ty + 3, 3, 1, skin); add(Rr, ty + 5, 3, 1, skin); add(L, ty + 1, 1, 2, kit.jersey);
+  } else if (look.blocking || look.crouch) {
+    add(Rr, ty + 3, 3, 2, skin); add(Rr + 2, ty + 3, 1, 2, glove); add(L, ty + 1, 1, 2, kit.jersey);
+  } else if (look.stumble) {
+    add(L - 1, ty + 1, 1, 2, kit.jersey); add(L - 1, ty + 3, 1, 2, skin); add(Rr + 1, ty + 1, 1, 2, kit.jersey); add(Rr + 1, ty + 3, 1, 2, skin);
+  } else {
+    add(L, ty + 1 + arm, 1, 2, kit.jersey); add(L, ty + 3 + arm, 1, 2, skin);
+    add(Rr, ty + 1 - arm, 1, 2, kit.jersey); add(Rr, ty + 3 - arm, 1, 2, skin);
+    if (look.gloves) { add(L, ty + 5 + arm, 1, 1, glove); add(Rr, ty + 5 - arm, 1, 1, glove); }
+  }
+  // Neck, helmet with a stripe, and a face mask on the side he faces.
+  const hy = ty - 5;
+  add(0 + lean, ty - 1, 2, 1, skin);
+  add(h0 + lean + (look.stumble ? -1 : 0), hy, hw, 4, kit.helmet);
+  add(h0 + lean, hy, hw, 1, shade(kit.helmet, 1.3));
+  add(h0 + lean + Math.floor(hw / 2), hy, 1, 4, shade(kit.helmet, 1.6));
+  add(h0 + lean + hw, hy + 1, 1, 3, '#D4D4D4'); add(h0 + lean + hw - 1, hy + 3, 2, 1, '#A3A3A3');
+  return out;
+}
+
 /**
- * A standard player build, feet at (x, y): helmet with a face mask (no face), shoulder pads, jersey with trim,
- * bare forearms in the player's skin tone, pants, socks and cleats. Four-frame run cycle from the stride.
+ * A standard player build, feet at (x, y): helmet with a face mask (no face), shoulder pads, jersey with trim and a
+ * number, forearms in the player's skin tone, pants, socks and cleats, outlined so he reads against the turf.
+ * Linemen are wider; poses cover the throw, the catch, the block, the tackle, a stumble and the end zone dance.
  */
-function player(ctx: CanvasRenderingContext2D, x: number, y: number, kit: Kit, skin: string, facing: 1 | -1, stride: number, moving: boolean, big = false) {
+function player(ctx: CanvasRenderingContext2D, x: number, y: number, kit: Kit, skin: string, facing: 1 | -1, stride: number, moving: boolean, look: Look) {
   const X = Math.round(x), Y = Math.round(y);
   const f = moving ? Math.floor(stride * 2.2) % 4 : 0;
-  const px = (dx: number, dy: number, w: number, h: number, c: string) => { ctx.fillStyle = c; ctx.fillRect(facing > 0 ? X + dx : X - dx - w + 1, Y + dy, w, h); };
-  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(X - 4, Y, 9, 2); ctx.fillRect(X - 3, Y + 2, 7, 1);
-  if (big) { ctx.fillStyle = 'rgba(253,224,71,.35)'; ctx.fillRect(X - 6, Y - 17, 13, 18); }
-  // Legs: back and front, swinging.
-  const legA = [0, 1, 0, -1][f], legB = -legA;
-  px(-2 + legA, -5, 2, 3, kit.pants); px(-2 + legA, -2, 2, 1, kit.socks); px(-2 + legA, -1, 2, 1, '#111111');
-  px(1 + legB, -5, 2, 3, kit.pants); px(1 + legB, -2, 2, 1, kit.socks); px(1 + legB, -1, 2, 1, '#111111');
-  // Torso: jersey with pads on top and trim at the waist.
-  px(-3, -11, 7, 6, kit.jersey);
-  px(-4, -11, 9, 2, kit.jersey);
-  px(-4, -11, 9, 1, shade(kit.jersey, 1.2));
-  px(-3, -6, 7, 1, kit.trim);
-  // Arms: sleeve then skin, swinging opposite the legs.
-  const arm = [0, -1, 0, 1][f];
-  px(-5, -10 + arm, 1, 2, kit.jersey); px(-5, -8 + arm, 1, 2, skin);
-  px(5, -10 - arm, 1, 2, kit.jersey); px(5, -8 - arm, 1, 2, skin);
-  // Neck, helmet with a stripe, and a face mask on the side he faces.
-  px(0, -12, 2, 1, skin);
-  px(-2, -16, 5, 4, kit.helmet);
-  px(-2, -16, 5, 1, shade(kit.helmet, 1.3));
-  px(0, -16, 1, 4, shade(kit.helmet, 1.6));
-  px(3, -15, 1, 3, '#D4D4D4'); px(2, -13, 2, 1, '#A3A3A3');
+  const put = (dx: number, dy: number, w: number, h: number, c: string, grow = 0) => { ctx.fillStyle = c; ctx.fillRect((facing > 0 ? X + dx : X - dx - w + 1) - grow, Y + dy - grow, w + grow * 2, h + grow * 2); };
+  if (look.carrier) { ctx.strokeStyle = 'rgba(253,224,71,.9)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(X + 0.5, Y + 1, 8, 3, 0, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(X - 5, Y, 11, 2); ctx.fillRect(X - 4, Y + 2, 9, 1);
+  const rects = playerRects(kit, skin, look, f);
+  for (const [dx, dy, w, h] of rects) put(dx, dy, w, h, 'rgba(10,10,10,.85)', 1);
+  for (const [dx, dy, w, h, c] of rects) put(dx, dy, w, h, c);
+  // A number across the chest (not mirrored, so it always reads), when there is room for it.
+  if (look.num != null && look.pose !== 'down') {
+    const txt = String(look.num).slice(-2), w = txt.length * 4 - 1, left = X - Math.floor(w / 2) + (look.crouch ? 1 : 0), top = Y - 10 + (look.crouch ? 3 : look.pose === 'tackle' ? 2 : 0) - (look.pose === 'cheer' ? 2 : 0);
+    ctx.fillStyle = kit.trim;
+    for (let k = 0; k < txt.length; k++) {
+      const g = DIGITS[txt[k]];
+      for (let i = 0; i < 15; i++) if (g[i] === '1') ctx.fillRect(left + k * 4 + (i % 3), top + Math.floor(i / 3), 1, 1);
+    }
+  }
 }
 
 /** Field yards to canvas pixels for the current camera. */
@@ -624,8 +817,8 @@ export function draw(ctx: CanvasRenderingContext2D, s: PlayState, frame: number,
       arrow(b.route[b.route.length - 1], b.route[b.route.length - 2] ?? b);
     }
     if (s.call === 'run') {
-      const rb = s.bodies.find((b) => b.role === 'RB')!, side = s.play.side ?? 1;
-      const hole = { x: s.los + 1, y: s.play.run === 'outside' ? MID + 9 * side : s.play.run === 'counter' ? MID - 4 * side : MID + 1.4 * side };
+      const rb = s.bodies.find((b) => b.role === 'RB')!;
+      const hole = { x: s.los + 1, y: holeFor(s, 'art') };
       ctx.fillStyle = 'rgba(253,224,71,.95)'; dots(rb, hole); const tip = { x: hole.x + 6, y: hole.y }; dots(hole, tip); arrow(tip, hole);
     }
   }
@@ -642,6 +835,16 @@ export function draw(ctx: CanvasRenderingContext2D, s: PlayState, frame: number,
     ctx.strokeStyle = '#FDE047'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(X, Y, 7, 3.5, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = '#FDE047'; ctx.fillRect(Math.round(X) - 1, Math.round(Y) - 1, 2, 2);
   }
+  // Who is open: a ring under each receiver while you look for one (green is open, red is covered), brighter on the one you are aiming at.
+  if (s.phase === 'live' && s.call === 'pass') {
+    for (const r of receivers(s)) {
+      const sep = Math.min(...s.bodies.filter((d) => d.side === 'def').map((d) => dist(d, r)));
+      const tone = sep > 3.4 ? '74,222,128' : sep > 2 ? '250,204,21' : '248,113,113';
+      const hot = s.aimTarget === s.bodies.indexOf(r);
+      ctx.strokeStyle = `rgba(${hot ? '255,255,255' : tone},${hot ? 1 : 0.85})`; ctx.lineWidth = hot ? 2 : 1;
+      ctx.beginPath(); ctx.ellipse(sx(r.x) + 0.5, sy(r.y) + 1, hot ? 9 : 7.5, hot ? 4 : 3.2, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
   // Players, back to front.
   const { off, def } = kits(s);
   const order = [...s.bodies.keys()].sort((a, b) => s.bodies[a].y - s.bodies[b].y);
@@ -649,14 +852,20 @@ export function draw(ctx: CanvasRenderingContext2D, s: PlayState, frame: number,
     const b = s.bodies[i];
     const moving = Math.hypot(b.vx, b.vy) > 0.6;
     const facing: 1 | -1 = b.side === 'off' ? (b.vx < -1.5 ? -1 : 1) : (b.vx > 1.5 ? 1 : -1);
-    player(ctx, sx(b.x), sy(b.y), b.side === 'off' ? off : def, b.skin, facing, b.stride, moving, i === s.carrier && s.phase === 'run');
+    const lineman = b.role === 'OL' || b.role === 'DL';
+    const tied = s.phase !== 'pre' && lineman && s.bodies.some((o) => o.side !== b.side && (o.role === 'OL' || o.role === 'DL') && dist(o, b) < 1.7);
+    const look: Look = {
+      big: lineman, num: b.num, pose: b.pose, crouch: lineman && (s.phase === 'pre' || tied) && !b.pose, blocking: tied,
+      stumble: (b.stunned ?? 0) > 0 && !b.pose, gloves: b.role === 'WR' || b.role === 'RB' || b.role === 'TE' || b.role === 'CB' || b.role === 'QB', carrier: i === s.carrier && s.phase === 'run',
+    };
+    player(ctx, sx(b.x), sy(b.y), b.side === 'off' ? off : def, b.skin, facing, b.stride, moving, look);
     const tag = (text: string, color: string) => {
       ctx.font = '7px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       const w = Math.ceil(ctx.measureText(text).width) + 4, X = Math.round(sx(b.x)), Y = Math.round(sy(b.y)) - 26;
       ctx.fillStyle = 'rgba(10,10,10,.82)'; ctx.fillRect(X - Math.ceil(w / 2), Y, w, 8);
       ctx.fillStyle = color; ctx.fillText(text, X + 0.5, Y + 7);
     };
-    if ((s.phase === 'pre' || s.phase === 'live') && s.call === 'pass' && b.label && b.side === 'off') tag(`${b.label} ${last(b.name).toUpperCase()}`, '#FDE047');
+    if ((s.phase === 'pre' || s.phase === 'live') && s.call === 'pass' && b.label && b.side === 'off') tag(`${b.label} ${last(b.name).toUpperCase()}`, s.aimTarget === i ? '#FFFFFF' : '#FDE047');
     else if (i === s.carrier && s.phase === 'run') tag(last(b.name ?? s.you.qb.name).toUpperCase(), '#FFFFFF');
   }
   // Ball: in the air with its shadow, or tucked.
@@ -700,6 +909,8 @@ export function draw(ctx: CanvasRenderingContext2D, s: PlayState, frame: number,
 export function toField(s: PlayState, px: number, py: number): Vec {
   return { x: s.cam - VIEW_W / 2 + px / PXX, y: (py - TOP) / PXY };
 }
+/** Field yards to canvas pixels: the other way round from `toField`. */
+export function toCanvas(s: PlayState, x: number, y: number): Vec { return { x: sxOf(s)(x), y: syOf(y) }; }
 /** Is this canvas point on a player's sprite (which stands up from his feet)? */
 export function onSprite(s: PlayState, b: Body, px: number, py: number) {
   const X = sxOf(s)(b.x), Y = syOf(b.y);
