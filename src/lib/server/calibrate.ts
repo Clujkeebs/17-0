@@ -2,6 +2,7 @@ import { db, schema } from '@/db';
 import { positionGroup } from '@/lib/game/attributes';
 import { FORMATS, MAX_RESPINS, boardOrder, gradePick, gradeRoster, isFantasy, slotAccepts, type FormatKey, type Pick, type PoolKey } from '@/lib/game/seventeen';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
+import { coachLegendGrade, coachLegendsFor } from '@/lib/game/coach-legends';
 import { fantasyValue } from '@/lib/game/fantasy';
 import { createRng } from '@/lib/game/prng';
 import { eq } from 'drizzle-orm';
@@ -21,8 +22,10 @@ async function boards(format: FormatKey, pool: PoolKey = 'current') {
   const players = await db.select().from(schema.players).where(eq(schema.players.isActive, true));
   const coaches = fantasy ? [] : await db.select().from(schema.coaches);
   const teams = [...new Set(players.map((p) => p.teamId).filter(Boolean))] as number[];
+  let abbrById = new Map<number, string>();
   if (allTime) {
     const [teamRows, hist] = await Promise.all([db.select().from(schema.teams), db.select().from(schema.nflLegends)]);
+    abbrById = new Map(teamRows.map((t) => [t.id, t.abbreviation]));
     for (const p of players.filter((x) => x.isAllTimeGreat)) p.teamId = teamRows.find((t) => t.abbreviation === LEGEND_FRANCHISE[p.slug])?.id ?? null;
     // A current player with a better best season is drafted at that season, so his today row leaves the board.
     const primed = new Set(hist.map((l) => `${l.espnId}:${l.teamId}`));
@@ -39,6 +42,8 @@ async function boards(format: FormatKey, pool: PoolKey = 'current') {
       ...(fantasy ? { fantasy: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : { ceiling: ceilings[((p as { legendGroup?: string }).legendGroup ?? positionGroup(p.position))] }),
     }));
     for (const c of coaches.filter((c) => c.teamId === t)) list.push({ slot: 'HC', teamId: t, name: c.fullName, group: 'HC', coachImpact: c.coachImpactScore });
+    // All-time also offers the franchise's legendary head coaches (see coach-legends.ts).
+    if (allTime) for (const lc of coachLegendsFor(abbrById.get(t) ?? '')) list.push({ slot: 'HC', teamId: t, name: lc.name, group: 'HC', coachImpact: coachLegendGrade(lc) });
     const def = fantasy ? defs.get(t) : null;
     if (def != null) list.push({ slot: 'DST', teamId: t, name: 'D/ST', group: 'DST', fantasy: def });
     byTeam.set(t, list);

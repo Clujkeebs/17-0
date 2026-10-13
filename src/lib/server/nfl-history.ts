@@ -14,13 +14,13 @@ import { getRedis } from './redis';
  * follow the franchise through moves (the Oilers are the Titans), and the 1980-95 Browns are Cleveland.
  * Runs in the worker. Finished seasons are skipped, so an interrupted backfill resumes where it stopped.
  */
-const CORE = 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl';
+export const CORE = 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl';
 export const FIRST_NFL_SEASON = 1980;
 /** The last finished regular season: an NFL season is named by its start year and ends in early January. */
 export const lastFinishedSeason = (now = new Date()) => (now.getUTCMonth() >= 1 ? now.getUTCFullYear() - 1 : now.getUTCFullYear() - 2);
 
 type Json = Record<string, unknown>;
-async function get(url: string, fetchImpl: typeof fetch, tries = 3): Promise<Json | null> {
+export async function get(url: string, fetchImpl: typeof fetch, tries = 3): Promise<Json | null> {
   for (let i = 0; i < tries; i++) {
     try {
       const r = await fetchImpl(url.replace(/^http:/, 'https:'), { signal: AbortSignal.timeout(20_000) });
@@ -31,7 +31,7 @@ async function get(url: string, fetchImpl: typeof fetch, tries = 3): Promise<Jso
   }
   return null;
 }
-async function pool<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
+export async function pool<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
   let i = 0;
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) await fn(items[i++]); }));
 }
@@ -94,7 +94,7 @@ export async function syncNflHistory(opts: { from?: number; to?: number; fetchIm
 }
 
 /** ESPN franchise id -> our team id, matched on today's nickname (then abbreviation). */
-async function franchiseMap(fetchImpl: typeof fetch): Promise<Map<number, number>> {
+export async function franchiseMap(fetchImpl: typeof fetch): Promise<Map<number, number>> {
   const ours = await db.select().from(schema.teams);
   const out = new Map<number, number>();
   const season = lastFinishedSeason() + 1;

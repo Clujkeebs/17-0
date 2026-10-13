@@ -13,6 +13,7 @@ import { get53Floor, getAllTimeFloor, getFantasyFloor } from './calibrate';
 import { getOffset } from './difficulty-offset';
 import { modeKey } from '@/lib/game/difficulty';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
+import { coachLegendByKey, coachLegendGrade, isCoachLegendId } from '@/lib/game/coach-legends';
 import { BUILD_ELIGIBLE, TRAITS, bestPossible, gradeTraitBuild, traitValue } from '@/lib/game/build';
 
 export class GradeError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
@@ -70,8 +71,9 @@ export async function gradeSeventeen(ctx: Ctx) {
   if (picks.length !== slotKeys.length || new Set(picks.map((p) => p.slot)).size !== slotKeys.length || !slotKeys.every((sl) => picks.some((p) => p.slot === sl))) {
     throw new GradeError(`Fill all ${slotKeys.length} slots.`);
   }
-  const playerIds = picks.filter((p) => !p.id.startsWith('coach:') && !p.id.startsWith('dst:')).map((p) => p.id);
+  const playerIds = picks.filter((p) => !p.id.startsWith('coach:') && !p.id.startsWith('dst:') && !isCoachLegendId(p.id)).map((p) => p.id);
   const coachIds = picks.filter((p) => p.id.startsWith('coach:')).map((p) => Number(p.id.slice(6)));
+  const legendCoachKeys = picks.filter((p) => isCoachLegendId(p.id)).map((p) => p.id.slice(7));
   if (playerIds.some((id) => !/^[0-9a-f-]{36}$/i.test(id)) || coachIds.some((n) => !Number.isInteger(n)) || picks.some((p) => p.id.startsWith('dst:') && !Number.isInteger(Number(p.id.slice(4))))) throw new GradeError('Invalid pick.');
   const teamRows = await db.select({ id: schema.teams.id, abbr: schema.teams.abbreviation, name: schema.teams.name, fantasyDef: schema.teams.fantasyDef }).from(schema.teams);
   const [players, coaches, formulas, weights, hist] = await Promise.all([
@@ -90,6 +92,13 @@ export async function gradeSeventeen(ctx: Ctx) {
       const t = teamRows.find((x) => x.id === Number(p.id.slice(4)));
       if (!t || t.fantasyDef == null || !isFantasy(format)) throw new GradeError('Unknown defense.');
       return { slot: p.slot, teamId: t.id, name: `${t.name} D/ST`, group: 'DST' as const, fantasy: t.fantasyDef };
+    }
+    if (isCoachLegendId(p.id)) {
+      // An all-time head coach counts only in All-time, and only for his own franchise, which must be the team he was drafted from.
+      const lc = coachLegendByKey(p.id.slice(7));
+      const abbr = teamRows.find((t) => t.id === p.teamId)?.abbr;
+      if (!lc || pool !== 'all-time' || !abbr || lc.team !== abbr) throw new GradeError(`${lc?.name ?? 'That coach'} is not on one of your spun teams.`);
+      return { slot: p.slot, teamId: p.teamId, name: lc.name, group: 'HC' as const, coachImpact: coachLegendGrade(lc) };
     }
     if (p.id.startsWith('coach:')) {
       const c = coaches.find((x) => x.id === Number(p.id.slice(6)));
@@ -123,7 +132,7 @@ export async function gradeSeventeen(ctx: Ctx) {
     if (!slotAccepts(p.slot, p.group, format)) throw new GradeError(`${p.name} cannot play ${p.slot}.`);
   }
   // Daily results must be identical for identical rosters, so seed from the date plus the roster.
-  const seed = s.isDaily || payload.challengeId ? `${s.seed}:${[...playerIds, ...coachIds, ...picks.filter((p) => p.id.startsWith("dst:")).map((p) => p.id)].sort().join(",")}` : s.id;
+  const seed = s.isDaily || payload.challengeId ? `${s.seed}:${[...playerIds, ...coachIds, ...legendCoachKeys, ...picks.filter((p) => p.id.startsWith("dst:")).map((p) => p.id)].sort().join(",")}` : s.id;
   // The 53 drafts from most of the league, so its schedule draws from every team.
   const opponents = teamRows.filter((t) => repeat || !usedTeams.has(t.id)).map((t) => t.abbr);
   // The simulated line for this mode, plus the balance nudge the daily step has found for it (zero until it has).

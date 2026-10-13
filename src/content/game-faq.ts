@@ -15,6 +15,7 @@ export const GAME_FAQ: Record<'17-0' | '82-0' | '162-0' | '44-0', GameFaq> = {
       { q: 'What roster sizes can I play?', a: 'The classic six (QB, RB, WR, TE, one defender and a head coach), a 12-man and a 16-man roster, a Fantasy lineup scored on real PPR points, and a full 53-man roster plus coach where teams come around again and backups count a little.' },
       { q: 'How many re-rolls do I get?', a: 'Two re-rolls in Easy mode (five in the 53-man game). Hard mode hides the ratings, makes you type player names, and gives no re-rolls.' },
       { q: 'How hard is it to go 17-0?', a: 'With current rosters, a careful drafter who uses the re-rolls goes 17-0 about one game in nine. All-time mode adds each franchise\'s greats and is tuned harder, about one in twenty.' },
+      { q: 'Are there all-time head coaches?', a: 'Yes. All-time mode puts each franchise\'s legendary head coaches next to its current one: Belichick with the Patriots, Shula with the Dolphins, Lombardi with the Packers, Walsh and Seifert with the 49ers, Noll with the Steelers and about sixty more. A legend is graded on his record with that franchise: winning percentage, titles, playoff trips and years, on the same 80 to 99 scale as today\'s coaches, and counts only for the team you spun.' },
       { q: 'What is the daily game?', a: 'Today is one shared board for everyone, the classic six with current rosters, ranked on the daily leaderboard. You get one ranked try per day. Casual games are unlimited.' },
     ],
   },

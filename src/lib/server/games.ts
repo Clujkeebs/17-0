@@ -8,6 +8,7 @@ import { positionGroup, type PositionGroup } from '@/lib/game/attributes';
 import { FORMATS, MAX_RESPINS, boardOrder, isFantasy, respinsFor, slotsFor as formatSlots, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
 import { fantasyValue } from '@/lib/game/fantasy';
 import { LEGEND_FRANCHISE } from '@/lib/game/legends';
+import { coachLegendGrade, coachLegendId, coachLegendLine, coachLegendsFor } from '@/lib/game/coach-legends';
 import { BUILD_CATEGORIES, BUILD_ELIGIBLE, BUILD_TEAMS, type BuildPosition } from '@/lib/game/build';
 import { createRng } from '@/lib/game/prng';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
@@ -146,6 +147,12 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
     if (fantasy) list.sort((a, b) => (b.fpts ?? 0) - (a.fpts ?? 0));
     for (const c of coaches.filter((c) => c.teamId === id)) {
       list.push({ id: `coach:${c.id}`, name: c.fullName, slug: c.slug, position: 'HC', group: 'HC', ovr: c.coachImpactScore, slots: ['HC'], img: c.imageUrl });
+    }
+    // All-time: the franchise's legendary head coaches, graded on their record with it (see coach-legends.ts).
+    if (allTime) {
+      for (const c of coachLegendsFor(t.abbreviation)) {
+        list.push({ id: coachLegendId(c.key), name: c.name, slug: '', position: 'HC', group: 'HC', ovr: Math.round(coachLegendGrade(c)), slots: ['HC'], img: null, legend: true, line: coachLegendLine(c) });
+      }
     }
     return { id, name: t.name, city: t.city, abbreviation: t.abbreviation, slug: t.slug, color: t.primaryColor, logoUrl: t.logoUrl, players: list };
   });
