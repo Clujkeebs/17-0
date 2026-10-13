@@ -1,12 +1,6 @@
-import type { Metadata } from 'next';
-import { auth } from '@/auth';
-import { UnbeatenBowl } from '@/components/minigames/games/UnbeatenBowl';
-import { unbeatenBowl as g } from '@/lib/minigames/bowl/game';
+import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: `${g.name}: retro football on real NFL rosters`, description: g.tagline, alternates: { canonical: `/games/${g.slug}` } };
-
-export default async function Page({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
-  const [session, sp] = await Promise.all([auth().catch(() => null), searchParams]);
-  return <UnbeatenBowl signedIn={!!session?.user?.id} gm={sp.mode === 'gm'} meta={{ slug: g.slug, name: g.name, tagline: g.tagline, howTo: g.howTo }} />;
+/** Unbeaten Bowl is taken down. The old link goes to the games list. */
+export default function Page() {
+  redirect('/games');
 }

@@ -7,7 +7,7 @@ import type { GameData } from '../types';
 export interface PName { name: string; last: string; sport: string; team: string; position: string }
 
 /**
- * Hand-picked five-letter sports words for Sports Wordle, so the answer is not always a surname. The hint
+ * Hand-picked five-letter sports words for Sportle, so the answer is not always a surname. The hint
  * shown from the start is the kind of word.
  */
 export const WORDS: { word: string; hint: 'Team name' | 'Sports term' }[] = [

@@ -1,3 +1,4 @@
+import { avatarUrl, imageVersion } from '@/lib/avatar';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -36,7 +37,7 @@ export default async function ProfilePage() {
     <div className="container section">
       <span className="eyebrow">Profile</span>
       <div className={`profile-head${style.banner ? ` banner ${style.banner}` : ''}`}>
-        <Avatar name={name} src={user.image} size={84} ring={style.border} effect={style.effect} />
+        <Avatar name={name} src={avatarUrl(user.username, imageVersion(user.image))} size={84} ring={style.border} effect={style.effect} />
         <div style={{ minWidth: 0 }}>
           <h1 style={{ margin: 0 }}><StyledName name={name} style={style} /></h1>
           {user.username && <p className="muted num" style={{ margin: '4px 0 0' }}>@{user.username}</p>}
@@ -47,7 +48,7 @@ export default async function ProfilePage() {
         <Link className="btn btn-sm" href="/shop">Shop</Link>
       </p>
       <div className="row" style={{ gap: 8, margin: '16px 0 8px' }}>
-        <ProfileEditor displayName={user.name ?? ''} fallbackName={user.username ?? 'Player'} image={user.image} favoriteGames={user.favoriteGames ?? []}
+        <ProfileEditor displayName={user.name ?? ''} fallbackName={user.username ?? 'Player'} image={avatarUrl(user.username, imageVersion(user.image))} favoriteGames={user.favoriteGames ?? []}
           nameFont={user.nameFont ?? 'classic'} nameColor={user.nameColor ?? 'ink'} longest={stats.longest} owner={style.owner} allGames={ALL_GAMES} />
         {style.owner && <a className="btn" href="/owner">Notes to Claude</a>}
         {user.username && <ShareButton label="Share profile" text={`${name} on Unbeaten.`} url={`/u/${user.username}`} />}

@@ -12,13 +12,13 @@ export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 /** One line per sport for the home page's sport row. */
 const SPORT_BLURB: Record<string, string> = {
-  nfl: '17-0, Build a Player, Unbeaten Bowl and the rating games.',
+  nfl: '17-0, Build a Player and the rating games.',
   nba: '82-0 and the NBA games, from the 2K ratings and real seasons.',
   wnba: '44-0 and the WNBA games, on every season since 1997.',
   college: 'Football, men\'s and women\'s hoops: Higher or Lower, Who Led, Whose Team, Build a Player.',
   mlb: '162-0 and the baseball games, on real stats since 1970.',
   soccer: 'Build a Soccer Player and the club games.',
-  puzzles: 'Wordle, Connections, Strands, crosswords and more.',
+  puzzles: 'Sportle, Connections, Strands, crosswords and more.',
 };
 
 const STEPS = [

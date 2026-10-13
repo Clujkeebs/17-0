@@ -29,7 +29,7 @@ export interface BadgeFacts {
   ranked: number;                      // Today results
   perfectMinis: number;                // perfect results in the mini games
   perfectGames: number;                // different games with a perfect result
-  puzzlesPerfect: string[];            // puzzle games (Wordle, Connections, Strands, Crossword) with a perfect result
+  puzzlesPerfect: string[];            // puzzle games (Sportle, Connections, Strands, Crossword) with a perfect result
   nightGames: number;                  // played between 1 and 4 a.m. Eastern
   earlyGames: number;                  // played between 4 and 7 a.m. Eastern
   midnightGames: number;               // played in the first five minutes of the Eastern day
@@ -117,8 +117,8 @@ export const BADGES: Rule[] = [
   b('sharpshooter', 'Sharpshooter', 'Five perfect results in the mini games', 'Games', 'silver', (f) => f.perfectMinis >= 5),
   b('perfectionist', 'Perfectionist', 'A perfect result in 10 different games', 'Games', 'gold', (f) => f.perfectGames >= 10),
   // ---- Puzzles
-  b('wordsmith', 'Wordsmith', 'A perfect Wordle, Connections, Strands or Crossword', 'Puzzles', 'silver', (f) => f.puzzlesPerfect.length > 0),
-  b('puzzle-master', 'Puzzle Master', 'A perfect Wordle, Connections, Strands and Crossword', 'Puzzles', 'gold', (f) => PUZZLES.every((p) => f.puzzlesPerfect.includes(p))),
+  b('wordsmith', 'Wordsmith', 'A perfect Sportle, Connections, Strands or Crossword', 'Puzzles', 'silver', (f) => f.puzzlesPerfect.length > 0),
+  b('puzzle-master', 'Puzzle Master', 'A perfect Sportle, Connections, Strands and Crossword', 'Puzzles', 'gold', (f) => PUZZLES.every((p) => f.puzzlesPerfect.includes(p))),
   // ---- Pick 'em
   b('picker', 'Picker', "Made your first Pick 'em pick", "Pick 'em", 'bronze', (f) => f.pickemPicks >= 1),
   b('sharp-eye', 'Sharp Eye', "10 right picks in Pick 'em", "Pick 'em", 'silver', (f) => f.pickemRight >= 10),

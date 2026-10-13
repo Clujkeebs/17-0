@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });
 });
 
-test('Sports Wordle casual: six misses reveal the player', async ({ page }) => {
+test('Sportle casual: six misses reveal the player', async ({ page }) => {
   await page.goto('/games/sports-wordle');
   await page.getByRole('tab', { name: 'Casual' }).click();
   await expect(page.getByText(/· 5 letters · 6 tries/)).toBeVisible({ timeout: 20_000 });

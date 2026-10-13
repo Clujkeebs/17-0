@@ -1,3 +1,4 @@
+import { avatarUrl, imageVersion } from '@/lib/avatar';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -35,7 +36,7 @@ export default async function PublicProfile({ params }: Props) {
     <div className="container section" style={{ maxWidth: 880 }}>
       <span className="eyebrow">Player</span>
       <div className={`profile-head${nameStyleOf(u).banner ? ` banner ${nameStyleOf(u).banner}` : ''}`}>
-        <Avatar name={name} src={u.image} size={84} ring={nameStyleOf(u).border} effect={nameStyleOf(u).effect} />
+        <Avatar name={name} src={avatarUrl(u.username, imageVersion(u.image))} size={84} ring={nameStyleOf(u).border} effect={nameStyleOf(u).effect} />
         <div style={{ minWidth: 0 }}>
           <h1 style={{ margin: 0 }}><StyledName name={name} style={nameStyleOf(u)} /></h1>
           <p className="muted num" style={{ margin: '4px 0 0' }}>@{u.username}</p>

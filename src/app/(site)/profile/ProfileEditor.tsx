@@ -24,7 +24,9 @@ export function ProfileEditor(p: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(p.displayName);
-  const [image, setImage] = useState<string | null>(p.image);
+  // p.image is the cached picture URL; a newly picked photo is a data URL, and undefined means the picture is unchanged.
+  const [picked, setPicked] = useState<string | null | undefined>(undefined);
+  const image = picked === undefined ? p.image : picked;
   const [favs, setFavs] = useState<string[]>(p.favoriteGames);
   const [font, setFont] = useState(p.nameFont);
   const [color, setColor] = useState(p.nameColor);
@@ -38,14 +40,15 @@ export function ProfileEditor(p: Props) {
   async function pickFile(f?: File) {
     if (!f) return;
     setErr('');
-    try { setImage(await squareJpeg(f)); } catch { setErr('That file did not open as an image. Try a JPG or PNG.'); }
+    try { setPicked(await squareJpeg(f)); } catch { setErr('That file did not open as an image. Try a JPG or PNG.'); }
   }
   function toggleFav(slug: string) {
     setFavs((cur) => cur.includes(slug) ? cur.filter((x) => x !== slug) : cur.length >= 3 ? cur : [...cur, slug]);
   }
   async function save() {
     setBusy(true); setErr(''); setMsg('');
-    const body: Record<string, unknown> = { displayName: name, image, favoriteGames: favs };
+    const body: Record<string, unknown> = { displayName: name, favoriteGames: favs };
+    if (picked !== undefined) body.image = picked;
     if (!p.owner) { body.nameFont = font; body.nameColor = color; }
     try {
       const r = await fetch('/api/user/profile', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -65,7 +68,7 @@ export function ProfileEditor(p: Props) {
         <Avatar name={name || p.fallbackName} src={image} size={72} />
         <div className="row" style={{ gap: 8 }}>
           <button type="button" className="btn btn-sm" onClick={() => fileRef.current?.click()}>{image ? 'Change picture' : 'Add a picture'}</button>
-          {image && <button type="button" className="btn btn-sm" onClick={() => setImage(null)}>Remove</button>}
+          {image && <button type="button" className="btn btn-sm" onClick={() => setPicked(null)}>Remove</button>}
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => pickFile(e.target.files?.[0])} />
         </div>
       </div>

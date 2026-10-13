@@ -111,7 +111,7 @@ const clean = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toUpper
 
 export const sportsWordle: MiniGame<WordlePuzzle, WordleAnswer, PuzzleData> = {
   slug: 'sports-wordle', sport: 'puzzles',
-  name: 'Sports Wordle',
+  name: 'Sportle',
   tagline: 'Six tries at a five-letter sports word: a star\'s last name, a team name or a sports term.',
   howTo: [
     'Type any five letters. Green is the right letter in the right spot, gold is in the name but elsewhere.',
