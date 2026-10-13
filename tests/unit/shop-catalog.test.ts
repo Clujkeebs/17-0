@@ -17,10 +17,12 @@ describe('shop catalog', () => {
       if (i.kind === 'flair') { expect(FLAIR_KEYS, i.key).toContain(i.key); continue; }
       if (i.kind === 'effect') {
         expect(existsSync(`public/cosmetics/fx/${i.key}.svg`), `effect ${i.key} has no art`).toBe(true);
+        expect(existsSync(`public/cosmetics/fx/${i.key}.still.svg`), `effect ${i.key} has no still twin`).toBe(true);
         if (EFFECT_BACK.has(i.key)) expect(existsSync(`public/cosmetics/fx/${i.key}-back.svg`), `effect ${i.key} has no back layer`).toBe(true);
         continue;
       }
-      if (i.kind === 'banner') expect(existsSync(`public/cosmetics/banners/${i.key}.svg`), `banner ${i.key} has no art`).toBe(true);
+      // The free plain banner is pure CSS; every other banner is drawn art with a still twin.
+      if (i.kind === 'banner' && !i.free) { expect(existsSync(`public/cosmetics/banners/${i.key}.svg`), `banner ${i.key} has no art`).toBe(true); expect(existsSync(`public/cosmetics/banners/${i.key}.still.svg`), `banner ${i.key} has no still twin`).toBe(true); }
       if (i.kind === 'border' && FRAMED.has(i.key)) expect(existsSync(`public/cosmetics/frames/${i.key}.svg`), `frame ${i.key} has no art`).toBe(true);
       expect(has(selector(i.kind, i.key)), `${i.kind} ${i.key} has no CSS`).toBe(true);
     }
@@ -28,12 +30,13 @@ describe('shop catalog', () => {
   it('draws no art that nothing sells', () => {
     const sold = new Set(SHOP_ITEMS.map((i) => i.key));
     // fx-ringfire is not an item: it burns on the flame and lava rings by itself.
-    for (const f of readdirSync('public/cosmetics/fx').filter((n) => n.endsWith('.svg') && !n.endsWith('-back.svg'))) {
-      const k = f.replace('.svg', '');
+    const keyOf = (f: string) => f.replace('.still.svg', '.svg').replace('.svg', '').replace(/-back$/, '');
+    for (const f of readdirSync('public/cosmetics/fx').filter((n) => n.endsWith('.svg') && !n.endsWith('-back.svg') && !n.endsWith('-back.still.svg'))) {
+      const k = keyOf(f);
       expect(sold.has(k) || k === 'fx-ringfire', `${f} is orphaned`).toBe(true);
     }
-    for (const f of readdirSync('public/cosmetics/frames')) expect(sold.has(f.replace('.svg', '')), `${f} is orphaned`).toBe(true);
-    for (const f of readdirSync('public/cosmetics/banners')) expect(sold.has(f.replace('.svg', '')), `${f} is orphaned`).toBe(true);
+    for (const f of readdirSync('public/cosmetics/frames')) expect(sold.has(keyOf(f)), `${f} is orphaned`).toBe(true);
+    for (const f of readdirSync('public/cosmetics/banners')) expect(sold.has(keyOf(f)), `${f} is orphaned`).toBe(true);
     for (const k of FRAMED) expect(SHOP_ITEMS.some((i) => i.kind === 'border' && i.key === k), `${k} is not a border item`).toBe(true);
   });
   it('every category has an owner exclusive and something limited', () => {

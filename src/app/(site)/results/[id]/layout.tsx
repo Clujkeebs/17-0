@@ -8,6 +8,7 @@ function greatRun(gameType: string, d: Record<string, unknown>): string | null {
   if (gameType === '17-0' && wins >= 15) return `${wins}-${losses}`;
   if (gameType === '82-0' && wins >= 70) return `${wins}-${losses}`;
   if (gameType === '162-0' && wins >= 135) return `${wins}-${losses}`;
+  if (gameType === '44-0' && wins >= 38) return `${wins}-${losses}`;
   if (gameType === 'build-a-player' && Number(d.rating) >= 90) return `A ${Number(d.rating).toFixed(1)} ${String(d.position ?? 'player')}`;
   return null;
 }

@@ -12,7 +12,7 @@ import { resultFacts, type DayRow, type HourRow, type ResultGroup } from '@/lib/
 /** A row with this key means the player's first sync is done. */
 const BASELINE = '_baseline';
 /** The draft games' own "perfect": every game won. */
-const SEASON_PERFECT = dsql`((game_type = '17-0' and (result_data->>'wins')::int = 17) or (game_type = '82-0' and (result_data->>'wins')::int = 82) or (game_type = '162-0' and (result_data->>'wins')::int = 162))`;
+const SEASON_PERFECT = dsql`((game_type = '17-0' and (result_data->>'wins')::int = 17) or (game_type = '82-0' and (result_data->>'wins')::int = 82) or (game_type = '162-0' and (result_data->>'wins')::int = 162) or (game_type = '44-0' and (result_data->>'wins')::int = 44))`;
 const ANY_PERFECT = dsql`(${SEASON_PERFECT} or (result_data->>'perfect') = 'true' or (game_type = 'build-a-player' and (result_data->>'rating')::float >= 97))`;
 const ET = dsql`'America/New_York'`;
 
@@ -23,7 +23,7 @@ export async function badgeFacts(userId: string): Promise<BadgeFacts> {
     db.execute<ResultGroup>(dsql`
       select game_type as game, is_daily as daily, coalesce((result_data->>'hard')::boolean, false) as hard,
         coalesce(result_data->>'format', '') as format, coalesce(result_data->>'pool', '') as pool,
-        case when game_type in ('17-0', '82-0', '162-0') then (result_data->>'wins')::int end as wins,
+        case when game_type in ('17-0', '82-0', '162-0', '44-0') then (result_data->>'wins')::int end as wins,
         coalesce((result_data->>'perfect') = 'true' or (game_type = 'build-a-player' and (result_data->>'rating')::float >= 97), false) as flag,
         count(*)::int as n
       from game_results where user_id = ${userId} and not flagged group by 1, 2, 3, 4, 5, 6, 7`),

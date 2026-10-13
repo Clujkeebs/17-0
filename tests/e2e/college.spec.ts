@@ -25,11 +25,52 @@ for (const [slug, rounds] of GAMES) {
   });
 }
 
+for (const slug of ['cbb-build-a-player', 'wcbb-build-a-player']) {
+  test(`${slug}: a player and a skill from each of five programs`, async ({ page }) => {
+    await page.goto(`/games/${slug}`);
+    await page.getByRole('tab', { name: 'Casual' }).click();
+    const build = page.getByRole('button', { name: 'Build my player' });
+    await expect(build).toBeDisabled();
+    const teams = page.locator('section.sb-club');
+    await expect(teams).toHaveCount(5);
+    const skills = ['Scoring', 'Rebounding', 'Playmaking', 'Steals', 'Blocks'];
+    for (let i = 0; i < 5; i++) {
+      await teams.nth(i).getByRole('radiogroup', { name: /players$/ }).getByRole('radio').first().click();
+      await teams.nth(i).getByRole('radio', { name: skills[i] }).click();
+    }
+    // A skill given to a second program is taken from the first.
+    await teams.nth(4).getByRole('radio', { name: 'Scoring' }).click();
+    await expect(build).toBeDisabled();
+    await teams.nth(0).getByRole('radio', { name: 'Blocks' }).click();
+    await build.click();
+    await expect(page.getByText('Your player', { exact: true })).toBeVisible();
+    await expect(page.getByText('Best build on this board')).toBeVisible();
+    await expect(page.locator('.m-big').first()).toContainText('pts');
+  });
+}
+
+test('cfb-build-a-player: five different skills, one from each team', async ({ page }) => {
+  await page.goto('/games/cfb-build-a-player');
+  await page.getByRole('tab', { name: 'Casual' }).click();
+  const build = page.getByRole('button', { name: 'Build my player' });
+  await expect(build).toBeDisabled();
+  const teams = page.locator('section.sb-club');
+  await expect(teams).toHaveCount(5);
+  for (let i = 0; i < 5; i++) await teams.nth(i).getByRole('radio').nth(i).click();
+  // Team 1 cannot also supply the skill team 2 already gives.
+  await expect(teams.nth(0).getByRole('radio').nth(1)).toBeDisabled();
+  await expect(build).toBeEnabled();
+  await build.click();
+  await expect(page.getByText('Your player', { exact: true })).toBeVisible();
+  await expect(page.getByText('Best build on this board')).toBeVisible();
+  await expect(page.locator('.m-big').first()).toContainText('Build score');
+});
+
 test('Games hub has a College tab with all three leagues', async ({ page }) => {
   await page.goto('/games');
   await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'College' }).click();
   await expect(page).toHaveURL(/sport=college/);
-  for (const slug of GAMES.map(([s]) => s)) await expect(page.locator(`a.hub-card[href="/games/${slug}"]`)).toBeVisible();
+  for (const slug of [...GAMES.map(([s]) => s), 'cfb-build-a-player', 'cbb-build-a-player', 'wcbb-build-a-player']) await expect(page.locator(`a.hub-card[href="/games/${slug}"]`)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'College football', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: "Women's college basketball", exact: true })).toBeVisible();
 });

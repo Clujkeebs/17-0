@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { getUserById, nameStyleOf } from '@/lib/server/account';
 import { EARN, ownedKeys, recentEvents, stockSold } from '@/lib/server/points';
 import { ShopClient } from './ShopClient';
+import { avatarUrl, imageVersion } from '@/lib/avatar';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -34,12 +35,10 @@ export default async function ShopPage() {
       <h1>Spend your points.</h1>
       <DoubleNote />
       <p className="muted" style={{ maxWidth: '62ch' }}>Points come from playing. Spend them on how your name looks on leaderboards and your profile. Points have no cash value and cannot be bought.</p>
-      {user ? (
-        <p className="row" style={{ gap: 10 }}><span className="pts-pill num" data-testid="balance">{user.points.toLocaleString('en-US')} pts</span><span className="muted">{user.pointsEarned.toLocaleString('en-US')} earned all time</span></p>
-      ) : (
+      {!user && (
         <div className="card" style={{ margin: '16px 0' }}><p style={{ margin: 0 }}><Link href="/login?next=/shop">Sign in</Link> or <Link href="/register?next=/shop">create an account</Link> to earn points. New accounts start with {EARN.welcome}.</p></div>
       )}
-      <ShopClient signedIn={!!user} points={user?.points ?? 0} owned={[...owned]} sold={sold} name={name} image={user?.image ?? null}
+      <ShopClient signedIn={!!user} points={user?.points ?? 0} earned={user?.pointsEarned ?? 0} owned={[...owned]} sold={sold} name={name} image={user ? avatarUrl(user.username, imageVersion(user.image)) : null}
         equipped={style ? { font: style.font, color: style.color, border: style.border ?? null, banner: style.banner ?? null, title: style.title ?? null, flair: style.flair ?? null, effect: style.effect ?? null } : null} owner={!!style?.owner} />
 
       <section style={{ marginTop: 48 }}>

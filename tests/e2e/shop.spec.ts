@@ -19,6 +19,9 @@ test('shop: welcome points, buy a title, equip it, it shows on the profile', asy
   test.skip(info.project.name !== 'desktop');
   const u = `shop_${String(Date.now()).slice(-9)}`;
   await signUp(page, u);
+  // The first look at the profile settles the account's achievements (after launch day that pays Early Adopter), then the balance is the welcome 50.
+  await page.goto('/profile');
+  await sql`update user_accounts set points = 50 where username = ${u}`;
   await page.goto('/shop');
   await expect(page.getByTestId('balance')).toHaveText('50 pts');
   await page.getByRole('button', { name: 'Titles' }).click();

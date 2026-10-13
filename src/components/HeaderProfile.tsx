@@ -23,7 +23,7 @@ export function HeaderProfile() {
   return (
     <span className="hp-row">
     <NotificationBell />
-    <Link href="/profile" className="hp" title={me.name}>
+    <Link href="/profile" className="hp" title={me.name} aria-label="Account">
       <Avatar name={me.name} src={me.image} size={28} />
       <span className="hp-name">Account</span>
     </Link>
@@ -32,9 +32,10 @@ export function HeaderProfile() {
 }
 
 export function Avatar({ name, src, size = 40, ring, effect }: { name: string; src: string | null; size?: number; ring?: string | null; effect?: string | null }) {
+  const [failed, setFailed] = useState(false);
   const initials = name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
-  const img = src
-    ? <img className="avatar" src={src} alt="" width={size} height={size} style={{ width: size, height: size }} />
+  const img = src && !failed
+    ? <img className="avatar" src={src} alt="" width={size} height={size} loading="lazy" decoding="async" onError={() => setFailed(true)} style={{ width: size, height: size }} />
     : <span className="avatar avatar-i" aria-hidden="true" style={{ width: size, height: size, fontSize: size * 0.4 }}>{initials || '?'}</span>;
   // An equipped avatar border (shop item) wraps the picture in a ring.
   const pic = ring ? <span className={`ring ${ring}`}>{img}</span> : img;

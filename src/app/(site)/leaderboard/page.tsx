@@ -4,10 +4,11 @@ import { allTimeLeaderboard, gameLeaderboard, PERIODS, type Period } from '@/lib
 import { dailyDateET } from '@/lib/game/daily';
 import { GAMES, SPORTS, gameEntry, gamesFor, type Sport } from '@/lib/game-registry';
 import { LeaderboardViewed } from '@/components/LeaderboardViewed';
-import { StyledName } from '@/components/StyledName';
+import { PlayerPlate } from '@/components/PlayerPlate';
+import type { PlayerLook } from '@/lib/cosmetics';
 
 const isHandle = (u: string) => /^[A-Za-z0-9_]{3,20}$/.test(u) && !u.startsWith('deleted-user-');
-const Player = ({ u, style }: { u: string; style?: import('@/lib/cosmetics').NameStyle }) => isHandle(u) ? <Link href={`/u/${u}`} className="lb-name"><StyledName name={u} style={style} /></Link> : <span>{u}</span>;
+const Player = ({ u, style }: { u: string; style?: PlayerLook }) => isHandle(u) ? <PlayerPlate name={u} username={u} look={style} /> : <span>{u}</span>;
 
 export const revalidate = 60;
 export const metadata: Metadata = {

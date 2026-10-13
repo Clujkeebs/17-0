@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { and, eq, inArray } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { db, schema } from '@/db';
+import { PlayerPlate } from '@/components/PlayerPlate';
+import { looksByUsername } from '@/lib/server/leaderboard';
+import type { PlayerLook } from '@/lib/cosmetics';
 import { PICKEM_POINTS, currentWeek, isLocked, myRecord, standings } from '@/lib/server/pickem';
 import { PickemBoard } from './PickemBoard';
 
@@ -37,6 +40,7 @@ export default async function PickemPage({ searchParams }: { searchParams: Promi
     standings(cur.season, week, 10).catch(miss), standings(cur.season, undefined, 10).catch(miss),
     session?.user?.id ? myRecord(session.user.id, cur.season).catch(() => null) : Promise.resolve(null),
   ]);
+  const looks = await looksByUsername([...weekTable, ...seasonTable].map((r) => r.username)).catch(() => new Map<string, PlayerLook>());
   const thisWeek = me?.weeks.find((w) => w.week === week);
   const pct = (r: number, w: number) => (r + w ? `${Math.round((r / (r + w)) * 100)}%` : '·');
   return (
@@ -80,7 +84,7 @@ export default async function PickemPage({ searchParams }: { searchParams: Promi
             <h2>{tb.t} standings</h2>
             {tb.rows.length ? (
               <table className="lb-table"><thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Right</th><th scope="col" className="num">Wrong</th><th scope="col" className="num">%</th></tr></thead>
-                <tbody>{tb.rows.map((r, i) => <tr key={r.username}><td className="num">{i + 1}</td><td>{r.username}</td><td className="num">{r.won}</td><td className="num">{r.made - r.won}</td><td className="num">{pct(r.won, r.made - r.won)}</td></tr>)}</tbody></table>
+                <tbody>{tb.rows.map((r, i) => <tr key={r.username}><td className="num">{i + 1}</td><td>{/^[A-Za-z0-9_]{3,20}$/.test(r.username) ? <PlayerPlate name={r.username} username={r.username} look={looks.get(r.username.toLowerCase())} size={28} /> : r.username}</td><td className="num">{r.won}</td><td className="num">{r.made - r.won}</td><td className="num">{pct(r.won, r.made - r.won)}</td></tr>)}</tbody></table>
             ) : <p className="muted">No finished games with picks yet.</p>}
           </section>
         ))}

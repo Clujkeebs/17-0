@@ -2,7 +2,7 @@ import { and, eq, gte, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { computeStreak, dailyDateET } from '@/lib/game/daily';
 import { GAMES } from '@/lib/game-registry';
-import { SHOP_ITEMS, giftsFor, shopItem, type ItemKind } from '@/lib/shop';
+import { FREE_KEYS, SHOP_ITEMS, giftsFor, shopItem, type ItemKind } from '@/lib/shop';
 import { isOwnerEmail } from '@/lib/cosmetics';
 import { DOUBLE_DEFAULT_DAY, weekdayOf } from '@/lib/badges';
 import { getRedis } from './redis';
@@ -17,7 +17,7 @@ export const EARN = {
   welcome: 50,
   daily: 10,
   perfect: 25,
-  /** A perfect season in a draft game (17-0, 82-0, 162-0) is the hardest thing on the site. */
+  /** A perfect season in a draft game (17-0, 82-0, 162-0, 44-0) is the hardest thing on the site. */
   perfectSeason: 75,
   casual: 2,
   casualDailyCap: 25,
@@ -60,8 +60,8 @@ export async function doubleDay(): Promise<number | null> {
 export const isDoubleToday = async (date = dailyDateET()) => (await doubleDay()) === weekdayOf(date);
 
 /** Points for one graded game. Ranked (Today) results earn the most; casual play earns a little, capped per day. */
-const SEASON_GAMES = new Set(['17-0', '82-0', '162-0']);
-const GAME_NAME: Record<string, string> = { '17-0': '17-0', '82-0': '82-0', '162-0': '162-0' };
+const SEASON_GAMES = new Set(['17-0', '82-0', '162-0', '44-0']);
+const GAME_NAME: Record<string, string> = { '17-0': '17-0', '82-0': '82-0', '162-0': '162-0', '44-0': '44-0' };
 
 /**
  * Points for one finished game. Every game pays a little (ranked Today 10, Casual 2, up to 25 Casual games a
@@ -160,7 +160,7 @@ export async function ownedKeys(userId: string, email: string | null | undefined
     db.select({ username: schema.users.username }).from(schema.users).where(eq(schema.users.id, userId)).limit(1),
   ]);
   // Gifts by username are owned outright, decided on the server.
-  return new Set([...rows.map((r) => r.k), ...(giftsFor(u?.username)?.items ?? [])]);
+  return new Set([...FREE_KEYS, ...rows.map((r) => r.k), ...(giftsFor(u?.username)?.items ?? [])]);
 }
 
 /** Units sold for each limited item. */
@@ -172,6 +172,7 @@ export async function stockSold(): Promise<Record<string, number>> {
 /** Buys an item: checks the price and, for limited items, the stock under a row lock, all in one transaction. */
 export async function buy(userId: string, email: string | null | undefined, itemKey: string) {
   const item = shopItem(itemKey);
+  if (item?.free) throw new ShopError('That one is free for everyone. Just equip it.', 409);
   if (!item || item.ownerOnly || item.giftOnly || item.dropOnly) throw new ShopError('That item is not for sale.', 404);
   if (isOwnerEmail(email)) throw new ShopError('You already own everything in the shop.', 409);
   return db.transaction(async (tx) => {

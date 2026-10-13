@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   description: SITE.description,
   openGraph: { type: 'website', siteName: SITE.name, images: ['/og-default.png'] },
   twitter: { card: 'summary_large_image' },
-  icons: { icon: '/icon.svg' },
+  icons: { icon: [{ url: '/icon.svg', type: 'image/svg+xml' }, { url: '/favicon.ico', sizes: '32x32' }], apple: '/apple-touch-icon.png' },
   alternates: { canonical: '/' },
 };
 

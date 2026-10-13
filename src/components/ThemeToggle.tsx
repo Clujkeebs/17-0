@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-/** Runs before paint (in the layout head) so the page never flashes the wrong theme. */
-export const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})();`;
+/** Runs before paint (in the layout head) so the page never flashes the wrong theme or the wrong amount of motion (html data-motion: full or reduce). */
+export const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}try{var m=localStorage.getItem('gl-motion');var r=window.matchMedia('(prefers-reduced-motion: reduce)').matches;document.documentElement.dataset.motion=(m==='on'||(m!=='off'&&!r))?'full':'reduce';}catch(e){document.documentElement.dataset.motion='full';}})();`;
 
 /** Light or dark. Follows the system until you pick one. */
 export function ThemeToggle({ labelled = false }: { labelled?: boolean }) {

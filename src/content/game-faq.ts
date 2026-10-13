@@ -1,11 +1,11 @@
 /**
- * Plain-language answers for the three draft games, shown under each game and sent as FAQPage data. Written
+ * Plain-language answers for the draft games, shown under each game and sent as FAQPage data. Written
  * answer-first so search and AI answer engines can quote them as they are. Every number here is the live rule;
  * change it here when the rule changes.
  */
 export interface GameFaq { slug: string; name: string; sport: string; summary: string; qa: { q: string; a: string }[] }
 
-export const GAME_FAQ: Record<'17-0' | '82-0' | '162-0', GameFaq> = {
+export const GAME_FAQ: Record<'17-0' | '82-0' | '162-0' | '44-0', GameFaq> = {
   '17-0': {
     slug: '17-0', name: '17-0', sport: 'NFL',
     summary: 'A free NFL draft game: each spin lands on a franchise, you take one player from it for an open roster spot, and the finished roster is graded and played through a 17-game season.',
@@ -41,6 +41,19 @@ export const GAME_FAQ: Record<'17-0' | '82-0' | '162-0', GameFaq> = {
       { q: 'How many re-spins do I get?', a: 'Two era re-spins and two team re-spins in Easy mode. Hard mode hides the stats and gives no re-spins.' },
       { q: 'What is Right now mode?', a: 'Right now skips the era and spins teams from the current season only, graded on this year\'s stats.' },
       { q: 'How hard is it to go 162-0?', a: 'The win line is fitted so a careful drafter using every re-spin goes 162-0 about 2 percent of the time.' },
+    ],
+  },
+  '44-0': {
+    slug: '44-0', name: '44-0', sport: 'WNBA',
+    summary: 'A free WNBA draft game: five spins, each an era since 1997 and then a franchise. Draft one player from each, graded on her real stats from her best season there, and see if the lineup goes 44-0.',
+    qa: [
+      { q: 'What is 44-0?', a: '44-0 is a free WNBA draft game. Each of five spins lands on an era (from the first season in 1997 to today) and then a franchise. You draft one player from that team in that era, set a starting five, and the lineup plays a projected 44-game season, the length of the current WNBA schedule.' },
+      { q: 'How are players rated in 44-0?', a: 'Every player on a board is shown at her best season with that franchise in that era, from real per-game stats (ESPN, every season since 1997). The rating blends points, rebounds, assists, steals and blocks, minus turnovers, plus shooting efficiency, and a full-time season counts in full whether the schedule was 22 games or 44. The top of the 40-99 scale is bent, so only the greatest seasons ever sit near 99.' },
+      { q: 'Can I pick the same era twice?', a: 'No. Each era can be used once, so your five picks come from five different eras.' },
+      { q: 'What is Current mode?', a: 'Current skips the eras and spins teams from the current season only, with players graded on this year\'s stats. All-time is the default and spins every era since 1997.' },
+      { q: 'How many re-spins do I get?', a: 'Two era re-spins and two team re-spins in Easy mode. Hard mode hides the stats and gives no re-spins. Current has no eras to re-spin.' },
+      { q: 'Does position matter?', a: 'Yes. A player can play any spot, but out of position she keeps 94 percent of her value one spot over, 82 percent two spots over, and 70 percent beyond that. A forward who averages five assists a game can play the point at no cost.' },
+      { q: 'How hard is it to go 44-0?', a: 'The win line is fitted to the real data so a careful drafter using every re-spin goes 44-0 about 3 percent of the time.' },
     ],
   },
 };

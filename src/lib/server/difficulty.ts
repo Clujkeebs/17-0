@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { describeStats, statsFromDist } from '@/lib/game/difficulty';
 
 /** Season length for each draft game, keyed by game type. */
-const GAMES: Record<string, number> = { '17-0': 17, '82-0': 82, '162-0': 162 };
+const GAMES: Record<string, number> = { '17-0': 17, '82-0': 82, '162-0': 162, '44-0': 44 };
 
 /**
  * What players actually get, not what a simulated drafter gets: for each draft game and mode, how often real
@@ -20,7 +20,7 @@ export async function logPlayerDifficulty(days = 30): Promise<void> {
              (result_data->>'wins')::int as wins,
              count(*)::int as n
       from game_results
-      where game_type in ('17-0', '82-0', '162-0') and not flagged and result_data ? 'wins'
+      where game_type in ('17-0', '82-0', '162-0', '44-0') and not flagged and result_data ? 'wins'
         and created_at > now() - make_interval(days => ${days})
       group by 1, 2, 3, 4, 5, 6, 7`);
     const groups = new Map<string, { game: string; dist: number[] }>();

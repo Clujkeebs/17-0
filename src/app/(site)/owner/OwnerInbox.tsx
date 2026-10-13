@@ -8,6 +8,7 @@ const COMMANDS = [
   { cmd: 'sync', label: 'Sync ratings', hint: 'Madden ratings, rosters, coaches' },
   { cmd: 'fantasy', label: 'Refresh fantasy', hint: 'Sleeper points and the win line' },
   { cmd: 'nba', label: 'Refresh NBA', hint: 'ESPN history and 82-0 win line' },
+  { cmd: 'wnba', label: 'Refresh WNBA', hint: 'ESPN history and 44-0 win line' },
   { cmd: 'legends', label: 'Rebuild legends', hint: 'All-time legends and win lines' },
   { cmd: 'mlb', label: 'Refresh MLB', hint: 'Stats API history for 162-0' },
   { cmd: 'pickem', label: "Sync Pick 'em", hint: 'ESPN scoreboard, then pay right picks' },

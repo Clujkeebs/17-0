@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { getUserById } from '@/lib/server/account';
 import { DeleteAccountForm, IdentityForm, Toggle } from './SettingsForms';
 import { SignOutButton } from '@/lib/client-auth';
+import { MotionToggle } from '@/components/Motion';
 
 export const metadata: Metadata = {
   title: 'Settings',
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
         <Toggle field="newsletterOptIn" label="Newsletter" initial={user.newsletterOptIn}
           hint={user.newsletterConfirmedAt ? 'Confirmed. Weekly at most. Every email has a one-click unsubscribe.' : 'Double opt-in: turning this on sends a confirmation link to your email.'} />
         <Toggle field="soundEnabled" label="Game sounds" initial={user.soundEnabled} hint="Reel clicks and result cues. Off by default." />
+        <MotionToggle />
       </section>
 
       <section aria-labelledby="data-h" className="card" style={{ marginTop: 24 }}>

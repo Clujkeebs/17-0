@@ -26,6 +26,7 @@ export const GAMES: GameEntry[] = [
   ...fantasyGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nfl' as const })),
   { slug: '82-0', name: '82-0', sport: 'nba', hard: true },
   ...nbaGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'nba' as const })),
+  { slug: '44-0', name: '44-0', sport: 'wnba', hard: true },
   ...wnbaGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'wnba' as const })),
   ...collegeGames.map((g) => ({ slug: g.slug, name: g.name, sport: 'college' as const })),
   { slug: '162-0', name: '162-0', sport: 'mlb', hard: true },
@@ -43,6 +44,11 @@ export const gamesFor = (sport: Sport) => GAMES.filter((g) => g.sport === sport)
  * sport tabs, so a game on a tab nobody opened still gets seen. Add a line when a game ships; old lines can stay.
  */
 export const ADDED: Record<string, string> = {
+  '44-0': '2026-10-13',
+  'cfb-build-a-player': '2026-10-13', 'cbb-build-a-player': '2026-10-13', 'wcbb-build-a-player': '2026-10-13',
+  'cfb-higher-lower': '2026-10-12', 'cfb-blind-resume': '2026-10-12', 'cfb-who-led': '2026-10-12', 'cfb-whose-team': '2026-10-12',
+  'cbb-higher-lower': '2026-10-12', 'cbb-blind-resume': '2026-10-12', 'cbb-who-led': '2026-10-12', 'cbb-whose-team': '2026-10-12',
+  'wcbb-higher-lower': '2026-10-12', 'wcbb-blind-resume': '2026-10-12', 'wcbb-who-led': '2026-10-12', 'wcbb-whose-team': '2026-10-12',
   'sports-strands': '2026-10-12',
   'unbeaten-bowl': '2026-10-12',
   'wnba-higher-lower': '2026-10-09', 'wnba-blind-resume': '2026-10-09', 'wnba-who-led': '2026-10-09', 'wnba-whose-team': '2026-10-09',

@@ -4,18 +4,28 @@ import { cached } from './redis';
 import { allTimePointsExpr } from './leaderboard-sql';
 import { scoreSummary } from './result-summary';
 import { dailyDateET } from '@/lib/game/daily';
-import { isOwnerEmail, resolveStyle, type NameStyle } from '@/lib/cosmetics';
+import { isOwnerEmail, resolveStyle, type PlayerLook } from '@/lib/cosmetics';
+import { avatarUrl } from '@/lib/avatar';
 
-/** Name styles for the players on a page, in one query. Emails stay here; only the resolved style leaves. */
-export async function stylesFor(userIds: string[]): Promise<Map<string, NameStyle>> {
+/** The look of each player on a page, in one query: name style, ring, banner, effect and picture URL. Emails stay here; only the resolved look leaves. */
+export async function stylesFor(userIds: string[]): Promise<Map<string, PlayerLook>> {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (!ids.length) return new Map();
-  const rows = await db.select({ id: schema.users.id, email: schema.users.email, font: schema.users.nameFont, color: schema.users.nameColor, title: schema.users.equipTitle, flair: schema.users.equipFlair, effect: schema.users.equipEffect })
+  const rows = await db.select({ id: schema.users.id, email: schema.users.email, username: schema.users.username, font: schema.users.nameFont, color: schema.users.nameColor, title: schema.users.equipTitle, flair: schema.users.equipFlair, border: schema.users.equipBorder, banner: schema.users.equipBanner, effect: schema.users.equipEffect, v: dsql<string | null>`left(md5(${schema.users.image}), 8)` })
     .from(schema.users).where(inArray(schema.users.id, ids));
-  return new Map(rows.map((r) => [r.id, resolveStyle({ font: r.font, color: r.color, title: r.title, flair: r.flair, effect: r.effect }, isOwnerEmail(r.email))]));
+  return new Map(rows.map((r) => [r.id, { ...resolveStyle({ font: r.font, color: r.color, title: r.title, flair: r.flair, border: r.border, banner: r.banner, effect: r.effect }, isOwnerEmail(r.email)), avatar: avatarUrl(r.username, r.v) }]));
 }
 
-export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string; hard: boolean; style?: NameStyle; date?: string }
+/** The same looks, found by username (for boards that only carry names). Keys are lower case. */
+export async function looksByUsername(names: string[]): Promise<Map<string, PlayerLook>> {
+  const lower = [...new Set(names.map((n) => n.toLowerCase()).filter((n) => /^[a-z0-9_]{3,20}$/.test(n)))];
+  if (!lower.length) return new Map();
+  const rows = await db.select({ id: schema.users.id, username: schema.users.username }).from(schema.users).where(inArray(dsql`lower(${schema.users.username})`, lower));
+  const looks = await stylesFor(rows.map((r) => r.id));
+  return new Map(rows.flatMap((r) => (r.username && looks.has(r.id) ? [[r.username.toLowerCase(), looks.get(r.id)!] as const] : [])));
+}
+
+export interface DailyRow { rank: number; username: string; score: number; summary: string; createdAt: string; resultId: string; hard: boolean; style?: PlayerLook; date?: string }
 
 export async function dailyLeaderboard(gameType: string, date = dailyDateET(), limit = 100, hardOnly = false): Promise<DailyRow[]> {
   return cached(`lb:daily:${gameType}:${date}${hardOnly ? ':hard' : ''}`, 60, async () => {
@@ -59,7 +69,7 @@ export async function gameLeaderboard(gameType: string, period: Period, hardOnly
   });
 }
 
-export interface AllTimeRow { rank: number; username: string; points: number; games: number; best: number; style?: NameStyle }
+export interface AllTimeRow { rank: number; username: string; points: number; games: number; best: number; style?: PlayerLook }
 
 /** All-time: points accumulate across every graded game. 17-0 = wins, Build a Player = rating / 10. */
 export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows: AllTimeRow[]; total: number }> {

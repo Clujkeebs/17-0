@@ -5,14 +5,14 @@ import Redis from 'ioredis';
  * Test databases have no ESPN, Stats API or Sleeper history. Stand-in rows (ids far above real ones, names marked
  * "Test") are written once, before any test runs, so no spec depends on another spec having run first.
  */
-/** WNBA stand-ins: 12 teams, four seasons, seven players each (ids from 9,000,000, names marked "Test"). */
+/** WNBA stand-ins: 12 teams, five seasons (one in each 44-0 era but the '15-'20 one is 2020), seven players each (ids from 9,000,000, names marked "Test"). */
 async function seedWnba() {
   const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
   const [{ n }] = await sql`select count(*)::int as n from wnba_player_seasons where player_id >= 9000000`;
-  if (n === 0) {
+  if (n < 12 * 5 * 7) {
     const pos = ['G', 'G', 'F', 'F', 'C', 'G', 'F'];
     for (let t = 1; t <= 12; t++) {
-      for (const season of [2000, 2010, 2020, 2024]) {
+      for (const season of [2000, 2005, 2010, 2020, 2024]) {
         await sql`insert into wnba_team_seasons (team_id, season, name, location, abbreviation, color) values (${9000 + t}, ${season}, ${`Testers ${t}`}, ${'Test City'}, ${`W${t}`}, ${'#553377'}) on conflict do nothing`;
         for (let i = 0; i < 7; i++) {
           const id = 9000000 + t * 1000 + season - 1990 + i * 100;

@@ -80,6 +80,7 @@ export const BADGES: Rule[] = [
   b('unbeaten', 'Unbeaten', 'A 17-0 season', 'Seasons', 'gold', (f) => (f.perfect['17-0'] ?? 0) > 0),
   b('eighty-two', '82-0', 'A perfect NBA season', 'Seasons', 'gold', (f) => (f.perfect['82-0'] ?? 0) > 0),
   b('one-sixty-two', '162-0', 'A perfect MLB season', 'Seasons', 'gold', (f) => (f.perfect['162-0'] ?? 0) > 0),
+  b('forty-four', '44-0', 'A perfect WNBA season', 'Seasons', 'gold', (f) => (f.perfect['44-0'] ?? 0) > 0),
   b('clean-sweep', 'Clean Sweep', 'A perfect season in 17-0, 82-0 and 162-0', 'Seasons', 'platinum', (f) => SEASON_GAMES.every((g) => (f.seasonPerfect[g] ?? 0) > 0)),
   b('close-call', 'Close Call', 'One game short of a perfect season', 'Seasons', 'bronze', (f) => f.closeCalls > 0),
   b('hard-knocks', 'Hard Knocks', 'A perfect season in Hard mode', 'Seasons', 'gold', (f) => f.perfectHard > 0),

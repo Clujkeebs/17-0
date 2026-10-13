@@ -19,6 +19,8 @@ export interface ShopItem {
   giftOnly?: boolean;
   /** Drop only: never sold. The only way to get it is to claim it from a free drop (src/lib/drops.ts). */
   dropOnly?: boolean;
+  /** Free for everyone: owned by every account from the start, and what a name wears when nothing else is equipped. */
+  free?: boolean;
 }
 
 export const KIND_LABELS: Record<ItemKind, string> = {
@@ -27,6 +29,10 @@ export const KIND_LABELS: Record<ItemKind, string> = {
 export const KIND_ORDER: ItemKind[] = ['effect', 'color', 'font', 'border', 'banner', 'title', 'flair'];
 
 export const SHOP_ITEMS: ShopItem[] = [
+  // The basics: everyone has these, free. Wearing nothing else, a name gets the plain ring and the plain banner.
+  { key: 'ring-plain', kind: 'border', label: 'Plain ring', price: 0, free: true, blurb: 'A thin neutral ring. Everyone has it.' },
+  { key: 'banner-plain', kind: 'banner', label: 'Plain banner', price: 0, free: true, blurb: 'A clean, quiet banner. Everyone has it.' },
+
   // Name colors (every flat color keeps 4.5:1 on white; gradients are bold enough to read)
   { key: 'teal', kind: 'color', label: 'Teal', price: 150 },
   { key: 'plum', kind: 'color', label: 'Plum', price: 150 },
@@ -339,9 +345,10 @@ export const itemsOf = (kind: ItemKind) => SHOP_ITEMS.filter((i) => i.kind === k
 export const titleLabel = (key: string | null | undefined) => (key ? shopItem(key)?.label ?? null : null);
 
 /** Rarity, from how an item is sold: owner exclusives, limited runs, then by price. Drives the card and title styling. */
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'limited' | 'exclusive' | 'gift' | 'drop';
-export const RARITY_LABEL: Record<Rarity, string> = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', limited: 'Limited', exclusive: 'Owner exclusive', gift: 'Gift', drop: 'Drop exclusive' };
+export type Rarity = 'free' | 'common' | 'rare' | 'epic' | 'legendary' | 'limited' | 'exclusive' | 'gift' | 'drop';
+export const RARITY_LABEL: Record<Rarity, string> = { free: 'Free for everyone', common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', limited: 'Limited', exclusive: 'Owner exclusive', gift: 'Gift', drop: 'Drop exclusive' };
 export function rarity(i: ShopItem): Rarity {
+  if (i.free) return 'free';
   if (i.ownerOnly) return 'exclusive';
   if (i.giftOnly) return 'gift';
   if (i.dropOnly) return 'drop';
@@ -349,6 +356,8 @@ export function rarity(i: ShopItem): Rarity {
   return i.price >= 1500 ? 'legendary' : i.price >= 700 ? 'epic' : i.price >= 300 ? 'rare' : 'common';
 }
 /** Title pills take their item's rarity, so a bought MVP looks like one. */
+/** Keys of the free items: every account owns these. */
+export const FREE_KEYS = SHOP_ITEMS.filter((i) => i.free).map((i) => i.key);
 export const titleRarity = (key: string | null | undefined) => { const i = key ? shopItem(key) : undefined; return i ? rarity(i) : null; };
 
 /** What a player has equipped beyond the name font and color. */

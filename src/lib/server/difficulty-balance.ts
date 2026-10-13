@@ -4,17 +4,19 @@ import { dailyDateET } from '@/lib/game/daily';
 import { FORMATS, isFantasy, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
 import { NBA_WIN_SPAN } from '@/lib/game/eightytwo';
 import { MLB_WIN_SPAN } from '@/lib/game/onesixtytwo';
+import { WNBA_WIN_SPAN } from '@/lib/game/fortyfour';
 import { MIN_PLAYERS, MIN_RUNS, TARGET_TOP_TENTH, lastRunsPerPlayer, modeKey, nextOffset, quantile, wantedOffset } from '@/lib/game/difficulty';
 import { get53Floor, getAllTimeFloor, getFantasyFloor } from './calibrate';
 import { getNbaFloor } from './nba-floor';
 import { getMlbFloor } from './mlb-floor';
+import { getWnbaFloor } from './wnba-floor';
 import { getRedis } from './redis';
 import { BALANCE_DAY_KEY, BALANCE_OFF_KEY, META_KEY, OFFSET_KEY, getOffset } from './difficulty-offset';
 
 /** Every mode that has a win line of its own. */
 export const BALANCE_MODES: string[] = [
   ...(['6', '12', '16', '53'] as const).flatMap((f) => (['current', 'all-time'] as const).map((p) => `17-0:${f}:${p}`)),
-  '17-0:fantasy:current', '82-0:classic', '82-0:standard', '162-0:eras', '162-0:now',
+  '17-0:fantasy:current', '82-0:classic', '82-0:standard', '162-0:eras', '162-0:now', '44-0:eras', '44-0:now',
 ];
 const WINDOW_DAYS = 30;
 
@@ -29,6 +31,7 @@ export async function baseLine(mode: string): Promise<{ base: number; span: numb
   }
   if (game === '82-0') return { base: await getNbaFloor(a === 'standard' ? 'standard' : 'classic'), span: NBA_WIN_SPAN };
   if (game === '162-0') return { base: await getMlbFloor(a === 'now' ? 'now' : 'eras'), span: MLB_WIN_SPAN };
+  if (game === '44-0') return { base: await getWnbaFloor(a === 'now' ? 'now' : 'eras'), span: WNBA_WIN_SPAN };
   return null;
 }
 
@@ -62,7 +65,7 @@ export async function balanceDifficulty(opts: { force?: boolean; dry?: boolean; 
              coalesce(user_id::text, session_id::text, id::text) as who,
              (case when result_data->>'format' = 'fantasy' then result_data->>'edge' else result_data->>'teamStrength' end)::float8 as strength
       from game_results
-      where game_type in ('17-0', '82-0', '162-0') and not is_daily and not flagged
+      where game_type in ('17-0', '82-0', '162-0', '44-0') and not is_daily and not flagged
         and not coalesce((result_data->>'hard')::boolean, false) and result_data ? 'teamStrength'
         and (coalesce(result_data->>'format', '') <> 'fantasy' or result_data ? 'edge')
         and created_at > now() - make_interval(days => ${WINDOW_DAYS})

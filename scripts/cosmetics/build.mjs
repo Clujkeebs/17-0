@@ -2,6 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REDUCE_RULE } from './lib.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public', 'cosmetics');
 const only = process.argv[2];
@@ -14,7 +15,12 @@ async function emit(dir, mod, map) {
     if (!m[fn]) { console.warn('missing', fn); continue; }
     const out = m[fn]();
     const files = typeof out === 'string' ? { [`${key}.svg`]: out } : Object.fromEntries(Object.entries(out).map(([suffix, s]) => [`${key}${suffix}.svg`, s]));
-    for (const [name, s] of Object.entries(files)) { writeFileSync(join(root, dir, name), s); n++; bytes += s.length; }
+    for (const [name, s] of Object.entries(files)) {
+      // x.svg always animates; x.still.svg keeps the reduced-motion rule (the resting pose). Frames never move, so they get one file.
+      const animated = s.split(REDUCE_RULE).join('');
+      writeFileSync(join(root, dir, name), animated); n++; bytes += animated.length;
+      if (dir !== 'frames') { writeFileSync(join(root, dir, name.replace(/\.svg$/, '.still.svg')), s); n++; bytes += s.length; }
+    }
   }
   console.log(`${dir}: ${n} files, ${Math.round(bytes / 1024)} KB`);
 }

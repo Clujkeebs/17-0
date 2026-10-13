@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { entrants, getChallenge, type ChallengeSetup } from '@/lib/server/challenges';
 import { getResult, stylesFor } from '@/lib/server/leaderboard';
-import { StyledName } from '@/components/StyledName';
+import { PlayerPlate } from '@/components/PlayerPlate';
 import { ShareButton } from '@/components/game/ShareButton';
 import { CHALLENGE_GAME_NAMES, faceOff, recordOf, rosterLines, setupChips } from '@/lib/challenge-view';
 import { CHALLENGE_POINTS } from '@/lib/server/challenges';
@@ -96,7 +96,7 @@ export default async function ChallengePage({ params, searchParams }: Props) {
             return (
               <li key={e.resultId} className={`${you ? 'you' : ''}${e.resultId === c.creatorResultId ? ' maker' : ''}`}>
                 <span className="ch-rank num">{i + 1}</span>
-                <span className="ch-who">{e.userId ? <Link href={`/u/${e.username}`}><StyledName name={name} style={styles.get(e.userId)} /></Link> : name}{e.resultId === c.creatorResultId && <span className="ch-tag">Set the spins</span>}{you && <span className="ch-tag you">You</span>}</span>
+                <span className="ch-who">{e.userId ? <PlayerPlate name={name} username={e.username} look={styles.get(e.userId)} size={30} /> : name}{e.resultId === c.creatorResultId && <span className="ch-tag">Set the spins</span>}{you && <span className="ch-tag you">You</span>}</span>
                 <span className="ch-rec num">{played ? <Link href={`/results/${e.resultId}`}>{e.wins}-{e.losses}</Link> : `${e.wins}-${e.losses}`}</span>
               </li>
             );

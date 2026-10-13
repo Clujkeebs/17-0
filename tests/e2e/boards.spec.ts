@@ -60,7 +60,7 @@ test('82-0 normal mode: twelve players, find box, era reel', async ({ page }) =>
   await expect(page.locator('.g-player').first()).toBeVisible();
 });
 
-test('after Today is played, 82-0 and 162-0 open on Casual instead of a locked board', async ({ page }, info) => {
+test('after Today is played, 82-0, 162-0 and 44-0 open on Casual instead of a locked board', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop');
   const u = `daily_${String(Date.now()).slice(-9)}`;
   await page.goto('/register');
@@ -70,10 +70,10 @@ test('after Today is played, 82-0 and 162-0 open on Casual instead of a locked b
   await page.waitForURL((url) => !url.pathname.startsWith('/register'));
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const [{ id }] = await sql`select id from user_accounts where username = ${u}`;
-  for (const g of ['82-0', '162-0']) await sql`insert into game_results (user_id, username, game_type, is_daily, daily_date, result_data, score) values (${id}, ${u}, ${g}, true, ${today}, '{"wins":50,"losses":32}', 50)`;
+  for (const g of ['82-0', '162-0', '44-0']) await sql`insert into game_results (user_id, username, game_type, is_daily, daily_date, result_data, score) values (${id}, ${u}, ${g}, true, ${today}, '{"wins":50,"losses":32}', 50)`;
   // Even with Today remembered as the last mode, the sheet opens on Casual and says why.
-  await page.evaluate(() => { localStorage.setItem('gl-82-0-setup', JSON.stringify({ mode: 'today' })); localStorage.setItem('gl-162-0-setup', JSON.stringify({ mode: 'today' })); });
-  for (const g of ['82-0', '162-0']) {
+  await page.evaluate(() => { localStorage.setItem('gl-82-0-setup', JSON.stringify({ mode: 'today' })); localStorage.setItem('gl-162-0-setup', JSON.stringify({ mode: 'today' })); localStorage.setItem('gl-44-0-setup', JSON.stringify({ mode: 'today' })); });
+  for (const g of ['82-0', '162-0', '44-0']) {
     await page.goto(`/games/${g}`);
     const sheet = page.getByRole('dialog', { name: 'Game setup' });
     await expect(sheet.getByRole('group', { name: 'Mode' }).getByRole('radio', { name: /Casual/ })).toBeChecked();

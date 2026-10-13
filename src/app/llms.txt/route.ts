@@ -13,7 +13,7 @@ export function GET() {
   const draft = Object.values(GAME_FAQ).map((g) => `- [${g.name}](${SITE.url}/games/${g.slug}): ${g.summary}`).join('\n');
   const rules = Object.values(GAME_FAQ).map((g) => `### ${g.name} (${g.sport})\n${g.qa.map((x) => `- ${x.q} ${x.a}`).join('\n')}`).join('\n\n');
   const bySport = SPORTS.map((s) => {
-    const list = GAMES.filter((g) => g.sport === s.key && !['17-0', '82-0', '162-0'].includes(g.slug));
+    const list = GAMES.filter((g) => g.sport === s.key && !['17-0', '82-0', '162-0', '44-0'].includes(g.slug));
     return list.length ? `### ${s.label}\n${list.map((g) => `- [${g.name}](${SITE.url}/games/${g.slug})`).join('\n')}` : '';
   }).filter(Boolean).join('\n\n');
   const body = `# ${SITE.name}

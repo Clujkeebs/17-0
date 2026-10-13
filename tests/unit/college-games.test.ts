@@ -97,12 +97,12 @@ describe('college basketball games', () => {
 });
 
 describe('registration', () => {
-  it('twelve games, unique slugs, each named for its league', () => {
-    expect(collegeGames).toHaveLength(12);
-    expect(new Set(collegeGames.map((g) => g.slug)).size).toBe(12);
-    expect(collegeGames.filter((g) => g.sport === 'cfb')).toHaveLength(4);
-    expect(collegeGames.filter((g) => g.sport === 'cbb')).toHaveLength(4);
-    expect(collegeGames.filter((g) => g.sport === 'wcbb')).toHaveLength(4);
-    expect(collegeGames.filter((g) => g.name.includes("Women's"))).toHaveLength(4);
+  it('fifteen games, unique slugs, five for each league', () => {
+    expect(collegeGames).toHaveLength(15);
+    expect(new Set(collegeGames.map((g) => g.slug)).size).toBe(15);
+    expect(collegeGames.filter((g) => g.sport === 'cfb')).toHaveLength(5);
+    expect(collegeGames.filter((g) => g.sport === 'cbb')).toHaveLength(5);
+    expect(collegeGames.filter((g) => g.sport === 'wcbb')).toHaveLength(5);
+    expect(collegeGames.filter((g) => g.name.includes("Women's"))).toHaveLength(5);
   });
 });

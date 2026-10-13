@@ -39,7 +39,7 @@ test('achievements: the first game unlocks one and tells you, hidden ones stay a
   expect(notes.items.map((n: { title: string }) => n.title)).toContain('Achievement unlocked: First Down');
   expect((await sql`select points from user_accounts where id = ${id}`)[0].points).toBe(before + 10);   // a bronze pays 10, once
   await page.goto('/profile');
-  expect((await sql`select count(*)::int as n from point_events where user_id = ${id} and reason = 'badge'`)[0].n).toBe(1);
+  expect((await sql`select count(*)::int as n from point_events where user_id = ${id} and reason = 'badge' and ref = 'first-down'`)[0].n).toBe(1);
   const again = await (await page.request.get('/api/notifications')).json();
   expect(again.items.filter((n: { title: string }) => n.title === 'Achievement unlocked: First Down')).toHaveLength(1);
 

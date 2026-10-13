@@ -257,7 +257,140 @@
 .banner-scoreboard { background-color: #0b0d14; background-image: url(/cosmetics/banners/banner-scoreboard.svg); }
 .banner-hologram { background-color: #0b0d14; background-image: url(/cosmetics/banners/banner-hologram.svg); }
 .banner-eclipse { background-color: #0b0d14; background-image: url(/cosmetics/banners/banner-eclipse.svg); }
+:root[data-motion="reduce"] .banner-field { background-image: url(/cosmetics/banners/banner-field.still.svg); }
+:root[data-motion="reduce"] .banner-court { background-image: url(/cosmetics/banners/banner-court.still.svg); }
+:root[data-motion="reduce"] .banner-diamond { background-image: url(/cosmetics/banners/banner-diamond.still.svg); }
+:root[data-motion="reduce"] .banner-night { background-image: url(/cosmetics/banners/banner-night.still.svg); }
+:root[data-motion="reduce"] .banner-sunset { background-image: url(/cosmetics/banners/banner-sunset.still.svg); }
+:root[data-motion="reduce"] .banner-launch { background-image: url(/cosmetics/banners/banner-launch.still.svg); }
+:root[data-motion="reduce"] .banner-founder { background-image: url(/cosmetics/banners/banner-founder.still.svg); }
+:root[data-motion="reduce"] .banner-endzone { background-image: url(/cosmetics/banners/banner-endzone.still.svg); }
+:root[data-motion="reduce"] .banner-snow { background-image: url(/cosmetics/banners/banner-snow.still.svg); }
+:root[data-motion="reduce"] .banner-playbook { background-image: url(/cosmetics/banners/banner-playbook.still.svg); }
+:root[data-motion="reduce"] .banner-jumbotron { background-image: url(/cosmetics/banners/banner-jumbotron.still.svg); }
+:root[data-motion="reduce"] .banner-retro { background-image: url(/cosmetics/banners/banner-retro.still.svg); }
+:root[data-motion="reduce"] .banner-marble { background-image: url(/cosmetics/banners/banner-marble.still.svg); }
+:root[data-motion="reduce"] .banner-aurora { background-image: url(/cosmetics/banners/banner-aurora.still.svg); }
+:root[data-motion="reduce"] .banner-confetti { background-image: url(/cosmetics/banners/banner-confetti.still.svg); }
+:root[data-motion="reduce"] .banner-vault { background-image: url(/cosmetics/banners/banner-vault.still.svg); }
+:root[data-motion="reduce"] .banner-inferno { background-image: url(/cosmetics/banners/banner-inferno.still.svg); }
+:root[data-motion="reduce"] .banner-stadium { background-image: url(/cosmetics/banners/banner-stadium.still.svg); }
+:root[data-motion="reduce"] .banner-ocean { background-image: url(/cosmetics/banners/banner-ocean.still.svg); }
+:root[data-motion="reduce"] .banner-city { background-image: url(/cosmetics/banners/banner-city.still.svg); }
+:root[data-motion="reduce"] .banner-hive { background-image: url(/cosmetics/banners/banner-hive.still.svg); }
+:root[data-motion="reduce"] .banner-tunnel { background-image: url(/cosmetics/banners/banner-tunnel.still.svg); }
+:root[data-motion="reduce"] .banner-pitch { background-image: url(/cosmetics/banners/banner-pitch.still.svg); }
+:root[data-motion="reduce"] .banner-rink { background-image: url(/cosmetics/banners/banner-rink.still.svg); }
+:root[data-motion="reduce"] .banner-ballpark { background-image: url(/cosmetics/banners/banner-ballpark.still.svg); }
+:root[data-motion="reduce"] .banner-trophy { background-image: url(/cosmetics/banners/banner-trophy.still.svg); }
+:root[data-motion="reduce"] .banner-draft { background-image: url(/cosmetics/banners/banner-draft.still.svg); }
+:root[data-motion="reduce"] .banner-synthwave { background-image: url(/cosmetics/banners/banner-synthwave.still.svg); }
+:root[data-motion="reduce"] .banner-comic { background-image: url(/cosmetics/banners/banner-comic.still.svg); }
+:root[data-motion="reduce"] .banner-circuit { background-image: url(/cosmetics/banners/banner-circuit.still.svg); }
+:root[data-motion="reduce"] .banner-galaxy { background-image: url(/cosmetics/banners/banner-galaxy.still.svg); }
+:root[data-motion="reduce"] .banner-rain { background-image: url(/cosmetics/banners/banner-rain.still.svg); }
+:root[data-motion="reduce"] .banner-gilded { background-image: url(/cosmetics/banners/banner-gilded.still.svg); }
+:root[data-motion="reduce"] .banner-sakura { background-image: url(/cosmetics/banners/banner-sakura.still.svg); }
+:root[data-motion="reduce"] .banner-matrix { background-image: url(/cosmetics/banners/banner-matrix.still.svg); }
+:root[data-motion="reduce"] .banner-pixelcity { background-image: url(/cosmetics/banners/banner-pixelcity.still.svg); }
+:root[data-motion="reduce"] .banner-summit { background-image: url(/cosmetics/banners/banner-summit.still.svg); }
+:root[data-motion="reduce"] .banner-scoreboard { background-image: url(/cosmetics/banners/banner-scoreboard.still.svg); }
+:root[data-motion="reduce"] .banner-hologram { background-image: url(/cosmetics/banners/banner-hologram.still.svg); }
+:root[data-motion="reduce"] .banner-eclipse { background-image: url(/cosmetics/banners/banner-eclipse.still.svg); }
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion]) .banner-field { background-image: url(/cosmetics/banners/banner-field.still.svg); }
+  :root:not([data-motion]) .banner-court { background-image: url(/cosmetics/banners/banner-court.still.svg); }
+  :root:not([data-motion]) .banner-diamond { background-image: url(/cosmetics/banners/banner-diamond.still.svg); }
+  :root:not([data-motion]) .banner-night { background-image: url(/cosmetics/banners/banner-night.still.svg); }
+  :root:not([data-motion]) .banner-sunset { background-image: url(/cosmetics/banners/banner-sunset.still.svg); }
+  :root:not([data-motion]) .banner-launch { background-image: url(/cosmetics/banners/banner-launch.still.svg); }
+  :root:not([data-motion]) .banner-founder { background-image: url(/cosmetics/banners/banner-founder.still.svg); }
+  :root:not([data-motion]) .banner-endzone { background-image: url(/cosmetics/banners/banner-endzone.still.svg); }
+  :root:not([data-motion]) .banner-snow { background-image: url(/cosmetics/banners/banner-snow.still.svg); }
+  :root:not([data-motion]) .banner-playbook { background-image: url(/cosmetics/banners/banner-playbook.still.svg); }
+  :root:not([data-motion]) .banner-jumbotron { background-image: url(/cosmetics/banners/banner-jumbotron.still.svg); }
+  :root:not([data-motion]) .banner-retro { background-image: url(/cosmetics/banners/banner-retro.still.svg); }
+  :root:not([data-motion]) .banner-marble { background-image: url(/cosmetics/banners/banner-marble.still.svg); }
+  :root:not([data-motion]) .banner-aurora { background-image: url(/cosmetics/banners/banner-aurora.still.svg); }
+  :root:not([data-motion]) .banner-confetti { background-image: url(/cosmetics/banners/banner-confetti.still.svg); }
+  :root:not([data-motion]) .banner-vault { background-image: url(/cosmetics/banners/banner-vault.still.svg); }
+  :root:not([data-motion]) .banner-inferno { background-image: url(/cosmetics/banners/banner-inferno.still.svg); }
+  :root:not([data-motion]) .banner-stadium { background-image: url(/cosmetics/banners/banner-stadium.still.svg); }
+  :root:not([data-motion]) .banner-ocean { background-image: url(/cosmetics/banners/banner-ocean.still.svg); }
+  :root:not([data-motion]) .banner-city { background-image: url(/cosmetics/banners/banner-city.still.svg); }
+  :root:not([data-motion]) .banner-hive { background-image: url(/cosmetics/banners/banner-hive.still.svg); }
+  :root:not([data-motion]) .banner-tunnel { background-image: url(/cosmetics/banners/banner-tunnel.still.svg); }
+  :root:not([data-motion]) .banner-pitch { background-image: url(/cosmetics/banners/banner-pitch.still.svg); }
+  :root:not([data-motion]) .banner-rink { background-image: url(/cosmetics/banners/banner-rink.still.svg); }
+  :root:not([data-motion]) .banner-ballpark { background-image: url(/cosmetics/banners/banner-ballpark.still.svg); }
+  :root:not([data-motion]) .banner-trophy { background-image: url(/cosmetics/banners/banner-trophy.still.svg); }
+  :root:not([data-motion]) .banner-draft { background-image: url(/cosmetics/banners/banner-draft.still.svg); }
+  :root:not([data-motion]) .banner-synthwave { background-image: url(/cosmetics/banners/banner-synthwave.still.svg); }
+  :root:not([data-motion]) .banner-comic { background-image: url(/cosmetics/banners/banner-comic.still.svg); }
+  :root:not([data-motion]) .banner-circuit { background-image: url(/cosmetics/banners/banner-circuit.still.svg); }
+  :root:not([data-motion]) .banner-galaxy { background-image: url(/cosmetics/banners/banner-galaxy.still.svg); }
+  :root:not([data-motion]) .banner-rain { background-image: url(/cosmetics/banners/banner-rain.still.svg); }
+  :root:not([data-motion]) .banner-gilded { background-image: url(/cosmetics/banners/banner-gilded.still.svg); }
+  :root:not([data-motion]) .banner-sakura { background-image: url(/cosmetics/banners/banner-sakura.still.svg); }
+  :root:not([data-motion]) .banner-matrix { background-image: url(/cosmetics/banners/banner-matrix.still.svg); }
+  :root:not([data-motion]) .banner-pixelcity { background-image: url(/cosmetics/banners/banner-pixelcity.still.svg); }
+  :root:not([data-motion]) .banner-summit { background-image: url(/cosmetics/banners/banner-summit.still.svg); }
+  :root:not([data-motion]) .banner-scoreboard { background-image: url(/cosmetics/banners/banner-scoreboard.still.svg); }
+  :root:not([data-motion]) .banner-hologram { background-image: url(/cosmetics/banners/banner-hologram.still.svg); }
+  :root:not([data-motion]) .banner-eclipse { background-image: url(/cosmetics/banners/banner-eclipse.still.svg); }
+}
 .profile-head.banner-hive .nm, .shop-look.banner-hive .shop-look-meta { color: #1C1917; }
+/* A player on a board (PlayerPlate): picture in its ring, name on the banner. Plates always use a banner's still art so long boards stay smooth. */
+.plate { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin: 0; padding: 6px 12px 6px 8px; border-radius: 14px; color: inherit; text-decoration: none; vertical-align: middle; box-sizing: border-box; }
+.plate .nm { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plate .avatar { display: block; }
+.plate.banner-field { background-image: url(/cosmetics/banners/banner-field.still.svg); }
+.plate.banner-court { background-image: url(/cosmetics/banners/banner-court.still.svg); }
+.plate.banner-diamond { background-image: url(/cosmetics/banners/banner-diamond.still.svg); }
+.plate.banner-night { background-image: url(/cosmetics/banners/banner-night.still.svg); }
+.plate.banner-sunset { background-image: url(/cosmetics/banners/banner-sunset.still.svg); }
+.plate.banner-launch { background-image: url(/cosmetics/banners/banner-launch.still.svg); }
+.plate.banner-founder { background-image: url(/cosmetics/banners/banner-founder.still.svg); }
+.plate.banner-endzone { background-image: url(/cosmetics/banners/banner-endzone.still.svg); }
+.plate.banner-snow { background-image: url(/cosmetics/banners/banner-snow.still.svg); }
+.plate.banner-playbook { background-image: url(/cosmetics/banners/banner-playbook.still.svg); }
+.plate.banner-jumbotron { background-image: url(/cosmetics/banners/banner-jumbotron.still.svg); }
+.plate.banner-retro { background-image: url(/cosmetics/banners/banner-retro.still.svg); }
+.plate.banner-marble { background-image: url(/cosmetics/banners/banner-marble.still.svg); }
+.plate.banner-aurora { background-image: url(/cosmetics/banners/banner-aurora.still.svg); }
+.plate.banner-confetti { background-image: url(/cosmetics/banners/banner-confetti.still.svg); }
+.plate.banner-vault { background-image: url(/cosmetics/banners/banner-vault.still.svg); }
+.plate.banner-inferno { background-image: url(/cosmetics/banners/banner-inferno.still.svg); }
+.plate.banner-stadium { background-image: url(/cosmetics/banners/banner-stadium.still.svg); }
+.plate.banner-ocean { background-image: url(/cosmetics/banners/banner-ocean.still.svg); }
+.plate.banner-city { background-image: url(/cosmetics/banners/banner-city.still.svg); }
+.plate.banner-hive { background-image: url(/cosmetics/banners/banner-hive.still.svg); }
+.plate.banner-tunnel { background-image: url(/cosmetics/banners/banner-tunnel.still.svg); }
+.plate.banner-pitch { background-image: url(/cosmetics/banners/banner-pitch.still.svg); }
+.plate.banner-rink { background-image: url(/cosmetics/banners/banner-rink.still.svg); }
+.plate.banner-ballpark { background-image: url(/cosmetics/banners/banner-ballpark.still.svg); }
+.plate.banner-trophy { background-image: url(/cosmetics/banners/banner-trophy.still.svg); }
+.plate.banner-draft { background-image: url(/cosmetics/banners/banner-draft.still.svg); }
+.plate.banner-synthwave { background-image: url(/cosmetics/banners/banner-synthwave.still.svg); }
+.plate.banner-comic { background-image: url(/cosmetics/banners/banner-comic.still.svg); }
+.plate.banner-circuit { background-image: url(/cosmetics/banners/banner-circuit.still.svg); }
+.plate.banner-galaxy { background-image: url(/cosmetics/banners/banner-galaxy.still.svg); }
+.plate.banner-rain { background-image: url(/cosmetics/banners/banner-rain.still.svg); }
+.plate.banner-gilded { background-image: url(/cosmetics/banners/banner-gilded.still.svg); }
+.plate.banner-sakura { background-image: url(/cosmetics/banners/banner-sakura.still.svg); }
+.plate.banner-matrix { background-image: url(/cosmetics/banners/banner-matrix.still.svg); }
+.plate.banner-pixelcity { background-image: url(/cosmetics/banners/banner-pixelcity.still.svg); }
+.plate.banner-summit { background-image: url(/cosmetics/banners/banner-summit.still.svg); }
+.plate.banner-scoreboard { background-image: url(/cosmetics/banners/banner-scoreboard.still.svg); }
+.plate.banner-hologram { background-image: url(/cosmetics/banners/banner-hologram.still.svg); }
+.plate.banner-eclipse { background-image: url(/cosmetics/banners/banner-eclipse.still.svg); }
+/* The free basics: a thin neutral ring and a clean banner that sits on the page like a card. Everyone has them. */
+.ring-plain { background: var(--steel-hi); }
+.ring-plain::after { box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.banner.banner-plain { background-color: var(--green); background-image: none; color: var(--bone); box-shadow: inset 0 0 0 1px var(--steel); }
+.banner.banner-plain::after { display: none; }
+.banner.banner-plain .nm { background: transparent; box-shadow: none; padding: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.banner.banner-plain .muted { color: var(--bone-dim); }
 
 /* Effects, frames: art drawn at twice the avatar's size around it */
 .fx-wrap { position: relative; display: inline-flex; flex: none; isolation: isolate; vertical-align: middle; }
@@ -382,54 +515,103 @@
 :root[data-theme="dark"] .nm-title.t-rare { color: #BFDBFE; border-color: #3B6FD4; background: linear-gradient(180deg, #1B2A4A, #14203A); }
 :root[data-theme="dark"] .nm-title.t-epic { color: #DDD6FE; border-color: #7C5CE0; background: linear-gradient(180deg, #2A2150, #1F1840); }
 :root[data-theme="dark"] .nm-title.t-legendary { color: #FDE68A; border-color: #B7860B; background: linear-gradient(180deg, #3B2D0A, #2A1F05); }
+:root[data-motion="reduce"] .nm-c-ocean,
+:root[data-motion="reduce"] .nm-c-aurora,
+:root[data-motion="reduce"] .nm-c-founders,
+:root[data-motion="reduce"] .nm-c-owner-blaze,
+:root[data-motion="reduce"] .nm-c-magma,
+:root[data-motion="reduce"] .nm-c-holo,
+:root[data-motion="reduce"] .nm-c-galaxy,
+:root[data-motion="reduce"] .nm-c-vapor,
+:root[data-motion="reduce"] .nm-c-sunrise,
+:root[data-motion="reduce"] .nm-c-nebula,
+:root[data-motion="reduce"] .nm-c-prism,
+:root[data-motion="reduce"] .nm-c-royal,
+:root[data-motion="reduce"] .nm-c-chrome,
+:root[data-motion="reduce"] .nm-c-gold-foil,
+:root[data-motion="reduce"] .nm-c-platinum,
+:root[data-motion="reduce"] .nm-c-silver,
+:root[data-motion="reduce"] .nm-c-rosegold,
+:root[data-motion="reduce"] .nm-c-emerald,
+:root[data-motion="reduce"] .nm-c-ruby,
+:root[data-motion="reduce"] .nm-c-sapphire,
+:root[data-motion="reduce"] .nm-c-amethyst,
+:root[data-motion="reduce"] .nm-c-glacier,
+:root[data-motion="reduce"] .nm-c-obsidian,
+:root[data-motion="reduce"] .nm-c-owner-crown,
+:root[data-motion="reduce"] .nm-c-toxic,
+:root[data-motion="reduce"] .nm-c-neon-pink,
+:root[data-motion="reduce"] .nm-c-neon-green,
+:root[data-motion="reduce"] .nm-c-ember,
+:root[data-motion="reduce"] .nm-c-wildfire,
+:root[data-motion="reduce"] .nm-c-electric,
+:root[data-motion="reduce"] .nm-c-honeycomb,
+:root[data-motion="reduce"] .nm-c-cyber,
+:root[data-motion="reduce"] .nm-c-rainbow,
+:root[data-motion="reduce"] .nm-f-glitch,
+:root[data-motion="reduce"] .nm-title::after,
+:root[data-motion="reduce"] .nm-flair svg,
+:root[data-motion="reduce"] .ring-gold,
+:root[data-motion="reduce"] .ring-gradient,
+:root[data-motion="reduce"] .ring-diamond,
+:root[data-motion="reduce"] .ring-owner,
+:root[data-motion="reduce"] .ring-ice,
+:root[data-motion="reduce"] .ring-flame,
+:root[data-motion="reduce"] .ring-holo,
+:root[data-motion="reduce"] .ring-owner-crown,
+:root[data-motion="reduce"] .ring-lava,
+:root[data-motion="reduce"] .ring-electric,
+:root[data-motion="reduce"] .ring-neon,
+:root[data-motion="reduce"] .ring-hive,
+:root[data-motion="reduce"] .ring-orbit { animation: none !important; }
 @media (prefers-reduced-motion: reduce) {
-  .nm-c-ocean,
-  .nm-c-aurora,
-  .nm-c-founders,
-  .nm-c-owner-blaze,
-  .nm-c-magma,
-  .nm-c-holo,
-  .nm-c-galaxy,
-  .nm-c-vapor,
-  .nm-c-sunrise,
-  .nm-c-nebula,
-  .nm-c-prism,
-  .nm-c-royal,
-  .nm-c-chrome,
-  .nm-c-gold-foil,
-  .nm-c-platinum,
-  .nm-c-silver,
-  .nm-c-rosegold,
-  .nm-c-emerald,
-  .nm-c-ruby,
-  .nm-c-sapphire,
-  .nm-c-amethyst,
-  .nm-c-glacier,
-  .nm-c-obsidian,
-  .nm-c-owner-crown,
-  .nm-c-toxic,
-  .nm-c-neon-pink,
-  .nm-c-neon-green,
-  .nm-c-ember,
-  .nm-c-wildfire,
-  .nm-c-electric,
-  .nm-c-honeycomb,
-  .nm-c-cyber,
-  .nm-c-rainbow,
-  .nm-f-glitch,
-  .nm-title::after,
-  .nm-flair svg,
-  .ring-gold,
-  .ring-gradient,
-  .ring-diamond,
-  .ring-owner,
-  .ring-ice,
-  .ring-flame,
-  .ring-holo,
-  .ring-owner-crown,
-  .ring-lava,
-  .ring-electric,
-  .ring-neon,
-  .ring-hive,
-  .ring-orbit { animation: none !important; }
+  :root:not([data-motion]) .nm-c-ocean,
+  :root:not([data-motion]) .nm-c-aurora,
+  :root:not([data-motion]) .nm-c-founders,
+  :root:not([data-motion]) .nm-c-owner-blaze,
+  :root:not([data-motion]) .nm-c-magma,
+  :root:not([data-motion]) .nm-c-holo,
+  :root:not([data-motion]) .nm-c-galaxy,
+  :root:not([data-motion]) .nm-c-vapor,
+  :root:not([data-motion]) .nm-c-sunrise,
+  :root:not([data-motion]) .nm-c-nebula,
+  :root:not([data-motion]) .nm-c-prism,
+  :root:not([data-motion]) .nm-c-royal,
+  :root:not([data-motion]) .nm-c-chrome,
+  :root:not([data-motion]) .nm-c-gold-foil,
+  :root:not([data-motion]) .nm-c-platinum,
+  :root:not([data-motion]) .nm-c-silver,
+  :root:not([data-motion]) .nm-c-rosegold,
+  :root:not([data-motion]) .nm-c-emerald,
+  :root:not([data-motion]) .nm-c-ruby,
+  :root:not([data-motion]) .nm-c-sapphire,
+  :root:not([data-motion]) .nm-c-amethyst,
+  :root:not([data-motion]) .nm-c-glacier,
+  :root:not([data-motion]) .nm-c-obsidian,
+  :root:not([data-motion]) .nm-c-owner-crown,
+  :root:not([data-motion]) .nm-c-toxic,
+  :root:not([data-motion]) .nm-c-neon-pink,
+  :root:not([data-motion]) .nm-c-neon-green,
+  :root:not([data-motion]) .nm-c-ember,
+  :root:not([data-motion]) .nm-c-wildfire,
+  :root:not([data-motion]) .nm-c-electric,
+  :root:not([data-motion]) .nm-c-honeycomb,
+  :root:not([data-motion]) .nm-c-cyber,
+  :root:not([data-motion]) .nm-c-rainbow,
+  :root:not([data-motion]) .nm-f-glitch,
+  :root:not([data-motion]) .nm-title::after,
+  :root:not([data-motion]) .nm-flair svg,
+  :root:not([data-motion]) .ring-gold,
+  :root:not([data-motion]) .ring-gradient,
+  :root:not([data-motion]) .ring-diamond,
+  :root:not([data-motion]) .ring-owner,
+  :root:not([data-motion]) .ring-ice,
+  :root:not([data-motion]) .ring-flame,
+  :root:not([data-motion]) .ring-holo,
+  :root:not([data-motion]) .ring-owner-crown,
+  :root:not([data-motion]) .ring-lava,
+  :root:not([data-motion]) .ring-electric,
+  :root:not([data-motion]) .ring-neon,
+  :root:not([data-motion]) .ring-hive,
+  :root:not([data-motion]) .ring-orbit { animation: none !important; }
 }

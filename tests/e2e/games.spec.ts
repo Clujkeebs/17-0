@@ -257,6 +257,8 @@ test('leaderboards: every sport has its games, with Today, This week and All tim
   await expect(page).toHaveURL(/game=nba-who-led&period=week/);
   await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'Baseball' }).click();
   await expect(page.getByRole('navigation', { name: 'Game' }).getByRole('link', { name: '162-0' })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'WNBA' }).click();
+  await expect(page.getByRole('navigation', { name: 'Game' }).getByRole('link', { name: '44-0', exact: true })).toBeVisible();
   await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'Overall' }).click();
   await expect(page.locator('.eyebrow').first()).toHaveText('Overall');
 });

@@ -5,9 +5,21 @@ import { dailyLeaderboard } from '@/lib/server/leaderboard';
 import { dailyDateET } from '@/lib/game/daily';
 import { ArrowIcon } from '@/components/Icons';
 import { HomeBlogCards } from '@/components/HomeBlogCards';
+import { SPORTS, gamesFor } from '@/lib/game-registry';
 
 export const revalidate = 60;
 export const metadata: Metadata = { alternates: { canonical: '/' } };
+
+/** One line per sport for the home page's sport row. */
+const SPORT_BLURB: Record<string, string> = {
+  nfl: '17-0, Build a Player, Unbeaten Bowl and the rating games.',
+  nba: '82-0 and the NBA games, from the 2K ratings and real seasons.',
+  wnba: '44-0 and the WNBA games, on every season since 1997.',
+  college: 'Football, men\'s and women\'s hoops: Higher or Lower, Who Led, Whose Team, Build a Player.',
+  mlb: '162-0 and the baseball games, on real stats since 1970.',
+  soccer: 'Build a Soccer Player and the club games.',
+  puzzles: 'Wordle, Connections, Strands, crosswords and more.',
+};
 
 const STEPS = [
   { h: 'Spin the reel', p: 'One reel, one team at a time. Everyone gets the same six NFL teams today, in the same order.' },
@@ -68,6 +80,20 @@ export default async function Home() {
             </div>
             <div className="tile-foot"><span className="tile-cta">Build <ArrowIcon size={16} /></span></div>
           </Link>
+        </div>
+      </section>
+
+      <section className="container section" aria-labelledby="sports-h">
+        <div className="sec-head"><div><span className="eyebrow">Every sport</span><h2 id="sports-h">Pick your game.</h2></div><Link href="/games">All games</Link></div>
+        <div className="hub-grid">
+          {SPORTS.filter((s) => gamesFor(s.key).length).map((s) => (
+            <Link key={s.key} href={s.key === 'nfl' ? '/games' : `/games?sport=${s.key}`} className="hub-card">
+              <span className="eyebrow">{gamesFor(s.key).length} games</span>
+              <h3>{s.label}</h3>
+              <p>{SPORT_BLURB[s.key] ?? ''}</p>
+              <span className="hub-cta">Play <ArrowIcon size={14} /></span>
+            </Link>
+          ))}
         </div>
       </section>
 

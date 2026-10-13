@@ -216,7 +216,23 @@ add(`.banner { position: relative; border-radius: 18px; padding: 18px; margin: 8
 @media (max-width: 520px) { .profile-head > .fx-wrap { margin: 14px 18px 14px 14px; } }
 @media (max-width: 520px) { .profile-head.banner { gap: 12px; padding: 14px; } .profile-head.banner .avatar { width: 64px !important; height: 64px !important; } }
 ${BANNER_KEYS.map((k) => `.banner-${k} { background-color: #0b0d14; background-image: url(/cosmetics/banners/banner-${k}.svg); }`).join('\n')}
+${BANNER_KEYS.map((k) => `:root[data-motion="reduce"] .banner-${k} { background-image: url(/cosmetics/banners/banner-${k}.still.svg); }`).join('\n')}
+@media (prefers-reduced-motion: reduce) {
+${BANNER_KEYS.map((k) => `  :root:not([data-motion]) .banner-${k} { background-image: url(/cosmetics/banners/banner-${k}.still.svg); }`).join('\n')}
+}
 .profile-head.banner-hive .nm, .shop-look.banner-hive .shop-look-meta { color: #1C1917; }
+/* A player on a board (PlayerPlate): picture in its ring, name on the banner. Plates always use a banner's still art so long boards stay smooth. */
+.plate { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin: 0; padding: 6px 12px 6px 8px; border-radius: 14px; color: inherit; text-decoration: none; vertical-align: middle; box-sizing: border-box; }
+.plate .nm { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plate .avatar { display: block; }
+${BANNER_KEYS.map((k) => `.plate.banner-${k} { background-image: url(/cosmetics/banners/banner-${k}.still.svg); }`).join('\n')}
+/* The free basics: a thin neutral ring and a clean banner that sits on the page like a card. Everyone has them. */
+.ring-plain { background: var(--steel-hi); }
+.ring-plain::after { box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.banner.banner-plain { background-color: var(--green); background-image: none; color: var(--bone); box-shadow: inset 0 0 0 1px var(--steel); }
+.banner.banner-plain::after { display: none; }
+.banner.banner-plain .nm { background: transparent; box-shadow: none; padding: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.banner.banner-plain .muted { color: var(--bone-dim); }
 
 /* Effects, frames: art drawn at twice the avatar's size around it */
 .fx-wrap { position: relative; display: inline-flex; flex: none; isolation: isolate; vertical-align: middle; }
@@ -233,7 +249,10 @@ add(`/* Dark palette */
 ${darkRules.map((r) => '  :root:not([data-theme="light"]) ' + r).join('\n')}
 }
 ${darkRules.map((r) => ':root[data-theme="dark"] ' + r).join('\n')}`);
-add(`@media (prefers-reduced-motion: reduce) {\n  ${[...new Set(REDUCE_SELECTORS)].join(',\n  ')} { animation: none !important; }\n}`);
+// The Animations setting (html[data-motion], set before paint) decides; the OS preference only decides when it never ran.
+const reduceSel = [...new Set(REDUCE_SELECTORS)];
+add(`${reduceSel.map((s) => `:root[data-motion="reduce"] ${s}`).join(',\n')} { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {\n  ${reduceSel.map((s) => `:root:not([data-motion]) ${s}`).join(',\n  ')} { animation: none !important; }\n}`);
 
 const file = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src', 'components', 'cosmetics.css');
 writeFileSync(file, out.join('\n') + '\n');

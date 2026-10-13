@@ -29,7 +29,7 @@
 }
 
 /* Your look: sticks under the header while you browse, wearing whatever you are trying on. */
-.shop-look { position: sticky; top: calc(var(--header-h) + 8px); z-index: 5; margin: 16px 0 8px; padding: 12px 16px; border: 1px solid var(--steel); border-radius: 18px; display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow); }
+.shop-look { position: sticky; top: calc(var(--header-stack, var(--header-h)) + 8px); z-index: 5; margin: 16px 0 8px; padding: 12px 16px; border: 1px solid var(--steel); border-radius: 18px; display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow); }
 .shop-look:not(.banner) { background: var(--surface); }
 .shop-look.banner { color: inherit; border-color: transparent; }
 .shop-look .fx-wrap { margin: 16px; }
@@ -41,9 +41,11 @@
 .shop-sort { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 4px; }
 .shop-count { font-size: .72em; opacity: .7; margin-left: 4px; }
 
-/* Cards */
-.shop-grid { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.shop-card { position: relative; display: grid; gap: 12px; padding: 12px 12px 14px; border: 1px solid var(--steel); border-radius: 18px; background: var(--surface); transition: border-color .15s, box-shadow .15s, transform .15s; align-content: start; }
+/* Cards: a compact grid that holds its shape while art loads. Off-screen cards are skipped until they scroll near. */
+.shop-grid { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 12px; }
+.shop-card { position: relative; display: grid; gap: 10px; padding: 10px 10px 12px; border: 1px solid var(--steel); border-radius: 18px; background: var(--surface); transition: border-color .15s, box-shadow .15s, transform .15s; align-content: start; content-visibility: auto; contain-intrinsic-size: auto 250px; }
+.shop-card.k-effect, .shop-card.k-border { contain-intrinsic-size: auto 330px; }
+.shop-card.k-banner { grid-column: span 2; contain-intrinsic-size: auto 250px; }
 @media (hover: hover) and (pointer: fine) { .shop-card:hover { border-color: var(--steel-hi); transform: translateY(-1px); } }
 .shop-card.r-rare { box-shadow: inset 0 3px 0 #3B82F6; }
 .shop-card.r-epic { box-shadow: inset 0 3px 0 #8B5CF6; }
@@ -55,17 +57,35 @@
 .shop-card.trying { outline: 2px solid var(--bone); outline-offset: 1px; }
 
 /* The stage: the item shown on you, on a tinted floor so every color and effect has something to sit on. */
-.shop-prev-btn { all: unset; cursor: pointer; box-sizing: border-box; display: grid; place-items: center; width: 100%; min-height: 84px; padding: 14px 10px; border-radius: 12px; background: var(--stage); text-align: center; overflow: hidden; }
+.shop-prev-btn { all: unset; cursor: pointer; box-sizing: border-box; display: grid; place-items: center; width: 100%; min-height: 76px; padding: 12px 8px; border-radius: 12px; background: var(--stage); text-align: center; overflow: hidden; }
 .shop-prev-btn:focus-visible { outline: 2px solid var(--bone); outline-offset: 3px; }
-.shop-card.k-effect .shop-prev-btn, .shop-card.k-border .shop-prev-btn { min-height: 168px; }
+.shop-card.k-effect .shop-prev-btn, .shop-card.k-border .shop-prev-btn { min-height: 150px; }
 .shop-card.k-banner .shop-prev-btn { padding: 0; min-height: 0; background: none; }
-.shop-card.k-banner .shop-banner { width: 100%; margin: 0; min-height: 96px; display: grid; align-items: end; padding: 14px; font-size: 1.1rem; font-weight: 700; border-radius: 12px; }
-.shop-name { font-size: 1.35rem; font-weight: 700; max-width: 100%; }
-.shop-meta { display: flex; flex-direction: column; gap: 6px; padding: 0 4px; }
-.shop-meta strong { font-size: 1.02rem; letter-spacing: -0.01em; }
-.shop-blurb { font-size: .86rem; line-height: 1.45; }
-.shop-act { display: flex; padding: 0 4px; }
+.shop-card.k-banner .shop-banner { width: 100%; margin: 0; min-height: 110px; display: grid; align-items: end; padding: 14px; font-size: 1.1rem; font-weight: 700; border-radius: 12px; }
+.shop-name { font-size: 1.25rem; font-weight: 700; max-width: 100%; overflow-wrap: anywhere; }
+.shop-meta { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; min-width: 0; }
+.shop-meta strong { font-size: .98rem; letter-spacing: -0.01em; }
+.shop-blurb { font-size: .82rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.shop-act { display: flex; padding: 0 2px; }
 .shop-act .btn { width: 100%; }
+
+/* Top of the page, the basics, the tools row */
+.shop-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; margin: 0 0 12px; }
+.shop-top .motion-toggle { margin: 0; }
+.shop-basics { margin: 0 0 16px; padding: 16px 18px 18px; border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); }
+.shop-basics h2 { margin: 0; font-size: 1.15rem; }
+.shop-basics > p { margin: 2px 0 12px; font-size: .9rem; }
+.basics-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.basic-card { display: grid; gap: 8px; justify-items: start; padding: 8px; border: 1px solid var(--steel); border-radius: 14px; background: var(--surface); align-content: start; }
+.basic-card.on { border-color: var(--bone); }
+.basic-card .shop-prev-btn { min-height: 64px; padding: 8px; }
+.basic-card.k-border .shop-prev-btn { min-height: 84px; }
+.basic-card.k-banner .shop-prev-btn { padding: 0; min-height: 0; background: none; }
+.basic-card.k-banner .shop-banner { width: 100%; margin: 0; min-height: 64px; display: grid; align-items: end; padding: 10px; font-size: .95rem; font-weight: 700; border-radius: 12px; }
+.basic-card strong { font-size: .92rem; padding: 0 2px; }
+.shop-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 8px 0 4px; }
+.shop-tools .shop-sort { margin: 0; }
+.shop-search { flex: 1 1 180px; min-width: 0; max-width: 280px; padding: 8px 12px; border: 1px solid var(--steel-hi); border-radius: 10px; background: var(--surface); color: var(--bone); font: inherit; font-size: .9rem; }
 
 /* Tags */
 .shop-tags { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -79,15 +99,22 @@
 .shop-tag.r-drop { background: var(--t-drop-bg); color: var(--t-drop-fg); }
 .shop-tag.r-drop.got { background: var(--t-own-bg); color: var(--t-own-fg); }
 .shop-tag.stock { background: var(--t-stock-bg); color: var(--t-stock-fg); }
-.shop-tag.owned { background: var(--t-own-bg); color: var(--t-own-fg); }
+.shop-tag.owned, .shop-tag.r-free { background: var(--t-own-bg); color: var(--t-own-fg); }
 
 @media (max-width: 520px) {
-  .shop-look { top: calc(var(--header-h) + 4px); padding: 10px 12px; gap: 8px 10px; flex-wrap: wrap; }
+  .shop-look { top: calc(var(--header-stack, var(--header-h)) + 4px); padding: 10px 12px; gap: 8px 10px; flex-wrap: wrap; }
   .shop-look .fx-wrap { margin: 12px; }
   .shop-look-name { font-size: 1rem; flex: 1 1 0; }
   .shop-look-meta.idle { display: none; }
   .shop-look-meta { flex: 1 0 100%; flex-direction: row; justify-content: space-between; align-items: center; margin-left: 0; }
-  .shop-grid { grid-template-columns: 1fr; }
+  .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .shop-card { padding: 8px 8px 10px; gap: 8px; border-radius: 16px; }
+  .shop-card.k-effect .shop-prev-btn, .shop-card.k-border .shop-prev-btn { min-height: 140px; }
+  .shop-card.k-banner .shop-banner { min-height: 96px; }
+  .shop-name { font-size: 1.1rem; }
+  .basics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shop-basics { padding: 14px; }
+  .shop-search { max-width: none; flex-basis: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .shop-card { transition: none; } }
 
@@ -118,3 +145,12 @@
 .sd-tile .shop-tag { margin-top: 6px; }
 .sd-tile:not(.got) .shop-prev-btn { opacity: .82; }
 .sd-foot { margin: 12px 0 0; font-size: .88rem; }
+/* On a phone the drop-only items scroll sideways instead of stacking six tall cards above the shop. */
+@media (max-width: 640px) {
+  .shop-drops { padding: 16px; }
+  .sd-grid { display: flex; overflow-x: auto; scroll-snap-type: x proximity; gap: 10px; margin: 14px -16px 0; padding: 2px 16px 8px; scrollbar-width: none; }
+  .sd-grid::-webkit-scrollbar { display: none; }
+  .sd-tile { flex: 0 0 142px; scroll-snap-align: start; }
+  .sd-tile .shop-prev-btn { min-height: 84px; }
+  .sd-tile.k-effect .shop-prev-btn, .sd-tile.k-border .shop-prev-btn { min-height: 118px; }
+}

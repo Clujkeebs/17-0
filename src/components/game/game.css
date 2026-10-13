@@ -61,10 +61,10 @@
 
 .g-done { border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); padding: 48px 32px; }
 
-.g-side { position: sticky; top: calc(var(--header-h) + 16px); }
+.g-side { position: sticky; top: calc(var(--header-stack, var(--header-h)) + 16px); }
 .g-side-inner { border: 1px solid var(--steel); border-radius: 20px; background: var(--surface); padding: 20px; }
 /* The lineup scrolls on its own, so a long roster (162-0, 12 and 16 man) never hides its bottom slots or the play button while the board scrolls. */
-@media (min-width: 901px) { .g-side-inner { max-height: calc(100dvh - var(--header-h) - 32px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; } }
+@media (min-width: 901px) { .g-side-inner { max-height: calc(100dvh - var(--header-stack, var(--header-h)) - 32px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; } }
 @media (max-width: 900px) { .g-side { position: static; margin-bottom: 20px; } .g-side-inner { padding: 14px 16px; } }
 .g-slots { list-style: none; margin: 0; padding: 0; }
 .g-slots li { display: grid; grid-template-columns: 56px 1fr; align-items: center; min-height: 48px; border-top: 1px solid var(--steel); }
@@ -94,7 +94,7 @@
 .b-rating { font-size: 3rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1; }
 
 @media (max-width: 900px) {
-  .g-side { position: sticky; top: var(--header-h); z-index: 5; margin: 0 calc(-1 * var(--gutter)) 16px; }
+  .g-side { position: sticky; top: var(--header-stack, var(--header-h)); z-index: 5; margin: 0 calc(-1 * var(--gutter)) 16px; }
   .g-side-inner { border-radius: 0; border-left: 0; border-right: 0; padding: 10px var(--gutter); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); max-height: 34dvh; overflow-y: auto; overscroll-behavior: contain; }
   .g-side .g-kicker, .g-reset { display: none; }
   .g-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -126,7 +126,7 @@
 @media (hover: hover) and (pointer: fine) { .b-trait:hover:not(:disabled) { background: var(--bone); color: var(--navy); border-color: var(--bone); } }
 .b-trait:disabled { opacity: .5; cursor: default; }
 .g-board .g-slots li { grid-template-columns: minmax(56px, auto) 1fr; column-gap: 12px; }
-.g-roster-wait { padding: 20px 24px 24px; display: grid; gap: 8px; } .g-stage { scroll-margin-top: calc(var(--header-h) + 94px); } @media (min-width: 901px) { .g-stage { scroll-margin-top: calc(var(--header-h) + 16px); } }
+.g-roster-wait { padding: 20px 24px 24px; display: grid; gap: 8px; } .g-stage { scroll-margin-top: calc(var(--header-stack, var(--header-h)) + 94px); } @media (min-width: 901px) { .g-stage { scroll-margin-top: calc(var(--header-h) + 16px); } }
 .g-modes { display: inline-flex; padding: 4px; border: 1px solid var(--steel); border-radius: 999px; background: var(--green); }
 .g-modes button { border: 0; background: transparent; padding: 8px 18px; border-radius: 999px; font: 600 .9rem var(--font-ui); color: var(--bone-dim); cursor: pointer; min-height: 40px; }
 .g-modes button.on { background: var(--bone); color: var(--navy); }
@@ -181,6 +181,9 @@
 .era-chip { flex: none; width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.02em; }
 .era-reel .reel2-name strong { font-size: clamp(1.6rem, 4.4vw, 2.4rem); }
 @media (max-width: 600px) { .era-chip { width: 52px; height: 52px; font-size: 1.1rem; } }
+/* WNBA eras read as a span of years ("'03-'08"), which needs a smaller type size to fit the chip on one line. */
+.era-chip.long { font-size: .8rem; letter-spacing: -.05em; white-space: nowrap; }
+@media (max-width: 600px) { .era-chip.long { font-size: .7rem; } }
 /* Find a player: in every mode, above the board */
 .g-find { margin: 0 0 12px; }
 .g-find input { width: 100%; }

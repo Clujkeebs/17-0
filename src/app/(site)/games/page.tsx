@@ -15,12 +15,16 @@ import { SPORTS, recentGames, type Sport } from '@/lib/game-registry';
 
 export const metadata: Metadata = {
   title: 'Games',
-  description: 'Free daily football, basketball and baseball games. NFL games built on Madden ratings, NBA and MLB games built on real stats. Play Today for the leaderboard, or Casual as much as you like.',
+  description: 'Free daily football, basketball and baseball games. NFL games built on Madden ratings, NBA, WNBA and MLB games built on real stats. Play Today for the leaderboard, or Casual as much as you like.',
   alternates: { canonical: '/games' },
 };
 
 const NBA = [
   { slug: '82-0', name: '82-0', tagline: 'Spin an era, spin a franchise, draft five. Move anyone between positions, then play 82.', meta: 'Draft · 3 min' },
+];
+
+const WNBA = [
+  { slug: '44-0', name: '44-0', tagline: 'Spin an era since 1997, spin a franchise, draft five. Or draft from this season only. Then play 44.', meta: 'Draft · 3 min' },
 ];
 
 const MLB = [
@@ -97,8 +101,8 @@ async function CollegeTab() {
             ) : (
               <div className="hub-card" style={{ maxWidth: 520 }}>
                 <span className="eyebrow">Loading</span>
-                <h3>The first sync is running</h3>
-                <p>Four games are built and waiting on {lg.title.toLowerCase()} stats from ESPN. The first full pull takes a few hours. Check back tomorrow.</p>
+                <h3>Stats are loading</h3>
+                <p>The games for {lg.title.toLowerCase()} open as soon as the numbers from ESPN are in. Reload in a minute.</p>
               </div>
             )}
           </section>
@@ -136,9 +140,9 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
       <DoubleNote />
       <NewRow />
 
-      {nba || mlb ? (
+      {nba || mlb || wnba ? (
         <div className="hub-featured">
-          {(nba ? NBA : MLB).map((g) => (
+          {(nba ? NBA : wnba ? WNBA : MLB).map((g) => (
             <Link key={g.slug} href={`/games/${g.slug}`} className="hub-card hub-feature hub-dark">
               <span className="eyebrow">{g.meta}</span>
               <h2>{g.name}</h2>
@@ -174,6 +178,7 @@ export default async function GamesHub({ searchParams }: { searchParams: Promise
           </div>
         </div>
       </>) : college ? (<CollegeTab />) : wnba ? (<>
+        <h2 style={{ marginTop: 56 }}>Daily puzzles</h2>
         <p className="muted" style={{ maxWidth: '58ch' }}>Stat games on every WNBA season since 1997, from ESPN.</p>
         <div className="hub-grid">
           {wnbaGames.map((g) => (

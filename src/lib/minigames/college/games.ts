@@ -3,6 +3,7 @@ import type { MiniGame } from '../types';
 import type { NbaGameData } from '../nba/data';
 import { hoopsGames, valueAt, deal, distinctBy, tries, r1 } from '../nba/games';
 import { starIds } from '../prominent';
+import { hoopsBuildPlayer } from './build';
 import type { CfbData, CfbLine } from './data';
 
 /* ------------------------------------------------------------------ college basketball: the four hoops games on college data */
@@ -25,6 +26,8 @@ const WOMEN = hoopsGames({
   names: { hl: "Higher or Lower: Women's College Hoops", br: "Blind Résumé: Women's College Hoops", led: "Who Led? Women's College Hoops", team: "Whose Team? Women's College Hoops" },
   cuts: cutsFor(),
 });
+export const cbbBuildPlayer = hoopsBuildPlayer({ slug: 'cbb-build-a-player', sport: 'cbb', league: "men's college basketball", name: 'Build a Player: College Hoops', tagline: 'Five programs, five real seasons. Take scoring from one, rebounding from another, and build the best player you can.' });
+export const wcbbBuildPlayer = hoopsBuildPlayer({ slug: 'wcbb-build-a-player', sport: 'wcbb', league: "women's college basketball", name: "Build a Player: Women's College Hoops", tagline: 'Five programs, five real seasons. Take scoring from one, rebounding from another, and build the best player you can.' });
 export const cbbHigherLower = MEN.higherLower, cbbBlindResume = MEN.blindResume, cbbWhoLed = MEN.whoLed, cbbWhoseTeam = MEN.whoseTeam;
 export const wcbbHigherLower = WOMEN.higherLower, wcbbBlindResume = WOMEN.blindResume, wcbbWhoLed = WOMEN.whoLed, wcbbWhoseTeam = WOMEN.whoseTeam;
 
@@ -152,9 +155,81 @@ export const cfbWhoseTeam = cfbPick({
   return { prompt: `Which school did ${t.name} play for in ${t.season}?`, options: list.map(asTeam), notes: list.map((l, k) => (k === correct ? lineText(t) : '')), correct };
 });
 
+/* ------------------------------------------------------------------ college football: build a player */
+
+/** The six skills a team-season's top performer can lend. Each round offers all six, in this order, so an option's index is its skill. */
+export const CFB_SKILLS = [
+  { key: 'passingYards', label: 'Passing' }, { key: 'rushingYards', label: 'Rushing' }, { key: 'receivingYards', label: 'Receiving' },
+  { key: 'sacks', label: 'Pass rush' }, { key: 'interceptions', label: 'Ball hawk' }, { key: 'totalTackles', label: 'Tackling' },
+] as const;
+type BuildRoundF = { school: { name: string; abbr: string; color: string; logo: string | null }; season: number; options: CfbLine[] };
+type BenchF = Record<string, number>;
+const qOf = (xs: number[], q: number) => { const v = [...xs].sort((a, b) => a - b); return v.length ? v[Math.min(v.length - 1, Math.floor(q * v.length))] : 1; };
+const cfbBenchCache = new WeakMap<CfbData, BenchF>();
+/** A star season in each skill: better than 95 in 100 of the stored team-season leaders. */
+export function cfbBench(data: CfbData): BenchF {
+  let b = cfbBenchCache.get(data);
+  if (!b) { b = Object.fromEntries(CFB_SKILLS.map((s) => [s.key, Math.max(1, qOf(data.lines.filter((l) => l.category === s.key && l.rank === 1).map((l) => l.value), 0.95))])); cfbBenchCache.set(data, b); }
+  return b;
+}
+/** The highest total any set of five different skills (one per round) allows, and which ones. */
+export function bestCfbBuild(rounds: BuildRoundF[], bench: BenchF): { total: number; picks: number[] } {
+  let top = -1, topPicks: number[] = [];
+  const go = (used: number[], total: number) => {
+    if (used.length === rounds.length) { if (total > top) { top = total; topPicks = [...used]; } return; }
+    for (let k = 0; k < CFB_SKILLS.length; k++) if (!used.includes(k)) go([...used, k], total + rounds[used.length].options[k].value / bench[CFB_SKILLS[k].key]);
+  };
+  go([], 0);
+  return { total: top, picks: topPicks };
+}
+
+export const cfbBuildPlayer: MiniGame<{ rounds: BuildRoundF[]; bench: BenchF }, number[], CfbData> = {
+  slug: 'cfb-build-a-player', ...CFB_META,
+  name: 'Build a Player: College Football',
+  tagline: 'Five college teams, five real seasons. Take passing from one, rushing from another, and build the best player you can.',
+  howTo: [
+    'Each round shows one college team in one real season, with its leader in six skills: passing, rushing, receiving, pass rush, ball hawk and tackling.',
+    'Take one skill from each team. Use five different skills. Your player gets those seasons.',
+    'Each skill is scored against a star season (better than 95 in 100 team leaders), and 100 means a star at all five. The reveal shows the best build this board allowed.',
+  ],
+  generate(seed, data) {
+    const rng = createRng(seed);
+    const bySeason = new Map<string, Map<string, CfbLine>>();
+    for (const l of data.lines) {
+      if (l.rank !== 1 || !CFB_SKILLS.some((s) => s.key === l.category)) continue;
+      const k = `${l.teamId}:${l.season}`, m = bySeason.get(k) ?? new Map<string, CfbLine>();
+      m.set(l.category, l); bySeason.set(k, m);
+    }
+    const byTeam = new Map<number, string[]>();
+    for (const [k, m] of bySeason) if (CFB_SKILLS.every((s) => m.has(s.key))) { const id = Number(k.split(':')[0]); byTeam.set(id, [...(byTeam.get(id) ?? []), k]); }
+    const teams = rng.shuffle([...byTeam.keys()].sort((a, b) => a - b));
+    if (teams.length < 5) throw new Error('College football stats are still loading. Try again in a few minutes.');
+    const rounds: BuildRoundF[] = teams.slice(0, 5).map((id) => {
+      const key = rng.pick(byTeam.get(id)!.sort());
+      const m = bySeason.get(key)!;
+      const options = CFB_SKILLS.map((s) => m.get(s.key)!);
+      return { school: { name: options[0].teamName, abbr: options[0].team, color: options[0].teamColor, logo: options[0].logoUrl }, season: options[0].season, options };
+    });
+    return { rounds, bench: cfbBench(data) };
+  },
+  publicView: (p) => ({
+    skills: CFB_SKILLS.map((s) => s.label),
+    rounds: p.rounds.map((r) => ({ school: r.school, season: r.season, options: r.options.map((l, k) => ({ id: l.key, skill: CFB_SKILLS[k].label, name: l.name, position: l.position, img: l.img, text: lineText(l) })) })),
+  }),
+  score(p, answer) {
+    if (!Array.isArray(answer) || answer.length !== p.rounds.length) throw new Error('Take a skill from every team.');
+    if (answer.some((k) => !Number.isInteger(k) || k < 0 || k >= CFB_SKILLS.length) || new Set(answer).size !== answer.length) throw new Error('Use five different skills.');
+    const total = answer.reduce((s, k, i) => s + p.rounds[i].options[k].value / p.bench[CFB_SKILLS[k].key], 0);
+    const best = bestCfbBuild(p.rounds, p.bench);
+    const score = Math.round((total / p.rounds.length) * 100), bestScore = Math.round((best.total / p.rounds.length) * 100);
+    const from = (picks: number[]) => picks.map((k, i) => { const l = p.rounds[i].options[k]; return { skill: CFB_SKILLS[k].label, name: l.name, season: l.season, school: l.teamName, text: lineText(l) }; });
+    return { score, summary: `Build ${score}`, detail: { score, from: from(answer), best: { score: bestScore, from: from(best.picks) } }, perfect: score >= bestScore };
+  },
+};
+
 /** Registered college games, in hub order. */
 export const collegeGames = [
-  cfbHigherLower, cfbBlindResume, cfbWhoLed, cfbWhoseTeam,
-  cbbHigherLower, cbbBlindResume, cbbWhoLed, cbbWhoseTeam,
-  wcbbHigherLower, wcbbBlindResume, wcbbWhoLed, wcbbWhoseTeam,
+  cfbBuildPlayer, cfbHigherLower, cfbBlindResume, cfbWhoLed, cfbWhoseTeam,
+  cbbBuildPlayer, cbbHigherLower, cbbBlindResume, cbbWhoLed, cbbWhoseTeam,
+  wcbbBuildPlayer, wcbbHigherLower, wcbbBlindResume, wcbbWhoLed, wcbbWhoseTeam,
 ];

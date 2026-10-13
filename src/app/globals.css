@@ -217,9 +217,16 @@ td.num, th.num { text-align: right; }
 
 .ad-slot { min-height: 250px; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--steel); border-radius: var(--radius); color: var(--bone-dim); font-size: .75rem; }
 
+/* Motion: the Animations setting (html[data-motion], set before paint from the device or the player's choice) decides.
+   The device preference only decides on its own if that script never ran. */
+:root[data-motion="reduce"] *, :root[data-motion="reduce"] *::before, :root[data-motion="reduce"] *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  :root:not([data-motion]) *, :root:not([data-motion]) *::before, :root:not([data-motion]) *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+.motion-toggle { margin: 12px 0; }
+.motion-toggle .mt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.motion-toggle .mt-label { font-weight: 600; font-size: .9rem; }
+.motion-toggle .mt-note { margin: 6px 0 0; font-size: .85rem; max-width: 58ch; }
 @media (hover: hover) and (pointer: fine) {
   .tile:hover, .pbtn:hover:not(:disabled) { transform: translateY(-2px); }
 }
@@ -564,6 +571,7 @@ html[data-rules=hidden] .rules-card { display: none; }
 /* Leaderboards */
 .sport-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .sport-tabs a { white-space: nowrap; }
+@media (max-width: 640px) { .sport-tabs { display: flex; flex-wrap: wrap; overflow: visible; border-radius: 22px; gap: 4px; } .sport-tabs a { padding: 7px 14px; } }
 .lb-games { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin: -12px 0 14px; scrollbar-width: thin; }
 .lb-chip { flex: none; padding: 7px 14px; border: 1px solid var(--steel); border-radius: 999px; font-size: .88rem; font-weight: 600; color: var(--bone); text-decoration: none; background: var(--surface); white-space: nowrap; }
 .lb-chip:hover { border-color: var(--bone); }
@@ -744,7 +752,7 @@ a.sn-sec-h:hover { color: var(--bone); }
 @media (max-width: 520px) { .tl-label { width: 56px; font-size: 1.1rem; } .tl-label.tl-edit { width: 56px; } .tl-items { padding: 6px; gap: 5px; } .tl-chip { font-size: .8rem; padding: 3px 8px 3px 3px; } .tl-pos { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tl-chip, .tl-items > li { transition: none; } .tl-ghost { transform: translate(-50%, -120%); } }
 /* Narrow phones: the Account pill drops its picture so the menu row keeps room. */
-@media (max-width: 400px) { .sh-me .hp:not(.hp-in) { padding: 4px 12px; gap: 0; } .sh-me .hp:not(.hp-in) .avatar, .sh-me .hp:not(.hp-in) .ring { display: none; } .sh-me .hp { font-size: .85rem; min-height: 36px; } }
+@media (max-width: 400px) { .sh-me .hp:not(.hp-in) { padding: 3px; gap: 0; border-color: transparent; } .sh-me .hp:not(.hp-in) .hp-name { display: none; } .sh-me .hp { font-size: .85rem; min-height: 36px; } }
 
 /* ---------- Trade calculator ---------- */
 .trade-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 20px; }

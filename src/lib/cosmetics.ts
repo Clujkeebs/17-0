@@ -47,6 +47,8 @@ const validFont = (k: string | null | undefined) => !!k && (NAME_FONTS.some((f) 
 const validColor = (k: string | null | undefined) => !!k && (NAME_COLORS.some((c) => c.key === k) || shopKeys('color').includes(k));
 const validOf = (kind: string, k: string | null | undefined) => !!k && SHOP_ITEMS.some((i) => i.kind === kind && i.key === k);
 
+/** A name style plus the player's picture URL (see lib/avatar.ts), for boards that show the picture and banner. */
+export type PlayerLook = NameStyle & { avatar?: string | null };
 export interface NameStyle { font: string; color: string; owner: boolean; title?: string | null; flair?: string | null; border?: string | null; banner?: string | null; effect?: string | null }
 type Stored = { font?: string | null; color?: string | null; title?: string | null; flair?: string | null; border?: string | null; banner?: string | null; effect?: string | null };
 /**
@@ -57,8 +59,9 @@ export function resolveStyle(stored: Stored, owner: boolean): NameStyle {
   const extras = {
     title: validOf('title', stored.title) ? stored.title : owner ? 'commissioner' : null,
     flair: validOf('flair', stored.flair) ? stored.flair : owner ? 'flair-owner' : null,
-    border: validOf('border', stored.border) ? stored.border : owner ? 'ring-owner' : null,
-    banner: validOf('banner', stored.banner) ? stored.banner : owner ? 'banner-founder' : null,
+    // With nothing equipped everyone wears the free basics, so a picture and a banner always show.
+    border: validOf('border', stored.border) ? stored.border : owner ? 'ring-owner' : 'ring-plain',
+    banner: validOf('banner', stored.banner) ? stored.banner : owner ? 'banner-founder' : 'banner-plain',
     effect: validOf('effect', stored.effect) ? stored.effect : owner ? 'fx-owner' : null,
   };
   // For the owner only shop picks replace the owner style (a saved default like Classic does not).

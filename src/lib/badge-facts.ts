@@ -4,7 +4,7 @@ import { PUZZLES, weekdayOf, type BadgeFacts } from './badges';
  * The result side of the achievement facts, from three small summaries of a player's results (so a player with
  * thousands of games costs a few dozen rows, not thousands). Pure, so it is tested with made-up rows.
  */
-const LEN: Record<string, number> = { '17-0': 17, '82-0': 82, '162-0': 162 };
+const LEN: Record<string, number> = { '17-0': 17, '82-0': 82, '162-0': 162, '44-0': 44 };
 
 /** Results grouped by game and how they were played; `wins` is a season game's record, `flag` a mini's own "perfect". */
 export type ResultGroup = { game: string; daily: boolean; hard: boolean; format: string; pool: string; wins: number | null; flag: boolean; n: number };

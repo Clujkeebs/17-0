@@ -37,9 +37,9 @@ export const TEAM_RESPINS = 2;
 /** A season with this many assists a game runs an offense: he plays the point with no cost (Jokic, LeBron, Magic). */
 export const PLAYMAKER_APG = 7;
 
-export function naturalSlots(position: string, apg?: number | null): NbaSlot[] {
+export function naturalSlots(position: string, apg?: number | null, playmakerApg = PLAYMAKER_APG): NbaSlot[] {
   const own = listedSlots(position);
-  return apg != null && apg >= PLAYMAKER_APG && !own.includes('PG') ? ['PG', ...own] : own;
+  return apg != null && apg >= playmakerApg && !own.includes('PG') ? ['PG', ...own] : own;
 }
 
 function listedSlots(position: string): NbaSlot[] {
@@ -56,8 +56,8 @@ function listedSlots(position: string): NbaSlot[] {
  * Playing out of position costs a share of the player's value: one spot over (a shooting guard at the point)
  * costs a little, two or more spots (a center at guard) costs a lot. This is what makes moving players matter.
  */
-export function fitMultiplier(position: string, slot: NbaSlot, apg?: number | null): number {
-  const nat = naturalSlots(position, apg).map((s) => NBA_SLOTS.indexOf(s));
+export function fitMultiplier(position: string, slot: NbaSlot, apg?: number | null, playmakerApg = PLAYMAKER_APG): number {
+  const nat = naturalSlots(position, apg, playmakerApg).map((s) => NBA_SLOTS.indexOf(s));
   const d = Math.min(...nat.map((i) => Math.abs(i - NBA_SLOTS.indexOf(slot))));
   return d === 0 ? 1 : d === 1 ? 0.94 : d === 2 ? 0.82 : 0.7;
 }
@@ -70,7 +70,7 @@ export interface SeasonLine { gp: number; mpg: number; ppg: number; rpg: number;
  * adds. Tiny samples are pulled toward replacement level. The top of the scale is bent (softTop) so only the
  * greatest seasons ever land near 99: a star's good year and his best year read differently.
  */
-export function seasonValue(s: SeasonLine): number {
+export function seasonValue(s: SeasonLine, fullSampleGp = 40): number {
   const tov = s.tov ?? 0.12 * (s.ppg + s.apg);
   const eff = s.fgPct != null && s.ppg >= 5 ? (s.fgPct - 0.46) * 40 : 0;
   // Shooting beyond the field goal: great three-point and free-throw shooters (Reggie Miller) score more per shot
@@ -79,7 +79,7 @@ export function seasonValue(s: SeasonLine): number {
   const three = scorer && s.tpPct != null ? Math.min(3.5, Math.max(0, s.tpPct - 0.35) * 30) : 0;
   const line = scorer && s.ftPct != null ? clamp((s.ftPct - 0.77) * 15, -1.5, 2.5) : 0;
   const raw = s.ppg + 1.2 * s.rpg + 1.5 * s.apg + 2.5 * s.spg + 2 * s.bpg - 1.5 * tov + eff + three + line;
-  const sample = clamp(s.gp / 40, 0, 1);
+  const sample = clamp(s.gp / fullSampleGp, 0, 1);
   return Math.round(clamp(softTop(50 + raw * 1.02), 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
 }
 

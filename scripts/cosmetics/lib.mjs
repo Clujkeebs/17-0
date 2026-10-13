@@ -18,7 +18,12 @@ export function rng(seed) {
 export const n1 = (v) => Math.round(v * 10) / 10;
 export const n2 = (v) => Math.round(v * 100) / 100;
 
-const REDUCE = '@media (prefers-reduced-motion: reduce){*{animation:none!important}}';
+/**
+ * Every animated SVG is written twice by build.mjs: x.svg without this rule (always animates) and x.still.svg with it
+ * (the resting pose every piece of art is drawn to look right in). The site picks one from the Animations setting.
+ */
+export const REDUCE_RULE = '@media (prefers-reduced-motion: reduce){*{animation:none!important}}';
+const REDUCE = REDUCE_RULE;
 
 /** A whole SVG document. `style` is CSS (keyframes and classes); reduced motion switches every animation off. */
 export function svg(w, h, { defs = '', body = '', style = '', slice = true } = {}) {

@@ -24,7 +24,7 @@ export function meteors() {
   });
   // A few stars that twinkle in the gaps.
   for (let i = 0; i < 5; i++) { const a = r.range(0, Math.PI * 2), d = r.range(60, 92); body += `<g transform="translate(${n1(C + Math.cos(a) * d)} ${n1(C + Math.sin(a) * d)})" class="tw" style="animation-delay:${n1(-r() * 2)}s">${glint(r.range(2, 3.4), '#fff7d6')}</g>`; }
-  const travel = `${n1(ux * 300)}px ${n1(uy * 300)}px`, back = `${n1(-ux * 120)}px ${n1(-uy * 120)}px`;
+  const travel = `${n1(ux * 300)}px, ${n1(uy * 300)}px`, back = `${n1(-ux * 120)}px, ${n1(-uy * 120)}px`;
   return fx(body, {
     defs: lg('mta', [[0, '#f97316', 0], [0.6, '#f97316', 0.85], [1, '#fde047', 1]], [0, 0, 1, 0]).replace('x1="0" y1="0" x2="1" y2="0"', `x1="${n1(-ux)}" y1="${n1(-uy)}" x2="0" y2="0"`)
       + lg('mtb', [[0, '#2563eb', 0], [0.6, '#2563eb', 0.85], [1, '#67e8f9', 1]], [0, 0, 1, 0]).replace('x1="0" y1="0" x2="1" y2="0"', `x1="${n1(-ux)}" y1="${n1(-uy)}" x2="0" y2="0"`),

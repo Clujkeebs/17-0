@@ -86,7 +86,7 @@ export function SpinningReel({ pool }: { pool: ReelTeam[] }) {
 
 const ERA_CELL = 96;
 /** Era colors on the reel: each decade gets its own swatch so the spin reads at a glance. */
-const ERA_TINT: Record<string, string> = { '1970s': '#B45309', '1980s': '#BE185D', '1990s': '#6D28D9', '2000s': '#1D4ED8', '2010s': '#0F766E', '2020s': '#C8102E' };
+const ERA_TINT: Record<string, string> = { '1970s': '#B45309', '1980s': '#BE185D', '1990s': '#6D28D9', '2000s': '#1D4ED8', '2010s': '#0F766E', '2020s': '#C8102E', '1997-2002': '#B45309', '2003-2008': '#BE185D', '2009-2014': '#6D28D9', '2015-2020': '#0F766E', '2021-now': '#C8102E' };
 
 /**
  * The era spins like the team does: a short slot reel of decades that lands on the one the server drew.
@@ -122,7 +122,7 @@ export function EraReel({ eras, target, targetLabel, spinKey, onLand }: { eras: 
       <div className="reel2-strip" style={{ transform: `translateY(${y}px)`, transition: y === 0 ? 'none' : `transform ${ms}ms cubic-bezier(.1,.7,.1,1)` }}>
         {strip.map((e, i) => (
           <div key={i} className="reel2-cell era-cell">
-            <span className="era-chip" style={{ background: ERA_TINT[e.key] ?? '#0A0A0A' }}>{e.label}</span>
+            <span className={`era-chip${e.label.length > 4 ? ' long' : ''}`} style={{ background: ERA_TINT[e.key] ?? '#0A0A0A' }}>{e.label}</span>
             <span className="reel2-name"><span className="reel2-city">Era</span><strong>{e.key}</strong></span>
           </div>
         ))}
@@ -136,7 +136,7 @@ export function EraCard({ era, label }: { era: string; label: string }) {
   return (
     <div className="reel2 era-reel is-still" aria-hidden="true" style={{ ['--tc' as string]: ERA_TINT[era] ?? 'var(--bone)' }}>
       <div className="reel2-cell era-cell">
-        <span className="era-chip" style={{ background: ERA_TINT[era] ?? '#0A0A0A' }}>{label}</span>
+        <span className={`era-chip${label.length > 4 ? ' long' : ''}`} style={{ background: ERA_TINT[era] ?? '#0A0A0A' }}>{label}</span>
         <span className="reel2-name"><span className="reel2-city">Era</span><strong>{era}</strong></span>
       </div>
     </div>

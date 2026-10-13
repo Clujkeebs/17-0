@@ -67,6 +67,7 @@ export function modeKey(game: string, f: { format?: string; pool?: string; editi
   if (game === '17-0') return `17-0:${f.format || '6'}:${f.format === 'fantasy' ? 'current' : f.pool || 'current'}`;
   if (game === '82-0') return `82-0:${f.edition === 'standard' ? 'standard' : 'classic'}`;
   if (game === '162-0') return `162-0:${f.mode === 'now' ? 'now' : 'eras'}`;
+  if (game === '44-0') return `44-0:${f.mode === 'now' ? 'now' : 'eras'}`;
   return null;
 }
 

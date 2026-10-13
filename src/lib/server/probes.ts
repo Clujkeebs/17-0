@@ -128,3 +128,30 @@ export async function probeCollegeShapes() {
   }
   console.log('[probe] college shapes\n' + out.join('\n'));
 }
+
+/** All-time coaches: what ESPN serves for head coaches by team-season, how far back, and what a coach resource carries. */
+export async function probeCoaches() {
+  const core = 'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl';
+  const out: string[] = [];
+  for (const season of [1966, 1975, 1985, 1995, 2010, 2024]) {
+    const l = await fetchJson(`${core}/seasons/${season}/coaches?limit=100`);
+    const items = (l.j?.items as { $ref: string }[] | undefined) ?? [];
+    out.push(`season ${season} coaches: status ${l.status} count ${String(l.j?.count ?? items.length)} first ${items[0]?.$ref ?? '-'}`);
+  }
+  const t = await fetchJson(`${core}/seasons/1985/teams/25/coaches`);
+  out.push(`SF 1985 team coaches: status ${t.status} ${JSON.stringify(t.j ?? t.text).slice(0, 300)}`);
+  const ref = ((t.j?.items as { $ref: string }[] | undefined) ?? [])[0]?.$ref;
+  if (ref) {
+    const c = await fetchJson(ref.replace(/^http:/, 'https:'));
+    out.push(`coach resource ${ref}: status ${c.status} keys ${keys(c.j)} ${JSON.stringify(c.j ?? c.text).slice(0, 700)}`);
+    const rec = await fetchJson(ref.replace(/^http:/, 'https:').replace(/\?.*$/, '') + '/record');
+    out.push(`coach record: status ${rec.status} ${JSON.stringify(rec.j ?? rec.text).slice(0, 600)}`);
+  }
+  const reg = await fetchJson(`${core}/seasons/1985/types/2/teams/25/record`);
+  out.push(`SF 1985 regular record: status ${reg.status} ${JSON.stringify(reg.j ?? reg.text).slice(0, 500)}`);
+  const post = await fetchJson(`${core}/seasons/1985/types/3/teams/25/record`);
+  out.push(`SF 1985 postseason record: status ${post.status} ${JSON.stringify(post.j ?? post.text).slice(0, 400)}`);
+  const team = await fetchJson(`${core}/seasons/1985/teams/25`);
+  out.push(`SF 1985 team: status ${team.status} keys ${keys(team.j)}`);
+  console.log('[probe] coaches history\n' + out.join('\n'));
+}

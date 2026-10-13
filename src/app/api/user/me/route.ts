@@ -5,6 +5,7 @@ import { getUserById, nameStyleOf } from '@/lib/server/account';
 import { json } from '@/lib/server/request';
 import { giftsFor } from '@/lib/shop';
 import { notify } from '@/lib/server/notifications';
+import { avatarUrl, imageVersion } from '@/lib/avatar';
 
 /** What the header needs: who is signed in, their picture and their name style. Never cached. */
 export async function GET() {
@@ -14,7 +15,7 @@ export async function GET() {
   const gift = u ? giftsFor(u.username) : null;
   if (u && gift) await notify(u.id, 'gift', gift.items.join(','), 'You got a gift', `${gift.note} Equip them in the shop.`, '/shop');
   const body = u
-    ? { signedIn: true, username: u.username, name: u.name || u.username || 'Player', image: u.image, style: nameStyleOf(u) }
+    ? { signedIn: true, username: u.username, name: u.name || u.username || 'Player', image: avatarUrl(u.username, imageVersion(u.image)), style: nameStyleOf(u) }
     : { signedIn: false };
   return json(body, { headers: { 'cache-control': 'private, no-store' } });
 }
