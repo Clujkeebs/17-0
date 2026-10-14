@@ -341,50 +341,55 @@
 }
 .profile-head.banner-hive .nm, .shop-look.banner-hive .shop-look-meta { color: #1C1917; }
 /* A player on a board (PlayerPlate): picture in its ring, name on the banner. Plates always use a banner's still art so long boards stay smooth. */
-.plate { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin: 0; padding: 6px 12px 6px 8px; border-radius: 14px; color: inherit; text-decoration: none; vertical-align: middle; box-sizing: border-box; }
-.plate .nm { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plate { display: inline-flex; align-items: center; gap: 9px; max-width: 100%; margin: 0; padding: 4px 14px 4px 5px; border-radius: 999px; color: inherit; text-decoration: none; vertical-align: middle; box-sizing: border-box; }
+/* A board shows a player as one clean pill: a soft tint of their banner's colours, the picture in its ring, the name straight on it. */
+.plate.banner { background-color: var(--surface); background-image: linear-gradient(100deg, color-mix(in srgb, var(--b1, var(--surface)) 24%, var(--surface)), color-mix(in srgb, var(--b3, var(--surface)) 24%, var(--surface))); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--b2, var(--steel)) 38%, var(--steel)); }
+.plate.banner::after { display: none; }
+.plate.banner .nm { background: none; box-shadow: none; padding: 0; backdrop-filter: none; -webkit-backdrop-filter: none; color: inherit; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plate .owner-tag { display: none; }
+.plate .nm-title { font-size: .56em; padding: 1px 7px; }
 .plate .avatar { display: block; }
-/* Boards use a light gradient in each banner's colours (scripts/cosmetics/board-banners.mjs), never the 100 KB drawings. */
-.plate.banner-aurora { background-image: linear-gradient(100deg, #020817 0%, #0a2238 58%, #34d399 100%); }
-.plate.banner-ballpark { background-image: linear-gradient(100deg, #070a1e 0%, #1b2a5c 58%, #1e7a34 100%); }
-.plate.banner-circuit { background-image: linear-gradient(100deg, #04101c 0%, #22d3ee 58%, #22d3ee 100%); }
-.plate.banner-city { background-image: linear-gradient(100deg, #120a2e 0%, #5b2a6e 58%, #e0567a 100%); }
-.plate.banner-comic { background-image: linear-gradient(100deg, #fb923c 0%, #e11d48 58%, #ef4444 100%); }
-.plate.banner-confetti { background-image: linear-gradient(100deg, #1a0b2e 0%, #43194f 58%, #38bdf8 100%); }
-.plate.banner-court { background-image: linear-gradient(100deg, #17110c 0%, #3a2a1c 58%, #c98a3e 100%); }
-.plate.banner-diamond { background-image: linear-gradient(100deg, #d19a63 0%, #a8723f 58%, #2a7d34 100%); }
-.plate.banner-draft { background-image: linear-gradient(100deg, #12062a 0%, #ff2d95 58%, #00c2ff 100%); }
-.plate.banner-eclipse { background-image: linear-gradient(100deg, #0d0624 0%, #fbbf24 58%, #f97316 100%); }
-.plate.banner-endzone { background-image: linear-gradient(100deg, #16276a 0%, #233b94 58%, #facc15 100%); }
-.plate.banner-field { background-image: linear-gradient(100deg, #1b2a5a 0%, #e0763a 58%, #2a7d34 100%); }
-.plate.banner-founder { background-image: linear-gradient(100deg, #0a0a0a 0%, #e8c547 58%, #7a5700 100%); }
-.plate.banner-galaxy { background-image: linear-gradient(100deg, #0b0524 0%, #fbbf8a 58%, #c2603a 100%); }
-.plate.banner-gilded { background-image: linear-gradient(100deg, #0a0a0a 0%, #e8c547 58%, #7a5700 100%); }
-.plate.banner-hive { background-image: linear-gradient(100deg, #f59e0b 0%, #7a3b05 58%, #facc15 100%); }
-.plate.banner-hologram { background-image: linear-gradient(100deg, #22d3ee 0%, #818cf8 58%, #ff0080 100%); }
-.plate.banner-inferno { background-image: linear-gradient(100deg, #2a0a06 0%, #6b1a07 58%, #c2410c 100%); }
-.plate.banner-jumbotron { background-image: linear-gradient(100deg, #ff3d5a 0%, #ffb703 58%, #00c2ff 100%); }
-.plate.banner-launch { background-image: linear-gradient(100deg, #1b1407 0%, #e8c547 58%, #8a6400 100%); }
-.plate.banner-marble { background-image: linear-gradient(100deg, #e8c547 0%, #7a5700 58%, #0c0c0e 100%); }
-.plate.banner-matrix { background-image: linear-gradient(100deg, #010a04 0%, #22ff66 58%, #22ff66 100%); }
-.plate.banner-night { background-image: linear-gradient(100deg, #050816 0%, #101b3d 58%, #1d6f31 100%); }
-.plate.banner-ocean { background-image: linear-gradient(100deg, #1e3a8a 0%, #f472b6 58%, #fdba74 100%); }
-.plate.banner-pitch { background-image: linear-gradient(100deg, #16224d 0%, #d9647a 58%, #ffc58a 100%); }
-.plate.banner-pixelcity { background-image: linear-gradient(100deg, #1b1048 0%, #3d1c74 58%, #6d2a8e 100%); }
-.plate.banner-playbook { background-image: linear-gradient(100deg, #25382f 0%, #8b5a2b 58%, #6b4423 100%); }
-.plate.banner-rain { background-image: linear-gradient(100deg, #0a1020 0%, #27344f 58%, #1c5a30 100%); }
-.plate.banner-retro { background-image: linear-gradient(100deg, #1e1b4b 0%, #1e1b4b 58%, #1e1b4b 100%); }
-.plate.banner-rink { background-image: linear-gradient(100deg, #a9d4f0 0%, #c8102e 58%, #0f172a 100%); }
-.plate.banner-sakura { background-image: linear-gradient(100deg, #c9a6c2 0%, #8f6f93 58%, #e11d74 100%); }
-.plate.banner-scoreboard { background-image: linear-gradient(100deg, #3a3f4a 0%, #14161b 58%, #ffb020 100%); }
-.plate.banner-snow { background-image: linear-gradient(100deg, #3e4c66 0%, #aeb9cd 58%, #aeb9cd 100%); }
-.plate.banner-stadium { background-image: linear-gradient(100deg, #141f45 0%, #090c18 58%, #c8102e 100%); }
-.plate.banner-summit { background-image: linear-gradient(100deg, #2a3c7a 0%, #e87d86 58%, #5a5f9a 100%); }
-.plate.banner-sunset { background-image: linear-gradient(100deg, #3b2a6e 0%, #c4486c 58%, #f58a4a 100%); }
-.plate.banner-synthwave { background-image: linear-gradient(100deg, #12033a 0%, #5b0a8a 58%, #ff3d8a 100%); }
-.plate.banner-trophy { background-image: linear-gradient(100deg, #2b1a0e 0%, #e8c547 58%, #8a6400 100%); }
-.plate.banner-tunnel { background-image: linear-gradient(100deg, #0b0c12 0%, #0b0c12 58%, #0b0c12 100%); }
-.plate.banner-vault { background-image: linear-gradient(100deg, #16110a 0%, #e8c547 58%, #7a5700 100%); }
+/* Each banner's own colours (scripts/cosmetics/board-banners.mjs), never the 100 KB drawings. */
+.plate.banner-aurora { --b1: #34d399; --b2: #38bdf8; --b3: #c084fc; }
+.plate.banner-ballpark { --b1: #facc15; --b2: #60a5fa; --b3: #f87171; }
+.plate.banner-circuit { --b1: #08213a; --b2: #22d3ee; --b3: #22d3ee; }
+.plate.banner-city { --b1: #e0567a; --b2: #ff7a59; --b3: #fde68a; }
+.plate.banner-comic { --b1: #e11d48; --b2: #fb923c; --b3: #fde047; }
+.plate.banner-confetti { --b1: #facc15; --b2: #38bdf8; --b3: #ef4444; }
+.plate.banner-court { --b1: #3a2a1c; --b2: #9e2b25; --b3: #d89d4d; }
+.plate.banner-diamond { --b1: #7a4a22; --b2: #2f8a3a; --b3: #ffd58a; }
+.plate.banner-draft { --b1: #00c2ff; --b2: #facc15; --b3: #ff2d95; }
+.plate.banner-eclipse { --b1: #1b0d3d; --b2: #f97316; --b3: #7c3aed; }
+.plate.banner-endzone { --b1: #233b94; --b2: #facc15; --b3: #facc15; }
+.plate.banner-field { --b1: #0d4a1a; --b2: #facc15; --b3: #e0763a; }
+.plate.banner-founder { --b1: #7a5700; --b2: #e8c547; --b3: #ef4444; }
+.plate.banner-galaxy { --b1: #0b0524; --b2: #c2603a; --b3: #fbbf8a; }
+.plate.banner-gilded { --b1: #0a0a0a; --b2: #7a5700; --b3: #e8c547; }
+.plate.banner-hive { --b1: #111111; --b2: #7a3b05; --b3: #facc15; }
+.plate.banner-hologram { --b1: #ff0080; --b2: #ffee00; --b3: #00e5ff; }
+.plate.banner-inferno { --b1: #6b1a07; --b2: #ff7a1a; --b3: #fde047; }
+.plate.banner-jumbotron { --b1: #00e676; --b2: #00c2ff; --b3: #ffb703; }
+.plate.banner-launch { --b1: #8a6400; --b2: #fde68a; --b3: #fde68a; }
+.plate.banner-marble { --b1: #7a5700; --b2: #7a1f1f; --b3: #e8c547; }
+.plate.banner-matrix { --b1: #010a04; --b2: #22ff66; --b3: #22ff66; }
+.plate.banner-night { --b1: #101b3d; --b2: #1d6f31; --b3: #9ec1ff; }
+.plate.banner-ocean { --b1: #0e7490; --b2: #fb923c; --b3: #f472b6; }
+.plate.banner-pitch { --b1: #2f9b45; --b2: #d9647a; --b3: #ffc58a; }
+.plate.banner-pixelcity { --b1: #ffd23f; --b2: #ff6ec7; --b3: #7df9ff; }
+.plate.banner-playbook { --b1: #1a2923; --b2: #8b5a2b; --b3: #8b5a2b; }
+.plate.banner-rain { --b1: #0d3a1c; --b2: #16233c; --b3: #9ec3e6; }
+.plate.banner-retro { --b1: #4c1d95; --b2: #4c1d95; --b3: #4c1d95; }
+.plate.banner-rink { --b1: #c8102e; --b2: #1d4ed8; --b3: #facc15; }
+.plate.banner-sakura { --b1: #e11d74; --b2: #ffc4d8; --b3: #ffd9c7; }
+.plate.banner-scoreboard { --b1: #2a1c05; --b2: #ffb020; --b3: #ff5a3d; }
+.plate.banner-snow { --b1: #3c4c6a; --b2: #aeb9cd; --b3: #aeb9cd; }
+.plate.banner-stadium { --b1: #16a34a; --b2: #c8102e; --b3: #facc15; }
+.plate.banner-summit { --b1: #2a3c7a; --b2: #ef4444; --b3: #ffd38a; }
+.plate.banner-sunset { --b1: #3b2a6e; --b2: #c4486c; --b3: #ffb040; }
+.plate.banner-synthwave { --b1: #ff2d95; --b2: #ff7a3d; --b3: #ffe45e; }
+.plate.banner-trophy { --b1: #8a6400; --b2: #e8c547; --b3: #e8c547; }
+.plate.banner-tunnel { --b1: #07080d; --b2: #a7e6ff; --b3: #a7e6ff; }
+.plate.banner-vault { --b1: #7a5700; --b2: #e8c547; --b3: #f87171; }
 /* The free basics: a thin neutral ring and a clean banner that sits on the page like a card. Everyone has them. */
 .ring-plain { background: var(--steel-hi); }
 .ring-plain::after { box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
