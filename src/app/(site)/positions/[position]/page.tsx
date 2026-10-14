@@ -22,8 +22,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const g = groupFromSlug((await params).position);
   if (!g) return pageMeta({ title: 'Position not found', description: 'No such position group.', path: '/positions', noindex: true });
   return pageMeta({
-    title: `Best NFL ${GROUP_PLURAL[g]}: top 50 ${g} ratings`,
-    description: `The top 50 ${GROUP_PLURAL[g]} by EA Sports Madden NFL ratings, plus the attribute weights Unbeaten uses to grade a ${POSITION_NAMES[g].toLowerCase()}.`,
+    title: `Best NFL ${GROUP_PLURAL[g]} right now: top 50 ${g} ratings`,
+    description: `The top 50 ${GROUP_PLURAL[g]} on current NFL rosters by EA Sports Madden NFL ratings (today's ability, not career greatness), plus the attribute weights Unbeaten uses to grade a ${POSITION_NAMES[g].toLowerCase()}.`,
     path: `/positions/${positionSlug(g)}`,
   });
 }
@@ -42,7 +42,8 @@ export default async function PositionPage({ params }: Props) {
     <div className="container section">
       <Breadcrumbs items={[{ name: 'Positions', path: '/positions' }, { name: POSITION_NAMES[g], path }]} />
       <span className="eyebrow">{g}</span>
-      <h1>The top 50 {GROUP_PLURAL[g]}</h1>
+      <h1>The top 50 {GROUP_PLURAL[g]} right now</h1>
+      <p className="muted" style={{ maxWidth: '62ch' }}>Ranked by Madden NFL ratings on current rosters, so this is who is best today, not who is greatest ever. A great career with a fading rating drops down, and a young star can top the list. For the all-time greats, draft in <Link href="/games/17-0">17-0</Link> with the All-time pool.</p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32, margin: '24px 0 40px' }}>
         <section aria-labelledby="formula-h">
@@ -73,7 +74,7 @@ export default async function PositionPage({ params }: Props) {
       </div>
 
       {players.length ? (
-        <PlayerTable players={players} teams={teams} caption={`Top 50 ${GROUP_PLURAL[g]} by overall rating`}
+        <PlayerTable players={players} teams={teams} caption={`Top 50 ${GROUP_PLURAL[g]} on current rosters by Madden overall rating`}
           extra={{ label: 'Grade', value: (p) => ratePlayer(p.attributes ?? {}, g).toFixed(1) }} />
       ) : <EmptyState title={`No ${GROUP_PLURAL[g]} loaded yet`} />}
       <PlayCta />

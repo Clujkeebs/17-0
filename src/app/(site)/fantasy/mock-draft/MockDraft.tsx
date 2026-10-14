@@ -134,7 +134,7 @@ export function MockDraft({ players }: { players: Slim[] }) {
             </select>
           </label>
         </div>
-        <p className="muted md-rules">Snake draft, {Math.min(MOCK_ROUNDS, Math.floor(players.length / t))} rounds, PPR. Starting lineup: 1 QB, 2 RB, 2 WR, 1 TE and a flex (RB, WR or TE).</p>
+        <p className="muted md-rules">Snake draft, {Math.min(MOCK_ROUNDS, Math.floor(players.length / t))} rounds, PPR. Starting lineup: 1 QB, 2 RB, 2 WR, 1 TE and a flex (RB, WR or TE). The rest of the roster is bench, so you draft backups too. The number beside each player is PPR fantasy points a game: his last four weeks blended with his season average and projection.</p>
         <button type="button" className="btn btn-primary" onClick={start}>Start the draft</button>
       </section>
     );
@@ -208,6 +208,14 @@ export function MockDraft({ players }: { players: Slim[] }) {
       {rec && (
         <p className="md-rec">
           Suggested: <button type="button" className="md-rec-btn" onClick={() => take(rec.player)}><strong>{rec.player.name}</strong> <span className={`md-pos pos-${rec.player.pos}`}>{rec.player.pos}</span></button> <span className="muted">{rec.reason}</span>
+        </p>
+      )}
+
+      {!finished && (
+        <p className="md-needs" aria-label="Your roster so far">
+          <span className="muted">Your roster:</span>
+          {lay.starters.map(([slot, p], i) => <span key={i} className={`md-need${p ? ' filled' : ''}`} title={p ? p.name : `${slot} still open`}>{slot}</span>)}
+          <span className={`md-need bench${lay.bench.length >= Math.max(0, draft.rounds - 7) ? ' filled' : ''}`}>Bench {lay.bench.length}/{Math.max(0, draft.rounds - 7)}</span>
         </p>
       )}
 

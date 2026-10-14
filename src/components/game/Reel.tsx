@@ -69,7 +69,14 @@ export function usePreloadLogos(pool: ReelTeam[]) {
 
 /** Endless spin shown while the server picks the team; the real Reel takes over and lands. */
 export function SpinningReel({ pool }: { pool: ReelTeam[] }) {
-  const strip = useMemo(() => [...pool, ...pool].slice(0, 64), [pool]);
+  // Shuffled on the client after mount so the waiting reel never runs the same teams in the same order twice.
+  const [order, setOrder] = useState(pool);
+  useEffect(() => {
+    const a = [...pool];
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    setOrder(a);
+  }, [pool]);
+  const strip = useMemo(() => [...order, ...order].slice(0, 64), [order]);
   return (
     <div className="reel2 reel2-loop" aria-hidden="true">
       <div className="reel2-strip">

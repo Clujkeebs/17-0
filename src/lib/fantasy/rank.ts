@@ -114,16 +114,20 @@ export function balancers<T extends TradeP>(pool: T[], give: TradeP[], get: Trad
   return scored.length ? { side, players: scored.slice(0, n).map((x) => x.p) } : null;
 }
 
+/** Likely free in a typical league: under 55 percent rostered on ESPN, or (without that number) outside the top 110 overall and not a Sleeper favourite. */
+const onWaivers = (p: Ranked) => (p.rostered != null ? p.rostered < 55 : (p.popularity == null || p.popularity > 150) && !(p.overall > 0 && p.overall <= 110));
+
 /**
- * Waiver wire: the most-added players first (adds across Sleeper leagues in the last day), so a breakout
- * everyone is grabbing tops the list. Before anyone is being added (the offseason), it falls back to
- * producing players outside the commonly rostered pool.
+ * Waiver wire: players a typical league has not rostered, the most-added first (adds across Sleeper leagues in the
+ * last day), so a breakout everyone is grabbing tops the list. A star never shows up here. Before anyone is being added
+ * (the offseason), it falls back to the best recent producers among them.
  */
 export function waiverTargets(ranked: Ranked[], limit = 50): Ranked[] {
-  const added = ranked.filter((p) => p.trend > 0).sort((a, b) => b.trend - a.trend || b.value - a.value);
+  const pool = ranked.filter(onWaivers);
+  const added = pool.filter((p) => p.trend > 0).sort((a, b) => b.trend - a.trend || b.value - a.value);
   if (added.length >= 10) return added.slice(0, limit);
-  return ranked
-    .filter((p) => (p.popularity == null || p.popularity > 150) && p.value >= 8)
-    .sort((a, b) => b.value - a.value)
+  return pool
+    .filter((p) => p.value >= 8)
+    .sort((a, b) => (b.recent ?? b.value) - (a.recent ?? a.value) || b.value - a.value)
     .slice(0, limit);
 }

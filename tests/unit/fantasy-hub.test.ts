@@ -30,7 +30,7 @@ describe('fantasy hub math', () => {
     expect(tradeVerdict([star], [star]).verdict).toBe('Fair');
   });
   it('waiver targets skip widely rostered players', () => {
-    const r = rankPlayers([...pool, mk('sleeper', 'WR', 12, { popularity: 400, trend: 900 })], 12);
+    const r = rankPlayers([...pool, mk('sleeper', 'WR', 12, { popularity: 400, trend: 900, rostered: 20 })], 12);
     const w = waiverTargets(r);
     expect(w[0].id).toBe('sleeper');
     expect(w.every((p) => p.popularity == null || p.popularity > 150)).toBe(true);

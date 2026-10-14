@@ -6,6 +6,7 @@ import { auth } from '@/auth';
 import { challengeInfo } from '@/lib/server/challenges';
 import { todaysResult } from '@/lib/server/games';
 import { db, schema } from '@/db';
+import { teamsWithPlayers } from '@/lib/server/reel-teams';
 import type { ReelTeam } from '@/components/game/Reel';
 import { FortyFourGame } from '@/components/game/FortyFourGame';
 import { wnbaReady } from '@/lib/server/wnba-game';
@@ -21,8 +22,9 @@ export const metadata: Metadata = {
 async function franchises(): Promise<ReelTeam[]> {
   try {
     const rows = await db.select().from(schema.wnbaTeamSeasons).orderBy(desc(schema.wnbaTeamSeasons.season));
+    const real = await teamsWithPlayers('wnba');
     const seen = new Map<number, ReelTeam>();
-    for (const t of rows) if (!seen.has(t.teamId)) seen.set(t.teamId, { id: t.teamId, abbreviation: t.abbreviation, city: t.location, name: t.name, color: t.color ?? '#555555', logoUrl: t.logoUrl });
+    for (const t of rows) if (real.has(t.teamId) && !seen.has(t.teamId)) seen.set(t.teamId, { id: t.teamId, abbreviation: t.abbreviation, city: t.location, name: t.name, color: t.color ?? '#555555', logoUrl: t.logoUrl });
     return [...seen.values()];
   } catch { return []; }
 }

@@ -6,6 +6,7 @@ import { auth } from '@/auth';
 import { challengeInfo } from '@/lib/server/challenges';
 import { todaysResult } from '@/lib/server/games';
 import { db, schema } from '@/db';
+import { teamsWithPlayers } from '@/lib/server/reel-teams';
 import type { ReelTeam } from '@/components/game/Reel';
 import { OneSixtyTwoGame } from '@/components/game/OneSixtyTwoGame';
 import { MLB_COLORS, mlbLogo, mlbReady } from '@/lib/server/mlb-game';
@@ -21,8 +22,9 @@ export const metadata: Metadata = {
 async function franchises(): Promise<ReelTeam[]> {
   try {
     const rows = await db.select().from(schema.mlbTeamSeasons).orderBy(desc(schema.mlbTeamSeasons.season));
+    const real = await teamsWithPlayers('mlb');
     const seen = new Map<number, ReelTeam>();
-    for (const t of rows) if (!seen.has(t.teamId)) seen.set(t.teamId, { id: t.teamId, abbreviation: t.abbreviation, city: t.location, name: t.name, color: MLB_COLORS[t.teamId] ?? '#1F2A44', logoUrl: mlbLogo(t.teamId) });
+    for (const t of rows) if (real.has(t.teamId) && !seen.has(t.teamId)) seen.set(t.teamId, { id: t.teamId, abbreviation: t.abbreviation, city: t.location, name: t.name, color: MLB_COLORS[t.teamId] ?? '#1F2A44', logoUrl: mlbLogo(t.teamId) });
     return [...seen.values()];
   } catch { return []; }
 }

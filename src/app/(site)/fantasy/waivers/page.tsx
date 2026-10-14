@@ -20,8 +20,9 @@ export default async function Waivers({ searchParams }: { searchParams: Promise<
       <p className="eyebrow"><Link href="/fantasy">Fantasy</Link> · Waiver wire</p>
       <h1>{filter ? `${filter} waiver wire` : 'Waiver wire'}</h1>
       <p className="muted">{byAdds
-        ? 'Most added first: adds across Sleeper leagues in the last 24 hours. Rostered is the share of ESPN leagues that have him. Updated every few hours.'
-        : 'Nobody is being added yet this week, so these are producing players most leagues have not rostered.'}</p>
+        ? 'Players most leagues have not rostered, the most added first (adds across Sleeper leagues in the last 24 hours). Stars are left out because they are already taken.'
+        : 'Nobody is being added yet this week, so these are the best recent producers most leagues have not rostered. Stars are left out because they are already taken.'}</p>
+      <p className="muted hint">The big number is PPR fantasy points a game: his last four weeks blended with his season average and this week&apos;s projection. Rostered is the share of ESPN leagues that have him.</p>
       <nav className="sport-tabs" aria-label="Position">
         <Link href="/fantasy/waivers" aria-current={!filter ? 'page' : undefined}>All</Link>
         {F_POS.map((p) => <Link key={p} href={`/fantasy/waivers?pos=${p}`} aria-current={filter === p ? 'page' : undefined}>{p}</Link>)}
