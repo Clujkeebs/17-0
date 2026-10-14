@@ -31,7 +31,8 @@ export function HeaderProfile() {
   );
 }
 
-export function Avatar({ name, src, size = 40, ring, effect }: { name: string; src: string | null; size?: number; ring?: string | null; effect?: string | null }) {
+/** `lite` is for long boards: the ring's colours only, none of the effect or frame drawings. */
+export function Avatar({ name, src, size = 40, ring, effect, lite = false }: { name: string; src: string | null; size?: number; ring?: string | null; effect?: string | null; lite?: boolean }) {
   const [failed, setFailed] = useState(false);
   const initials = name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
   const img = src && !failed
@@ -41,7 +42,7 @@ export function Avatar({ name, src, size = 40, ring, effect }: { name: string; s
   const pic = ring ? <span className={`ring ${ring}`}>{img}</span> : img;
   // An equipped effect (shop item) animates around the picture, and ornate borders add a frame over it.
   // Fire rings burn for real: flames rise off them even without an effect equipped.
-  const fx = effect ?? (ring === 'ring-flame' || ring === 'ring-lava' ? 'fx-ringfire' : null);
-  const framed = !!ring && FRAMED.has(ring);
+  const fx = lite ? null : effect ?? (ring === 'ring-flame' || ring === 'ring-lava' ? 'fx-ringfire' : null);
+  const framed = !lite && !!ring && FRAMED.has(ring);
   return fx || framed ? <span className="fx-wrap">{pic}<Frame k={ring} /><Effect k={fx} /></span> : pic;
 }

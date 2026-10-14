@@ -10,6 +10,9 @@ import { CookieBanner } from '@/components/CookieBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { JsonLd } from '@/components/JsonLd';
 import { THEME_SCRIPT } from '@/components/ThemeToggle';
+
+/** After a deploy, a page opened earlier can ask for scripts or styles that no longer exist. One reload (at most one a minute) brings the new ones. */
+const STALE_ASSET_SCRIPT = `(function(){try{function heal(){var k='gl-reload',n=Date.now(),l=+sessionStorage.getItem(k)||0;if(n-l<60000)return;sessionStorage.setItem(k,String(n));location.reload();}addEventListener('error',function(e){var t=e.target;if(t&&(t.tagName==='LINK'||t.tagName==='SCRIPT')){var u=t.href||t.src||'';if(u.indexOf('/_next/static/')>-1)heal();}},true);addEventListener('unhandledrejection',function(e){var r=e.reason,m=String(r&&(r.name+' '+r.message));if(/ChunkLoadError|Loading chunk|Loading CSS chunk|dynamically imported/.test(m))heal();});}catch(_){}})();`;
 import { KonamiCode } from '@/components/KonamiCode';
 
 // Self-hosted, Latin subset, variable. next/font preloads them and generates metric-matched fallbacks (no CLS).
@@ -36,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${nameFontVariables}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: STALE_ASSET_SCRIPT }} />
         <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`} crossOrigin="anonymous" />
       </head>
       <body>

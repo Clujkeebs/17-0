@@ -10,6 +10,8 @@ const securityHeaders = [
 
 const config: NextConfig = {
   output: 'standalone',
+  // One id per build (the Docker build passes the commit): a tab left open across a deploy reloads instead of mixing old and new files.
+  deploymentId: process.env.NEXT_DEPLOYMENT_ID || undefined,
   poweredByHeader: false,
   serverExternalPackages: ['bullmq', 'ioredis', 'playwright-core', 'bcryptjs'],
   images: {
