@@ -58,6 +58,14 @@ test('the leaderboard shows each player\'s picture and banner, from a cached ima
   expect(res.headers()['content-type']).toBe('image/png');
   expect(res.headers()['cache-control']).toContain('immutable');
   expect((await page.request.get('/api/avatar/nobody_here_x')).status()).toBe(404);
+  // A board shows a soft tint of the banner, never the banner's drawing, with the Animations setting on or off. The reduced-motion banner rules are more specific than a plate and once put the art back under the name on exactly the devices that ask for less motion.
+  const tint = () => plate(a).evaluate((el) => getComputedStyle(el).backgroundImage);
+  expect(await tint()).toMatch(/^linear-gradient/);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'reduce');
+  await expect(plate(a)).toHaveClass(/banner-synthwave/);
+  expect(await tint()).toMatch(/^linear-gradient/);
   await sql`delete from game_results where user_id in (${ids[0].id}, ${ids[1].id})`;
   await sql`delete from user_accounts where username in (${a}, ${b})`;
   await ctx2.close();
