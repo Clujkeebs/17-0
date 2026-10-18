@@ -41,7 +41,7 @@ export interface NbaPayload {
   challengeId?: string;
 }
 
-export interface NbaBoardPlayer { id: number; name: string; position: string; season: number; seasonLabel: string; value: number; ppg: number; rpg: number; apg: number; headshot: string | null; fits: NbaSlot[] }
+export interface NbaBoardPlayer { id: number; /** Already on your roster from another team or era: shown, but he cannot be drafted twice. */ onRoster?: boolean; name: string; position: string; season: number; seasonLabel: string; value: number; ppg: number; rpg: number; apg: number; headshot: string | null; fits: NbaSlot[] }
 export interface NbaTeamView { id: number; era: EraKey; eraLabel: string; name: string; location: string; abbreviation: string; color: string; logoUrl: string | null; players: NbaBoardPlayer[] }
 export interface NbaState {
   sessionId: string; index: number; total: number; done: boolean; hard: boolean;
@@ -179,7 +179,8 @@ async function state(sessionId: string, p: NbaPayload): Promise<NbaState> {
   const index = p.picks.length, done = index >= NBA_ROUNDS;
   const team = !done && p.current ? await boardFor(p, p.current.teamId, p.current.era) : null;
   const hide = <T extends { value: number; ppg: number; rpg: number; apg: number }>(x: T): T => (p.hard ? { ...x, value: -1, ppg: -1, rpg: -1, apg: -1 } : x);
-  const view = team ? { ...team, players: (p.hard ? [...team.players].sort((a, b) => a.name.localeCompare(b.name)) : team.players).map(hide) } : null;
+  const mine = new Set(p.picks.map((x) => x.playerId));
+  const view = team ? { ...team, players: (p.hard ? [...team.players].sort((a, b) => a.name.localeCompare(b.name)) : team.players).map(hide).map((x) => (mine.has(x.id) ? { ...x, onRoster: true } : x)) } : null;
   const pickedTeams = await Promise.all(p.picks.map(async (x) => ({ x, t: await boardFor(p, x.teamId, x.era) })));
   const roster = NBA_SLOTS.map((slot) => {
     const hit = pickedTeams.find(({ x }) => x.slot === slot);
@@ -251,6 +252,7 @@ export async function pickNba(sessionId: string, tok: string, playerId: number, 
   const team = await boardFor(p, p.current.teamId, p.current.era);
   const pl = team?.players.find((x) => x.id === playerId);
   if (!team || !pl) throw new NbaError('That player is not on this board.');
+  if (p.picks.some((x) => x.playerId === playerId)) throw new NbaError(`${pl.name} is already on your roster. Take someone else.`);
   const taken = new Set(p.picks.map((x) => x.slot));
   const openSlots = NBA_SLOTS.filter((x) => !taken.has(x));
   // Out of position is allowed; it just costs value. Default to a natural open spot.

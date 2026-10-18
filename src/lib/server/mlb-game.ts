@@ -51,7 +51,7 @@ export interface MlbPayload {
   challengeId?: string;
 }
 
-export interface MlbBoardPlayer { id: number; name: string; position: string; kind: MlbKind; season: number; value: number; line: string; headshot: string; fits: MlbSlot[] }
+export interface MlbBoardPlayer { id: number; /** Already on your roster from another team or era: shown, but he cannot be drafted twice. */ onRoster?: boolean; name: string; position: string; kind: MlbKind; season: number; value: number; line: string; headshot: string; fits: MlbSlot[] }
 export interface MlbTeamView { id: number; era: SpinEra; eraLabel: string; name: string; location: string; abbreviation: string; color: string; logoUrl: string; players: MlbBoardPlayer[] }
 export interface MlbState {
   sessionId: string; index: number; total: number; done: boolean; hard: boolean; mode: MlbMode;
@@ -163,7 +163,8 @@ async function state(sessionId: string, p: MlbPayload): Promise<MlbState> {
   const index = p.picks.length, done = index >= MLB_ROUNDS;
   const team = !done && p.current ? await board(p.current.teamId, p.current.era) : null;
   const hide = <T extends { value: number; line: string }>(x: T): T => (p.hard ? { ...x, value: -1, line: '' } : x);
-  const view = team ? { ...team, players: (p.hard ? [...team.players].sort((a, b) => a.name.localeCompare(b.name)) : team.players).map(hide) } : null;
+  const mine = new Set(p.picks.map((x) => x.playerId));
+  const view = team ? { ...team, players: (p.hard ? [...team.players].sort((a, b) => a.name.localeCompare(b.name)) : team.players).map(hide).map((x) => (mine.has(x.id) ? { ...x, onRoster: true } : x)) } : null;
   const pickedTeams = await Promise.all(p.picks.map(async (x) => ({ x, t: await board(x.teamId, x.era) })));
   const roster = MLB_SLOTS.map((slot) => {
     const hit = pickedTeams.find(({ x }) => x.slot === slot);
@@ -230,10 +231,12 @@ export async function pickMlb(sessionId: string, tok: string, playerId: number, 
   const team = await board(p.current.teamId, p.current.era);
   const pl = team?.players.find((x) => x.id === playerId);
   if (!team || !pl) throw new MlbError('That player is not on this board.');
+  if (p.picks.some((x) => x.playerId === playerId)) throw new MlbError(`${pl.name} is already on your roster. Take someone else.`);
   const taken = new Set(p.picks.map((x) => x.slot));
   // His own position, or DH for a hitter. Pitchers keep their role. If nobody on this board fits an open
   // spot, anyone may play out of position (at the fit cost) so a draft can never get stuck.
-  const stuck = !team.players.some((x) => x.fits.some((f) => !taken.has(f)));
+  const mine = new Set(p.picks.map((x) => x.playerId));
+  const stuck = !team.players.some((x) => !mine.has(x.id) && x.fits.some((f) => !taken.has(f)));
   const openSlots = stuck ? MLB_SLOTS.filter((x) => !taken.has(x) && mlbFit(pl.position, pl.kind, x) > 0) : pl.fits.filter((x) => !taken.has(x));
   if (!openSlots.length) throw new MlbError(`${pl.fits.join(' and ')} ${pl.fits.length > 1 ? 'are' : 'is'} filled. Take someone at an open spot.`);
   const best = [...openSlots].sort((a, b) => mlbFit(pl.position, pl.kind, b) - mlbFit(pl.position, pl.kind, a))[0];

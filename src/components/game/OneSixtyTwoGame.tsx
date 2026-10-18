@@ -192,8 +192,9 @@ export function OneSixtyTwoGame({ franchises, signedIn, playedTodayId = null, in
   const openPitch = game.roster.some((r) => !r.pick && isPitchSlot(r.slot));
   const taken = new Set(game.roster.filter((r) => r.pick).map((r) => r.slot));
   // Same rule as the server: his own spot or DH. If nobody here fits an open spot, anyone may play out of position.
-  const stuck = !!team && !team.players.some((x) => x.fits.some((f) => !taken.has(f)));
-  const canTake = (p: MlbBoardPlayer) => (stuck ? (p.kind === 'bat' ? openBat : openPitch) : p.fits.some((f) => !taken.has(f)));
+  // Anyone already on your roster (from another team or era) cannot be drafted twice, and does not count as a fit for an open spot.
+  const stuck = !!team && !team.players.some((x) => !x.onRoster && x.fits.some((f) => !taken.has(f)));
+  const canTake = (p: MlbBoardPlayer) => !p.onRoster && (stuck ? (p.kind === 'bat' ? openBat : openPitch) : p.fits.some((f) => !taken.has(f)));
   // Type a name in any mode. Hard shows only matches; the other modes show matches in place of the grouped board.
   const found = team && q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)).sort((a, b) => Number(canTake(b)) - Number(canTake(a))) : null;
   const hardList = game.hard && found ? found.slice(0, 6) : [];
@@ -203,10 +204,10 @@ export function OneSixtyTwoGame({ franchises, signedIn, playedTodayId = null, in
   }).filter((g) => g.all.length).sort((a, b) => Number(b.open) - Number(a.open)) : [];
   const row = (p: MlbBoardPlayer) => {
     const ok = canTake(p);
-    const why = ok ? '' : `${p.fits.join(' and ')} filled`;
+    const why = ok ? '' : p.onRoster ? 'on your roster' : `${p.fits.join(' and ')} filled`;
     return (
       <li key={p.id}>
-        <button type="button" className="g-player" onClick={() => pick(p)} disabled={!!busy || !ok} title={why || undefined}
+        <button type="button" className={`g-player${p.onRoster ? ' g-taken' : ''}`} onClick={() => pick(p)} disabled={!!busy || !ok} title={why || undefined}
           aria-label={`Draft ${p.name}, ${p.position}, ${p.season}${p.value >= 0 ? `, ${p.line}, value ${p.value.toFixed(0)}` : ''}${why ? `, ${why}` : ''}`}>
           <PlayerFace name={p.name} src={p.headshot} color={team!.color} size={44} />
           <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position} · {p.season}{p.value >= 0 && <> · {p.line}</>}{why && <span className="g-filled"> · {why}</span>}</span></span>

@@ -6,7 +6,7 @@ import { getRedis } from './redis';
 import { NBA_FLOOR_KEY, NBA_FLOOR_KEY_2K, getNbaFloor } from './nba-floor';
 import { describeStats, statsFromWins } from '@/lib/game/difficulty';
 
-type Cand = { name: string; position: string; teamId: number; season: number; value: number; apg?: number };
+type Cand = { pid: number; name: string; position: string; teamId: number; season: number; value: number; apg?: number };
 /** A careful drafter using both re-spins goes 82-0 about this often (was 6 percent; owners asked for harder). */
 const TARGET_P17 = 0.03;
 const RESPIN_BELOW = 85;
@@ -35,7 +35,7 @@ async function boards() {
       if (r.ps.season < e.from || r.ps.season > e.to) continue;
       const m = byTeam.get(r.ps.teamId) ?? new Map<number, Cand>();
       const cur = m.get(r.p.id);
-      if (!cur || r.ps.value > cur.value) m.set(r.p.id, { name: r.p.fullName, position: r.p.position, teamId: r.ps.teamId, season: r.ps.season, value: r.ps.value, apg: r.ps.apg });
+      if (!cur || r.ps.value > cur.value) m.set(r.p.id, { pid: r.p.id, name: r.p.fullName, position: r.p.position, teamId: r.ps.teamId, season: r.ps.season, value: r.ps.value, apg: r.ps.apg });
       byTeam.set(r.ps.teamId, m);
     }
     out.set(e.key, new Map([...byTeam].filter(([, m]) => m.size >= 5).map(([t, m]) => [t, [...m.values()].sort((a, b) => b.value - a.value)])));
@@ -50,6 +50,8 @@ function simulateWins(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'r
     const rng = createRng(`nbacal:${mode}:${g}`);
     let eraLeft = mode === 'respin' && eras.length > 1 ? ERA_RESPINS : 0, teamLeft = mode === 'respin' ? TEAM_RESPINS : 0;
     const used = new Set<number>(), picks: Cand[] = [], perEra = new Map<EraKey, number>();
+    // Same rule as the game: a player already on the roster cannot be drafted again from another team or era.
+    const mine = (c: Cand) => picks.some((x) => x.pid === c.pid);
     // Same rule as the game: each era gives one pick (Standard has one era, so the rule does not apply there).
     const live = () => (eras.length === 1 ? eras : eras.filter((x) => (perEra.get(x) ?? 0) < ERA_PICKS_MAX));
     const spin = (era?: EraKey) => {
@@ -60,12 +62,12 @@ function simulateWins(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'r
     for (let round = 0; round < 5; round++) {
       let { e, t } = spin();
       if (mode === 'respin') {
-        const top = () => b.get(e)!.get(t)![0].value;
+        const top = () => (b.get(e)!.get(t)!.find((c) => !mine(c)) ?? b.get(e)!.get(t)![0]).value;
         while (top() < RESPIN_BELOW && (teamLeft || (eraLeft && live().length > 1))) {
           if (teamLeft) { teamLeft--; ({ e, t } = spin(e)); } else { eraLeft--; const cur = e; ({ e, t } = spin(rng.pick(live().filter((x) => x !== cur)))); }
         }
       }
-      const list = b.get(e)!.get(t)!;
+      const list = b.get(e)!.get(t)!.filter((c) => !mine(c));
       picks.push(mode === 'random' ? rng.pick(list) : list[0]);
       used.add(t); perEra.set(e, (perEra.get(e) ?? 0) + 1);
     }
@@ -87,7 +89,7 @@ async function boards2k() {
   const byTeam = new Map<number, Cand[]>();
   for (const p of rows) {
     if (p.rating2kTeamId == null) continue;
-    byTeam.set(p.rating2kTeamId, [...(byTeam.get(p.rating2kTeamId) ?? []), { name: p.fullName, position: p.rating2kPosition ?? p.position, teamId: p.rating2kTeamId, season: 0, value: p.rating2k! }]);
+    byTeam.set(p.rating2kTeamId, [...(byTeam.get(p.rating2kTeamId) ?? []), { pid: p.id, name: p.fullName, position: p.rating2kPosition ?? p.position, teamId: p.rating2kTeamId, season: 0, value: p.rating2k! }]);
   }
   const era = new Map([...byTeam].filter(([, l]) => l.length >= 5).map(([t, l]) => [t, l.sort((a, b) => b.value - a.value)]));
   return new Map<EraKey, Map<number, Cand[]>>(ERAS.map((e) => [e.key, e.key === '2020s' ? era : new Map()]));

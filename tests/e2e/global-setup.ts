@@ -173,6 +173,39 @@ async function seedCollege() {
   await sql.end();
 }
 
+/**
+ * One stand-in star per draft game, on every board of that game, so the "no two of the same player" tests have somebody who
+ * can be drafted from two places: the same player in several eras and teams (82-0, 162-0, 44-0), and an All-time legend of
+ * every franchise (17-0). Written before any test runs and never removed while they run, because another spec may draft
+ * him mid-game and grading needs his rows to still be there. He is deliberately unremarkable (a low board value and small
+ * stat lines), so no other spec's "take the best player" picker lands on him and he never leads a minigame category; only
+ * the duplicates spec asks for him by id. Rewritten each run so a change here always takes effect. Ids and names are marked "Test".
+ */
+async function seedStars() {
+  const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
+  await sql`delete from nba_player_seasons where player_id = 9990001`;
+  await sql`insert into nba_players (id, full_name, position) values (9990001, 'Test Twice Star', 'SF') on conflict do nothing`;
+  await sql`insert into nba_player_seasons (player_id, team_id, season, gp, mpg, ppg, rpg, apg, spg, bpg, tov, fg_pct, value)
+    select 9990001, 9000 + t, s, 70, 30, 4, 2, 1, 0.5, 0.2, 1, 0.45, 55 from generate_series(1, 12) t, unnest(${[1985, 1995, 2005, 2015, 2024]}::int[]) s`;
+  await sql`delete from wnba_player_seasons where player_id = 9990002`;
+  await sql`insert into wnba_players (id, full_name, position) values (9990002, 'Test Twice Star', 'F') on conflict do nothing`;
+  await sql`insert into wnba_player_seasons (player_id, team_id, season, gp, mpg, ppg, rpg, apg, spg, bpg, tov, fg_pct, value)
+    select 9990002, 9000 + t, s, 34, 30, 4, 2, 1, 0.5, 0.2, 1, 0.45, 55 from generate_series(1, 12) t, unnest(${[2000, 2005, 2010, 2020, 2024]}::int[]) s`;
+  const line = { pa: 600, ops: 0.7, hr: 20, sb: 5, avg: 0.25, obp: 0.3, slg: 0.4, rbi: 80 };
+  await sql`delete from mlb_player_seasons where player_id = 8990001`;
+  await sql`insert into mlb_players (id, full_name, position) values (8990001, 'Test Twice Star', '1B') on conflict do nothing`;
+  await sql`insert into mlb_player_seasons (player_id, team_id, season, kind, position, line, value)
+    select 8990001, 9000 + t, s, 'bat', '1B', ${sql.json(line)}, 55 from generate_series(1, 14) t, unnest(${[1975, 1985, 1995, 2005, 2015, 2024]}::int[]) s`;
+  // The All-time legend is a QB of every franchise, filed in 1994 like the other stand-in legends.
+  await sql`delete from nfl_legends where espn_id = 9990003`;
+  await sql`insert into nfl_legends (espn_id, full_name, position, "group", team_id, season, grade, line)
+    select 9990003, 'Test Twice Legend', 'QB', 'QB', id, 1994, 60, '3,000 pass yds, 20 TD' from teams`;
+  const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+  await redis.del('legends:by-team', 'nba:era-teams', 'mlb:era-teams');
+  redis.disconnect();
+  await sql.end();
+}
+
 export default async function globalSetup() {
   await seedSoccer();
   await seedNba();
@@ -180,4 +213,5 @@ export default async function globalSetup() {
   await seedMlb();
   await seedFantasy();
   await seedCollege();
+  await seedStars();
 }

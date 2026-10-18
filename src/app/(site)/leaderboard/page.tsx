@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { allTimeLeaderboard, gameLeaderboard, PERIODS, type Period } from '@/lib/server/leaderboard';
+import { allTimeLeaderboard, gameLeaderboard, undefeatedLeaderboard, PERIODS, type Period } from '@/lib/server/leaderboard';
+import { CASUAL_PERFECTS_PER_DAY, hasUndefeated } from '@/lib/server/leaderboard-sql';
 import { dailyDateET } from '@/lib/game/daily';
 import { GAMES, SPORTS, gameEntry, gamesFor, type Sport } from '@/lib/game-registry';
 import { LeaderboardViewed } from '@/components/LeaderboardViewed';
@@ -13,7 +14,7 @@ const Player = ({ u, style }: { u: string; style?: PlayerLook }) => isHandle(u) 
 export const revalidate = 60;
 export const metadata: Metadata = {
   title: 'Leaderboards',
-  description: 'Every game has a board: today, this week and all time. Ranked results only, validated on the server. Resets at midnight ET.',
+  description: 'Every game has a board: today, this week and all time. The draft games also rank who has gone undefeated the most. Validated on the server, resets at midnight ET.',
   alternates: { canonical: '/leaderboard' },
 };
 
@@ -29,18 +30,22 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
   const period: Period = PERIODS.includes(sp.period as Period) ? (sp.period as Period) : 'today';
   const hardOnly = sp.hard === '1' && !!entry.hard;
   const page = Math.max(1, Number(sp.page) || 1);
+  // Games with a perfect season (17-0, 82-0, 162-0, 44-0) also rank who has gone undefeated the most.
+  const canUndefeated = hasUndefeated(entry.slug);
+  const undefeated = !overall && canUndefeated && sp.period === 'undefeated';
   let error = false;
-  const rows = overall ? [] : await gameLeaderboard(entry.slug, period, hardOnly).catch(() => { error = true; return []; });
+  const rows = overall || undefeated ? [] : await gameLeaderboard(entry.slug, period, hardOnly).catch(() => { error = true; return []; });
+  const perfect = undefeated ? await undefeatedLeaderboard(entry.slug, hardOnly).catch(() => { error = true; return []; }) : [];
   const all = overall ? await allTimeLeaderboard(page).catch(() => { error = true; return { rows: [], total: 0 }; }) : { rows: [], total: 0 };
   const pages = Math.max(1, Math.ceil(all.total / 50));
-  const href = (o: { game?: string; period?: Period; hard?: boolean }) => {
-    const g = o.game ?? entry.slug, p = o.period ?? period, h = o.hard ?? hardOnly;
+  const href = (o: { game?: string; period?: Period | 'undefeated'; hard?: boolean }) => {
+    const g = o.game ?? entry.slug, p = o.period ?? (undefeated ? 'undefeated' : period), h = o.hard ?? hardOnly;
     return `/leaderboard?game=${g}&period=${p}${h && gameEntry(g)?.hard ? '&hard=1' : ''}`;
   };
   return (
     <div className="container section lb">
-      <LeaderboardViewed tab={overall ? 'all-time' : period} />
-      <span className="eyebrow">{overall ? 'Overall' : `${entry.name} · ${PERIOD_LABEL[period]}${period === 'today' ? ` · ${dailyDateET()} · resets midnight ET` : ''}`}</span>
+      <LeaderboardViewed tab={overall ? 'all-time' : undefeated ? 'undefeated' : period} />
+      <span className="eyebrow">{overall ? 'Overall' : undefeated ? `${entry.name} · Undefeated` : `${entry.name} · ${PERIOD_LABEL[period]}${period === 'today' ? ` · ${dailyDateET()} · resets midnight ET` : ''}`}</span>
       <h1>Leaderboards</h1>
 
       <nav aria-label="Sport" className="sport-tabs">
@@ -60,7 +65,8 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
           </nav>
           <div className="row lb-filters">
             <nav aria-label="Period" className="seg">
-              {PERIODS.map((p) => <Link key={p} href={href({ period: p })} className={p === period ? 'on' : ''} aria-current={p === period ? 'page' : undefined}>{PERIOD_LABEL[p]}</Link>)}
+              {PERIODS.map((p) => <Link key={p} href={href({ period: p })} className={!undefeated && p === period ? 'on' : ''} aria-current={!undefeated && p === period ? 'page' : undefined}>{PERIOD_LABEL[p]}</Link>)}
+              {canUndefeated && <Link href={href({ period: 'undefeated' })} className={undefeated ? 'on' : ''} aria-current={undefeated ? 'page' : undefined}>Undefeated</Link>}
             </nav>
             {entry.hard && (
               <nav aria-label="Difficulty" className="seg">
@@ -74,7 +80,23 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
 
       {error && <div role="alert" className="card card-error">The leaderboard is not responding. Scores are safe, try again in a minute.</div>}
 
-      {!overall ? (
+      {undefeated ? (
+        perfect.length ? (
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table className="lb-table">
+            <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Undefeated</th></tr></thead>
+            <tbody>{perfect.map((r) => (
+              <tr key={r.rank} className={r.rank <= 3 ? `lb-top lb-${r.rank}` : undefined}>
+                <td className="num"><span className="lb-rank">{r.rank}</span></td>
+                <td><Player u={r.username} style={r.style} /></td>
+                <td className="num"><strong>{r.count}</strong></td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        ) : !error && (
+          <div className="card"><p>{hardOnly ? `Nobody has gone undefeated in ${entry.name} on Hard yet.` : `Nobody has gone undefeated in ${entry.name} yet.`} Win every game of the season while signed in and your name goes here.</p>
+            <Link className="btn btn-primary" href={`/games/${entry.slug}`}>Play {entry.name}</Link></div>
+        )
+      ) : !overall ? (
         rows.length ? (
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table className="lb-table">
             <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Result</th>{period !== 'today' && <th scope="col" className="num">Date</th>}</tr></thead>
@@ -109,7 +131,9 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
           )}
         </>
       )}
-      <p className="hint" style={{ marginTop: 24 }}>Only signed-in players appear, and only ranked (Today) results count. Every score is validated on the server.</p>
+      <p className="hint" style={{ marginTop: 24 }}>{undefeated
+        ? `Only signed-in players appear. Every perfect season counts, Today and Casual, with Casual ones capped at ${CASUAL_PERFECTS_PER_DAY} a day so nobody can farm the board. Ties go to whoever reached the count first. Every score is validated on the server.`
+        : 'Only signed-in players appear, and only ranked (Today) results count. Every score is validated on the server.'}</p>
     </div>
   );
 }

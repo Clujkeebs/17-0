@@ -5,6 +5,7 @@ import { computeStreak, dailyDateET, longestStreak } from '@/lib/game/daily';
 import { audit } from './audit';
 import { accountDeleted, sendEmail } from './email';
 import { scoreSummary } from './result-summary';
+import { perfectSeasonsFor } from './leaderboard';
 import { isOwnerEmail, resolveStyle, type NameStyle } from '@/lib/cosmetics';
 
 export const deletedUsername = (userId: string) =>
@@ -73,11 +74,10 @@ export async function getStreak(userId: string) {
 }
 
 export async function getUserStats(userId: string) {
-  const [totals, byTypeRows, recentRows, bestRows, streak] = await Promise.all([
-    // 17-0 results store wins in result_data; perfect seasons and the best record come from there.
+  const [totals, byTypeRows, recentRows, bestRows, streak, perfectSeasons] = await Promise.all([
+    // 17-0 results store wins in result_data; the best record comes from there.
     db.select({
       n: dsql<number>`count(*)::int`,
-      perfect: dsql<number>`count(*) filter (where ${schema.gameResults.gameType} = '17-0' and (${schema.gameResults.resultData}->>'wins')::int = 17)::int`,
       bestWins: dsql<number | null>`max((${schema.gameResults.resultData}->>'wins')::int) filter (where ${schema.gameResults.gameType} = '17-0')`,
     }).from(schema.gameResults).where(eq(schema.gameResults.userId, userId)),
     db.select({
@@ -97,6 +97,8 @@ export async function getUserStats(userId: string) {
       where user_id = ${userId}
       order by game_type, score desc`),
     getStreak(userId),
+    // Perfect seasons in any draft game (17-0, 82-0, 162-0, 44-0), counted the way the undefeated boards count them.
+    perfectSeasonsFor(userId),
   ]);
   const bestSummary = new Map(bestRows.map((r) => [r.game_type, scoreSummary(r.game_type, r.result_data)]));
   const byType = await Promise.all(byTypeRows.map(async (t) => ({
@@ -111,7 +113,7 @@ export async function getUserStats(userId: string) {
   })));
   const bestWins = totals[0]?.bestWins ?? null;
   return {
-    played: totals[0]?.n ?? 0, perfectSeasons: totals[0]?.perfect ?? 0,
+    played: totals[0]?.n ?? 0, perfectSeasons,
     bestRecord: bestWins == null ? null : `${bestWins}-${17 - bestWins}`,
     byType, recent, ...streak,
   };

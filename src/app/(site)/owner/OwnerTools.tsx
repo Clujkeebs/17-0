@@ -93,7 +93,7 @@ export function OwnerTools({ games }: { games: { slug: string; name: string }[] 
 
       <h2 style={{ marginTop: 32 }}>Difficulty balance</h2>
       <div className="card owner-tools">
-        <p className="muted" style={{ margin: 0 }}>Once a day, each mode&apos;s win line moves a little (half a point at most) so the best tenth of real Casual runs finish at 94 percent of the season everywhere: 16-1 in 17-0, 77-5 in 82-0, 152-10 in 162-0. Modes with fewer than 20 runs from 5 players stay on the simulated line.{balance?.paused ? ' Paused.' : ''}</p>
+        <p className="muted" style={{ margin: 0 }}>Once a day, each mode&apos;s win line moves a little (half a point at most) so the best tenth of real Casual runs finish at 94 percent of the season: 77-5 in 82-0, 152-10 in 162-0. 17-0 is held a notch tighter, at 91 percent (15-2), since friends found a perfect season too easy. Modes with fewer than 20 runs from 5 players stay on the simulated line.{balance?.paused ? ' Paused.' : ''}</p>
         {balance && (
           <ul className="ot-list">
             {balance.modes.filter((m) => m.meta && (m.meta.runs > 0 || m.offset !== 0)).map((m) => (

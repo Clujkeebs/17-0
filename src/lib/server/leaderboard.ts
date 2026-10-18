@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { cached } from './redis';
-import { allTimePointsExpr } from './leaderboard-sql';
+import { SEASON_GAMES, allTimePointsExpr, countedPerfect, perfectSeasonRows } from './leaderboard-sql';
 import { scoreSummary } from './result-summary';
 import { dailyDateET } from '@/lib/game/daily';
 import { isOwnerEmail, resolveStyle, type PlayerLook } from '@/lib/cosmetics';
@@ -90,6 +90,33 @@ export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows
     const styles = await stylesFor(rows.map((r) => r.userId ?? ''));
     return { rows: rows.map((r, i) => ({ rank: (page - 1) * perPage + i + 1, username: r.username ?? 'anonymous', points: r.points, games: r.games, best: r.best, style: styles.get(r.userId ?? '') })), total: t?.n ?? 0 };
   });
+}
+
+export interface UndefeatedRow { rank: number; username: string; count: number; style?: PlayerLook }
+
+/**
+ * Who has gone undefeated the most in one draft game (17-0, 82-0, 162-0 or 44-0): perfect seasons, Today and Casual,
+ * with Casual ones capped per day (see CASUAL_PERFECTS_PER_DAY). Ties go to whoever reached the count first.
+ */
+export async function undefeatedLeaderboard(gameType: string, hardOnly = false, limit = 100): Promise<UndefeatedRow[]> {
+  if (!SEASON_GAMES[gameType]) return [];
+  return cached(`lb:perfect:${gameType}${hardOnly ? ':hard' : ''}`, 300, async () => {
+    const rows = await db.execute<{ user_id: string; username: string; n: number }>(dsql`
+      with perfect as (${perfectSeasonRows(dsql`game_type = ${gameType} and user_id not in (select id from user_accounts where lb_hidden) ${hardOnly ? dsql`and coalesce((result_data->>'hard')::boolean, false)` : dsql``}`)})
+      select user_id, max(username) as username, count(*)::int as n
+      from perfect where ${countedPerfect}
+      group by user_id order by n desc, max(created_at) asc limit ${limit}`);
+    const styles = await stylesFor(rows.map((r) => r.user_id));
+    return rows.map((r, i) => ({ rank: i + 1, username: r.username, count: r.n, style: styles.get(r.user_id) }));
+  });
+}
+
+/** One player's perfect seasons across the draft games, counted the way the boards count them. */
+export async function perfectSeasonsFor(userId: string): Promise<number> {
+  const [r] = await db.execute<{ n: number }>(dsql`
+    with perfect as (${perfectSeasonRows(dsql`user_id = ${userId}`)})
+    select count(*)::int as n from perfect where ${countedPerfect}`);
+  return r?.n ?? 0;
 }
 
 export async function getResult(id: string) {

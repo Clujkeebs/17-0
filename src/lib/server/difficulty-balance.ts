@@ -5,7 +5,7 @@ import { FORMATS, isFantasy, type FormatKey, type PoolKey } from '@/lib/game/sev
 import { NBA_WIN_SPAN } from '@/lib/game/eightytwo';
 import { MLB_WIN_SPAN } from '@/lib/game/onesixtytwo';
 import { WNBA_WIN_SPAN } from '@/lib/game/fortyfour';
-import { MIN_PLAYERS, MIN_RUNS, TARGET_TOP_TENTH, lastRunsPerPlayer, modeKey, nextOffset, quantile, wantedOffset } from '@/lib/game/difficulty';
+import { MIN_PLAYERS, MIN_RUNS, lastRunsPerPlayer, modeKey, nextOffset, quantile, targetTopTenth, wantedOffset } from '@/lib/game/difficulty';
 import { get53Floor, getAllTimeFloor, getFantasyFloor } from './calibrate';
 import { getNbaFloor } from './nba-floor';
 import { getMlbFloor } from './mlb-floor';
@@ -91,11 +91,12 @@ export async function balanceDifficulty(opts: { force?: boolean; dry?: boolean; 
       } else {
         const strengths = runs.map((r) => r.strength);
         meta.top = Math.round(quantile(strengths, 0.9) * 10) / 10;
-        meta.wanted = Math.round(wantedOffset(strengths, line.base, line.span) * 100) / 100;
+        const target = targetTopTenth(mode);
+        meta.wanted = Math.round(wantedOffset(strengths, line.base, line.span, target) * 100) / 100;
         const next = Math.round(nextOffset(current, meta.wanted, line.span) * 100) / 100;
         if (!opts.dry && next !== current) { meta.offset = next; await redis.set(OFFSET_KEY(mode), String(next)); changed.push(mode); }
         console.log(opts.dry ? '[difficulty] balance preview' : '[difficulty] balance', mode, `runs=${runs.length} players=${players} top-tenth=${meta.top} line=${line.base}`,
-          `target ${(TARGET_TOP_TENTH * 100).toFixed(0)}% wants offset ${meta.wanted >= 0 ? '+' : ''}${meta.wanted}, offset ${current} -> ${next}${opts.dry ? ' (not applied)' : ''}`);
+          `target ${(target * 100).toFixed(0)}% wants offset ${meta.wanted >= 0 ? '+' : ''}${meta.wanted}, offset ${current} -> ${next}${opts.dry ? ' (not applied)' : ''}`);
       }
       await redis.set(META_KEY(mode), JSON.stringify(meta), 'EX', 45 * 86400);
     }

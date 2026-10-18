@@ -32,7 +32,7 @@ export interface WnbaPayload {
   picks: { playerId: number; teamId: number; season: number; slot: WnbaSlot; era: WnbaSpin }[];
 }
 
-export interface WnbaBoardPlayer { id: number; name: string; position: string; season: number; seasonLabel: string; value: number; ppg: number; rpg: number; apg: number; headshot: string | null; fits: WnbaSlot[] }
+export interface WnbaBoardPlayer { id: number; /** Already on your roster from another team or era: shown, but he cannot be drafted twice. */ onRoster?: boolean; name: string; position: string; season: number; seasonLabel: string; value: number; ppg: number; rpg: number; apg: number; headshot: string | null; fits: WnbaSlot[] }
 export interface WnbaTeamView { id: number; era: WnbaSpin; eraLabel: string; name: string; location: string; abbreviation: string; color: string; logoUrl: string | null; players: WnbaBoardPlayer[] }
 export interface WnbaState {
   sessionId: string; index: number; total: number; done: boolean; hard: boolean; mode: WnbaMode;
@@ -122,7 +122,8 @@ async function state(sessionId: string, p: WnbaPayload): Promise<WnbaState> {
   const index = p.picks.length, done = index >= WNBA_ROUNDS;
   const team = !done && p.current ? await board(p.current.teamId, p.current.era) : null;
   const hide = <T extends { value: number; ppg: number; rpg: number; apg: number }>(x: T): T => (p.hard ? { ...x, value: -1, ppg: -1, rpg: -1, apg: -1 } : x);
-  const view = team ? { ...team, players: (p.hard ? [...team.players].sort((a, b) => a.name.localeCompare(b.name)) : team.players).map(hide) } : null;
+  const mine = new Set(p.picks.map((x) => x.playerId));
+  const view = team ? { ...team, players: (p.hard ? [...team.players].sort((a, b) => a.name.localeCompare(b.name)) : team.players).map(hide).map((x) => (mine.has(x.id) ? { ...x, onRoster: true } : x)) } : null;
   const pickedTeams = await Promise.all(p.picks.map(async (x) => ({ x, t: await board(x.teamId, x.era) })));
   const roster = WNBA_SLOTS.map((slot) => {
     const hit = pickedTeams.find(({ x }) => x.slot === slot);
@@ -192,6 +193,7 @@ export async function pickWnba(sessionId: string, tok: string, playerId: number,
   const team = await board(p.current.teamId, p.current.era);
   const pl = team?.players.find((x) => x.id === playerId);
   if (!team || !pl) throw new WnbaError('That player is not on this board.');
+  if (p.picks.some((x) => x.playerId === playerId)) throw new WnbaError(`${pl.name} is already on your roster. Take someone else.`);
   const taken = new Set(p.picks.map((x) => x.slot));
   const openSlots = WNBA_SLOTS.filter((x) => !taken.has(x));
   // Out of position is allowed; it just costs value. Default to a natural open spot.

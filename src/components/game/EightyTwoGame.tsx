@@ -190,8 +190,10 @@ export function EightyTwoGame({ franchises, signedIn, playedTodayId = null, init
   const norm = (x: string) => x.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z ]/g, '');
   const q = norm(query).trim();
   // Type a name in any mode; without a query, Hard shows nothing and the other modes show the top 12 (or everyone).
-  const found = team && q.length >= 1 ? team.players.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)) : null;
-  const list = team ? (found ? found.slice(0, game.hard ? 6 : 40) : game.hard ? [] : showAll ? team.players : team.players.slice(0, 12)) : [];
+  // Anyone already on your roster (from another team or era) is listed last and cannot be drafted twice.
+  const ordered = team ? [...team.players].sort((a, b) => Number(!!a.onRoster) - Number(!!b.onRoster)) : [];
+  const found = team && q.length >= 1 ? ordered.filter((p) => norm(p.name).split(' ').some((w) => w.startsWith(q.split(' ')[0])) && norm(p.name).includes(q)) : null;
+  const list = team ? (found ? found.slice(0, game.hard ? 6 : 40) : game.hard ? [] : showAll ? ordered : ordered.slice(0, 12)) : [];
 
   return (
     <div className="g-wrap g-board">
@@ -243,10 +245,10 @@ export function EightyTwoGame({ franchises, signedIn, playedTodayId = null, init
                 <ul className="g-list">
                   {list.map((p) => (
                     <li key={p.id}>
-                      <button type="button" className="g-player" onClick={() => pick(p)} disabled={!!busy}
-                        aria-label={`Draft ${p.name}, ${p.position}, ${p.seasonLabel}${p.value >= 0 ? `, ${stat(p.ppg)} points, ${stat(p.rpg)} rebounds, ${stat(p.apg)} assists, value ${p.value.toFixed(0)}` : ''}`}>
+                      <button type="button" className={`g-player${p.onRoster ? ' g-taken' : ''}`} onClick={() => pick(p)} disabled={!!busy || !!p.onRoster} title={p.onRoster ? 'Already on your roster' : undefined}
+                        aria-label={`${p.onRoster ? 'Already on your roster: ' : 'Draft '}${p.name}, ${p.position}, ${p.seasonLabel}${p.value >= 0 ? `, ${stat(p.ppg)} points, ${stat(p.rpg)} rebounds, ${stat(p.apg)} assists, value ${p.value.toFixed(0)}` : ''}`}>
                         <PlayerFace name={p.name} src={p.headshot} color={team.color} size={44} />
-                        <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position} · {game.edition === 'standard' ? '2K overall' : p.seasonLabel}{p.value >= 0 && game.edition !== 'standard' && <> · {stat(p.ppg)} / {stat(p.rpg)} / {stat(p.apg)}</>}</span></span>
+                        <span className="g-player-name">{p.name}<span className="g-player-pos">{p.position} · {game.edition === 'standard' ? '2K overall' : p.seasonLabel}{p.value >= 0 && game.edition !== 'standard' && <> · {stat(p.ppg)} / {stat(p.rpg)} / {stat(p.apg)}</>}{p.onRoster && <span className="g-filled"> · on your roster</span>}</span></span>
                         <span className="g-ovr num" aria-hidden="true">{p.value >= 0 ? p.value.toFixed(0) : '??'}</span>
                       </button>
                     </li>

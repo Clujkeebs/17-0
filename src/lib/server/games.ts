@@ -11,6 +11,7 @@ import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { coachLegendGrade, coachLegendId, coachLegendLine, coachLegendsFor } from '@/lib/game/coach-legends';
 import { BUILD_CATEGORIES, BUILD_ELIGIBLE, BUILD_TEAMS, type BuildPosition } from '@/lib/game/build';
 import { createRng } from '@/lib/game/prng';
+import { personKey } from '@/lib/game/person';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
 
 export type GameType = '17-0' | 'build-a-player';
@@ -27,8 +28,8 @@ export interface SpinPayload {
   /** 17-0 roster size (default 6) and player pool (default current). Today is always 6 and current. */
   format?: FormatKey;
   pool?: PoolKey;
-  /** Server-side draft log. One entry per revealed team, in order. The next team is revealed only after a pick. */
-  picks?: { teamId: number; id: string; slot?: string; trait?: string }[];
+  /** Server-side draft log. One entry per revealed team, in order. The next team is revealed only after a pick. `pid` is who he is (person.ts), so one person cannot be drafted from two franchises. */
+  picks?: { teamId: number; id: string; slot?: string; trait?: string; pid?: string }[];
   /** Every team a re-spin can land on, and re-spins used per round: the n-th re-spin of a round is the same for everyone (spin-order.ts). */
   respinPool?: number[];
   roundRespins?: number[];
@@ -36,7 +37,7 @@ export interface SpinPayload {
   challengeId?: string;
 }
 
-export interface PublicPlayer { id: string; name: string; slug: string; position: string; group: PositionGroup | 'HC' | 'DST'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** All-time legend from ESPN history: his best season with this franchise, e.g. "1994 · 112 rec, 1,499 yds, 13 TD". */ line?: string; /** All-time: a current player shown at his best season (his prime) instead of today's rating. */ prime?: boolean; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
+export interface PublicPlayer { id: string; /** Who he is, whichever franchise's row this is (person.ts). */ pid?: string; name: string; slug: string; position: string; group: PositionGroup | 'HC' | 'DST'; ovr: number; slots?: string[]; attrs?: Partial<Record<string, number>>; img?: string | null; legend?: boolean; /** All-time legend from ESPN history: his best season with this franchise, e.g. "1994 · 112 rec, 1,499 yds, 13 TD". */ line?: string; /** All-time: a current player shown at his best season (his prime) instead of today's rating. */ prime?: boolean; /** Fantasy edition: blended PPR points per game. */ fpts?: number }
 export interface PublicTeam { id: number; name: string; city: string; abbreviation: string; slug: string; color: string; logoUrl: string | null; players: PublicPlayer[] }
 
 const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
@@ -123,14 +124,14 @@ export async function publicTeams(teamIds: number[], gameType: GameType, positio
     const list: PublicPlayer[] = [...(legends.get(id) ?? []), ...players.filter((p) => p.teamId === id)].map((p) => {
       const group = positionGroup(p.position);
       const attrs = position ? Object.fromEntries(BUILD_CATEGORIES[position].map((k) => [k, (p.attributes as Record<string, number>)[k] ?? 50])) : undefined;
-      return { id: p.id, name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}), ...(fantasy ? { fpts: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : {}) };
+      return { id: p.id, pid: personKey({ espnId: p.espnId, name: p.fullName, group }), name: p.fullName, slug: p.slug, position: p.position, group, ovr: p.overallRating, slots: slotsFor(group), attrs, img: p.imageBlobUrl ?? p.imageUrl, ...(p.isAllTimeGreat ? { legend: true } : {}), ...(fantasy ? { fpts: fantasyValue(p.fantasyPpg, p.fantasyGames, p.fantasyProjPpg, p.fantasyRecent) } : {}) };
     }).filter((p) => (allowed ? allowed.has(p.group as PositionGroup) : p.slots!.length > 0) && !(fantasy && p.position === 'P'));
     // All-time: today's players with a better best season appear at that season (their prime), not twice.
     const onTeam = new Set(players.filter((p) => p.teamId === id).map((p) => Number(p.espnId)));
     const hist: PublicPlayer[] = (history.get(id) ?? []).map((l) => {
       const group = l.group as PositionGroup;
       const prime = onTeam.has(l.espnId);
-      return { id: l.id, name: l.fullName, slug: '', position: l.position, group, ovr: Math.round(l.grade), slots: slotsFor(group), img: l.headshot, legend: !prime, ...(prime ? { prime: true } : {}), line: `${prime ? 'Prime · ' : ''}${l.season} · ${l.line}` };
+      return { id: l.id, pid: personKey({ espnId: l.espnId, name: l.fullName, group }), name: l.fullName, slug: '', position: l.position, group, ovr: Math.round(l.grade), slots: slotsFor(group), img: l.headshot, legend: !prime, ...(prime ? { prime: true } : {}), line: `${prime ? 'Prime · ' : ''}${l.season} · ${l.line}` };
     }).filter((p) => p.slots!.length > 0);
     const primed = new Set((history.get(id) ?? []).filter((l) => onTeam.has(l.espnId)).map((l) => l.espnId));
     const isPrimed = (p: PublicPlayer) => !p.legend && !p.prime && primed.has(Number(players.find((x) => x.id === p.id)?.espnId));

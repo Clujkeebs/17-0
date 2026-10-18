@@ -5,6 +5,7 @@ import { LEGEND_FRANCHISE } from '@/lib/game/legends';
 import { coachLegendGrade, coachLegendsFor } from '@/lib/game/coach-legends';
 import { fantasyValue } from '@/lib/game/fantasy';
 import { createRng } from '@/lib/game/prng';
+import { nameKey } from '@/lib/game/person';
 import { eq } from 'drizzle-orm';
 import { getRedis } from './redis';
 import { groupCeilings } from './data';
@@ -61,7 +62,9 @@ function simulate(format: FormatKey, b: Awaited<ReturnType<typeof boards>>, mode
     const board = order.slice(0, fmt.slots.length); const reserves = order.slice(fmt.slots.length, fmt.slots.length + MAX_RESPINS);
     const picks: Pick[] = []; const open = new Set(fmt.slots.map((d) => d.key));
     const bestOn = (t: number) => {
-      const opts = b.byTeam.get(t)!.flatMap((p) => [...open].filter((s) => slotAccepts(s, p.group, format)).map((s) => ({ ...p, slot: s })));
+      // Same rule as the game: one person is on the roster once, even if two franchises list him (All-time legends).
+      const have = new Set(picks.map((x) => nameKey(x.name)));
+      const opts = b.byTeam.get(t)!.filter((p) => !have.has(nameKey(p.name))).flatMap((p) => [...open].filter((s) => slotAccepts(s, p.group, format)).map((s) => ({ ...p, slot: s })));
       let best: Pick | null = null, bv = -1;
       for (const o of opts) { const v = value(o); if (v > bv) { bv = v; best = o; } }
       return { opts, best, grade: best ? gradePick(best) : 0 };

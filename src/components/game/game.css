@@ -43,6 +43,8 @@
 @keyframes land { 0% { transform: scale(.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
 .team-mono { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 700; font-family: var(--font-num); }
 
+.g-rostered { margin: 0; padding: 12px 24px 0; }
+@media (max-width: 600px) { .g-rostered { padding: 10px 16px 0; } }
 .g-roster { padding: 8px 24px 24px; opacity: .3; pointer-events: none; transition: opacity .35s; }
 .g-roster.in { opacity: 1; pointer-events: auto; }
 @media (max-width: 600px) { .g-roster { padding: 4px 16px 16px; } }
@@ -53,6 +55,7 @@
 .g-player { width: 100%; display: flex; align-items: center; gap: 14px; padding: 10px 14px 10px 10px; min-height: 64px; background: var(--navy); border: 1px solid var(--steel); border-radius: 14px; color: var(--bone); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
 @media (hover: hover) and (pointer: fine) { .g-player:hover:not(:disabled) { border-color: var(--bone); box-shadow: 0 6px 20px rgba(0,0,0,.06); transform: translateY(-1px); } }
 .g-player:disabled { cursor: default; }
+.g-player.g-taken { opacity: .55; }
 .g-player-name { flex: 1; font-weight: 600; font-size: .98rem; display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
 .g-player-pos { font-weight: 400; font-size: .8rem; color: var(--bone-dim); }
 .g-ovr { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; }

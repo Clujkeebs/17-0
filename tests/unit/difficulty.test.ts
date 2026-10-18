@@ -28,7 +28,7 @@ describe('difficulty stats', () => {
   });
 });
 
-import { MIN_PLAYERS, MIN_RUNS, OFFSET_LIMIT, PER_PLAYER, STEP_LIMIT, TARGET_TOP_TENTH, lastRunsPerPlayer, modeKey, nextOffset, quantile, trust, wantedOffset } from '@/lib/game/difficulty';
+import { MIN_PLAYERS, MIN_RUNS, OFFSET_LIMIT, PER_PLAYER, STEP_LIMIT, TARGET_TOP_TENTH, TARGET_TOP_TENTH_17_0, lastRunsPerPlayer, modeKey, nextOffset, quantile, targetTopTenth, trust, wantedOffset } from '@/lib/game/difficulty';
 
 describe('daily balance step', () => {
   it('quantile interpolates between neighbours and ignores input order', () => {
@@ -50,6 +50,31 @@ describe('daily balance step', () => {
     const right = quantile(s, 0.9) - TARGET_TOP_TENTH * 26;
     expect(wantedOffset(s, right - 2, 26)).toBeGreaterThan(0);              // line too low, runs too easy: harder
     expect(wantedOffset(s, right + 2, 26)).toBeLessThan(0);                 // line too high: easier
+  });
+  it('holds 17-0 a notch tighter than the other games', () => {
+    expect(TARGET_TOP_TENTH_17_0).toBeLessThan(TARGET_TOP_TENTH);
+    for (const m of ['17-0:6:current', '17-0:12:current', '17-0:16:all-time', '17-0:53:current', '17-0:fantasy:current']) expect(targetTopTenth(m), m).toBe(TARGET_TOP_TENTH_17_0);
+    for (const m of ['82-0:classic', '82-0:standard', '162-0:eras', '162-0:now', '44-0:eras', '44-0:now']) expect(targetTopTenth(m), m).toBe(TARGET_TOP_TENTH);
+  });
+  it('a lower target asks for a higher line, by the gap times the span, so the same runs get harder', () => {
+    const s = Array.from({ length: 400 }, (_, i) => 60 + (i % 40) * 0.5);
+    const base = quantile(s, 0.9) - TARGET_TOP_TENTH * 26;                          // a line that is already right for 94 percent
+    const at94 = wantedOffset(s, base, 26), at91 = wantedOffset(s, base, 26, TARGET_TOP_TENTH_17_0);
+    expect(at91).toBeGreaterThan(at94);
+    expect(at91 - at94).toBeCloseTo((TARGET_TOP_TENTH - TARGET_TOP_TENTH_17_0) * 26 * trust(400), 5);
+  });
+  it('moves the live 6-man 17-0 line up about half a point, over a few nights, from where it sat on 2026-10-17', () => {
+    // Real numbers from the worker log: 268 runs, best tenth at strength 93.1, line 68.8, offset -0.19.
+    const strengths = [...Array(237).fill(85), ...Array(31).fill(93.1)];            // the top tenth of 268 sits at 93.1
+    expect(quantile(strengths, 0.9)).toBeCloseTo(93.1, 5);
+    const before = wantedOffset(strengths, 68.8, 26, TARGET_TOP_TENTH), after = wantedOffset(strengths, 68.8, 26, TARGET_TOP_TENTH_17_0);
+    expect(before).toBeCloseTo(-0.12, 1);                                           // the log said "wants offset -0.1"
+    expect(after).toBeGreaterThan(0.4); expect(after).toBeLessThan(0.7);
+    // Each night closes half the gap, at most half a point, and it stops within a tenth of the target.
+    let offset = -0.19; const nights: number[] = [];
+    for (let n = 0; n < 8; n++) { offset = Math.round(nextOffset(offset, after, 26) * 100) / 100; nights.push(offset); }
+    expect(nights[0]).toBeGreaterThan(-0.19);
+    expect(Math.abs(nights.at(-1)! - after)).toBeLessThan(0.1);
   });
   it('trusts few runs less and never asks for more than 15 percent of the span', () => {
     const many = Array.from({ length: 400 }, (_, i) => 60 + (i % 20));

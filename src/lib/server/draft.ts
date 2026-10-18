@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
-import { loadSession, publicTeams, type GameType, type PublicTeam, type SpinPayload } from './games';
+import { loadSession, publicTeams, type GameType, type PublicPlayer, type PublicTeam, type SpinPayload } from './games';
+import { peopleOn } from '@/lib/game/person';
 import { FORMATS, MAX_RESPINS, respinsFor, type FormatKey, type PoolKey } from '@/lib/game/seventeen';
 import { TRAITS, traitValue } from '@/lib/game/build';
 import { getTeams } from './data';
@@ -16,13 +17,13 @@ async function ensurePlayable(gameType: GameType, p: SpinPayload): Promise<SpinP
   const picks = p.picks ?? [], index = picks.length;
   if (index >= p.teams.length) return p;
   const open = FORMATS[format].slots.map((d) => d.key).filter((k) => !picks.some((x) => x.slot === k));
-  const taken = new Set(picks.map((x) => x.id));
+  const taken = new Set(picks.map((x) => x.id)), people = peopleOn(picks);
   const ids = (await getTeams()).map((t) => t.id).sort((a, b) => a - b);
   const start = Math.max(0, ids.indexOf(p.teams[index]));
   for (let i = 0; i < ids.length; i++) {
     const id = ids[(start + i) % ids.length];
     const [t] = await publicTeams([id], gameType, p.position, teamOpts(p));
-    if (t?.players.some((x) => !taken.has(x.id) && x.slots?.some((k) => open.includes(k)))) {
+    if (t?.players.some((x) => !taken.has(x.id) && !(x.pid && people.has(x.pid)) && x.slots?.some((k) => open.includes(k)))) {
       if (id === p.teams[index]) return p;
       const teams = [...p.teams]; teams[index] = id;
       return { ...p, teams };
@@ -39,9 +40,11 @@ export interface DraftState {
   total: number;            // teams in this game
   team: PublicTeam | null;  // current team, null when the draft is complete
   respinsLeft: number;
-  picks: { teamId: number; id: string; slot?: string; trait?: string; value?: number; name: string; position: string; ovr: number; fpts?: number; team: string; teamColor: string; logoUrl: string | null }[];
+  picks: { teamId: number; id: string; slot?: string; trait?: string; pid?: string; value?: number; name: string; position: string; ovr: number; fpts?: number; team: string; teamColor: string; logoUrl: string | null }[];
   done: boolean;
   hard: boolean;
+  /** Players left off this board because the same person is already on the roster under another franchise (All-time legends), so the board can say why he is missing. */
+  rostered?: string[];
   /** 17-0 only: roster size, player pool and the slots to fill, in order. */
   format?: FormatKey;
   pool?: PoolKey;
@@ -64,12 +67,15 @@ export async function draftState(sessionId: string, gameType: GameType, p: SpinP
   // alphabetical so its order cannot leak the ranking.
   const hide = <T extends { ovr: number; attrs?: unknown; fpts?: number; line?: string }>(x: T): T => (p.hard ? { ...x, ovr: -1, attrs: undefined, line: undefined, ...(x.fpts !== undefined ? { fpts: -1 } : {}) } : x);
   const order = <T extends { name: string }>(list: T[]) => (p.hard ? [...list].sort((a, b) => a.name.localeCompare(b.name)) : list);
-  // When teams come around again (the 53), players already on your roster are off the board.
-  const taken = new Set(picks.map((x) => x.id));
-  const team = done ? null : current ? { ...current, players: order(current.players.filter((x) => !taken.has(x.id)).map(hide)) } : null;
+  // Players already on your roster are off the board: the same row when teams come around again (the 53), or the same person under another franchise (an All-time legend who starred for two).
+  const taken = new Set(picks.map((x) => x.id)), people = peopleOn(picks);
+  const same = (x: PublicPlayer) => taken.has(x.id) || (!!x.pid && people.has(x.pid));
+  const team = done ? null : current ? { ...current, players: order(current.players.filter((x) => !same(x)).map(hide)) } : null;
+  const elsewhere = done || !current ? [] : current.players.filter((x) => !taken.has(x.id) && !!x.pid && people.has(x.pid)).map((x) => x.name);
   return {
     sessionId, index, total: p.teams.length, done, hard: !!p.hard,
     team,
+    rostered: elsewhere,
     respinsLeft: respinsLeft(p),
     ...(gameType === '17-0' ? { format: teamOpts(p).format, pool: teamOpts(p).pool, slots: FORMATS[teamOpts(p).format].slots.map(({ key, label, hint }) => ({ key, label, hint })) } : {}),
     picks: picks.map((x, i) => {
@@ -126,7 +132,7 @@ export async function pickPlayer(sessionId: string, token: string, gameType: Gam
   const [team] = await publicTeams([p.teams[index]], gameType, p.position, teamOpts(p));
   const player = team.players.find((x) => x.id === playerId);
   if (!player) throw new DraftError(`That player is not on the ${team.name}.`);
-  if (picks.some((x) => x.id === playerId)) throw new DraftError(`${player.name} is already on your roster.`);
+  if (picks.some((x) => x.id === playerId) || (player.pid && picks.some((x) => x.pid === player.pid))) throw new DraftError(`${player.name} is already on your roster.`);
   let chosenSlot: string | undefined;
   if (gameType === '17-0') {
     const open = FORMATS[teamOpts(p).format].slots.map((d) => d.key).filter((x) => !picks.some((y) => y.slot === x));
@@ -141,7 +147,7 @@ export async function pickPlayer(sessionId: string, token: string, gameType: Gam
     if (!t) throw new DraftError('Pick an open trait for this player.');
     chosenTrait = t.key;
   }
-  const next = await ensurePlayable(gameType, { ...p, picks: [...picks, { teamId: team.id, id: player.id, slot: chosenSlot, trait: chosenTrait }] });
+  const next = await ensurePlayable(gameType, { ...p, picks: [...picks, { teamId: team.id, id: player.id, slot: chosenSlot, trait: chosenTrait, ...(player.pid ? { pid: player.pid } : {}) }] });
   await db.update(schema.gameSessions).set({ spinPayload: next }).where(eq(schema.gameSessions.id, s.id));
   return draftState(s.id, gameType, next);
 }

@@ -29,11 +29,19 @@ export const describeStats = (s: WinStats) => `n=${s.n} perfect ${pct(s.perfect)
  * Keeping every mode equally hard. The simulated drafters keep each mode's win line in step with the data (ratings
  * change), but real players are not simulated drafters, so a daily balance step looks at what real Casual Easy runs
  * actually reached and nudges each mode's win line until the best tenth of runs finish at the same place everywhere:
- * 16-1 in 17-0, 77-5 in 82-0, 152-10 in 162-0 (94 percent of the season). That puts a perfect season at a few in a
- * hundred, the way 6-man 17-0 already plays. The nudge is an offset added to the win line, in the line's own points.
+ * 77-5 in 82-0, 152-10 in 162-0 (94 percent of the season), and a notch tighter in 17-0 (see TARGET_TOP_TENTH_17_0). That puts a
+ * perfect season at a few in a hundred. The nudge is an offset added to the win line, in the line's own points.
  * It works from team strengths, not records, so it does not depend on what line the runs were graded against.
  */
 export const TARGET_TOP_TENTH = 0.94;
+/**
+ * 17-0 is held a notch tighter: by 2026-10-17 real Casual 6-man runs were 13.5 percent perfect (2.8 percent five days earlier)
+ * and friends asked for a harder 17-0. The best tenth finishes at 91 percent of the season, 15-2, instead of 16-1. The other
+ * games keep 94 percent until they ask for the same.
+ */
+export const TARGET_TOP_TENTH_17_0 = 0.91;
+/** The yardstick for one mode, from its key ('17-0:6:current', '82-0:classic', ...). */
+export const targetTopTenth = (mode: string): number => (mode.startsWith('17-0:') ? TARGET_TOP_TENTH_17_0 : TARGET_TOP_TENTH);
 /** At least this many runs, from at least this many players, before a mode is adjusted at all. */
 export const MIN_RUNS = 20;
 export const MIN_PLAYERS = 5;
@@ -75,9 +83,9 @@ export function modeKey(game: string, f: { format?: string; pool?: string; editi
  * Where the offset should sit today: the win line that would put the best tenth of these team strengths at the
  * target, as a distance from the line in force without any offset, shrunk toward zero when there are few runs.
  */
-export function wantedOffset(strengths: readonly number[], base: number, span: number): number {
+export function wantedOffset(strengths: readonly number[], base: number, span: number, target = TARGET_TOP_TENTH): number {
   if (!strengths.length) return 0;
-  const line = quantile(strengths, 0.9) - TARGET_TOP_TENTH * span;
+  const line = quantile(strengths, 0.9) - target * span;
   return clampTo((line - base) * trust(strengths.length), OFFSET_LIMIT * span);
 }
 

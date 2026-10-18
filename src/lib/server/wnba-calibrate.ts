@@ -10,7 +10,7 @@ import { getWnbaFloor, wnbaFloorKey } from './wnba-floor';
 import { eraTeams, lineValue, seasonGames } from './wnba-data';
 import { describeStats, statsFromWins } from '@/lib/game/difficulty';
 
-type Cand = { name: string; position: string; teamId: number; season: number; value: number; apg: number };
+type Cand = { pid: number; name: string; position: string; teamId: number; season: number; value: number; apg: number };
 /** A careful drafter using both re-spins goes 44-0 about this often (the same line 82-0 and 162-0 are held to). */
 const TARGET_PERFECT = 0.03;
 const RESPIN_BELOW = 80;
@@ -44,7 +44,7 @@ async function boards(mode: WnbaMode) {
       const value = lineValue(r.ps, games);
       const m = byTeam.get(r.ps.teamId) ?? new Map<number, Cand>();
       const cur = m.get(r.p.id);
-      if (!cur || value > cur.value) m.set(r.p.id, { name: r.p.fullName, position: r.p.position, teamId: r.ps.teamId, season: r.ps.season, value, apg: r.ps.apg });
+      if (!cur || value > cur.value) m.set(r.p.id, { pid: r.p.id, name: r.p.fullName, position: r.p.position, teamId: r.ps.teamId, season: r.ps.season, value, apg: r.ps.apg });
       byTeam.set(r.ps.teamId, m);
     }
     out.set(e.key, new Map([...byTeam].filter(([, m]) => m.size >= 5).map(([t, m]) => [t, [...m.values()].sort((a, b) => b.value - a.value)])));
@@ -60,6 +60,8 @@ function simulateWins(b: Awaited<ReturnType<typeof boards>>, policy: 'greedy' | 
     const rng = createRng(`wnbacal:${policy}:${g}`);
     let eraLeft = policy === 'respin' && !oneEra ? WNBA_ERA_RESPINS : 0, teamLeft = policy === 'respin' ? WNBA_TEAM_RESPINS : 0;
     const used = new Set<number>(), picks: Cand[] = [], perEra = new Map<string, number>();
+    // Same rule as the game: a player already on the roster cannot be drafted again from another team or era.
+    const mine = (c: Cand) => picks.some((x) => x.pid === c.pid);
     // Same rule as the game: each era gives one pick (Right now has a single era, so the rule does not apply there).
     const live = () => (oneEra ? eras : eras.filter((x) => (perEra.get(x) ?? 0) < WNBA_ERA_PICKS_MAX));
     const spin = (era?: string) => {
@@ -70,12 +72,12 @@ function simulateWins(b: Awaited<ReturnType<typeof boards>>, policy: 'greedy' | 
     for (let round = 0; round < WNBA_ROUNDS; round++) {
       let { e, t } = spin();
       if (policy === 'respin') {
-        const top = () => b.get(e)!.get(t)![0].value;
+        const top = () => (b.get(e)!.get(t)!.find((c) => !mine(c)) ?? b.get(e)!.get(t)![0]).value;
         while (top() < RESPIN_BELOW && (teamLeft || (eraLeft && live().length > 1))) {
           if (teamLeft) { teamLeft--; ({ e, t } = spin(e)); } else { eraLeft--; const cur = e; ({ e, t } = spin(rng.pick(live().filter((x) => x !== cur)))); }
         }
       }
-      const list = b.get(e)!.get(t)!;
+      const list = b.get(e)!.get(t)!.filter((c) => !mine(c));
       picks.push(policy === 'random' ? rng.pick(list) : list[0]);
       used.add(t); perEra.set(e, (perEra.get(e) ?? 0) + 1);
     }

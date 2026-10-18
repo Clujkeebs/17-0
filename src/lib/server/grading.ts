@@ -35,7 +35,7 @@ export async function saveResult(...args: Parameters<typeof saveResultTx>) {
   const challengeId = (s.spinPayload as { challengeId?: unknown } | undefined)?.challengeId;
   if (typeof challengeId === 'string') await recordEntry(challengeId, id, score, ctx.userId, ctx.username).catch((e) => console.warn('[challenge] entry failed', (e as Error).message));
   // Signed-in results change the leaderboards; clear their cache so the player sees themselves immediately.
-  if (ctx.userId) await Promise.all([s.isDaily ? invalidatePrefix(`lb:daily:${gameType}:`) : null, s.isDaily ? invalidatePrefix(`lb:week:${gameType}:`) : null, invalidatePrefix('lb:all:')]).catch(() => {});
+  if (ctx.userId) await Promise.all([s.isDaily ? invalidatePrefix(`lb:daily:${gameType}:`) : null, s.isDaily ? invalidatePrefix(`lb:week:${gameType}:`) : null, invalidatePrefix('lb:all:'), perfect ? invalidatePrefix(`lb:perfect:${gameType}`) : null]).catch(() => {});
   // Points never block a result: a failed grant is logged and the game still saves.
   if (ctx.userId) await earnForResult(ctx.userId, gameType, s.isDaily, perfect, id).catch((e) => console.warn('[points] earn failed', (e as Error).message));
   return id;

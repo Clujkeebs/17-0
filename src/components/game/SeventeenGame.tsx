@@ -223,6 +223,7 @@ export function SeventeenGame({ reelPool, signedIn, playedTodayId, initialMode, 
               </div>
             </div>
 
+            {landed && draft.rostered?.length ? <p className="hint g-rostered">Already on your team: {draft.rostered.join(', ')}.</p> : null}
             {!landed ? <div className="g-roster-wait" aria-hidden="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 14 }} />)}</div> : draft.hard ? (
               <HardSearch team={team} openSlots={openSlots} query={query} setQuery={setQuery} busy={!!busy} onPick={(p) => pick(p)} />
             ) : <div className="g-roster in">

@@ -96,11 +96,14 @@ test('162-0 challenge: two starts from one challenge draw the same board', async
   test.skip(first.status === 503, 'No MLB data in this database yet');
   let s = first.d;
   const auth = { sessionId: s.sessionId, token: s.token };
-  while (!s.done) {
+  // Never someone already on the roster (the server refuses him twice), and a bounded loop so a mistake fails instead of hanging.
+  for (let round = 0; round < 30 && !s.done; round++) {
     const taken = new Set(s.roster.filter((r: { pick: unknown }) => r.pick).map((r: { slot: string }) => r.slot));
-    const p = s.team.players.find((x: { fits: string[] }) => x.fits.some((f) => !taken.has(f))) ?? s.team.players[0];
+    const open = s.team.players.filter((x: { onRoster?: boolean }) => !x.onRoster);
+    const p = open.find((x: { fits: string[] }) => x.fits.some((f) => !taken.has(f))) ?? open[0];
     s = { ...s, ...(await call({ action: 'pick', playerId: p.id, ...auth })).d };
   }
+  expect(s.done).toBe(true);
   const graded = await call({ action: 'grade', ...auth });
   expect(graded.status).toBe(200);
   const ch = await request.post('/api/challenges', { data: { resultId: graded.d.id } });
@@ -115,7 +118,7 @@ test('162-0 challenge: two starts from one challenge draw the same board', async
   // Re-spins are keyed by round, not by how many were used before: x re-spins in round 1 and y does not,
   // then both re-spin round 2 once and land on the same franchise.
   const xa = { sessionId: x.sessionId, token: x.token }, ya = { sessionId: y.sessionId, token: y.token };
-  const pickAny = async (st: { team: { players: { id: number }[] } }, a: object) => (await call({ action: 'pick', playerId: st.team.players[0].id, ...a })).d;
+  const pickAny = async (st: { team: { players: { id: number; onRoster?: boolean }[] } }, a: object) => (await call({ action: 'pick', playerId: st.team.players.find((p) => !p.onRoster)!.id, ...a })).d;
   const x0 = (await call({ action: 'respin', what: 'team', ...xa })).d;
   const x1 = await pickAny(x0, xa), y1 = await pickAny(y, ya);
   const xr = (await call({ action: 'respin', what: 'team', ...xa })).d, yr = (await call({ action: 'respin', what: 'team', ...ya })).d;
@@ -136,7 +139,8 @@ test('44-0 challenge: a friend draws the same board, the game page skips setup, 
   const playOut = async (start: Record<string, any>) => {
     let s = start;
     const auth = { sessionId: s.sessionId, token: s.token };
-    while (!s.done) s = { ...s, ...(await call({ action: 'pick', playerId: s.team.players[0].id, ...auth })).d };
+    for (let round = 0; round < 30 && !s.done; round++) s = { ...s, ...(await call({ action: 'pick', playerId: s.team.players.find((p: { onRoster?: boolean }) => !p.onRoster).id, ...auth })).d };
+    expect(s.done).toBe(true);
     const graded = await call({ action: 'grade', ...auth });
     expect(graded.status).toBe(200);
     return graded.d.id as string;

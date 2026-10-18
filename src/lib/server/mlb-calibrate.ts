@@ -7,7 +7,7 @@ import { getMlbFloor, mlbFloorKey } from './mlb-floor';
 import { describeStats, statsFromWins } from '@/lib/game/difficulty';
 import { latestMlbSeason } from './mlb-sync';
 
-type Cand = { name: string; position: string; kind: MlbKind; teamId: number; season: number; value: number };
+type Cand = { pid: number; name: string; position: string; kind: MlbKind; teamId: number; season: number; value: number };
 /** A careful drafter using the re-spins goes 162-0 about this often (was 6 percent; owners asked for harder). */
 const TARGET_PERFECT = 0.03;
 const RESPIN_BELOW = 85;
@@ -23,7 +23,7 @@ async function boards(mode: MlbMode) {
       if (r.ps.season < e.from || r.ps.season > e.to) continue;
       const m = byTeam.get(r.ps.teamId) ?? new Map<number, Cand>();
       const cur = m.get(r.p.id);
-      if (!cur || r.ps.value > cur.value) m.set(r.p.id, { name: r.p.fullName, position: r.ps.position, kind: r.ps.kind as MlbKind, teamId: r.ps.teamId, season: r.ps.season, value: r.ps.value });
+      if (!cur || r.ps.value > cur.value) m.set(r.p.id, { pid: r.p.id, name: r.p.fullName, position: r.ps.position, kind: r.ps.kind as MlbKind, teamId: r.ps.teamId, season: r.ps.season, value: r.ps.value });
       byTeam.set(r.ps.teamId, m);
     }
     out.set(e.key, new Map([...byTeam].filter(([, m]) => m.size >= 11).map(([t, m]) => [t, [...m.values()].sort((a, b) => b.value - a.value)])));
@@ -46,18 +46,20 @@ function simulateWins(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'r
   for (let g = 0; g < games; g++) {
     const rng = createRng(`mlbcal:${mode}:${g}`);
     let eraLeft = mode === 'respin' && !oneEra ? MLB_ERA_RESPINS : 0, teamLeft = mode === 'respin' ? MLB_TEAM_RESPINS : 0;
-    const used = new Set<number>(), open = new Set<MlbSlot>(MLB_SLOTS), picks: MlbPick[] = [], perEra = new Map<string, number>();
+    const used = new Set<number>(), open = new Set<MlbSlot>(MLB_SLOTS), picks: (MlbPick & { pid: number })[] = [], perEra = new Map<string, number>();
+    // Same rule as the game: a player already on the roster cannot be drafted again from another team or era.
+    const fresh = (list: Cand[]) => list.filter((c) => !picks.some((x) => x.pid === c.pid));
     // Same rule as the game: an era that has given two picks is off the reel (Right now has a single era).
     const live = () => (oneEra ? eras : eras.filter((x) => (perEra.get(x) ?? 0) < MLB_ERA_PICKS_MAX));
     const spin = (era?: string) => { const e = era ?? rng.pick(live()); const teams = [...b.get(e)!.keys()].filter((t) => !used.has(t)); return { e, t: rng.pick(teams) }; };
     for (let round = 0; round < MLB_SLOTS.length; round++) {
       let { e, t } = spin();
       if (mode === 'respin') {
-        const top = () => bestFor(b.get(e)!.get(t)!, open)?.v ?? 0;
+        const top = () => bestFor(fresh(b.get(e)!.get(t)!), open)?.v ?? 0;
         if (top() < RESPIN_BELOW && teamLeft) { teamLeft--; ({ e, t } = spin(e)); }
         if (top() < RESPIN_BELOW && eraLeft && live().length > 1) { eraLeft--; const cur = e; ({ e, t } = spin(rng.pick(live().filter((x) => x !== cur)))); }
       }
-      const list = b.get(e)!.get(t)!;
+      const list = fresh(b.get(e)!.get(t)!);
       let pick = bestFor(list, open);
       if (mode === 'random') { const ok = list.filter((c) => draftSlots(c.position, c.kind).some((s) => open.has(s))); const c = ok.length ? rng.pick(ok) : null; pick = c ? bestFor([c], open) : null; }
       if (!pick) break;
