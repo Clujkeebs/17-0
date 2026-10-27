@@ -41,6 +41,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${a.fullName} vs ${b.fullName}: ratings compared`,
     description: `${a.fullName} (${a.overallRating} OVR) against ${b.fullName} (${b.overallRating} OVR), attribute by attribute, with a verdict from the 17-0 position formula.`,
     path: comparePath(a.slug, b.slug),
+    // Thousands of near-identical pairings: useful as a tool, thin as search pages.
+    noindex: true,
   });
 }
 

@@ -3,6 +3,7 @@ import { db, schema } from '@/db';
 import { GROUP_RAW, type CoachRow, type PlayerRow, type TeamRow } from '@/lib/server/data';
 import { POSITION_GROUPS, positionGroup, type AttributeKey, type PositionGroup } from '@/lib/game/attributes';
 import { safe } from './safe';
+import { buildProfiles, type PlayerLite, type TeamProfile } from './league';
 
 // Uncached, timeout-guarded reads for ISR pages. ISR already caches the rendered HTML for a day,
 // and skipping Redis here keeps the build from hanging when Redis is not reachable.
@@ -82,4 +83,17 @@ export async function topMatchups(): Promise<{ group: PositionGroup; pairs: [Pla
     if (top.length >= 3) pairs.push([top[0], top[2]], [top[1], top[2]]);
     return { group, pairs };
   }));
+}
+
+let profileCache: { at: number; value: Map<number, TeamProfile> } | null = null;
+
+/** Every team's unit ratings, from one query for the whole league, kept for ten minutes. Team pages rank themselves against it. */
+export async function loadLeagueProfiles(): Promise<Map<number, TeamProfile>> {
+  if (profileCache && Date.now() - profileCache.at < 10 * 60_000) return profileCache.value;
+  const rows = await safe(() => db.select({
+    teamId: schema.players.teamId, position: schema.players.position, overallRating: schema.players.overallRating, fullName: schema.players.fullName, slug: schema.players.slug,
+  }).from(schema.players).where(eq(schema.players.isActive, true)), [] as PlayerLite[]);
+  const value = buildProfiles(rows);
+  if (value.size) profileCache = { at: Date.now(), value };
+  return value;
 }

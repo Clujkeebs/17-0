@@ -6,6 +6,7 @@ import { dailyDateET } from '@/lib/game/daily';
 import { ArrowIcon } from '@/components/Icons';
 import { HomeBlogCards } from '@/components/HomeBlogCards';
 import { SPORTS, gamesFor } from '@/lib/game-registry';
+import { SLOT_WEIGHTS } from '@/lib/game/seventeen';
 
 export const revalidate = 60;
 export const metadata: Metadata = { alternates: { canonical: '/' } };
@@ -60,7 +61,7 @@ export default async function Home() {
           <Link href="/games/17-0" className="tile tile-wide">
             <span className="eyebrow">Daily</span>
             <h3 className="tile-h">17-0</h3>
-            <p className="muted" style={{ maxWidth: '40ch' }}>Six spins, six picks, one projected record. QB and defense carry 45 percent of the weight. The tight end carries ten and still costs you a game.</p>
+            <p className="muted" style={{ maxWidth: '40ch' }}>Six spins, six picks, one projected record. QB and defense carry {Math.round((SLOT_WEIGHTS.QB + SLOT_WEIGHTS.DEF) * 100)} percent of the weight. The tight end carries {Math.round(SLOT_WEIGHTS.TE * 100)} and still costs you a game.</p>
             <div className="mini-reel" aria-hidden="true">{['KC', 'PHI', 'BAL', 'DET', 'SF', 'BUF'].map((a, i) => <span key={a} className={i === 2 ? 'on' : ''}>{a}</span>)}</div>
             <div className="tile-foot">
               <span className="stat"><span className="v">6</span><span className="l">Picks</span></span>

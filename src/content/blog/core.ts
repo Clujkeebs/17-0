@@ -1,19 +1,13 @@
-// Blog posts as data. Rendered by src/app/(site)/blog. Keep copy free of em-dashes and en-dashes.
+// The first posts: how 17-0 is graded and why. Rendered by src/app/(site)/blog. Keep copy free of em-dashes and en-dashes.
+import type { BlogPost } from './types';
 
-export interface BlogSection { h2: string; paragraphs: string[] }
-export interface BlogPost {
-  slug: string;
-  title: string;
-  date: string; // YYYY-MM-DD
-  excerpt: string;
-  sections: BlogSection[];
-}
-
-const POSTS: BlogPost[] = [
+export const CORE_POSTS: BlogPost[] = [
   {
     slug: 'how-17-0-works',
     title: 'How 17-0 works',
     date: '2026-08-18',
+    updated: '2026-10-27',
+    category: 'Strategy',
     excerpt: 'One reel, six spins, six slots, one pick per team. What the reel does, what the grade measures, and why a perfect season is rarer than it looks.',
     sections: [
       {
@@ -26,14 +20,14 @@ const POSTS: BlogPost[] = [
       {
         h2: 'The reel',
         paragraphs: [
-          'The six teams come from a seeded shuffle of all 32 franchises. The seed is fixed when your session starts, so refreshing the page does not reroll the board. There are no re-spins. Whatever team the reel lands on, you draft from it.',
-          'The daily puzzle uses the same machinery with a seed built from the date in Eastern Time. Everyone who plays on a given day sees the same six teams in the same order. That is what makes the daily leaderboard a fair fight: same board, different decisions.',
+          'The six teams come from a seeded shuffle of all 32 franchises. The seed is fixed when your session starts, so refreshing the page does not reroll the board. Easy mode gives you two re-rolls: spend one and that round spins again and lands on a different team. Hard mode hides the ratings, makes you type player names, and gives no re-rolls at all.',
+          'Today uses the same machinery with a seed built from the date in Eastern Time. Everyone who plays Today sees the same six teams in the same order, and gets one ranked try. That is what makes the daily leaderboard a fair fight: same board, different decisions. Casual is unlimited, with a fresh board every time.',
         ],
       },
       {
         h2: 'You only see one team at a time',
         paragraphs: [
-          'This is the real constraint. You do not get to look at all six teams and plan. You see one team, you commit, and the slot is gone. If the reel opens on a team with an elite tight end and an average quarterback, taking the tight end is safe but spends a spin on the 8 percent slot. Taking the quarterback bets that no better one is coming.',
+          'This is the real constraint. You do not get to look at all six teams and plan. You see one team, you commit, and the slot is gone. If the reel opens on a team with an elite tight end and an average quarterback, taking the tight end is safe but spends a spin on the 8 percent slot. Taking the quarterback bets that no better one is coming. The two Easy mode re-rolls soften this a little, but a re-roll trades the team in front of you for a random one, which is a bet of its own. The guide to [when to use your re-rolls](/blog/when-to-use-your-re-rolls-in-17-0) covers that bet.',
           'So every pick is a guess about what the rest of the reel will bring. Defense is the easiest slot to fill late, because five position groups qualify for it and almost every team has a good defender. Quarterback is the hardest, because many teams do not have a good one. When the reel hands you a great quarterback, take him.',
         ],
       },
@@ -47,7 +41,8 @@ const POSTS: BlogPost[] = [
       {
         h2: 'Why 17-0 is hard on purpose',
         paragraphs: [
-          'A perfect season requires team strength of roughly 91 or better and a good luck roll, or about 95.6 and any roll at all. A well-drafted roster goes 17-0 roughly one time in eight. Most competent rosters land between 10 and 14 wins, which is also roughly where good real teams land. The name of the game is the goal, not the expected result.',
+          'A perfect season requires team strength of roughly 91 or better and a good luck roll, or about 95.6 and any roll at all. Most competent rosters land between 10 and 14 wins, which is also roughly where good real teams land. The name of the game is the goal, not the expected result.',
+          'The bar is not fixed. Each night the site looks at how real players have actually done and nudges the win line so the best tenth of Casual drafters land around 15-2. A perfect 17-0 is rarer than that, even for people who use their re-rolls well. The nudge is small, never more than a point or two of team strength, and it is the reason the thresholds in these posts are a few tenths off the live numbers.',
           'When you do not get there, the season recap names the slot that got exposed. Usually it is the one you filled last, from whatever team the reel had left.',
         ],
       },
@@ -57,6 +52,7 @@ const POSTS: BlogPost[] = [
     slug: 'ea-sports-madden-nfl-ratings-explained',
     title: 'EA Sports Madden NFL ratings, explained',
     date: '2026-08-25',
+    category: 'The math',
     excerpt: 'Overall is a summary, not a scouting report. What the attribute ratings are, how we use them, and where they are weakest.',
     sections: [
       {
@@ -94,12 +90,21 @@ const POSTS: BlogPost[] = [
           'If you think a rating is wrong, you are probably right about some of them. The games still use them as published, because a shared, fixed scale is what makes the leaderboard fair.',
         ],
       },
+      {
+        h2: 'Overall on the board, grade in the result',
+        paragraphs: [
+          'The draft board in Easy mode shows each player\'s overall rating, because that is the number most fans already know. The game does not grade on it. When you simulate the season, the server recomputes each pick\'s grade from his attributes with the position formula, and the result page lists the grade for every slot, which you can set against the overall you drafted on. Hard mode hides the overall until the result.',
+          'That gap is where the interesting decisions are. Two players with the same overall can grade several points apart, and the board will not tell you which is which. If you want to improve, compare the overall you drafted on with the grade you got for every pick on the result page, and look for the pattern. Players who grade above their overall are almost always the ones whose strongest attributes sit in the heaviest slots of the formula.',
+        ],
+      },
     ],
   },
   {
     slug: 'the-math-behind-the-projected-record',
     title: 'The math behind the projected record',
     date: '2026-09-01',
+    updated: '2026-10-27',
+    category: 'The math',
     excerpt: 'Team strength is a weighted average. Wins are strength minus 68.8, over 26, times 17, plus a seeded roll from minus 2 to plus 1. Here is what that implies.',
     sections: [
       {
@@ -127,7 +132,15 @@ const POSTS: BlogPost[] = [
         h2: 'The threshold for 17-0',
         paragraphs: [
           'To reach 17 wins after rounding, the formula has to produce at least 16.5. With the best roll of plus 1, team strength of 91.0 gets there. With a roll of 0, you need 92.5. With minus 1, 94.1. At 95.6 or above, even the worst roll of minus 2 still rounds to 17.',
-          'So a perfect season is within reach of any roster that grades around 91, with a one-in-four roll, and guaranteed only for rosters above 95.5. In practice a well-drafted roster goes 17-0 roughly one time in eight. For 16-1 with the best roll, the bar drops to 89.5.',
+          'So a perfect season is within reach of any roster that grades around 91, with a one-in-four roll, and guaranteed only for rosters above 95.5. For 16-1 with the best roll, the bar drops to 89.5. Those are the thresholds at the base line of 68.8. The live line moves a few tenths either way, as the next section explains.',
+        ],
+      },
+      {
+        h2: 'The live line moves a little each night',
+        paragraphs: [
+          'The 68.8 and the 26 are the base line, and every number above comes from them. The site does not leave the line alone. Once a mode has enough finished Casual games from enough different players, a nightly job compares how real drafters are doing with a target and nudges the line to close the gap. For the classic six-man roster the target is that the best tenth of drafters land around 15-2.',
+          'The nudge is capped. The line can move by at most half a point of team strength in one night, and never more than 15 percent of the 26-point span from the base. In practice it moves by tenths. If you want the exact number a roster needs today, finish a season short of perfect: the result page says where a perfect one locks in, and that is the number to trust over any table in a blog post.',
+          'The reason for the job is fairness over time. A formula fitted once in a spreadsheet drifts as the player pool changes and as people get better at the game. A line that follows real results keeps a perfect season rare, which is the only reason it is worth chasing.',
         ],
       },
       {
@@ -143,6 +156,7 @@ const POSTS: BlogPost[] = [
     slug: 'the-tight-end-slot',
     title: 'The tight end slot (8 percent)',
     date: '2026-09-08',
+    category: 'Strategy',
     excerpt: 'The smallest weight in 17-0 is also the one most likely to decide whether a good roster finishes 16-1 or 17-0.',
     sections: [
       {
@@ -180,12 +194,20 @@ const POSTS: BlogPost[] = [
           'A simple rule: fill quarterback when you see a good one, fill tight end when you see an elite one, and let defense come last, since almost any team can fill it. Eight percent is small. It is also the slot where one early decision is most likely to be the difference between very good and perfect.',
         ],
       },
+      {
+        h2: 'Two tight ends, same overall, different grades',
+        paragraphs: [
+          'The tight end formula is catching 20 percent, run blocking 20, catch in traffic 15, speed 15, route running 15 and awareness 15. Consider two tight ends with invented ratings. The first has catching 90, catch in traffic 85, run blocking 60, speed 80, route running 85 and awareness 80. The second has catching 70, catch in traffic 65, run blocking 90, speed 65, route running 65 and awareness 80.',
+          'The first grades 79.5. The second grades 73.3. A blocking specialist and a receiving threat can carry a similar overall rating and still land more than six grade points apart here, which is half a point of team strength at 8 percent. The Easy board shows the overall rating, so when two tight ends look close, ask which kind of player each one is. The formula pays slightly more for the one who catches.',
+        ],
+      },
     ],
   },
   {
     slug: 'build-a-player-the-case-for-stealing-one-attribute',
     title: 'Build a Player: the case for stealing one trait',
     date: '2026-09-15',
+    category: 'Strategy',
     excerpt: 'You do not need the best player on each team. You need the best number for each trait, placed in the right order. Those are rarely the same thing.',
     sections: [
       {
@@ -224,19 +246,40 @@ const POSTS: BlogPost[] = [
           'You will often end up taking a trait from a player nobody would start. That is the point. The build does not play the snaps. It borrows the one thing he does better than anyone else on the reel.',
         ],
       },
+      {
+        h2: 'Eight positions, five traits each',
+        paragraphs: [
+          'You can build a quarterback, running back, wide receiver, tight end, edge rusher, linebacker, cornerback or safety. Each has five traits, each trait is built from one or two Madden attributes, and each trait has a weight in the final score. The weights are not even, and they are the whole game. The heaviest traits at five of the positions are below.',
+        ],
+        table: {
+          caption: 'The heaviest traits at five Build a Player positions',
+          head: ['Position', 'Heaviest trait or traits', 'Weight'],
+          rows: [
+            ['Quarterback', 'Accuracy and poise', '25% each'],
+            ['Running back', 'Vision', '25%'],
+            ['Wide receiver', 'Route running', '25%'],
+            ['Edge rusher', 'Power rush and finesse rush', '25% each'],
+            ['Cornerback', 'Man coverage', '30%'],
+          ],
+        },
+        closing: [
+          'The rule that follows is simple. Before the first spin, look at the position and say which one or two traits carry the score. Those are the traits to spend your best numbers on, and the traits worth waiting for. If a team offers a 97 in a 15 percent trait and a 90 in a 30 percent one, the 90 is worth 27 points of score and the 97 only 14.6.',
+        ],
+      },
     ],
   },
   {
     slug: 'coach-impact-score-explained',
     title: 'Coach impact score, explained',
     date: '2026-09-22',
+    category: 'The math',
     excerpt: 'A single number for a head coach, built from roster quality, recent winning, playoff trips, rings, and tenure. The formula, the tradeoffs, and what it misses.',
     sections: [
       {
         h2: 'Why coaches need a number',
         paragraphs: [
           'The head coach slot is 9 percent of team strength in 17-0. A coach matters, just less than the quarterback the offense runs through. Players have attribute ratings. Coaches do not, at least not in a form anyone agrees on. So we built one, kept it simple, and published the formula.',
-          'The coach impact score runs from 0 to 99, like a player grade, and it plugs straight into team strength. There is no separate coach formula inside the game. The score is the grade.',
+          'The formula produces a raw number. The site then ranks the current head coaches by that number and spreads their grades evenly from 80 for the lowest to 97 for the highest. That grade, from 0 to 99 like a player grade, is what plugs into team strength. There is no separate coach formula inside the game.',
         ],
       },
       {
@@ -254,24 +297,21 @@ const POSTS: BlogPost[] = [
         ],
       },
       {
-        h2: 'Why coach scores run lower than player grades',
+        h2: 'From the raw number to the grade',
         paragraphs: [
-          'Look at the example again. A good coach with a title lands in the mid 60s. Getting into the 80s requires an elite roster, a win rate near .750, three straight playoff trips, and multiple rings. That compression is a feature. In 17-0, an 80 coach is genuinely rare, and a 70 coach is a solid pick.',
-          'It also changes strategy. Because the coach pool is compressed, the gap between the best and worst coach on a board is usually smaller than the gap between the best and worst running back. When a board forces a tradeoff between a great coach and a great running back from the same team, the running back is often the better use of that team.',
+          'Look at the example again. A good coach with a title lands in the mid 60s, and the raw formula for the whole league mostly sits between the 40s and the 60s. Dropped straight into team strength, that would make nearly every coach a liability next to a quarterback graded in the 90s. A coach is part of the team you draft, so none of them should read as a drag.',
+          'So the raw score is used only for the order. Current head coaches are ranked by it and given grades spread evenly from 80 to 97. A coach in the middle of the pack grades about 88. Legends in All-time mode are placed on the same scale from their own record and can reach 99.',
+          'It also changes strategy. The best and worst current coaches are 17 grade points apart. At 9 percent of team strength, that whole spread is about 1.5 points of strength, or one projected win. The spread between the best and worst running back on a board is usually larger. When a board forces a choice between a top coach and a top running back from the same team, the running back is often the better use of that team.',
         ],
       },
       {
         h2: 'What it misses',
         paragraphs: [
           'Scheme, play calling, game management, player development, and culture are not in the formula, because none of them can be measured cleanly from public data. The score is an outcome measure, not a talent evaluation. A brilliant first-year coach with an inherited roster will score lower than he deserves until the results catch up.',
-          'Scores are recomputed on a schedule and the site keeps a history of each one, so a coach climbs or slides as seasons enter and leave the three-year window. Each coach page shows the calculation term by term.',
+          'Scores are recomputed on a schedule and the site keeps a history of each one, so a coach climbs or slides as seasons enter and leave the three-year window. Each coach page shows the calculation term by term, then where that total ranks among the current head coaches and the grade it earns.',
         ],
       },
     ],
   },
 ];
 
-export const BLOG_POSTS: BlogPost[] = [...POSTS].sort((a, b) => b.date.localeCompare(a.date));
-export const getPost = (slug: string) => BLOG_POSTS.find((p) => p.slug === slug) ?? null;
-export const wordCount = (p: BlogPost) => p.sections.reduce((n, s) => n + s.h2.split(/\s+/).length + s.paragraphs.join(' ').split(/\s+/).length, 0);
-export const readingMinutes = (p: BlogPost) => Math.max(1, Math.round(wordCount(p) / 230));

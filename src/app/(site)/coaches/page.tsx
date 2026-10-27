@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { TeamLogo } from '@/components/TeamLogo';
 import { Avatar } from '@/components/Avatar';
 import { pageMeta } from '@/lib/seo/meta';
+import { SLOT_WEIGHTS } from '@/lib/game/seventeen';
 import { loadCoaches, loadTeamMap, teamName } from '@/lib/seo/queries';
 import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
 import { EmptyState } from '@/components/seo/EmptyState';
@@ -24,7 +25,7 @@ export default async function CoachesPage() {
       <span className="eyebrow">Head coaches</span>
       <h1>Coach impact, ranked</h1>
       <p className="muted" style={{ maxWidth: '64ch' }}>
-        The HC slot is 15 percent of team strength in 17-0. The score blends roster quality, recent winning, playoff trips, rings, and tenure.{' '}
+        The HC slot is {Math.round(SLOT_WEIGHTS.HC * 100)} percent of team strength in 17-0. The score blends roster quality, recent winning, playoff trips, rings, and tenure.{' '}
         <Link href="/blog/coach-impact-score-explained">How the score works</Link>.
       </p>
       {coaches.length === 0 ? <EmptyState title="Coaches are not loaded yet" /> : (

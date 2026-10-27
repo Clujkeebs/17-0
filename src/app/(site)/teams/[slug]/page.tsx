@@ -10,7 +10,8 @@ import type { PlayerRow } from '@/lib/server/data';
 import { pageMeta } from '@/lib/seo/meta';
 import { safe } from '@/lib/seo/safe';
 import { sportsTeamLd } from '@/lib/seo/jsonld';
-import { avg, divisionLabel, groupOf, loadRoster, loadTeam, loadTeamCoach, teamName } from '@/lib/seo/queries';
+import { avg, divisionLabel, groupOf, loadCoaches, loadLeagueProfiles, loadRoster, loadTeam, loadTeamCoach, rankOf, teamName } from '@/lib/seo/queries';
+import { teamReport } from '@/lib/seo/league';
 import { JsonLd } from '@/components/JsonLd';
 import { Monogram } from '@/components/Avatar';
 import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
@@ -43,7 +44,12 @@ export default async function TeamPage({ params }: Props) {
   const { slug } = await params;
   const t = await loadTeam(slug);
   if (!t) notFound();
-  const [roster, coach] = await Promise.all([loadRoster(t.id), loadTeamCoach(t.id)]);
+  const [roster, coach, profiles, coaches] = await Promise.all([loadRoster(t.id), loadTeamCoach(t.id), loadLeagueProfiles(), loadCoaches()]);
+  const current = coaches.filter((c) => c.teamId != null);
+  const report = teamReport({
+    name: t.name, teamId: t.id, profiles,
+    coach: coach ? { fullName: coach.fullName, score: coach.coachImpactScore, rank: rankOf(current.map((c) => c.coachImpactScore), coach.coachImpactScore), of: current.length } : null,
+  });
   const name = teamName(t);
   const path = `/teams/${t.slug}`;
   const byGroup = new Map<PositionGroup, PlayerRow[]>();
@@ -79,6 +85,28 @@ export default async function TeamPage({ params }: Props) {
         <Link className="btn btn-primary" href={`/games/17-0/${t.slug}`}>Can the {t.name} go 17-0?</Link>
         {coach && <Link className="btn" href={`/coaches/${coach.slug}`}>Coach profile</Link>}
       </div>
+
+      {report && (
+        <section aria-labelledby="report-h" style={{ marginTop: 64, maxWidth: 760 }}>
+          <h2 id="report-h">How the {t.name} stack up</h2>
+          <p>{report.overview}</p>
+          {report.unitsText && <p>{report.unitsText}</p>}
+          {report.playersText && <p>{report.playersText}</p>}
+          {report.draftText && <p>{report.draftText}</p>}
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
+            <table>
+              <caption className="sr-only">{name} unit ratings against the league</caption>
+              <thead><tr><th scope="col">Unit</th><th scope="col" className="num">Starters&apos; average</th><th scope="col" className="num">League rank</th></tr></thead>
+              <tbody>
+                {report.units.map((u) => (
+                  <tr key={u.unit}><td>{u.label.charAt(0).toUpperCase() + u.label.slice(1)}</td><td className="num">{u.rating.toFixed(1)}</td><td className="num">{u.rank} of {u.of}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted" style={{ marginTop: 12, fontSize: '.9rem' }}>A unit&apos;s rating is the average overall of its starters: one quarterback, one back, three receivers, one tight end, five linemen, two tackles, two edge rushers, three linebackers, three cornerbacks and two safeties. Ranks compare all {profiles.size} teams. The <Link href="/blog/how-to-draft-a-17-0-roster">draft guide</Link> explains how those slots are weighted in 17-0.</p>
+        </section>
+      )}
 
       {roster.length === 0 ? <div style={{ marginTop: 32 }}><EmptyState title="Roster not loaded yet" /></div> : (
         <div style={{ marginTop: 72 }}>

@@ -13,6 +13,8 @@ import { Avatar } from '@/components/Avatar';
 import { JsonLd } from '@/components/JsonLd';
 import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
 import { PlayCta } from '@/components/seo/PlayCta';
+import { coachReport } from '@/lib/seo/league';
+import { SLOT_WEIGHTS } from '@/lib/game/seventeen';
 
 export const revalidate = 86400;
 export const dynamicParams = true;
@@ -57,6 +59,17 @@ export default async function CoachPage({ params }: Props) {
     ['Years with team', `${c.yearsWithTeam} x 0.5`, c.yearsWithTeam * 0.5],
   ];
 
+  const rawTotal = parts.reduce((sum, [, , v]) => sum + v, 0);
+  const biggest = [...parts].sort((a, b) => b[2] - a[2])[0];
+  const current = all.filter((x) => x.teamId != null);
+  const isCurrent = c.teamId != null;
+  const report = coachReport({
+    name: c.fullName, raw: rawTotal, biggest: { label: biggest[0], points: biggest[2] }, score: c.coachImpactScore,
+    currentScores: current.map((x) => x.coachImpactScore), isCurrent, teamName: team ? teamName(team) : null,
+  });
+  const at = current.findIndex((x) => x.id === c.id);
+  const nearby = isCurrent && at >= 0 ? current.slice(Math.max(0, at - 2), at + 3).filter((x) => x.id !== c.id) : [];
+
   return (
     <div className="container section">
       <Breadcrumbs items={[{ name: 'Coaches', path: '/coaches' }, { name: c.fullName, path }]} />
@@ -85,7 +98,7 @@ export default async function CoachPage({ params }: Props) {
 
       <section aria-labelledby="calc-h" style={{ marginTop: 72, maxWidth: 720 }}>
         <h2 id="calc-h">Where the score comes from</h2>
-        <p className="muted">The impact score is capped at 99. The stored score is refreshed by the nightly sync, so the sum below can drift a point or two from it between updates.</p>
+        <p>{report.paragraphs[0]}</p>
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
           <table>
             <caption className="sr-only">Coach impact score components for {c.fullName}</caption>
@@ -94,13 +107,24 @@ export default async function CoachPage({ params }: Props) {
               {parts.map(([k, calc, v]) => (
                 <tr key={k}><td>{k}</td><td className="num muted">{calc}</td><td className="num">{v.toFixed(1)}</td></tr>
               ))}
+              <tr><td><strong>Raw score</strong></td><td className="num muted">sum of the five inputs</td><td className="num"><strong>{rawTotal.toFixed(1)}</strong></td></tr>
             </tbody>
           </table>
         </div>
+        {report.paragraphs.slice(1).map((para, i) => <p key={i} style={{ marginTop: 16 }}>{para}</p>)}
         <p style={{ marginTop: 16 }}><Link href="/blog/coach-impact-score-explained">Read the full explanation of the coach impact score</Link>.</p>
+        {nearby.length > 0 && (
+          <>
+            <h3 style={{ marginTop: 32 }}>Nearby on the list</h3>
+            <ul>{nearby.map((x) => <li key={x.id}><Link href={`/coaches/${x.slug}`}>{x.fullName}</Link>, grade {x.coachImpactScore}</li>)}</ul>
+          </>
+        )}
       </section>
 
-      <PlayCta title={`${c.fullName} is 15 percent of a season`} body="The head coach slot carries the same weight as your running back. Pick well." />
+      <PlayCta
+        title={`${c.fullName} is ${Math.round(SLOT_WEIGHTS.HC * 100)} percent of team strength`}
+        body={`In the six-man 17-0 game the head coach slot carries ${Math.round(SLOT_WEIGHTS.HC * 100)} percent, against ${Math.round(SLOT_WEIGHTS.RB * 100)} percent for a running back and ${Math.round(SLOT_WEIGHTS.QB * 100)} percent for a quarterback.`}
+      />
     </div>
   );
 }

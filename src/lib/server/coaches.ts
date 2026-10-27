@@ -26,7 +26,7 @@ export async function recomputeCoachImpact(): Promise<number> {
     superBowlWins: c.superBowlWins,
     yearsWithTeam: c.yearsWithTeam,
   }));
-  // The raw formula lands in the 30s to 70s and bunches up, so a straight rescale left most coaches
+  // The raw formula lands in the 30s to 80s and bunches up, so a straight rescale left most coaches
   // near the floor. Grade current head coaches by rank instead: evenly spread from 80 (worst) to 97 (best).
   // A coach is part of the team you draft, so none should read as a liability. Legends interpolate and cap at 99.
   const current = raw.filter((_, i) => coaches[i].teamId != null).sort((x, y) => x - y);

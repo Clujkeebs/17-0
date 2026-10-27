@@ -9,6 +9,7 @@ import { avatarUrl, imageVersion } from '@/lib/avatar';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
+  robots: { index: false, follow: true },
   title: 'Shop',
   description: 'Spend the points you earn playing on name colors, fonts, avatar borders, banners, titles and flair. Limited editions for the first players only.',
   alternates: { canonical: '/shop' },
