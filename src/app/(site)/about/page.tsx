@@ -32,7 +32,7 @@ export default function AboutPage() {
         </p>
         <ul>
           <li><strong>Football.</strong> <Link href="/games/17-0">17-0</Link> drafts an NFL roster from six, twelve, sixteen or all fifty-three spots, with a current pool or an All-time pool of legends and coaches. <Link href="/games/build-a-player">Build a Player</Link> assembles one player trait by trait.</li>
-          <li><strong>Basketball.</strong> <Link href="/games/82-0">82-0</Link> drafts an NBA starting five across five eras, and <Link href="/games/44-0">44-0</Link> does the same for the WNBA.</li>
+          <li><strong>Basketball.</strong> <Link href="/games/82-0">82-0</Link> drafts an NBA starting five across five eras, and <Link href="/games/44-0">44-0</Link> drafts a WNBA starting five from this season&apos;s teams.</li>
           <li><strong>Baseball.</strong> <Link href="/games/162-0">162-0</Link> drafts a lineup, a starter and a closer from every season since 1970.</li>
           <li><strong>Everything else.</strong> <Link href="/games">Dozens of quick games</Link> for football, basketball, baseball, college sports and soccer, daily puzzles such as <Link href="/games/sports-connections">Sports Connections</Link> and <Link href="/games/sports-wordle">Sportle</Link>, a <Link href="/fantasy">fantasy football hub</Link> and weekly <Link href="/pickem">Pick &apos;em</Link>.</li>
           <li><strong>Reference pages</strong> for <Link href="/players">players</Link>, <Link href="/teams">teams</Link>, <Link href="/coaches">coaches</Link> and <Link href="/positions">positions</Link>, with the ratings and the formulas behind them.</li>

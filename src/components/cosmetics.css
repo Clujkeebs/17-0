@@ -358,6 +358,8 @@
 .plate .owner-tag { display: none; }
 .plate .nm-title { font-size: .56em; padding: 1px 7px; box-shadow: none; }
 .plate .nm-title::after { display: none; }
+/* A long name ends in an ellipsis at the pill's edge instead of being cut mid-letter. */
+.plate .nm-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plate .avatar { display: block; }
 /* Each banner's main colour (scripts/cosmetics/board-banners.mjs), read from its art. */
 .plate.banner-aurora { --ac: #38bdf8; }

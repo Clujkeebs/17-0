@@ -139,6 +139,13 @@ tbody tr { transition: background-color .12s ease; }
 tbody tr:hover { background: var(--green); }
 td.num, th.num { text-align: right; }
 .table-wrap { overflow-x: auto; }
+/* Columns that drop out on narrow screens, so the number a table is ranked by stays in view instead of scrolling away. */
+@media (max-width: 600px) { th.c-600, td.c-600 { display: none; } }
+@media (max-width: 480px) { th.c-480, td.c-480 { display: none; } th, td { padding-inline: 8px; } }
+@media (max-width: 360px) { table { font-size: .88rem; } }
+/* A name with a portrait beside it. On a phone the portrait steps aside so the numbers keep their room. */
+.who { display: inline-flex; align-items: center; gap: 10px; }
+@media (max-width: 480px) { .who.who-sm > :first-child { display: none; } }
 /* Small label for Hard mode runs on leaderboards. */
 .tag-hard { display: inline-block; margin-left: 8px; padding: 1px 7px; border: 1px solid var(--bone); border-radius: 999px; font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; vertical-align: 2px; }
 /* Side-rail ad: only beside content on wide screens, sticky, fixed 160px. */
@@ -310,13 +317,15 @@ html[data-rules=hidden] .rules-card { display: none; }
 .ticker-item { white-space: nowrap; }
 
 .blog-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-@media (max-width: 860px) { .blog-cards { grid-template-columns: 1fr; } }
+@media (max-width: 860px) { .blog-cards { grid-template-columns: 1fr; gap: 8px; } }
 .post-card { display: flex; flex-direction: column; text-decoration: none; color: var(--bone); padding: 28px 0 0; border-top: 1px solid var(--bone); min-height: 220px; }
 .post-card:hover { color: var(--bone); }
 .post-card h3 { font-size: 1.45rem; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: .6em; transition: color .15s ease; }
 .post-card:hover h3 { color: var(--orange); }
 .post-card p { color: var(--bone-dim); font-size: .95rem; }
 .post-card .more { margin-top: auto; font-size: .88rem; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
+/* One column: the cards only needed a minimum height to line up three across. */
+@media (max-width: 860px) { .post-card { min-height: 0; padding-bottom: 20px; } }
 
 /* ===== Profiles (player/team/coach) ===== */
 .profile-hero { display: grid; grid-template-columns: auto 1fr auto; gap: 40px; align-items: end; padding-bottom: 40px; border-bottom: 1px solid var(--steel); }
@@ -593,7 +602,7 @@ html[data-rules=hidden] .rules-card { display: none; }
 @media (max-width: 640px) {
   .lb-table th:first-child, .lb-table td:first-child { width: 34px; }
   .lb-table th, .lb-table td { padding-inline: 6px; }
-  .lb-table td .plate { max-width: max(150px, calc(100vw - 190px)); }
+  .lb-table td .plate { max-width: max(128px, calc(100vw - 190px)); }
   .lb-table td .plate .nm { flex-wrap: nowrap; }
   .lb-table:has(th:nth-child(4)) td .plate { max-width: max(120px, calc(100vw - 236px)); }
 }
@@ -851,7 +860,9 @@ a.sn-sec-h:hover { color: var(--bone); }
 .sp-dots.sp-small li { width: 9px; height: 9px; }
 
 /* How-it-works answers under the draft games (search and answer engines read these). */
-.g-faq { max-width: calc(880px + 2 * var(--gutter)); margin: 0 auto; padding: 8px var(--gutter) 64px; border-top: 1px solid var(--steel); }
+.g-faq { max-width: calc(880px + 2 * var(--gutter)); margin: 0 auto 0 max(0px, calc((100% - (var(--maxw) + 2 * var(--gutter))) / 2)); padding: 0 var(--gutter) 64px; }
+/* The rule above the guide runs along the text, not out to the edge of the screen. */
+.g-faq::before { content: ""; display: block; height: 1px; margin-bottom: 40px; background: var(--steel); }
 .g-faq h2 { font-size: 1.4rem; letter-spacing: -0.02em; margin: 32px 0 8px; }
 .g-faq-lede { color: var(--bone-dim); margin: 0 0 20px; }
 .g-faq dl { margin: 0; display: grid; gap: 18px; }

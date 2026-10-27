@@ -392,7 +392,7 @@ export const SITE_POSTS: BlogPost[] = [
           `Easy and Hard: Easy shows ratings and gives re-rolls or re-spins. Hard hides the numbers, makes you type names, and gives none.`,
           `Reel and spin: the wheel that lands on a team (and in some games an era). One spin per slot.`,
           `Re-roll: in 17-0, spending a re-roll to spin a round again and land on a different team.`,
-          `Re-spin: in 82-0, 162-0 and 44-0, spending a re-spin on the era or the team. An era re-spin changes the decade, a team re-spin changes the franchise.`,
+          `Re-spin: in 82-0 and 162-0, spending a re-spin on the era or the team. An era re-spin changes the decade, a team re-spin changes the franchise. 44-0 drafts from one season, so it has team re-spins only.`,
           `All-time: a 17-0 pool that adds each franchise's greats and legendary coaches to its current roster.`,
           `Right now: a mode that drafts from the current season only.`,
           `Standard: the 82-0 edition that grades today's rosters on NBA 2K ratings instead of historical stats. Classic is the default.`,

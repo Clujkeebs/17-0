@@ -1,4 +1,5 @@
-.m-wrap { max-width: calc(880px + 2 * var(--gutter)); margin: 0 auto; padding: 32px var(--gutter) 64px; }
+/* Starts under the logo like every other page, so the game and the guide below it share one left edge. */
+.m-wrap { max-width: calc(880px + 2 * var(--gutter)); margin: 0 auto 0 max(0px, calc((100% - (var(--maxw) + 2 * var(--gutter))) / 2)); padding: 32px var(--gutter) 64px; }
 @media (min-width: 900px) { .m-wrap { padding-top: 48px; } }
 .m-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
 .m-kicker { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--bone-dim); margin: 0 0 8px; }

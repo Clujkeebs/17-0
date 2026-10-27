@@ -43,7 +43,7 @@
 
 /* Cards: a compact grid that holds its shape while art loads. Off-screen cards are skipped until they scroll near. */
 .shop-grid { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 12px; }
-.shop-card { position: relative; display: grid; gap: 10px; padding: 10px 10px 12px; border: 1px solid var(--steel); border-radius: 18px; background: var(--surface); transition: border-color .15s, box-shadow .15s, transform .15s; align-content: start; content-visibility: auto; contain-intrinsic-size: auto 250px; }
+.shop-card { position: relative; display: grid; gap: 10px; padding: 10px 10px 12px; border: 1px solid var(--steel); border-radius: 18px; background: var(--surface); transition: border-color .15s, box-shadow .15s, transform .15s; align-content: start; grid-template-rows: auto 1fr auto; content-visibility: auto; contain-intrinsic-size: auto 250px; }
 .shop-card.k-effect, .shop-card.k-border { contain-intrinsic-size: auto 330px; }
 .shop-card.k-banner { grid-column: span 2; contain-intrinsic-size: auto 250px; }
 @media (hover: hover) and (pointer: fine) { .shop-card:hover { border-color: var(--steel-hi); transform: translateY(-1px); } }
@@ -78,9 +78,8 @@
 .basics-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .basic-card { display: grid; gap: 8px; justify-items: start; padding: 8px; border: 1px solid var(--steel); border-radius: 14px; background: var(--surface); align-content: start; }
 .basic-card.on { border-color: var(--bone); }
-.basic-card .shop-prev-btn { min-height: 64px; padding: 8px; }
-.basic-card.k-border .shop-prev-btn { min-height: 84px; }
-.basic-card.k-banner .shop-prev-btn { padding: 0; min-height: 0; background: none; }
+.basic-card .shop-prev-btn { min-height: 84px; padding: 8px; }
+.basic-card.k-banner .shop-prev-btn { padding: 0; background: none; }
 .basic-card.k-banner .shop-banner { width: 100%; margin: 0; min-height: 64px; display: grid; align-items: end; padding: 10px; font-size: .95rem; font-weight: 700; border-radius: 12px; }
 .basic-card strong { font-size: .92rem; padding: 0 2px; }
 .shop-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 8px 0 4px; }
@@ -135,9 +134,8 @@
 .sd-clock { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; min-width: 3.2ch; text-align: right; }
 @media (max-width: 640px) { .sd-live { grid-template-columns: auto 1fr; } .sd-live-act { grid-column: 1 / -1; justify-content: space-between; } }
 .sd-grid { list-style: none; padding: 0; margin: 16px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.sd-tile .shop-prev-btn { min-height: 96px; padding: 8px 6px; }
-.sd-tile.k-effect .shop-prev-btn, .sd-tile.k-border .shop-prev-btn { min-height: 150px; }
-.sd-tile.k-banner .shop-prev-btn { padding: 0; min-height: 0; background: none; }
+.sd-tile .shop-prev-btn { min-height: 150px; padding: 8px 6px; }
+.sd-tile.k-banner .shop-prev-btn { padding: 0; background: none; }
 .sd-tile.k-banner .shop-banner { width: 100%; margin: 0; min-height: 96px; display: grid; align-items: end; padding: 10px; font-size: .95rem; font-weight: 700; border-radius: 12px; }
 .sd-tile .shop-name { font-size: 1.05rem; }
 .sd-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; padding: 12px 8px 10px; border: 1px solid var(--steel); border-radius: 14px; background: var(--green); }
@@ -151,6 +149,5 @@
   .sd-grid { display: flex; overflow-x: auto; scroll-snap-type: x proximity; gap: 10px; margin: 14px -16px 0; padding: 2px 16px 8px; scrollbar-width: none; }
   .sd-grid::-webkit-scrollbar { display: none; }
   .sd-tile { flex: 0 0 142px; scroll-snap-align: start; }
-  .sd-tile .shop-prev-btn { min-height: 84px; }
-  .sd-tile.k-effect .shop-prev-btn, .sd-tile.k-border .shop-prev-btn { min-height: 118px; }
+  .sd-tile .shop-prev-btn { min-height: 118px; }
 }

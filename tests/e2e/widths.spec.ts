@@ -73,6 +73,39 @@ test('a page with a narrow column starts under the logo, not in the middle of th
   expect(form!.x).toBeGreaterThan(150);
 });
 
+test('a table on a phone keeps the number it is ranked by in view', async ({ page }) => {
+  for (const [path, last] of [['/coaches', 'Impact'], ['/players', 'OVR']] as const) {
+    for (const width of [320, 375, 540]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(path);
+      const m = await page.locator('.table-wrap').first().evaluate((wrap) => {
+        const heads = [...wrap.querySelectorAll('thead th')].filter((th) => getComputedStyle(th).display !== 'none');
+        const tail = heads[heads.length - 1];
+        return { last: tail?.textContent, right: tail?.getBoundingClientRect().right ?? 0, wrapRight: wrap.getBoundingClientRect().right, scrolls: wrap.scrollWidth - wrap.clientWidth };
+      });
+      expect(m.last).toBe(last);
+      expect(m.scrolls, `${path} at ${width}px: the table scrolls sideways`).toBeLessThanOrEqual(1);
+      expect(m.right, `${path} at ${width}px: ${last} is off screen`).toBeLessThanOrEqual(m.wrapRight + 1);
+    }
+  }
+});
+
+test('a game and the guide under it start at the same edge as the logo', async ({ page }) => {
+  for (const path of ['/games/higher-lower', '/games/82-0']) {
+    for (const width of [1024, 1180, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(path);
+      const [logo, title, guide] = await Promise.all([
+        page.locator('.site-header .brand').boundingBox(),
+        page.locator('main h1').first().boundingBox(),
+        page.locator('.g-faq h2, .game-guide h2').first().boundingBox(),
+      ]);
+      expect(Math.abs((title?.x ?? 0) - (logo?.x ?? 99)), `${path} at ${width}px: game title ${title?.x}, logo ${logo?.x}`).toBeLessThanOrEqual(1);
+      expect(Math.abs((guide?.x ?? 0) - (logo?.x ?? 99)), `${path} at ${width}px: guide ${guide?.x}, logo ${logo?.x}`).toBeLessThanOrEqual(1);
+    }
+  }
+});
+
 test('the leaderboard keeps rank, player and result on screen from a phone to a tablet, and a pill stays inside its edge', async ({ page }) => {
   const stamp = String(Date.now()).slice(-8);
   const names = [`wide_${stamp}`, `ringy_${stamp}`];
@@ -108,6 +141,8 @@ test('the leaderboard keeps rank, player and result on screen from a phone to a 
     await page.goto('/leaderboard?game=mystery-player&period=today');
     const ring = page.locator(`a.plate[href="/u/${names[0]}"] .ring`);
     expect(await ring.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('none');
+    // A name too long for its pill ends in dots, not a cut letter.
+    expect(await page.locator(`a.plate[href="/u/${names[0]}"] .nm-text`).evaluate((el) => getComputedStyle(el).textOverflow)).toBe('ellipsis');
     // The wash is one colour fading to the page, never two colours mixed.
     const wash = await page.locator(`a.plate[href="/u/${names[0]}"]`).evaluate((el) => getComputedStyle(el).backgroundImage);
     expect(wash).toMatch(/^linear-gradient/);

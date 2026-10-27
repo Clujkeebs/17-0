@@ -90,7 +90,7 @@
 .b-cell { width: 100%; min-height: 48px; border: 1px solid var(--steel); background: var(--navy); border-radius: 12px; font: 600 1.05rem var(--font-num); color: var(--bone); cursor: pointer; }
 .b-cell[aria-pressed=true] { background: var(--bone); color: var(--navy); border-color: var(--bone); }
 .b-pos { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 32px; }
-.b-pos button { text-align: left; padding: 16px; border: 1px solid var(--steel); border-radius: 16px; background: var(--surface); color: var(--bone); font: inherit; cursor: pointer; min-height: 96px; }
+.b-pos button { display: flex; flex-direction: column; justify-content: flex-start; text-align: left; padding: 16px; border: 1px solid var(--steel); border-radius: 16px; background: var(--surface); color: var(--bone); font: inherit; cursor: pointer; min-height: 96px; }
 .b-pos button[aria-pressed=true] { border-color: var(--bone); box-shadow: inset 0 0 0 1px var(--bone); }
 .b-pos strong { display: block; font-size: 1.4rem; letter-spacing: -0.02em; }
 .b-pos span { font-size: .85rem; color: var(--bone-dim); }

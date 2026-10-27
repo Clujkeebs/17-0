@@ -173,8 +173,8 @@ export function FortyFourGame({ franchises, signedIn, playedTodayId = null, init
         </header>
         {error ? <section className="g-done"><p role="alert" className="field-error">{error}</p><button className="btn btn-primary" onClick={() => setSheet(true)}>Try again</button></section> : (
           <section className="g-intro" style={{ maxWidth: 'none', paddingTop: 16 }}>
-            <h2 className="g-title">Spin an era.<br />Spin a team. Go <span style={{ whiteSpace: 'nowrap' }}>44-0.</span></h2>
-            <p className="g-lede">Five spins, each an era and then a franchise, and every era only once. Take one player from each, graded on her real stats from her best season there, and move anyone between positions before the season tips off.</p>
+            <h2 className="g-title">Spin a team.<br />Go <span style={{ whiteSpace: 'nowrap' }}>44-0.</span></h2>
+            <p className="g-lede">Five spins, each landing on a WNBA franchise. Take one player from each, graded on her real stats from this season, and move anyone between positions before the season tips off.</p>
             <button className="btn btn-primary btn-lg" onClick={() => setSheet(true)} disabled={busy === 'start'}>{busy === 'start' ? 'Spinning' : 'Set up a game'}</button>
           </section>
         )}

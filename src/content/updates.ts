@@ -9,6 +9,11 @@ export const SITE_STARTED = '2026-09-28';
 export const UPDATES: Update[] = [
   {
     date: '2026-10-27',
+    title: 'Tables that fit a phone, and a 44-0 page that matches the game',
+    body: 'Tables on a phone now keep the number they are ranked by, so the Coaches page shows Impact and the player lists show OVR instead of hiding them off the side. A long name on a board ends in dots instead of being cut mid-letter. The Build a Player position cards line up, the blog list sits tighter on a tablet, and the 44-0 page no longer mentions eras, since it drafts from this season only.',
+  },
+  {
+    date: '2026-10-27',
     title: 'Tablet fixes, cleaner boards, current teams',
     body: 'The header no longer collides on a tablet or half an iPad, and pages start under the logo at every width. Leaderboard rows are one tidy pill with the result beside it, and a profile banner shows its whole picture. The NBA 2K edition of 82-0 files each player under his team on ESPN\'s current roster, so Kawhi Leonard is a Raptor.',
   },

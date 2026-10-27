@@ -22,8 +22,8 @@ export function PlayerTable({ players, teams, caption, showRank = true, extra }:
           <tr>
             {showRank && <th scope="col" className="num">#</th>}
             <th scope="col">Player</th>
-            <th scope="col">Pos</th>
-            <th scope="col">Team</th>
+            <th scope="col" className={extra ? 'c-480' : undefined}>Pos</th>
+            <th scope="col" className="c-480">Team</th>
             {extra && <th scope="col" className="num">{extra.label}</th>}
             <th scope="col" className="num">OVR</th>
           </tr>
@@ -35,8 +35,8 @@ export function PlayerTable({ players, teams, caption, showRank = true, extra }:
               <tr key={p.id}>
                 {showRank && <td className="num muted">{i + 1}</td>}
                 <td><span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Avatar name={p.fullName} src={resolvePlayerImage(p)} color={t?.primaryColor ?? '#0A0A0A'} size={32} decorative /><Link href={`/players/${p.slug}`}>{p.fullName}</Link></span></td>
-                <td><Link href={`/positions/${positionGroup(p.position).toLowerCase()}`} className="muted">{p.position}</Link></td>
-                <td>{t ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TeamLogo abbr={t.abbreviation} src={t.logoUrl} color={t.primaryColor} size={20} /><Link href={`/teams/${t.slug}`} className="muted" title={teamName(t)}>{t.abbreviation}</Link></span> : <span className="muted">FA</span>}</td>
+                <td className={extra ? 'c-480' : undefined}><Link href={`/positions/${positionGroup(p.position).toLowerCase()}`} className="muted">{p.position}</Link></td>
+                <td className="c-480">{t ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TeamLogo abbr={t.abbreviation} src={t.logoUrl} color={t.primaryColor} size={20} /><Link href={`/teams/${t.slug}`} className="muted" title={teamName(t)}>{t.abbreviation}</Link></span> : <span className="muted">FA</span>}</td>
                 {extra && <td className="num">{extra.value(p)}</td>}
                 <td className="num" style={{ fontWeight: 700 }}>{p.overallRating}</td>
               </tr>

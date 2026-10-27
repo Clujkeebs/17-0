@@ -32,17 +32,17 @@ export default async function CoachesPage() {
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table" style={{ marginTop: 24 }}>
           <table>
             <caption className="sr-only">NFL head coaches by impact score</caption>
-            <thead><tr><th scope="col" className="num">#</th><th scope="col">Coach</th><th scope="col">Team</th><th scope="col" className="num">Record</th><th scope="col" className="num">SB</th><th scope="col" className="num">Impact</th></tr></thead>
+            <thead><tr><th scope="col" className="num">#</th><th scope="col">Coach</th><th scope="col" className="c-600">Team</th><th scope="col" className="num">Record</th><th scope="col" className="num c-480">SB</th><th scope="col" className="num">Impact</th></tr></thead>
             <tbody>
               {coaches.map((c, i) => {
                 const t = c.teamId != null ? teams.get(c.teamId) : undefined;
                 return (
                   <tr key={c.id}>
                     <td className="num muted">{i + 1}</td>
-                    <td><span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}><Avatar name={c.fullName} src={c.imageUrl} color={t?.primaryColor ?? '#0A0A0A'} size={32} decorative /><Link href={`/coaches/${c.slug}`}>{c.fullName}</Link></span></td>
-                    <td>{t ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TeamLogo abbr={t.abbreviation} src={t.logoUrl} color={t.primaryColor} size={20} /><Link className="muted" href={`/teams/${t.slug}`}>{teamName(t)}</Link></span> : <span className="muted">None</span>}</td>
+                    <td><span className="who who-sm"><Avatar name={c.fullName} src={c.imageUrl} color={t?.primaryColor ?? '#0A0A0A'} size={32} decorative /><Link href={`/coaches/${c.slug}`}>{c.fullName}</Link></span></td>
+                    <td className="c-600">{t ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TeamLogo abbr={t.abbreviation} src={t.logoUrl} color={t.primaryColor} size={20} /><Link className="muted" href={`/teams/${t.slug}`}>{teamName(t)}</Link></span> : <span className="muted">None</span>}</td>
                     <td className="num">{c.careerWins}-{c.careerLosses}</td>
-                    <td className="num">{c.superBowlWins}</td>
+                    <td className="num c-480">{c.superBowlWins}</td>
                     <td className="num" style={{ fontWeight: 700 }}>{c.coachImpactScore}</td>
                   </tr>
                 );
