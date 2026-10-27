@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { seasonLabel } from '@/lib/game/eightytwo';
+import { DATASET_TTL_MS, memoAsync } from '@/lib/memo';
 
 /** One player's season with one franchise, flattened for NBA mini games. */
 export interface NSeason {
@@ -12,11 +13,8 @@ export interface NSeason {
 export interface NRated { key: string; playerId: number; name: string; position: string; img: string | null; team: string; teamName: string; teamColor: string; logoUrl: string | null; ovr: number }
 export interface NbaGameData { seasons: NSeason[]; rated: NRated[] }
 
-let cache: { at: number; data: NbaGameData } | null = null;
-
-/** Rotation players only (40+ games, 15+ minutes), so every puzzle is about people fans have heard of. Cached 10 minutes. */
-export async function loadNbaGameData(): Promise<NbaGameData> {
-  if (cache && Date.now() - cache.at < 10 * 60_000) return cache.data;
+/** Rotation players only (40+ games, 15+ minutes), so every puzzle is about people fans have heard of. In memory for an hour. */
+export const loadNbaGameData = memoAsync(DATASET_TTL_MS, async (): Promise<NbaGameData> => {
   const rows = await db.select({ ps: schema.nbaPlayerSeasons, p: schema.nbaPlayers, t: schema.nbaTeamSeasons }).from(schema.nbaPlayerSeasons)
     .innerJoin(schema.nbaPlayers, eq(schema.nbaPlayers.id, schema.nbaPlayerSeasons.playerId))
     .innerJoin(schema.nbaTeamSeasons, and(eq(schema.nbaTeamSeasons.teamId, schema.nbaPlayerSeasons.teamId), eq(schema.nbaTeamSeasons.season, schema.nbaPlayerSeasons.season)))
@@ -40,9 +38,8 @@ export async function loadNbaGameData(): Promise<NbaGameData> {
       gp: ps.gp, mpg: ps.mpg, ppg: ps.ppg, rpg: ps.rpg, apg: ps.apg, spg: ps.spg, bpg: ps.bpg, value: ps.value,
     })),
   };
-  cache = { at: Date.now(), data };
   return data;
-}
+});
 
 /** The card a client sees: who, which season, which team. Never the numbers being asked about. */
 export const ncard = (s: NSeason) => ({ id: s.key, name: s.name, position: `${s.position} · ${s.seasonLabel}`, team: s.team, teamName: s.teamName, teamColor: s.teamColor, logoUrl: s.logoUrl, img: s.img });

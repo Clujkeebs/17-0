@@ -1,4 +1,5 @@
 import { db, schema } from '@/db';
+import { DATASET_TTL_MS, memoAsync } from '@/lib/memo';
 import { leagueName, seasonLabel } from '@/lib/server/soccer-sync';
 
 /** A known current player: on a synced club roster and on a recent goal or assist leader list. */
@@ -16,11 +17,8 @@ const POS: Record<string, string> = { G: 'Goalkeeper', D: 'Defender', M: 'Midfie
 let photos = new Map<number, string | null>();
 const headshot = (id: number) => (id >= 9_000_000 ? '' : photos.has(id) ? photos.get(id) ?? '' : `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png`);
 
-let cache: { at: number; data: SoccerGameData } | null = null;
-
-/** Soccer minis draw only on players fans would know: those on a recent league goal or assist leader list. Cached 10 minutes. */
-export async function loadSoccerGameData(): Promise<SoccerGameData> {
-  if (cache && Date.now() - cache.at < 10 * 60_000) return cache.data;
+/** Soccer minis draw only on players fans would know: those on a recent league goal or assist leader list. In memory for an hour. */
+export const loadSoccerGameData = memoAsync(DATASET_TTL_MS, async (): Promise<SoccerGameData> => {
   const [clubRows, players, leaderRows, photoRows] = await Promise.all([
     db.select().from(schema.soccerClubs),
     db.select().from(schema.soccerPlayers),
@@ -39,10 +37,8 @@ export async function loadSoccerGameData(): Promise<SoccerGameData> {
     const c = l.clubId ? club.get(l.clubId) : undefined;
     return { key: `l:${l.league}:${l.season}:${l.playerId}`, playerId: l.playerId, name: l.name, league: l.league, season: l.season, seasonLabel: `${leagueName(l.league)} ${seasonLabel(l.league, l.season)}`, goals: l.goals, assists: l.assists, matches: l.matches, club: c?.name ?? '', clubAbbr: c?.abbr ?? '', clubColor: c?.color ?? '#1F2937', clubLogo: c?.logo ?? null, img: headshot(l.playerId) };
   });
-  const data = { stars, leaders, clubs };
-  cache = { at: Date.now(), data };
-  return data;
-}
+  return { stars, leaders, clubs };
+});
 
 export const scard = (s: SStar) => ({ id: s.key, name: s.name, position: `${s.position} · ${leagueName(s.league)}`, team: s.clubAbbr, teamName: s.club, teamColor: s.clubColor, logoUrl: s.clubLogo, img: s.img });
 export const lcard = (l: SLeader) => ({ id: l.key, name: l.name, position: l.seasonLabel, team: l.clubAbbr, teamName: l.club, teamColor: l.clubColor, logoUrl: l.clubLogo, img: l.img });

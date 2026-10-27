@@ -1,13 +1,13 @@
 import { and, desc, eq, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { seasonLabel } from '@/lib/game/eightytwo';
+import { DATASET_TTL_MS, memoAsync } from '@/lib/memo';
 
 /** One ranked entry: the name to find and a hint that does not give it away. */
 export interface TopEntry { rank: number; name: string; hint: string; value: number }
 export type TopKey = 'nfl-now' | 'nfl-all' | 'nba-now' | 'nba-all' | 'mlb-now' | 'mlb-all';
 export type TopData = Record<TopKey, TopEntry[]>;
 
-let cache: { at: number; data: TopData } | null = null;
 const rank = (rows: { name: string; hint: string; value: number }[]): TopEntry[] =>
   rows.sort((a, b) => b.value - a.value).slice(0, 100).map((r, i) => ({ rank: i + 1, ...r }));
 
@@ -15,10 +15,9 @@ const rank = (rows: { name: string; hint: string; value: number }[]): TopEntry[]
  * Six separate top-100 lists, never mixed: today's players and all-time, for each league.
  * NFL now: Madden overall. NFL all-time: retired players' best graded season (ESPN history, 1980+) and the
  * classic legends. NBA now: NBA 2K overall. NBA all-time: best season value since 1984-85. MLB now: this
- * season's value. MLB all-time: best season value since 1970. Cached for an hour.
+ * season's value. MLB all-time: best season value since 1970. In memory for an hour.
  */
-export async function loadTop100(): Promise<TopData> {
-  if (cache && Date.now() - cache.at < 3600_000) return cache.data;
+export const loadTop100 = memoAsync(DATASET_TTL_MS, async (): Promise<TopData> => {
   const [nflNow, legends, madLegends, nbaNow, nbaAll, mlbLatest] = await Promise.all([
     db.select({ name: schema.players.fullName, pos: schema.players.position, ovr: schema.players.overallRating, team: schema.teams.abbreviation })
       .from(schema.players).innerJoin(schema.teams, eq(schema.teams.id, schema.players.teamId))
@@ -53,6 +52,5 @@ export async function loadTop100(): Promise<TopData> {
     'mlb-now': rank([...mlbNow].map((p) => ({ name: p.name, hint: `${p.pos} · ${latest}`, value: p.value }))),
     'mlb-all': rank([...mlbAll].map((p) => ({ name: p.name, hint: `${p.pos} · ${p.season}`, value: p.value }))),
   };
-  cache = { at: Date.now(), data };
   return data;
-}
+});

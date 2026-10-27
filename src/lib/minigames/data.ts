@@ -1,14 +1,12 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { positionGroup } from '@/lib/game/attributes';
+import { DATASET_TTL_MS, memoAsync } from '@/lib/memo';
 import type { GameData } from './types';
 import { resolvePlayerImage } from '@/lib/server/images';
 
-let cache: { at: number; data: GameData } | null = null;
-
-/** All active players and teams, flattened for puzzle generation. In-memory for 10 minutes. */
-export async function loadGameData(): Promise<GameData> {
-  if (cache && Date.now() - cache.at < 10 * 60_000) return cache.data;
+/** All active players and teams, flattened for puzzle generation. In memory for an hour, one load shared by every caller. */
+export const loadGameData = memoAsync(DATASET_TTL_MS, async (): Promise<GameData> => {
   const [teams, players] = await Promise.all([
     db.select().from(schema.teams),
     db.select().from(schema.players).where(eq(schema.players.isActive, true)),
@@ -27,9 +25,8 @@ export async function loadGameData(): Promise<GameData> {
       };
     }),
   };
-  cache = { at: Date.now(), data };
   return data;
-}
+});
 
 /** Public player card fields (no ratings unless the game chooses to reveal them). */
 export const card = (p: GameData['players'][number]) => ({ id: p.id, name: p.name, position: p.position, team: p.team, teamName: p.teamName, teamColor: p.teamColor, logoUrl: p.logoUrl, img: p.img });

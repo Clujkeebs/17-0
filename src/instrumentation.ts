@@ -8,6 +8,7 @@ function scrub(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
 }
 
 export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') (await import('@/lib/server/memory-log')).startMemoryLog('web');
   if (!process.env.SENTRY_DSN) return;
   Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.05, beforeSend: scrub });
 }

@@ -1,18 +1,16 @@
 import { and, eq, gte } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { seasonLabel } from '@/lib/game/eightytwo';
+import { DATASET_TTL_MS, memoAsync, memoByKey } from '@/lib/memo';
 import type { NbaGameData } from '../nba/data';
 
 type Hoops = 'mbb' | 'wbb';
-const hoopsCache = new Map<Hoops, { at: number; data: NbaGameData }>();
 
 /**
  * College basketball in the same shape as the NBA data, so the four hoops games run on it unchanged. Rotation players
- * only (15+ games, 15+ minutes), from the programs the sync follows. Cached 10 minutes.
+ * only (15+ games, 15+ minutes), from the programs the sync follows. In memory for an hour.
  */
-export async function loadCollegeHoops(league: Hoops): Promise<NbaGameData> {
-  const hit = hoopsCache.get(league);
-  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.data;
+export const loadCollegeHoops = memoByKey(DATASET_TTL_MS, async (league: Hoops): Promise<NbaGameData> => {
   const rows = await db.select({ h: schema.collegeHoops, p: schema.collegePlayers, t: schema.collegeTeams }).from(schema.collegeHoops)
     .innerJoin(schema.collegePlayers, and(eq(schema.collegePlayers.league, schema.collegeHoops.league), eq(schema.collegePlayers.id, schema.collegeHoops.playerId)))
     .innerJoin(schema.collegeTeams, and(eq(schema.collegeTeams.league, schema.collegeHoops.league), eq(schema.collegeTeams.id, schema.collegeHoops.teamId)))
@@ -26,9 +24,8 @@ export async function loadCollegeHoops(league: Hoops): Promise<NbaGameData> {
       gp: h.gp, mpg: h.mpg, ppg: h.ppg, rpg: h.rpg, apg: h.apg, spg: h.spg, bpg: h.bpg, value: h.value,
     })),
   };
-  hoopsCache.set(league, { at: Date.now(), data });
   return data;
-}
+});
 
 /** One player's number in one category for one team's season, ready for the football games. */
 export interface CfbLine {
@@ -37,11 +34,9 @@ export interface CfbLine {
   category: string; value: number; display: string | null; rank: number;
 }
 export interface CfbData { lines: CfbLine[] }
-let cfbCache: { at: number; data: CfbData } | null = null;
 
-/** Every stat leader the sync stored for college football. Cached 10 minutes. */
-export async function loadCollegeFootball(): Promise<CfbData> {
-  if (cfbCache && Date.now() - cfbCache.at < 10 * 60_000) return cfbCache.data;
+/** Every stat leader the sync stored for college football. In memory for an hour. */
+export const loadCollegeFootball = memoAsync(DATASET_TTL_MS, async (): Promise<CfbData> => {
   const rows = await db.select({ l: schema.collegeLeaders, p: schema.collegePlayers, t: schema.collegeTeams }).from(schema.collegeLeaders)
     .innerJoin(schema.collegePlayers, and(eq(schema.collegePlayers.league, schema.collegeLeaders.league), eq(schema.collegePlayers.id, schema.collegeLeaders.playerId)))
     .innerJoin(schema.collegeTeams, and(eq(schema.collegeTeams.league, schema.collegeLeaders.league), eq(schema.collegeTeams.id, schema.collegeLeaders.teamId)))
@@ -54,6 +49,5 @@ export async function loadCollegeFootball(): Promise<CfbData> {
       category: l.category, value: l.value, display: l.display, rank: l.rank,
     })),
   };
-  cfbCache = { at: Date.now(), data };
   return data;
-}
+});

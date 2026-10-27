@@ -1,12 +1,10 @@
 import { and, eq, gte, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
+import { DATASET_TTL_MS, memoAsync } from '@/lib/memo';
 import type { NbaGameData } from '../nba/data';
 
-let cache: { at: number; data: NbaGameData } | null = null;
-
-/** Rotation players only (15+ games, 15+ minutes; WNBA seasons run 34 to 44 games). Same shape as the NBA data. Cached 10 minutes. */
-export async function loadWnbaGameData(): Promise<NbaGameData> {
-  if (cache && Date.now() - cache.at < 10 * 60_000) return cache.data;
+/** Rotation players only (15+ games, 15+ minutes; WNBA seasons run 34 to 44 games). Same shape as the NBA data. In memory for an hour. */
+export const loadWnbaGameData = memoAsync(DATASET_TTL_MS, async (): Promise<NbaGameData> => {
   const rows = await db.select({ ps: schema.wnbaPlayerSeasons, p: schema.wnbaPlayers, t: schema.wnbaTeamSeasons }).from(schema.wnbaPlayerSeasons)
     .innerJoin(schema.wnbaPlayers, eq(schema.wnbaPlayers.id, schema.wnbaPlayerSeasons.playerId))
     .innerJoin(schema.wnbaTeamSeasons, and(eq(schema.wnbaTeamSeasons.teamId, schema.wnbaPlayerSeasons.teamId), eq(schema.wnbaTeamSeasons.season, schema.wnbaPlayerSeasons.season)))
@@ -21,6 +19,5 @@ export async function loadWnbaGameData(): Promise<NbaGameData> {
       gp: ps.gp, mpg: ps.mpg, ppg: ps.ppg, rpg: ps.rpg, apg: ps.apg, spg: ps.spg, bpg: ps.bpg, value: ps.value,
     })),
   };
-  cache = { at: Date.now(), data };
   return data;
-}
+});

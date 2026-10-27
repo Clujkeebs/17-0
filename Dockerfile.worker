@@ -43,6 +43,10 @@ RUN mkdir -p .next/cache && chown -R app:app .next/cache
 USER app
 EXPOSE 8080
 ENV PORT=8080 HOSTNAME=0.0.0.0
+# Railway bills memory by the minute, and it was most of the bill. A crawl of 817 pages against this build left the
+# server at 670 MB resident. Two malloc arenas instead of one per thread (glibc hoards freed memory) took that to 540 MB,
+# and a 512 MB heap cap (V8 collects late on a big host) to 390 MB. The live heap is a fraction of the cap.
+ENV MALLOC_ARENA_MAX=2 NODE_OPTIONS=--max-old-space-size=512
 HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 # Migrate, then seed (idempotent: never overwrites rows a live sync has replaced), then serve.
 COPY --from=builder --chown=app:app /app/scripts/start.sh ./start.sh

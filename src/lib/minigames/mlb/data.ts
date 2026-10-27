@@ -1,17 +1,15 @@
 import { eq, and } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { MLB_COLORS, mlbHeadshot, mlbLogo } from '@/lib/server/mlb-game';
+import { DATASET_TTL_MS, memoAsync } from '@/lib/memo';
 import type { BatLine, MlbKind, PitchLine } from '@/lib/game/onesixtytwo';
 
 import type { BSeason, MlbGameData } from './card';
 export type { BSeason, MlbGameData } from './card';
 export { bcard } from './card';
 
-let cache: { at: number; data: MlbGameData } | null = null;
-
-/** Every graded season since 1970 (everyday hitters, starters, relievers). Cached 10 minutes. */
-export async function loadMlbGameData(): Promise<MlbGameData> {
-  if (cache && Date.now() - cache.at < 10 * 60_000) return cache.data;
+/** Every graded season since 1970 (everyday hitters, starters, relievers). In memory for an hour. */
+export const loadMlbGameData = memoAsync(DATASET_TTL_MS, async (): Promise<MlbGameData> => {
   const rows = await db.select({ ps: schema.mlbPlayerSeasons, p: schema.mlbPlayers, t: schema.mlbTeamSeasons }).from(schema.mlbPlayerSeasons)
     .innerJoin(schema.mlbPlayers, eq(schema.mlbPlayers.id, schema.mlbPlayerSeasons.playerId))
     .innerJoin(schema.mlbTeamSeasons, and(eq(schema.mlbTeamSeasons.teamId, schema.mlbPlayerSeasons.teamId), eq(schema.mlbTeamSeasons.season, schema.mlbPlayerSeasons.season)));
@@ -25,6 +23,5 @@ export async function loadMlbGameData(): Promise<MlbGameData> {
       };
     }),
   };
-  cache = { at: Date.now(), data };
   return data;
-}
+});
