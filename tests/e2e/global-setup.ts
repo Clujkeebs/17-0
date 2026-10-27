@@ -196,6 +196,10 @@ async function seedStars() {
   await sql`insert into mlb_players (id, full_name, position) values (8990001, 'Test Twice Star', '1B') on conflict do nothing`;
   await sql`insert into mlb_player_seasons (player_id, team_id, season, kind, position, line, value)
     select 8990001, 9000 + t, s, 'bat', '1B', ${sql.json(line)}, 55 from generate_series(1, 14) t, unnest(${[1975, 1985, 1995, 2005, 2015, 2024]}::int[]) s`;
+  // A franchise's board in the 2020s shows its latest season, which is this one (seedMlb's Right now rows), on all 22 stand-in clubs.
+  const now = new Date(), y = now.getUTCMonth() >= 3 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+  await sql`insert into mlb_player_seasons (player_id, team_id, season, kind, position, line, value)
+    select 8990001, 9000 + t, ${y}, 'bat', '1B', ${sql.json(line)}, 55 from generate_series(1, 22) t on conflict do nothing`;
   // The All-time legend is a QB of every franchise, filed in 1994 like the other stand-in legends.
   await sql`delete from nfl_legends where espn_id = 9990003`;
   await sql`insert into nfl_legends (espn_id, full_name, position, "group", team_id, season, grade, line)

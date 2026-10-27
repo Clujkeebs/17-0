@@ -37,7 +37,9 @@ test('achievements: the first game unlocks one and tells you, hidden ones stay a
   await expect(page.locator('#badges .badge.on', { hasText: 'First Down' })).toBeVisible();
   const notes = await (await page.request.get('/api/notifications')).json();
   expect(notes.items.map((n: { title: string }) => n.title)).toContain('Achievement unlocked: First Down');
-  expect((await sql`select points from user_accounts where id = ${id}`)[0].points).toBe(before + 10);   // a bronze pays 10, once
+  // A bronze pays 10, once. Count its own payout: the visit can also earn Night Owl (1 to 4 a.m. Eastern), which pays on top.
+  expect((await sql`select coalesce(sum(amount), 0)::int as n from point_events where user_id = ${id} and reason = 'badge' and ref = 'first-down'`)[0].n).toBe(10);
+  expect((await sql`select points from user_accounts where id = ${id}`)[0].points).toBeGreaterThanOrEqual(before + 10);
   await page.goto('/profile');
   expect((await sql`select count(*)::int as n from point_events where user_id = ${id} and reason = 'badge' and ref = 'first-down'`)[0].n).toBe(1);
   const again = await (await page.request.get('/api/notifications')).json();
