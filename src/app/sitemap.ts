@@ -1,10 +1,12 @@
 import type { MetadataRoute } from 'next';
-import { eq } from 'drizzle-orm';
+import { and, eq, gte } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { SITE } from '@/lib/site';
 import { POSITION_GROUPS } from '@/lib/game/attributes';
 import { BUILD_POSITIONS } from '@/lib/game/build';
 import { BLOG_POSTS } from '@/content/blog';
+import { GAMES } from '@/lib/game-registry';
+import { INDEXABLE_MIN_OVERALL } from '@/lib/seo/indexing';
 import { safe } from '@/lib/seo/safe';
 import { SITEMAP_IDS, type SitemapId } from '@/lib/seo/sitemap-ids';
 import { currentSeason } from '@/lib/seo/seasons';
@@ -19,12 +21,17 @@ const u = (path: string) => `${SITE.url}${path}`;
 type Entry = MetadataRoute.Sitemap[number];
 
 const STATIC: [string, Entry['changeFrequency'], number][] = [
-  ['/', 'daily', 1], ['/games/17-0', 'daily', 0.9], ['/games/build-a-player', 'daily', 0.9], ['/games/82-0', 'daily', 0.9], ['/games/162-0', 'daily', 0.9], ['/games/44-0', 'daily', 0.9], ['/fantasy', 'daily', 0.8], ['/fantasy/mock-draft', 'weekly', 0.7], ['/fantasy/start-sit', 'weekly', 0.7], ['/fantasy/rankings', 'daily', 0.8], ['/fantasy/waivers', 'daily', 0.7], ['/fantasy/trade', 'weekly', 0.7], ['/fantasy/cheat-sheet', 'weekly', 0.6], ['/fantasy/draft-order', 'monthly', 0.5], ['/fantasy/tier-list', 'weekly', 0.6], ['/games/nba-higher-lower', 'daily', 0.7], ['/games/nba-blind-resume', 'daily', 0.7], ['/games/nba-who-led', 'daily', 0.7], ['/games/nba-whose-team', 'daily', 0.7], ['/games/wnba-higher-lower', 'daily', 0.7], ['/games/wnba-blind-resume', 'daily', 0.7], ['/games/wnba-who-led', 'daily', 0.7], ['/games/wnba-whose-team', 'daily', 0.7], ['/games/nba-2k-higher-lower', 'daily', 0.7], ['/games/nba-2k-rank-em', 'daily', 0.7], ['/games/nba-2k-guess', 'daily', 0.7], ['/leaderboard', 'hourly', 0.7], ['/pickem', 'daily', 0.8], ['/games?sport=soccer', 'daily', 0.7], ['/games/soccer-whose-club', 'daily', 0.7], ['/games/soccer-where-from', 'daily', 0.7], ['/games/soccer-higher-lower', 'daily', 0.7], ['/games/soccer-top-scorer', 'daily', 0.7], ['/games/build-a-soccer-player', 'daily', 0.8], ['/games/soccer-assist-king', 'daily', 0.7], ['/games/soccer-which-league', 'daily', 0.7], ['/games/soccer-odd-club', 'daily', 0.7], ['/games/soccer-rank-goals', 'daily', 0.7], ['/games/mlb-higher-lower', 'daily', 0.7], ['/games/mlb-blind-resume', 'daily', 0.7], ['/games/mlb-who-led', 'daily', 0.7], ['/games/mlb-whose-team', 'daily', 0.7], ['/games/mlb-rank-em', 'daily', 0.7], ['/games?sport=college', 'daily', 0.8], ['/games/cfb-build-a-player', 'daily', 0.8], ['/games/cfb-higher-lower', 'daily', 0.7], ['/games/cfb-blind-resume', 'daily', 0.7], ['/games/cfb-who-led', 'daily', 0.7], ['/games/cfb-whose-team', 'daily', 0.7], ['/games/cbb-build-a-player', 'daily', 0.8], ['/games/cbb-higher-lower', 'daily', 0.7], ['/games/cbb-blind-resume', 'daily', 0.7], ['/games/cbb-who-led', 'daily', 0.7], ['/games/cbb-whose-team', 'daily', 0.7], ['/games/wcbb-build-a-player', 'daily', 0.8], ['/games/wcbb-higher-lower', 'daily', 0.7], ['/games/wcbb-blind-resume', 'daily', 0.7], ['/games/wcbb-who-led', 'daily', 0.7], ['/games/wcbb-whose-team', 'daily', 0.7], ['/games/sports-connections', 'daily', 0.8], ['/games/sports-wordle', 'daily', 0.8], ['/games/sports-strands', 'daily', 0.8], ['/games/sports-crossword', 'daily', 0.8], ['/games/fantasy-start-em', 'daily', 0.7], ['/games/fantasy-rank-em', 'daily', 0.7], ['/games/top-100-nfl-now', 'daily', 0.7], ['/games/top-100-nfl-all', 'weekly', 0.6], ['/games/top-100-nba-now', 'daily', 0.7], ['/games/top-100-nba-all', 'weekly', 0.6], ['/games/top-100-mlb-now', 'daily', 0.7], ['/games/top-100-mlb-all', 'weekly', 0.6],
+  ['/', 'daily', 1], ['/games', 'daily', 0.9], ['/fantasy', 'daily', 0.8], ['/fantasy/mock-draft', 'weekly', 0.7], ['/fantasy/start-sit', 'weekly', 0.7], ['/fantasy/rankings', 'daily', 0.8],
+  ['/fantasy/waivers', 'daily', 0.7], ['/fantasy/trade', 'weekly', 0.7], ['/fantasy/cheat-sheet', 'weekly', 0.6], ['/fantasy/draft-order', 'monthly', 0.5], ['/fantasy/tier-list', 'weekly', 0.6],
+  ['/leaderboard', 'hourly', 0.7], ['/pickem', 'daily', 0.8],
   ['/players', 'daily', 0.8], ['/teams', 'weekly', 0.7], ['/coaches', 'weekly', 0.6], ['/positions', 'weekly', 0.7],
-  ['/compare', 'weekly', 0.5], ['/blog', 'weekly', 0.8], ['/seasons', 'monthly', 0.4], ['/about', 'monthly', 0.3], ['/contact', 'yearly', 0.2],
+  ['/compare', 'weekly', 0.5], ['/blog', 'weekly', 0.8], ['/seasons', 'monthly', 0.4], ['/about', 'monthly', 0.4], ['/updates', 'weekly', 0.5], ['/contact', 'yearly', 0.2],
   ['/legal/terms', 'yearly', 0.1], ['/legal/privacy', 'yearly', 0.1], ['/legal/cookies', 'yearly', 0.1],
   ['/legal/disclaimer', 'yearly', 0.1], ['/legal/dmca', 'yearly', 0.1], ['/legal/accessibility', 'yearly', 0.1],
 ];
+
+/** The five draft games lead; every other quick game comes from the registry, so a new game is listed without touching this file. */
+const FLAGSHIP = new Set(['17-0', 'build-a-player', '82-0', '162-0', '44-0']);
 
 export default async function sitemap(props: { id: Promise<string> }): Promise<MetadataRoute.Sitemap> {
   const id = (await props.id) as SitemapId;
@@ -33,10 +40,11 @@ export default async function sitemap(props: { id: Promise<string> }): Promise<M
     case 'static':
       return [
         ...STATIC.map(([path, changeFrequency, priority]) => ({ url: u(path), lastModified: now, changeFrequency, priority })),
+        ...GAMES.map((g) => ({ url: u(`/games/${g.slug}`), lastModified: now, changeFrequency: 'daily' as const, priority: FLAGSHIP.has(g.slug) ? 0.9 : 0.7 })),
         { url: u(`/seasons/${currentSeason()}`), lastModified: now, changeFrequency: 'weekly', priority: 0.5 },
       ];
     case 'players': {
-      const rows = await safe(() => db.select({ slug: schema.players.slug, at: schema.players.lastSyncedAt }).from(schema.players).where(eq(schema.players.isActive, true)), []);
+      const rows = await safe(() => db.select({ slug: schema.players.slug, at: schema.players.lastSyncedAt }).from(schema.players).where(and(eq(schema.players.isActive, true), gte(schema.players.overallRating, INDEXABLE_MIN_OVERALL))), []);
       return rows.map((r) => ({ url: u(`/players/${r.slug}`), lastModified: r.at, changeFrequency: 'weekly', priority: 0.6 }));
     }
     case 'teams': {
@@ -49,13 +57,9 @@ export default async function sitemap(props: { id: Promise<string> }): Promise<M
     }
     case 'positions':
       return POSITION_GROUPS.map((g) => ({ url: u(`/positions/${g.toLowerCase()}`), lastModified: now, changeFrequency: 'weekly', priority: 0.6 }));
-    case 'games': {
-      const rows = await safe(() => db.select({ slug: schema.teams.slug }).from(schema.teams), []);
-      return [
-        ...rows.map((r) => ({ url: u(`/games/17-0/${r.slug}`), lastModified: now, changeFrequency: 'weekly' as const, priority: 0.6 })),
-        ...BUILD_POSITIONS.map((p) => ({ url: u(`/games/build-a-player/${p.toLowerCase()}`), lastModified: now, changeFrequency: 'weekly' as const, priority: 0.6 })),
-      ];
-    }
+    case 'games':
+      // The per-team 17-0 pages repeat what each team page already says, so they carry noindex and stay out of here.
+      return BUILD_POSITIONS.map((p) => ({ url: u(`/games/build-a-player/${p.toLowerCase()}`), lastModified: now, changeFrequency: 'weekly' as const, priority: 0.6 }));
     case 'blog':
       return BLOG_POSTS.map((p) => ({ url: u(`/blog/${p.slug}`), lastModified: new Date(`${p.updated ?? p.date}T12:00:00Z`), changeFrequency: 'monthly', priority: 0.7 }));
     default:

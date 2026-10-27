@@ -27,6 +27,11 @@ const config: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
+  // /sitemap.xml is the address search consoles expect. The numbered sitemaps are served from /sitemap/[id].xml and
+  // Next leaves /sitemap.xml itself empty (a route there conflicts with them), so the index lives at /sitemap-index.xml.
+  async rewrites() {
+    return { beforeFiles: [{ source: '/sitemap.xml', destination: '/sitemap-index.xml' }], afterFiles: [], fallback: [] };
+  },
 };
 
 export default config;

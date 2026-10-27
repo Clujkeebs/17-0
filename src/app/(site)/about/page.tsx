@@ -66,7 +66,7 @@ export default function AboutPage() {
           Numbers come from named public sources and are refreshed on a schedule. When a source goes stale, a banner at the top of the site says so. When a
           reader finds a mistake, we check it against the source, fix it, and note the date on any post it changed. We keep personal data to a minimum: IP
           addresses are hashed before they are stored, there is no third-party analytics, and the leaderboards show usernames only. The site is built to be
-          usable with a keyboard and a screen reader, and the <Link href="/legal/accessibility">accessibility statement</Link> says where we fall short.
+          usable with a keyboard and a screen reader, and the <Link href="/legal/accessibility">accessibility statement</Link> says where we fall short. What changed on the site, and the day it went out, is on the <Link href="/updates">updates page</Link>.
         </p>
 
         <h2>Who runs it</h2>

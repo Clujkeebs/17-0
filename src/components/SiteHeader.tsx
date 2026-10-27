@@ -37,7 +37,7 @@ function menus(): NavItem[] {
       { title: 'Play', only: 'phone', links: [{ label: "Pick 'em", href: '/pickem' }, { label: 'Leaderboards', href: '/leaderboard' }, { label: 'Shop', href: '/shop' }, { label: 'Play 17-0', href: '/games/17-0', strong: true }] },
       { ...fantasySection, only: 'narrow' },
       { title: 'Browse', links: [
-      { label: 'Players', href: '/players' }, { label: 'Teams', href: '/teams' }, { label: 'Coaches', href: '/coaches' }, { label: 'Positions', href: '/positions' }, { label: 'Blog', href: '/blog' },
+      { label: 'Players', href: '/players' }, { label: 'Teams', href: '/teams' }, { label: 'Coaches', href: '/coaches' }, { label: 'Positions', href: '/positions' }, { label: 'Blog', href: '/blog' }, { label: 'About', href: '/about' }, { label: 'Updates', href: '/updates' },
     ] }],
   };
   return [games, fantasy, { label: "Pick 'em", href: '/pickem', hideOn: 'phone' }, { label: 'Leaders', href: '/leaderboard', hideOn: 'phone' }, { label: 'Shop', href: '/shop', hideOn: 'phone' }, more];

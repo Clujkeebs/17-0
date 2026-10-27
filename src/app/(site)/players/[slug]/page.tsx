@@ -8,6 +8,7 @@ import { db, schema } from '@/db';
 import { POSITION_NAMES, type AttributeKey } from '@/lib/game/attributes';
 import { ratePlayer, letterGrade } from '@/lib/game/formulas';
 import { pageMeta } from '@/lib/seo/meta';
+import { INDEXABLE_MIN_OVERALL } from '@/lib/seo/indexing';
 import { safe } from '@/lib/seo/safe';
 import { personLd } from '@/lib/seo/jsonld';
 import { heightStr, ordinal } from '@/lib/seo/text';
@@ -63,6 +64,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: d.summary.slice(0, 160),
     path: `/players/${d.p.slug}`,
     image: d.p.imageBlobUrl ?? d.p.imageUrl,
+    // Depth players stay reachable and linked, but a table about a backup is thin as a search result.
+    noindex: d.p.overallRating < INDEXABLE_MIN_OVERALL,
   });
 }
 

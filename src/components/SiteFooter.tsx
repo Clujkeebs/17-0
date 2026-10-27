@@ -34,6 +34,13 @@ export function SiteFooter() {
           <div>
             <span className="eyebrow">Appearance</span>
             <p style={{ margin: '0 0 18px' }}><ThemeToggle labelled /></p>
+            <span className="eyebrow">Site</span>
+            <ul className="footer-links" style={{ marginBottom: 18 }}>
+              <li><Link href="/about">About</Link></li>
+              <li><Link href="/updates">Updates</Link></li>
+              <li><Link href="/contact">Contact</Link></li>
+              <li><Link href="/credits">Photo credits</Link></li>
+            </ul>
             <span className="eyebrow">Legal</span>
             <ul className="footer-links">
               <li><Link href="/legal/terms">Terms</Link></li>
@@ -41,9 +48,7 @@ export function SiteFooter() {
               <li><Link href="/legal/cookies">Cookies</Link></li>
               <li><Link href="/legal/disclaimer">Disclaimer</Link></li>
               <li><Link href="/legal/dmca">DMCA</Link></li>
-              <li><Link href="/credits">Photo credits</Link></li>
               <li><Link href="/legal/accessibility">Accessibility</Link></li>
-              <li><Link href="/contact">Contact</Link></li>
             </ul>
           </div>
         </div>

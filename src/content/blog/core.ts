@@ -5,7 +5,7 @@ export const CORE_POSTS: BlogPost[] = [
   {
     slug: 'how-17-0-works',
     title: 'How 17-0 works',
-    date: '2026-08-18',
+    date: '2026-09-29',
     updated: '2026-10-27',
     category: 'Strategy',
     excerpt: 'One reel, six spins, six slots, one pick per team. What the reel does, what the grade measures, and why a perfect season is rarer than it looks.',
@@ -51,7 +51,8 @@ export const CORE_POSTS: BlogPost[] = [
   {
     slug: 'ea-sports-madden-nfl-ratings-explained',
     title: 'EA Sports Madden NFL ratings, explained',
-    date: '2026-08-25',
+    date: '2026-09-29',
+    updated: '2026-10-27',
     category: 'The math',
     excerpt: 'Overall is a summary, not a scouting report. What the attribute ratings are, how we use them, and where they are weakest.',
     sections: [
@@ -102,7 +103,7 @@ export const CORE_POSTS: BlogPost[] = [
   {
     slug: 'the-math-behind-the-projected-record',
     title: 'The math behind the projected record',
-    date: '2026-09-01',
+    date: '2026-09-29',
     updated: '2026-10-27',
     category: 'The math',
     excerpt: 'Team strength is a weighted average. Wins are strength minus 68.8, over 26, times 17, plus a seeded roll from minus 2 to plus 1. Here is what that implies.',
@@ -155,7 +156,8 @@ export const CORE_POSTS: BlogPost[] = [
   {
     slug: 'the-tight-end-slot',
     title: 'The tight end slot (8 percent)',
-    date: '2026-09-08',
+    date: '2026-09-29',
+    updated: '2026-10-27',
     category: 'Strategy',
     excerpt: 'The smallest weight in 17-0 is also the one most likely to decide whether a good roster finishes 16-1 or 17-0.',
     sections: [
@@ -206,7 +208,8 @@ export const CORE_POSTS: BlogPost[] = [
   {
     slug: 'build-a-player-the-case-for-stealing-one-attribute',
     title: 'Build a Player: the case for stealing one trait',
-    date: '2026-09-15',
+    date: '2026-09-29',
+    updated: '2026-10-27',
     category: 'Strategy',
     excerpt: 'You do not need the best player on each team. You need the best number for each trait, placed in the right order. Those are rarely the same thing.',
     sections: [
@@ -271,7 +274,8 @@ export const CORE_POSTS: BlogPost[] = [
   {
     slug: 'coach-impact-score-explained',
     title: 'Coach impact score, explained',
-    date: '2026-09-22',
+    date: '2026-09-29',
+    updated: '2026-10-27',
     category: 'The math',
     excerpt: 'A single number for a head coach, built from roster quality, recent winning, playoff trips, rings, and tenure. The formula, the tradeoffs, and what it misses.',
     sections: [

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-const PAGES = ['/', '/games', '/games/higher-lower', '/games/grid', '/games/mystery-player', '/games/wheres-he-from', '/games/blind-resume', '/games/rating-match', '/games/guess-the-ovr', '/games/top-ten', '/games/rank-em', '/games/name-that-team', '/games/speed-trap', '/games/odd-one-out', '/games/numbers-game', '/games/size-up', '/games/vet-check', '/games/division-line', '/games/17-0', '/games/build-a-player', '/games/82-0', '/games/162-0', '/games/44-0', '/games?sport=wnba', '/games?sport=nba', '/games?sport=mlb', '/games?sport=puzzles', '/games/sports-connections', '/games/sports-wordle', '/games/sports-crossword', '/games/fantasy-start-em', '/games/fantasy-rank-em', '/games/top-100-nfl-now', '/games/top-100-nba-all', '/fantasy', '/fantasy/rankings', '/fantasy/waivers', '/fantasy/trade', '/fantasy/cheat-sheet', '/fantasy/draft-order', '/fantasy/tier-list', '/fantasy/mock-draft', '/fantasy/start-sit', '/games/nba-higher-lower', '/games/nba-blind-resume', '/games/nba-who-led', '/games/nba-whose-team', '/games/wnba-higher-lower', '/games/wnba-blind-resume', '/games/wnba-who-led', '/games/wnba-whose-team', '/games/nba-2k-higher-lower', '/games/nba-2k-rank-em', '/games/nba-2k-guess', '/games?sport=soccer', '/games/soccer-whose-club', '/games/soccer-where-from', '/games/soccer-higher-lower', '/games/soccer-top-scorer', '/games/build-a-soccer-player', '/games/soccer-assist-king', '/games/soccer-which-league', '/games/soccer-odd-club', '/games/soccer-rank-goals', '/games/mlb-higher-lower', '/games/mlb-blind-resume', '/games/mlb-who-led', '/games/mlb-whose-team', '/games/mlb-rank-em', '/leaderboard', '/shop', '/players', '/teams', '/coaches', '/positions', '/blog', '/blog/how-17-0-works', '/about', '/teams/arizona-cardinals', '/coaches/andy-reid',
+const PAGES = ['/', '/games', '/games/higher-lower', '/games/grid', '/games/mystery-player', '/games/wheres-he-from', '/games/blind-resume', '/games/rating-match', '/games/guess-the-ovr', '/games/top-ten', '/games/rank-em', '/games/name-that-team', '/games/speed-trap', '/games/odd-one-out', '/games/numbers-game', '/games/size-up', '/games/vet-check', '/games/division-line', '/games/17-0', '/games/build-a-player', '/games/82-0', '/games/162-0', '/games/44-0', '/games?sport=wnba', '/games?sport=nba', '/games?sport=mlb', '/games?sport=puzzles', '/games/sports-connections', '/games/sports-wordle', '/games/sports-crossword', '/games/fantasy-start-em', '/games/fantasy-rank-em', '/games/top-100-nfl-now', '/games/top-100-nba-all', '/fantasy', '/fantasy/rankings', '/fantasy/waivers', '/fantasy/trade', '/fantasy/cheat-sheet', '/fantasy/draft-order', '/fantasy/tier-list', '/fantasy/mock-draft', '/fantasy/start-sit', '/games/nba-higher-lower', '/games/nba-blind-resume', '/games/nba-who-led', '/games/nba-whose-team', '/games/wnba-higher-lower', '/games/wnba-blind-resume', '/games/wnba-who-led', '/games/wnba-whose-team', '/games/nba-2k-higher-lower', '/games/nba-2k-rank-em', '/games/nba-2k-guess', '/games?sport=soccer', '/games/soccer-whose-club', '/games/soccer-where-from', '/games/soccer-higher-lower', '/games/soccer-top-scorer', '/games/build-a-soccer-player', '/games/soccer-assist-king', '/games/soccer-which-league', '/games/soccer-odd-club', '/games/soccer-rank-goals', '/games/mlb-higher-lower', '/games/mlb-blind-resume', '/games/mlb-who-led', '/games/mlb-whose-team', '/games/mlb-rank-em', '/leaderboard', '/shop', '/players', '/teams', '/coaches', '/positions', '/blog', '/blog/how-17-0-works', '/about', '/updates', '/teams/arizona-cardinals', '/coaches/andy-reid',
   '/games/sports-strands', '/games?sport=college', '/games/cfb-higher-lower', '/games/cbb-who-led', '/games/wcbb-whose-team', '/games/cfb-build-a-player', '/games/cbb-build-a-player', '/games/wcbb-build-a-player',
   '/legal/terms', '/legal/privacy', '/legal/cookies', '/legal/disclaimer', '/legal/dmca', '/legal/accessibility', '/login', '/register'];
 
@@ -76,4 +76,16 @@ test('llms.txt and the IndexNow key are served', async ({ request }) => {
   const body = await r.text();
   for (const g of ['/games/17-0', '/games/82-0', '/games/162-0', '/games/44-0']) expect(body).toContain(g);
   expect((await request.get('/6b4158a0c2e8d8bf572858230b641949.txt')).status()).toBe(200);
+});
+
+test('the sitemap index names every sitemap, and robots.txt points at it', async ({ request }) => {
+  const r = await request.get('/sitemap.xml');
+  expect(r.status()).toBe(200);
+  const xml = await r.text();
+  for (const id of ['static', 'players', 'teams', 'coaches', 'positions', 'games', 'blog']) expect(xml).toContain(`/sitemap/${id}.xml`);
+  expect(await (await request.get('/robots.txt')).text()).toContain('/sitemap.xml');
+  // The static sitemap lists every quick game, the updates page and the about page, and nothing that canonicalizes elsewhere.
+  const stat = await (await request.get('/sitemap/static.xml')).text();
+  for (const p of ['/games/higher-lower', '/games/sports-connections', '/updates', '/about', '/games<']) expect(stat).toContain(p);
+  expect(stat).not.toContain('?sport=');
 });

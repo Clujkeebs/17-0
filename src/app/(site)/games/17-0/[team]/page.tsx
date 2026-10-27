@@ -40,6 +40,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `Can a ${name} roster go 17-0?`,
     description: `The six best draftable ${name} players for 17-0, what each slot is worth, and whether a roster built around them can run the table.`,
     path: `/games/17-0/${t.slug}`,
+    // Thirty-two pages that repeat what each team page already says. Linked from it, not offered to search.
+    noindex: true,
   });
 }
 
