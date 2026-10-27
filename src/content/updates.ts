@@ -9,8 +9,8 @@ export const SITE_STARTED = '2026-09-28';
 export const UPDATES: Update[] = [
   {
     date: '2026-10-27',
-    title: 'Tables that fit a phone, and a 44-0 page that matches the game',
-    body: 'Tables on a phone now keep the number they are ranked by, so the Coaches page shows Impact and the player lists show OVR instead of hiding them off the side. A long name on a board ends in dots instead of being cut mid-letter. The Build a Player position cards line up, the blog list sits tighter on a tablet, and the 44-0 page no longer mentions eras, since it drafts from this season only.',
+    title: 'Tables that fit a phone, cleaner results, and a 44-0 page that matches the game',
+    body: 'Tables on a phone now keep the number they are ranked by, so the Coaches page shows Impact and the player lists show OVR instead of hiding them off the side. A long name on a board ends in dots instead of being cut mid-letter. The 17-0 result no longer runs its point differential into the next line, a share card fits a long headline such as "Streak 24", and the 404 page shows one header instead of two. The Build a Player position cards line up, the blog list sits tighter on a tablet, and the 44-0 page no longer mentions eras, since it drafts from this season only.',
   },
   {
     date: '2026-10-27',

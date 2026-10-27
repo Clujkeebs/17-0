@@ -38,7 +38,7 @@
 .reel2-city { font-size: 1rem; color: var(--bone-dim); }
 .reel2-name strong { font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: -0.035em; }
 .reel2.is-landed { box-shadow: inset 0 -4px 0 var(--tc, var(--bone)); }
-@media (max-width: 600px) { .reel2-cell { gap: 14px; padding: 0 16px; } .reel2-cell img, .reel2-cell .team-mono { width: 64px !important; height: 64px !important; } }
+@media (max-width: 600px) { .reel2-cell { gap: 14px; padding: 0 16px; } .reel2-cell img, .reel2-cell .team-mono { width: 64px !important; height: 64px !important; } .reel2-cell .team-mono { font-size: 19px !important; } }
 .reel2.is-landed { animation: land .35s ease-out; }
 @keyframes land { 0% { transform: scale(.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
 .team-mono { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 700; font-family: var(--font-num); }

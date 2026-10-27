@@ -35,7 +35,7 @@ export async function renderCard(c: CardInput) {
           <div style={{ display: 'flex', height: 2, background: '#0A0A0A' }} />
           {c.lines.slice(0, 6).map((l) => (
             <div key={l.k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 28, padding: '14px 0', borderBottom: '1px solid #E7E5E0' }}>
-              <span style={{ color: '#5E5C57', fontWeight: 400, width: 110 }}>{l.k}</span>
+              <span style={{ color: '#5E5C57', fontWeight: 400, minWidth: 110, marginRight: 16, whiteSpace: 'nowrap' }}>{l.k}</span>
               <span style={{ fontWeight: 700, flex: 1, display: 'flex', justifyContent: 'flex-end' }}>{l.v}</span>
             </div>
           ))}

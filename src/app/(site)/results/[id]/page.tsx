@@ -58,6 +58,8 @@ export default async function ResultPage({ params }: Props) {
   if (r.gameType === '44-0') return <WnbaResultPage r={r} />;
   const mini = r.gameType !== '17-0' && r.gameType !== 'build-a-player' ? getMiniGame(r.gameType) : null;
   if (mini) return <MiniResultPage r={r} name={mini.name} slug={mini.slug} tagline={mini.tagline} />;
+  // A game that has been taken down (Unbeaten Bowl) still has old results, and nothing here knows how to show them.
+  if (r.gameType !== '17-0' && r.gameType !== 'build-a-player') notFound();
   const is17 = r.gameType === '17-0';
   const headline = is17 ? `${d.wins}-${d.losses}` : Number(d.rating).toFixed(1);
   const schedule = is17 && Array.isArray(d.schedule) ? (d.schedule as GameLine[]).filter((g) => g && typeof g.week === 'number') : [];
@@ -79,8 +81,8 @@ export default async function ResultPage({ params }: Props) {
               {is17 ? (
                 <>
                   <span className="stat"><span className="v">{Number(d.teamStrength).toFixed(1)}</span><span className="l">{d.format === 'fantasy' ? 'Points per week' : 'Team strength'}</span></span>
-                  <span className="muted num">Point diff {Number(d.pointDiff) >= 0 ? '+' : ''}{String(d.pointDiff)}</span>
-                  {d.perfectAt != null && Number(d.wins) < 17 && <span className="muted num">17-0 locks in at {Number(d.perfectAt).toFixed(1)}</span>}
+                  <span className="muted num" style={{ display: 'block', marginTop: 6 }}>Point diff {Number(d.pointDiff) >= 0 ? '+' : ''}{String(d.pointDiff)}</span>
+                  {d.perfectAt != null && Number(d.wins) < 17 && <span className="muted num" style={{ display: 'block', marginTop: 2 }}>17-0 locks in at {Number(d.perfectAt).toFixed(1)}</span>}
                 </>
               ) : (
                 <span className="stat"><span className="v">{String(d.letter)}</span><span className="l">{String(d.position)} grade</span></span>
