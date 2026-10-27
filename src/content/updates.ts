@@ -9,6 +9,11 @@ export const SITE_STARTED = '2026-09-28';
 export const UPDATES: Update[] = [
   {
     date: '2026-10-27',
+    title: 'Tablet fixes, cleaner boards, current teams',
+    body: 'The header no longer collides on a tablet or half an iPad, and pages start under the logo at every width. Leaderboard rows are one tidy pill with the result beside it, and a profile banner shows its whole picture. The NBA 2K edition of 82-0 files each player under his team on ESPN\'s current roster, so Kawhi Leonard is a Raptor.',
+  },
+  {
+    date: '2026-10-27',
     title: 'More to read, and the numbers checked',
     body: 'The blog grows to 31 posts that explain how every grade, win line and odds table is built, with worked examples. Every quick game page now has a written guide under the game. Team and coach pages show how a roster ranks by unit and what the coach slot is worth in wins. Wrong figures on the home page, the per-team 17-0 FAQ and the coaches pages were corrected. About and Updates are now linked from every page.',
   },

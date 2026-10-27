@@ -8,6 +8,7 @@ import { NameEffect } from './Effect';
  * The font sits on the outer span and the color on the inner one, so a font's shadow or outline and a color's
  * glow or animation (both CSS filters) never fight over the same element.
  * The owner tag is rendered here from a server-decided flag only.
+ * `lite` leaves out the effect mark before the name: on a board, and beside a picture that already wears the effect.
  */
 export function StyledName({ name, style, className, showTitle = true, lite = false }: { name: string; style?: NameStyle | null; className?: string; showTitle?: boolean; lite?: boolean }) {
   const s = style ?? { font: 'classic', color: 'ink', owner: false };

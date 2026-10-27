@@ -98,7 +98,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
         )
       ) : !overall ? (
         rows.length ? (
-          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table className="lb-table">
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table className={`lb-table${period !== 'today' ? ' lb-dated' : ''}`}>
             <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Result</th>{period !== 'today' && <th scope="col" className="num">Date</th>}</tr></thead>
             <tbody>{rows.map((r) => (
               <tr key={r.rank} className={r.rank <= 3 ? `lb-top lb-${r.rank}` : undefined}>

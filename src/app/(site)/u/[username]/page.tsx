@@ -38,7 +38,7 @@ export default async function PublicProfile({ params }: Props) {
       <div className={`profile-head${nameStyleOf(u).banner ? ` banner ${nameStyleOf(u).banner}` : ''}`}>
         <Avatar name={name} src={avatarUrl(u.username, imageVersion(u.image))} size={84} ring={nameStyleOf(u).border} effect={nameStyleOf(u).effect} />
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ margin: 0 }}><StyledName name={name} style={nameStyleOf(u)} /></h1>
+          <h1 className={name.length > 13 ? 'long' : undefined} style={{ margin: 0 }}><StyledName name={name} style={nameStyleOf(u)} lite /></h1>
           <p className="muted num" style={{ margin: '4px 0 0' }}>@{u.username}</p>
         </div>
       </div>

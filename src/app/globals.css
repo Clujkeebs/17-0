@@ -83,7 +83,9 @@ strong { font-weight: 650; }
 .skip-link:focus { left: 12px; color: #fff; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-.container { width: 100%; max-width: calc(var(--maxw) + 2 * var(--gutter)); margin: 0 auto; padding: 0 var(--gutter); }
+.container { width: 100%; max-width: calc(var(--maxw) + 2 * var(--gutter)); margin-left: max(0px, calc((100% - (var(--maxw) + 2 * var(--gutter))) / 2)); margin-right: auto; padding: 0 var(--gutter); }
+/* A page that sets a narrower column (a max-width of its own) keeps its left edge on the header's grid, under the logo, so the heading never drifts away from the nav on a tablet. Forms centre themselves. */
+.container.center { margin-left: auto; }
 .section { padding-block: 40px; }
 @media (min-width: 900px) { .section { padding-block: 72px; } }
 /* The first block on a page sits close to the header, the same distance on every page. */
@@ -571,8 +573,10 @@ html[data-rules=hidden] .rules-card { display: none; }
 /* Leaderboards */
 .sport-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .sport-tabs a { white-space: nowrap; }
-@media (max-width: 640px) { .sport-tabs { display: flex; flex-wrap: wrap; overflow: visible; border-radius: 22px; gap: 4px; } .sport-tabs a { padding: 7px 14px; } }
+@media (max-width: 900px) { .sport-tabs { display: flex; flex-wrap: wrap; overflow: visible; border-radius: 22px; gap: 4px; } }
+@media (max-width: 640px) { .sport-tabs a { padding: 7px 14px; } }
 .lb-games { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin: -12px 0 14px; scrollbar-width: thin; }
+@media (min-width: 641px) { .lb-games { flex-wrap: wrap; overflow: visible; padding-bottom: 2px; margin-bottom: 18px; } }
 .lb-chip { flex: none; padding: 7px 14px; border: 1px solid var(--steel); border-radius: 999px; font-size: .88rem; font-weight: 600; color: var(--bone); text-decoration: none; background: var(--surface); white-space: nowrap; }
 .lb-chip:hover { border-color: var(--bone); }
 .lb-chip.on { background: var(--bone); border-color: var(--bone); color: var(--on-bone); }
@@ -581,6 +585,22 @@ html[data-rules=hidden] .rules-card { display: none; }
 .seg { display: inline-flex; padding: 3px; border: 1px solid var(--steel); border-radius: 10px; background: var(--surface); }
 .seg a { padding: 6px 12px; border-radius: 7px; font-size: .85rem; font-weight: 600; color: var(--bone-dim); text-decoration: none; white-space: nowrap; }
 .seg a.on { background: var(--bone); color: var(--on-bone); }
+/* A board is a narrow column: the rank, the player and the result sit close together instead of at opposite edges of a wide screen. */
+.lb-table { max-width: 720px; }
+.lb-table td { padding-block: 9px; }
+.lb-table th:first-child, .lb-table td:first-child { width: 52px; text-align: left; }
+/* On a phone the pill shrinks to leave room for the result, which used to sit past the edge of the screen. */
+@media (max-width: 640px) {
+  .lb-table th:first-child, .lb-table td:first-child { width: 34px; }
+  .lb-table th, .lb-table td { padding-inline: 6px; }
+  .lb-table td .plate { max-width: max(150px, calc(100vw - 190px)); }
+  .lb-table td .plate .nm { flex-wrap: nowrap; }
+  .lb-table:has(th:nth-child(4)) td .plate { max-width: max(120px, calc(100vw - 236px)); }
+}
+/* This week and All time carry a date as well; on a small phone the date gives way to the result. */
+@media (max-width: 480px) { .lb-table.lb-dated th:nth-child(4), .lb-table.lb-dated td:nth-child(4) { display: none; } }
+@media (max-width: 480px) { .lb-table .plate .nm-title { display: none; } }
+.lb-table td.num { white-space: nowrap; }
 .lb-rank { display: inline-grid; place-items: center; min-width: 26px; height: 26px; border-radius: 999px; font-weight: 700; }
 .lb-1 .lb-rank { background: #E8C547; color: #1A1A1A; }
 .lb-2 .lb-rank { background: #D5D9DE; color: #1A1A1A; }
@@ -677,11 +697,13 @@ html[data-rules=hidden] .rules-card { display: none; }
 .sn-item.open .sn-caret { transform: rotate(180deg); }
 .sn-panel { position: absolute; top: calc(100% + 10px); left: -8px; z-index: 50; min-width: 240px; padding: 16px; border: 1px solid var(--steel); border-radius: 18px; background: var(--surface); box-shadow: 0 24px 60px rgba(10,10,10,.14), 0 2px 8px rgba(10,10,10,.06); animation: sn-in .16s ease-out; }
 /* The big Games menu sits centered under the header and never wider than the screen (iPad widths included). */
-.sn-panel.wide { position: fixed; top: calc(var(--header-h) - 2px); left: max(16px, calc(50vw - 560px)); width: min(1120px, calc(100vw - 32px)); min-width: 0; }
+.sn-panel.wide { position: fixed; top: calc(var(--header-h) - 2px); left: max(16px, calc(50vw - 560px)); width: min(1120px, calc(100vw - 32px)); min-width: 0; max-height: calc(100dvh - var(--header-h) - 16px); overflow-y: auto; }
 .sn-panel::before { content: ''; position: absolute; left: 0; right: 0; top: -12px; height: 12px; }
 @keyframes sn-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .sn-grid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 24px; }
-.sn-sec-h { display: block; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--bone-dim); text-decoration: none; margin: 0 0 8px; }
+.sn-sec-h { display: block; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--bone-dim); text-decoration: none; margin: 0 0 8px; white-space: nowrap; }
+/* Seven sports in a row need a desktop; a tablet gets four across and two rows, so no heading breaks mid-word and no link wraps to three lines. */
+@media (min-width: 761px) and (max-width: 1100px) { .sn-panel.wide .sn-grid { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-columns: auto; gap: 22px 24px; } }
 a.sn-sec-h:hover { color: var(--bone); }
 .sn-sec ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .sn-sec a:not(.sn-sec-h) { display: block; padding: 6px 8px; margin: 0 -8px; border-radius: 8px; color: var(--bone); text-decoration: none; font-size: .92rem; }
@@ -709,7 +731,8 @@ a.sn-sec-h:hover { color: var(--bone); }
   .sn-panel, .sn-panel.wide { position: fixed; top: var(--header-h); left: 0; right: 0; width: auto; min-width: 0; border-radius: 0 0 20px 20px; border-left: 0; border-right: 0; max-height: calc(100dvh - var(--header-h) - 24px); overflow-y: auto; padding: 16px; }
   .sn-grid { grid-auto-flow: row; grid-template-columns: 1fr 1fr; grid-auto-columns: auto; gap: 16px; }
 }
-@media (min-width: 761px) { .sn-phone { display: none; } }
+@media (max-width: 980px) { .sn-desk { display: none; } }
+@media (min-width: 981px) { .sn-phone { display: none; } }
 @media (min-width: 361px) { .sn-narrow { display: none; } }
 @media (max-width: 360px) { .sn-wide { display: none; } }
 @media (prefers-reduced-motion: reduce) { .sn-panel { animation: none; } .sn-caret { transition: none; } }

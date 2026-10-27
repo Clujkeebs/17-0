@@ -28,7 +28,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const error = typeof sp.error === 'string' ? (ERRORS[sp.error] ?? 'Sign-in failed. Try again.') : null;
 
   return (
-    <div className="container section" style={{ maxWidth: 480 }}>
+    <div className="container section center" style={{ maxWidth: 480 }}>
       <span className="eyebrow">Account</span>
       <h1>Sign in</h1>
       <p className="muted">Keep your scores, track your daily streak, and get a name on the leaderboard.</p>

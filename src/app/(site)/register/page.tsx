@@ -21,7 +21,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   const google = !!process.env.GOOGLE_CLIENT_ID;
 
   return (
-    <div className="container section" style={{ maxWidth: 480 }}>
+    <div className="container section center" style={{ maxWidth: 480 }}>
       <span className="eyebrow">Account</span>
       <h1>Create an account</h1>
       <p className="muted">Free. Your scores, your streak, your name on the board. No account needed to play.</p>

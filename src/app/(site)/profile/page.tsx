@@ -39,7 +39,7 @@ export default async function ProfilePage() {
       <div className={`profile-head${style.banner ? ` banner ${style.banner}` : ''}`}>
         <Avatar name={name} src={avatarUrl(user.username, imageVersion(user.image))} size={84} ring={style.border} effect={style.effect} />
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ margin: 0 }}><StyledName name={name} style={style} /></h1>
+          <h1 className={name.length > 13 ? 'long' : undefined} style={{ margin: 0 }}><StyledName name={name} style={style} lite /></h1>
           {user.username && <p className="muted num" style={{ margin: '4px 0 0' }}>@{user.username}</p>}
         </div>
       </div>

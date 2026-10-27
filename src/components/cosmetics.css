@@ -212,9 +212,16 @@
 .banner.banner-warn::after, .banner.banner-error::after { display: none; }
 /* The name sits on a plate so every colour and font reads on every banner. */
 .banner .nm { background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--bone); padding: 4px 12px; border-radius: 12px; box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 6px 20px rgba(0,0,0,.28); box-sizing: border-box; max-width: 100%; backdrop-filter: blur(6px); }
-.profile-head.banner .nm { padding: 6px 14px; }
+.profile-head.banner .nm { padding: 6px 14px; align-items: center; row-gap: 4px; }
 .profile-head.banner h1 { font-size: clamp(1.45rem, 6.5vw, 2.6rem); }
+/* A long name steps down a size so it keeps to one line beside its title. */
+.profile-head.banner h1.long { font-size: clamp(1.15rem, 4.6vw, 1.9rem); }
+.profile-head .nm-title { font-size: clamp(.7rem, .3em, .95rem); flex: none; }
 .profile-head > .fx-wrap { margin: 22px; }
+/* A banner's art is 4 to 1. On a tablet or a desktop its header keeps that shape, so the picture shows whole instead of losing its top and bottom, and the picture and name sit low on it. */
+.profile-head.banner { align-items: flex-end; }
+@media (min-width: 761px) { .profile-head.banner:not(.banner-plain) { aspect-ratio: 4 / 1; padding: 22px 26px; } }
+@media (max-width: 760px) { .profile-head.banner:not(.banner-plain) { min-height: 150px; } }
 @media (max-width: 520px) { .profile-head > .fx-wrap { margin: 14px 18px 14px 14px; } }
 @media (max-width: 520px) { .profile-head.banner { gap: 12px; padding: 14px; } .profile-head.banner .avatar { width: 64px !important; height: 64px !important; } }
 .banner-field { background-color: #0b0d14; background-image: url(/cosmetics/banners/banner-field.svg); }
@@ -340,56 +347,59 @@
   :root:not([data-motion]) .banner-eclipse { background-image: url(/cosmetics/banners/banner-eclipse.still.svg); }
 }
 .profile-head.banner-hive .nm, .shop-look.banner-hive .shop-look-meta { color: #1C1917; }
-/* A player on a board (PlayerPlate): picture in its ring, name on the banner. Plates always use a banner's still art so long boards stay smooth. */
-.plate { display: inline-flex; align-items: center; gap: 9px; max-width: 100%; margin: 0; padding: 4px 14px 4px 5px; border-radius: 999px; color: inherit; text-decoration: none; vertical-align: middle; box-sizing: border-box; }
-/* A board shows a player as one clean pill: a soft tint of their banner's colours, the picture in its ring, the name straight on it. The tint is !important because the reduced-motion rules (:root[data-motion="reduce"] .banner-x) are more specific than a plate and would put the banner's drawing back under a name with no chip, on exactly the devices that ask for less motion. */
-.plate.banner { background-color: var(--surface); background-image: linear-gradient(100deg, color-mix(in srgb, var(--b1, var(--surface)) 24%, var(--surface)), color-mix(in srgb, var(--b3, var(--surface)) 24%, var(--surface))) !important; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--b2, var(--steel)) 38%, var(--steel)); }
+/* A player on a board (PlayerPlate) is one clean pill: the picture in its ring, the name straight on it, a small title. The banner shows as a wash of its own main colour that fades into the page, never as its drawing, so a board of a hundred never loads a hundred 100 KB pictures. One colour, not two, so no banner turns muddy. The wash is !important because the reduced-motion banner rules (:root[data-motion="reduce"] .banner-x) are more specific than a plate and would put the drawing back under a name, on exactly the devices that ask for less motion. */
+.plate { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; min-height: 42px; margin: 0; padding: 4px 16px 4px 5px; border-radius: 999px; color: inherit; text-decoration: none; vertical-align: middle; box-sizing: border-box; }
+.plate.banner { background-color: var(--surface); background-image: linear-gradient(90deg, color-mix(in srgb, var(--ac, var(--steel)) 24%, var(--surface)), var(--surface) 82%) !important; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ac, var(--steel)) 36%, var(--steel)); }
+.plate.banner.banner-plain { background-color: var(--surface); }
 .plate.banner::after { display: none; }
 .plate.banner .nm { background: none; box-shadow: none; padding: 0; backdrop-filter: none; -webkit-backdrop-filter: none; color: inherit; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Nothing spills past the pill: a ring's halo would reach into the row, and a shimmer on fifty titles is noise. */
+.plate .ring { box-shadow: none !important; }
 .plate .owner-tag { display: none; }
-.plate .nm-title { font-size: .56em; padding: 1px 7px; }
+.plate .nm-title { font-size: .56em; padding: 1px 7px; box-shadow: none; }
+.plate .nm-title::after { display: none; }
 .plate .avatar { display: block; }
-/* Each banner's own colours (scripts/cosmetics/board-banners.mjs), never the 100 KB drawings. */
-.plate.banner-aurora { --b1: #34d399; --b2: #38bdf8; --b3: #c084fc; }
-.plate.banner-ballpark { --b1: #facc15; --b2: #60a5fa; --b3: #f87171; }
-.plate.banner-circuit { --b1: #08213a; --b2: #22d3ee; --b3: #22d3ee; }
-.plate.banner-city { --b1: #e0567a; --b2: #ff7a59; --b3: #fde68a; }
-.plate.banner-comic { --b1: #e11d48; --b2: #fb923c; --b3: #fde047; }
-.plate.banner-confetti { --b1: #facc15; --b2: #38bdf8; --b3: #ef4444; }
-.plate.banner-court { --b1: #3a2a1c; --b2: #9e2b25; --b3: #d89d4d; }
-.plate.banner-diamond { --b1: #7a4a22; --b2: #2f8a3a; --b3: #ffd58a; }
-.plate.banner-draft { --b1: #00c2ff; --b2: #facc15; --b3: #ff2d95; }
-.plate.banner-eclipse { --b1: #1b0d3d; --b2: #f97316; --b3: #7c3aed; }
-.plate.banner-endzone { --b1: #233b94; --b2: #facc15; --b3: #facc15; }
-.plate.banner-field { --b1: #0d4a1a; --b2: #facc15; --b3: #e0763a; }
-.plate.banner-founder { --b1: #7a5700; --b2: #e8c547; --b3: #ef4444; }
-.plate.banner-galaxy { --b1: #0b0524; --b2: #c2603a; --b3: #fbbf8a; }
-.plate.banner-gilded { --b1: #0a0a0a; --b2: #7a5700; --b3: #e8c547; }
-.plate.banner-hive { --b1: #111111; --b2: #7a3b05; --b3: #facc15; }
-.plate.banner-hologram { --b1: #ff0080; --b2: #ffee00; --b3: #00e5ff; }
-.plate.banner-inferno { --b1: #6b1a07; --b2: #ff7a1a; --b3: #fde047; }
-.plate.banner-jumbotron { --b1: #00e676; --b2: #00c2ff; --b3: #ffb703; }
-.plate.banner-launch { --b1: #8a6400; --b2: #fde68a; --b3: #fde68a; }
-.plate.banner-marble { --b1: #7a5700; --b2: #7a1f1f; --b3: #e8c547; }
-.plate.banner-matrix { --b1: #010a04; --b2: #22ff66; --b3: #22ff66; }
-.plate.banner-night { --b1: #101b3d; --b2: #1d6f31; --b3: #9ec1ff; }
-.plate.banner-ocean { --b1: #0e7490; --b2: #fb923c; --b3: #f472b6; }
-.plate.banner-pitch { --b1: #2f9b45; --b2: #d9647a; --b3: #ffc58a; }
-.plate.banner-pixelcity { --b1: #ffd23f; --b2: #ff6ec7; --b3: #7df9ff; }
-.plate.banner-playbook { --b1: #1a2923; --b2: #8b5a2b; --b3: #8b5a2b; }
-.plate.banner-rain { --b1: #0d3a1c; --b2: #16233c; --b3: #9ec3e6; }
-.plate.banner-retro { --b1: #4c1d95; --b2: #4c1d95; --b3: #4c1d95; }
-.plate.banner-rink { --b1: #c8102e; --b2: #1d4ed8; --b3: #facc15; }
-.plate.banner-sakura { --b1: #e11d74; --b2: #ffc4d8; --b3: #ffd9c7; }
-.plate.banner-scoreboard { --b1: #2a1c05; --b2: #ffb020; --b3: #ff5a3d; }
-.plate.banner-snow { --b1: #3c4c6a; --b2: #aeb9cd; --b3: #aeb9cd; }
-.plate.banner-stadium { --b1: #16a34a; --b2: #c8102e; --b3: #facc15; }
-.plate.banner-summit { --b1: #2a3c7a; --b2: #ef4444; --b3: #ffd38a; }
-.plate.banner-sunset { --b1: #3b2a6e; --b2: #c4486c; --b3: #ffb040; }
-.plate.banner-synthwave { --b1: #ff2d95; --b2: #ff7a3d; --b3: #ffe45e; }
-.plate.banner-trophy { --b1: #8a6400; --b2: #e8c547; --b3: #e8c547; }
-.plate.banner-tunnel { --b1: #07080d; --b2: #a7e6ff; --b3: #a7e6ff; }
-.plate.banner-vault { --b1: #7a5700; --b2: #e8c547; --b3: #f87171; }
+/* Each banner's main colour (scripts/cosmetics/board-banners.mjs), read from its art. */
+.plate.banner-aurora { --ac: #38bdf8; }
+.plate.banner-ballpark { --ac: #facc15; }
+.plate.banner-circuit { --ac: #22d3ee; }
+.plate.banner-city { --ac: #ff7a59; }
+.plate.banner-comic { --ac: #fb923c; }
+.plate.banner-confetti { --ac: #facc15; }
+.plate.banner-court { --ac: #d89d4d; }
+.plate.banner-diamond { --ac: #ffd58a; }
+.plate.banner-draft { --ac: #00c2ff; }
+.plate.banner-eclipse { --ac: #f97316; }
+.plate.banner-endzone { --ac: #facc15; }
+.plate.banner-field { --ac: #facc15; }
+.plate.banner-founder { --ac: #ef4444; }
+.plate.banner-galaxy { --ac: #fbbf8a; }
+.plate.banner-gilded { --ac: #7a5700; }
+.plate.banner-hive { --ac: #facc15; }
+.plate.banner-hologram { --ac: #ff0080; }
+.plate.banner-inferno { --ac: #ff7a1a; }
+.plate.banner-jumbotron { --ac: #00c2ff; }
+.plate.banner-launch { --ac: #8a6400; }
+.plate.banner-marble { --ac: #7a5700; }
+.plate.banner-matrix { --ac: #22ff66; }
+.plate.banner-night { --ac: #9ec1ff; }
+.plate.banner-ocean { --ac: #fb923c; }
+.plate.banner-pitch { --ac: #ffc58a; }
+.plate.banner-pixelcity { --ac: #ffd23f; }
+.plate.banner-playbook { --ac: #8b5a2b; }
+.plate.banner-rain { --ac: #9ec3e6; }
+.plate.banner-retro { --ac: #4c1d95; }
+.plate.banner-rink { --ac: #facc15; }
+.plate.banner-sakura { --ac: #e11d74; }
+.plate.banner-scoreboard { --ac: #ffb020; }
+.plate.banner-snow { --ac: #3c4c6a; }
+.plate.banner-stadium { --ac: #facc15; }
+.plate.banner-summit { --ac: #ef4444; }
+.plate.banner-sunset { --ac: #ffb040; }
+.plate.banner-synthwave { --ac: #ff2d95; }
+.plate.banner-trophy { --ac: #8a6400; }
+.plate.banner-tunnel { --ac: #a7e6ff; }
+.plate.banner-vault { --ac: #7a5700; }
 /* The free basics: a thin neutral ring and a clean banner that sits on the page like a card. Everyone has them. */
 .ring-plain { background: var(--steel-hi); }
 .ring-plain::after { box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }

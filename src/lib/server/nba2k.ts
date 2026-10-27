@@ -1,10 +1,12 @@
 import { desc, eq, isNotNull } from 'drizzle-orm';
 import { db, schema } from '@/db';
+import { pool } from './nba-sync';
 
 /**
  * NBA 2K overall ratings for current players, from nba2klab.com's public ratings table (robots.txt allows all
  * crawling; credited on every page that shows a 2K number). One page fetch a day; the table lives in the page's
- * Next.js data blob. Players are matched to ESPN's NBA players by name, with the team breaking ties.
+ * Next.js data blob. Players are matched to ESPN's NBA players by name, with the team breaking ties. The team a player
+ * is filed under is the one on ESPN's current roster, because the table lags trades.
  */
 const URL_2K = 'https://www.nba2klab.com/nba2k-player-ratings';
 export const SOURCE_2K = { name: 'NBA2KLab', url: URL_2K };
@@ -19,6 +21,39 @@ export function parse2k(html: string): Row2k[] {
     .filter((d) => d.Player && typeof d.Overall === 'number' && d.Overall > 0)
     .map((d) => ({ name: String(d.Player), team: String(d.Team ?? ''), position: String(d.Position ?? 'F'), overall: Math.round(d.Overall!) }));
 }
+
+/** ESPN's NBA site API: one roster per team, under the same team ids the core API gives each franchise. */
+const SITE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
+const ESPN_HEADERS = { 'user-agent': 'Mozilla/5.0' };
+
+/** The athletes on one ESPN roster: a flat list for basketball, in groups for other sports. */
+export function rosterAthletes(j: unknown): { id: number; name: string }[] {
+  const list = ((j as { athletes?: unknown[] } | null)?.athletes ?? []) as { id?: string; fullName?: string; items?: unknown[] }[];
+  const flat = list.flatMap((a) => (Array.isArray(a.items) ? (a.items as typeof list) : [a]));
+  return flat.flatMap((a) => { const id = Number(a.id); return Number.isFinite(id) && a.fullName ? [{ id, name: a.fullName }] : []; });
+}
+
+/**
+ * Who is on which team today (athlete id to ESPN team id), read from each team's roster. A roster is right the day a trade
+ * is made; 2K's ratings table is not (Kawhi Leonard stayed on the Clippers in it for weeks after going to Toronto).
+ * Empty or short when ESPN cannot be read, and the caller then keeps 2K's teams.
+ */
+export async function currentTeams(fetchImpl: typeof fetch = fetch): Promise<Map<number, number>> {
+  const getJson = async (path: string) => {
+    try { const r = await fetchImpl(`${SITE}${path}`, { signal: AbortSignal.timeout(20_000), headers: ESPN_HEADERS }); return r.ok ? ((await r.json()) as unknown) : null; } catch { return null; }
+  };
+  const teams = ((await getJson('/teams')) as { sports?: { leagues?: { teams?: { team?: { id?: string } }[] }[] }[] } | null)?.sports?.[0]?.leagues?.[0]?.teams ?? [];
+  const ids = teams.map((t) => Number(t.team?.id)).filter(Number.isFinite);
+  const out = new Map<number, number>();
+  await pool(ids, 6, async (teamId) => { for (const a of rosterAthletes(await getJson(`/teams/${teamId}/roster`))) out.set(a.id, teamId); });
+  return out;
+}
+
+/** 30 teams of 13 to 18 players; fewer than this means ESPN did not answer properly. */
+export const MIN_ROSTER_PLAYERS = 300;
+
+/** A player on a current ESPN roster plays for that team; anyone else keeps the team 2K lists (a free agent, say). */
+export const teamNow = (espnTeam: number | undefined, twoKTeam: number | null): number | null => espnTeam ?? twoKTeam;
 
 /** Name key that ignores accents, punctuation, case and Jr/Sr/II suffixes (Nikola Jokić = Nikola Jokic). */
 export const nameKey = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -54,9 +89,16 @@ export async function sync2k(fetchImpl: typeof fetch = fetch) {
     byLastTeam.set(lt, (byLastTeam.get(lt) ?? new Set()).add(p.id));
   }
 
+  const abbr = new Map<number, string>();
+  for (const t of teams) if (!abbr.has(t.teamId)) abbr.set(t.teamId, t.abbreviation);
+  const roster = await currentTeams(fetchImpl);
+  const rosterOk = roster.size >= MIN_ROSTER_PLAYERS;
+  if (!rosterOk) console.warn(`[2k] ESPN rosters gave ${roster.size} players; keeping the teams 2K lists`);
+
   const now = new Date();
   const seen = new Set<number>();
   const unmatched: string[] = [];
+  const moved: string[] = [];
   for (const row of rows) {
     const teamId = teamByName.get(nameKey(row.team)) ?? null;
     const cands = byName.get(nameKey(row.name)) ?? [];
@@ -68,13 +110,16 @@ export async function sync2k(fetchImpl: typeof fetch = fetch) {
     }
     if (!pick) { unmatched.push(row.name); continue; }
     seen.add(pick.id);
-    await db.update(schema.nbaPlayers).set({ rating2k: row.overall, rating2kPosition: row.position, rating2kTeamId: teamId, rating2kUpdatedAt: now }).where(eq(schema.nbaPlayers.id, pick.id));
+    const espnTeam = rosterOk ? roster.get(pick.id) : undefined;
+    if (espnTeam != null && espnTeam !== teamId) moved.push(`${row.name} ${teamId != null ? abbr.get(teamId) ?? teamId : row.team} to ${abbr.get(espnTeam) ?? espnTeam}`);
+    await db.update(schema.nbaPlayers).set({ rating2k: row.overall, rating2kPosition: row.position, rating2kTeamId: teamNow(espnTeam, teamId), rating2kUpdatedAt: now }).where(eq(schema.nbaPlayers.id, pick.id));
   }
   // Players who dropped out of 2K's table lose their rating.
   const stale = await db.select({ id: schema.nbaPlayers.id }).from(schema.nbaPlayers).where(isNotNull(schema.nbaPlayers.rating2k));
   for (const s of stale) if (!seen.has(s.id)) await db.update(schema.nbaPlayers).set({ rating2k: null, rating2kTeamId: null }).where(eq(schema.nbaPlayers.id, s.id));
-  const summary = { parsed: rows.length, matched: seen.size, unmatched: unmatched.length };
+  const summary = { parsed: rows.length, matched: seen.size, unmatched: unmatched.length, moved: moved.length, rostersRead: roster.size };
   console.log('[2k] synced', JSON.stringify(summary));
   if (unmatched.length) console.log('[2k] unmatched', unmatched.slice(0, 60).join(', '));
+  if (moved.length) console.log(`[2k] team differs, ESPN's roster wins (${moved.length})`, moved.slice(0, 60).join(', '));
   return summary;
 }

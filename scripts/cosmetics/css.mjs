@@ -1,6 +1,7 @@
 // Generates src/components/cosmetics.css: every name colour, font, title pill, ring, banner and effect rule in one place.
 // Light and dark palettes are written side by side and emitted for both the system preference and the manual toggle.
 import { writeFileSync } from 'node:fs';
+import { boardBannerRules } from './board-banners.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -210,9 +211,16 @@ add(`.banner { position: relative; border-radius: 18px; padding: 18px; margin: 8
 .banner.banner-warn::after, .banner.banner-error::after { display: none; }
 /* The name sits on a plate so every colour and font reads on every banner. */
 .banner .nm { background: color-mix(in srgb, var(--surface) 92%, transparent); color: var(--bone); padding: 4px 12px; border-radius: 12px; box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 6px 20px rgba(0,0,0,.28); box-sizing: border-box; max-width: 100%; backdrop-filter: blur(6px); }
-.profile-head.banner .nm { padding: 6px 14px; }
+.profile-head.banner .nm { padding: 6px 14px; align-items: center; row-gap: 4px; }
 .profile-head.banner h1 { font-size: clamp(1.45rem, 6.5vw, 2.6rem); }
+/* A long name steps down a size so it keeps to one line beside its title. */
+.profile-head.banner h1.long { font-size: clamp(1.15rem, 4.6vw, 1.9rem); }
+.profile-head .nm-title { font-size: clamp(.7rem, .3em, .95rem); flex: none; }
 .profile-head > .fx-wrap { margin: 22px; }
+/* A banner's art is 4 to 1. On a tablet or a desktop its header keeps that shape, so the picture shows whole instead of losing its top and bottom, and the picture and name sit low on it. */
+.profile-head.banner { align-items: flex-end; }
+@media (min-width: 761px) { .profile-head.banner:not(.banner-plain) { aspect-ratio: 4 / 1; padding: 22px 26px; } }
+@media (max-width: 760px) { .profile-head.banner:not(.banner-plain) { min-height: 150px; } }
 @media (max-width: 520px) { .profile-head > .fx-wrap { margin: 14px 18px 14px 14px; } }
 @media (max-width: 520px) { .profile-head.banner { gap: 12px; padding: 14px; } .profile-head.banner .avatar { width: 64px !important; height: 64px !important; } }
 ${BANNER_KEYS.map((k) => `.banner-${k} { background-color: #0b0d14; background-image: url(/cosmetics/banners/banner-${k}.svg); }`).join('\n')}
@@ -221,11 +229,20 @@ ${BANNER_KEYS.map((k) => `:root[data-motion="reduce"] .banner-${k} { background-
 ${BANNER_KEYS.map((k) => `  :root:not([data-motion]) .banner-${k} { background-image: url(/cosmetics/banners/banner-${k}.still.svg); }`).join('\n')}
 }
 .profile-head.banner-hive .nm, .shop-look.banner-hive .shop-look-meta { color: #1C1917; }
-/* A player on a board (PlayerPlate): picture in its ring, name on the banner. Plates always use a banner's still art so long boards stay smooth. */
-.plate { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin: 0; padding: 6px 12px 6px 8px; border-radius: 14px; color: inherit; text-decoration: none; vertical-align: middle; box-sizing: border-box; }
-.plate .nm { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A player on a board (PlayerPlate) is one clean pill: the picture in its ring, the name straight on it, a small title. The banner shows as a wash of its own main colour that fades into the page, never as its drawing, so a board of a hundred never loads a hundred 100 KB pictures. One colour, not two, so no banner turns muddy. The wash is !important because the reduced-motion banner rules (:root[data-motion="reduce"] .banner-x) are more specific than a plate and would put the drawing back under a name, on exactly the devices that ask for less motion. */
+.plate { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; min-height: 42px; margin: 0; padding: 4px 16px 4px 5px; border-radius: 999px; color: inherit; text-decoration: none; vertical-align: middle; box-sizing: border-box; }
+.plate.banner { background-color: var(--surface); background-image: linear-gradient(90deg, color-mix(in srgb, var(--ac, var(--steel)) 24%, var(--surface)), var(--surface) 82%) !important; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ac, var(--steel)) 36%, var(--steel)); }
+.plate.banner.banner-plain { background-color: var(--surface); }
+.plate.banner::after { display: none; }
+.plate.banner .nm { background: none; box-shadow: none; padding: 0; backdrop-filter: none; -webkit-backdrop-filter: none; color: inherit; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Nothing spills past the pill: a ring's halo would reach into the row, and a shimmer on fifty titles is noise. */
+.plate .ring { box-shadow: none !important; }
+.plate .owner-tag { display: none; }
+.plate .nm-title { font-size: .56em; padding: 1px 7px; box-shadow: none; }
+.plate .nm-title::after { display: none; }
 .plate .avatar { display: block; }
-${BANNER_KEYS.map((k) => `.plate.banner-${k} { background-image: url(/cosmetics/banners/banner-${k}.still.svg); }`).join('\n')}
+/* Each banner's main colour (scripts/cosmetics/board-banners.mjs), read from its art. */
+${boardBannerRules()}
 /* The free basics: a thin neutral ring and a clean banner that sits on the page like a card. Everyone has them. */
 .ring-plain { background: var(--steel-hi); }
 .ring-plain::after { box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
