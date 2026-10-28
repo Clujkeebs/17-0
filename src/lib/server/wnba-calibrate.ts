@@ -1,7 +1,7 @@
 import { eq, gte } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import {
-  WNBA_ERAS, WNBA_ERA_PICKS_MAX, WNBA_ERA_RESPINS, WNBA_MIN_GP, WNBA_ROUNDS, WNBA_SLOTS, WNBA_TEAM_RESPINS, gradeWnbaRoster, wnbaFit,
+  WNBA_ERAS, WNBA_ERA_PICKS_MAX, WNBA_ERA_RESPINS, WNBA_MIN_GP, WNBA_ROUNDS, WNBA_SLOTS, WNBA_TEAM_RESPINS, gradeWnbaRoster, wnbaFit, wnbaPosition,
   type WnbaMode, type WnbaPick, type WnbaSlot,
 } from '@/lib/game/fortyfour';
 import { createRng } from '@/lib/game/prng';
@@ -44,7 +44,7 @@ async function boards(mode: WnbaMode) {
       const value = lineValue(r.ps, games);
       const m = byTeam.get(r.ps.teamId) ?? new Map<number, Cand>();
       const cur = m.get(r.p.id);
-      if (!cur || value > cur.value) m.set(r.p.id, { pid: r.p.id, name: r.p.fullName, position: r.p.position, teamId: r.ps.teamId, season: r.ps.season, value, apg: r.ps.apg });
+      if (!cur || value > cur.value) m.set(r.p.id, { pid: r.p.id, name: r.p.fullName, position: wnbaPosition(r.p.position, r.ps), teamId: r.ps.teamId, season: r.ps.season, value, apg: r.ps.apg });
       byTeam.set(r.ps.teamId, m);
     }
     out.set(e.key, new Map([...byTeam].filter(([, m]) => m.size >= 5).map(([t, m]) => [t, [...m.values()].sort((a, b) => b.value - a.value)])));

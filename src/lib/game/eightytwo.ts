@@ -42,14 +42,16 @@ export function naturalSlots(position: string, apg?: number | null, playmakerApg
   return apg != null && apg >= playmakerApg && !own.includes('PG') ? ['PG', ...own] : own;
 }
 
+const LISTED: Record<string, NbaSlot[]> = {
+  PG: ['PG'], SG: ['SG'], SF: ['SF'], PF: ['PF'], C: ['C'],
+  G: ['PG', 'SG'], F: ['SF', 'PF'], GF: ['SG', 'SF'], 'G-F': ['SG', 'SF'], 'F-G': ['SG', 'SF'],
+  FC: ['PF', 'C'], 'F-C': ['PF', 'C'], 'C-F': ['PF', 'C'], 'PG-SG': ['PG', 'SG'], 'SG-SF': ['SG', 'SF'], 'SF-PF': ['SF', 'PF'], 'PF-C': ['PF', 'C'],
+};
+const listedKey = (position: string) => position.toUpperCase().replace(/\s/g, '');
+/** False for what ESPN says when it has no position ("NA"); such a player was filed under SF. */
+export const isListedPosition = (position: string) => LISTED[listedKey(position)] !== undefined;
 function listedSlots(position: string): NbaSlot[] {
-  const p = position.toUpperCase().replace(/\s/g, '');
-  const map: Record<string, NbaSlot[]> = {
-    PG: ['PG'], SG: ['SG'], SF: ['SF'], PF: ['PF'], C: ['C'],
-    G: ['PG', 'SG'], F: ['SF', 'PF'], GF: ['SG', 'SF'], 'G-F': ['SG', 'SF'], 'F-G': ['SG', 'SF'],
-    FC: ['PF', 'C'], 'F-C': ['PF', 'C'], 'C-F': ['PF', 'C'], 'PG-SG': ['PG', 'SG'], 'SG-SF': ['SG', 'SF'], 'SF-PF': ['SF', 'PF'], 'PF-C': ['PF', 'C'],
-  };
-  return map[p] ?? ['SF'];
+  return LISTED[listedKey(position)] ?? ['SF'];
 }
 
 /**

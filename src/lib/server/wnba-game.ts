@@ -10,7 +10,7 @@ import { getOffset } from './difficulty-offset';
 import { modeKey } from '@/lib/game/difficulty';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
 import {
-  WNBA_ERAS, WNBA_ERA_PICKS_MAX, WNBA_ERA_RESPINS, WNBA_GAME, WNBA_GAMES, WNBA_MIN_GP, WNBA_ROUNDS, WNBA_SLOTS, WNBA_TEAM_RESPINS, gradeWnbaRoster, wnbaFit, wnbaSeasonLabel, wnbaSlots,
+  WNBA_ERAS, WNBA_ERA_PICKS_MAX, WNBA_ERA_RESPINS, WNBA_GAME, WNBA_GAMES, WNBA_MIN_GP, WNBA_ROUNDS, WNBA_SLOTS, WNBA_TEAM_RESPINS, gradeWnbaRoster, wnbaFit, wnbaPosition, wnbaSeasonLabel, wnbaSlots,
   type WnbaMode, type WnbaPick, type WnbaSlot, type WnbaSpin,
 } from '@/lib/game/fortyfour';
 
@@ -70,8 +70,8 @@ async function board(teamId: number, era: WnbaSpin): Promise<WnbaTeamView | null
   const best = new Map<number, (typeof scored)[number]>();
   for (const r of scored) { const b = best.get(r.p.id); if (!b || r.value > b.value) best.set(r.p.id, r); }
   const players = [...best.values()].sort((a, b) => b.value - a.value).map(({ ps, p, value }) => ({
-    id: p.id, name: p.fullName, position: p.position, season: ps.season, seasonLabel: wnbaSeasonLabel(ps.season), value,
-    ppg: ps.ppg, rpg: ps.rpg, apg: ps.apg, headshot: p.headshot, fits: wnbaSlots(p.position, ps.apg),
+    id: p.id, name: p.fullName, position: wnbaPosition(p.position, ps), season: ps.season, seasonLabel: wnbaSeasonLabel(ps.season), value,
+    ppg: ps.ppg, rpg: ps.rpg, apg: ps.apg, headshot: p.headshot, fits: wnbaSlots(wnbaPosition(p.position, ps), ps.apg),
   }));
   return { id: teamId, era, eraLabel: e.label, name: t.name, location: t.location, abbreviation: t.abbreviation, color: t.color ?? '#555555', logoUrl: t.logoUrl, players };
 }
@@ -225,7 +225,7 @@ export async function gradeWnba(ctx: { sessionId: string; token: string; userId?
   const picks: WnbaPick[] = p.picks.map((x) => {
     const r = rows.find((y) => y.p.id === x.playerId && y.ps.teamId === x.teamId && y.ps.season === x.season);
     if (!r) throw new WnbaError('Unknown player.');
-    return { slot: x.slot, name: r.p.fullName, position: r.p.position, teamId: x.teamId, season: x.season, value: lineValue(r.ps, games), apg: r.ps.apg };
+    return { slot: x.slot, name: r.p.fullName, position: wnbaPosition(r.p.position, r.ps), teamId: x.teamId, season: x.season, value: lineValue(r.ps, games), apg: r.ps.apg };
   });
   // Today (and any shared board) grades the roster, so identical picks always play out the same season.
   const seed = s.isDaily || p.challengeId ? `${s.seed}:${p.picks.map((x) => `${x.playerId}@${x.slot}`).sort().join(',')}` : s.id;

@@ -1,7 +1,7 @@
 import { createRng, seasonWins } from './prng';
 import { letterGrade } from './formulas';
 import { lastName } from '@/lib/names';
-import { NBA_SLOTS, PLAYMAKER_APG, fitMultiplier, naturalSlots, seasonValue, type NbaSlot, type SeasonLine } from './eightytwo';
+import { NBA_SLOTS, PLAYMAKER_APG, fitMultiplier, isListedPosition, naturalSlots, seasonValue, type NbaSlot, type SeasonLine } from './eightytwo';
 
 /**
  * 44-0 (WNBA). The same game as 82-0 on the league's own history: each round spins an era, then a franchise;
@@ -46,6 +46,25 @@ export const WNBA_TEAM_RESPINS = 2;
 export const WNBA_MIN_GP = 10;
 /** WNBA assists run lower than the NBA's: a forward at five a game runs the offense and plays the point with no cost. */
 export const WNBA_PLAYMAKER_APG = 5;
+/**
+ * ESPN has no position for most WNBA players before 2010: it says "NA" for 93 percent of the 1998 rotation, 66 percent of
+ * 2004 and none after 2012, which was 44 percent of the players we store. They showed "NA" on the card and were filed
+ * under SF, so a point guard at the point or a center at center cost 18 percent. A season's line says a lot about the
+ * position: centers rebound and block, guards pass and steal. This is a straight-line fit of position (G 0, F 1, C 2) to
+ * four per-30-minute numbers over the 895 listed rotation seasons of ten seasons from 1998 to 2025 (scripts/fit-wnba-positions.mjs
+ * refits it). A number near a boundary reads as a hybrid, G-F or F-C, the way a swingman or a big forward is listed, and
+ * then covers both spots. On seasons held out of the fit, a plain G, F or C (65 percent of seasons) is right 84 percent of
+ * the time, a hybrid (the other 35 percent) names the real position 97 percent of the time, and overall the real position
+ * is among the label's 88 percent of the time. Centers are the hardest: nearly half come out F-C or C, the rest F.
+ */
+export function inferWnbaPosition(l: { mpg: number; rpg: number; apg: number; spg: number; bpg: number }): 'G' | 'G-F' | 'F' | 'F-C' | 'C' {
+  const per30 = (v: number) => v / (Math.max(l.mpg, 8) / 30);
+  const size = 0.1739 + 0.1467 * per30(l.rpg) - 0.0948 * per30(l.apg) + 0.3257 * per30(l.bpg) - 0.1717 * per30(l.spg);
+  return size < 0.4 ? 'G' : size < 0.8 ? 'G-F' : size < 1.3 ? 'F' : size < 1.7 ? 'F-C' : 'C';
+}
+/** The position to show and play a player-season at: the one ESPN lists, or the one her line says when ESPN lists none. */
+export const wnbaPosition = (listed: string, line: Parameters<typeof inferWnbaPosition>[0]): string => (isListedPosition(listed) ? listed : inferWnbaPosition(line));
+
 /**
  * ESPN lists a WNBA player as G, F or C and nothing finer. A guard covers both guard spots and a forward both forward
  * spots, but a center covered only C, which put the league's centers (A'ja Wilson) out of position at the four. The

@@ -9,8 +9,8 @@ export const SITE_STARTED = '2026-09-28';
 export const UPDATES: Update[] = [
   {
     date: '2026-10-28',
-    title: 'A profile stat for everyone, and WNBA centers at power forward',
-    body: 'Profiles now show Games tried, how many different games you have played, where they used to show a 17-0 record that read "--" for anyone who plays something else. In 44-0 a listed center can play power forward at no cost. The league lists players only as guard, forward or center, so A\'ja Wilson at the four used to lose 6 percent of her value for no good reason.',
+    title: 'A profile stat for everyone, and better positions in 44-0',
+    body: 'Profiles now show Games tried, how many different games you have played, where they used to show a 17-0 record that read "--" for anyone who plays something else. In 44-0 a listed center can play power forward at no cost. The league lists players only as guard, forward or center, so A\'ja Wilson at the four used to lose 6 percent of her value for no good reason. ESPN has no position for most players before 2010, so those cards read "NA" and played as small forwards. Each is now placed from her stats, so a center plays center.',
   },
   {
     date: '2026-10-27',

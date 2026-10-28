@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  WNBA_ERAS, WNBA_FLOOR_DEFAULT, WNBA_GAMES, WNBA_SLOTS, WNBA_WIN_SPAN, gradeWnbaRoster, isWnbaEra, isWnbaMode, wnbaFit, wnbaSlots, wnbaValue,
+  WNBA_ERAS, WNBA_FLOOR_DEFAULT, WNBA_GAMES, WNBA_SLOTS, WNBA_WIN_SPAN, gradeWnbaRoster, inferWnbaPosition, isWnbaEra, isWnbaMode, wnbaFit, wnbaPosition, wnbaSlots, wnbaValue,
   type WnbaPick,
 } from '@/lib/game/fortyfour';
 import { modeKey } from '@/lib/game/difficulty';
@@ -73,6 +73,53 @@ describe('44-0 positions', () => {
     expect(wnbaSlots('C', 5.5)).toEqual(['C', 'PG', 'PF']);
     // The NBA game is unchanged: its listings have five positions, so a C is only a C.
     expect(fitMultiplier('C', 'PF')).toBe(0.94);
+  });
+});
+
+describe('44-0 positions ESPN does not list', () => {
+  // ESPN says "NA" for most players before 2010. A season's line places them: guards pass and steal, centers rebound and block.
+  const guard = { mpg: 32, rpg: 2.6, apg: 5.3, spg: 1.3, bpg: 0.1 };
+  const swingman = { mpg: 33, rpg: 5.1, apg: 2.1, spg: 2.5, bpg: 0.5 };
+  const forward = { mpg: 30, rpg: 7, apg: 1, spg: 1, bpg: 0.2 };
+  const bigForward = { mpg: 30, rpg: 9, apg: 1.5, spg: 1, bpg: 1.4 };
+  const rimProtector = { mpg: 31, rpg: 9.6, apg: 2.4, spg: 1.1, bpg: 2.3 };
+  it('reads a guard, a swingman, a forward, a big forward and a shot-blocking center from their lines', () => {
+    expect(inferWnbaPosition(guard)).toBe('G');
+    expect(inferWnbaPosition(swingman)).toBe('G-F');
+    expect(inferWnbaPosition(forward)).toBe('F');
+    expect(inferWnbaPosition(bigForward)).toBe('F-C');
+    expect(inferWnbaPosition(rimProtector)).toBe('C');
+  });
+  it('moves toward the center as rebounds and blocks rise and toward the guard as assists and steals rise', () => {
+    const order = ['G', 'G-F', 'F', 'F-C', 'C'];
+    const at = (o: Partial<typeof forward>) => order.indexOf(inferWnbaPosition({ ...forward, ...o }));
+    for (let r = 2; r < 12; r++) expect(at({ rpg: r + 1 })).toBeGreaterThanOrEqual(at({ rpg: r }));
+    for (let b = 0; b < 3; b += 0.25) expect(at({ bpg: b + 0.25 })).toBeGreaterThanOrEqual(at({ bpg: b }));
+    for (let a = 0; a < 8; a++) expect(at({ apg: a + 1 })).toBeLessThanOrEqual(at({ apg: a }));
+  });
+  it('counts a short stint by the minute, so a bench player is not read as a different position than a starter with the same rates', () => {
+    expect(inferWnbaPosition({ mpg: 12, rpg: 3.6, apg: 0.9, spg: 0.4, bpg: 0.9 })).toBe(inferWnbaPosition({ mpg: 30, rpg: 9, apg: 2.25, spg: 1, bpg: 2.25 }));
+    // Under eight minutes a game is read as eight, so a cameo cannot swing a label.
+    expect(inferWnbaPosition({ mpg: 2, rpg: 1, apg: 0, spg: 0, bpg: 0 })).toBe(inferWnbaPosition({ mpg: 8, rpg: 1, apg: 0, spg: 0, bpg: 0 }));
+  });
+  it('keeps the position ESPN lists and only fills in the ones it does not', () => {
+    expect(wnbaPosition('G', rimProtector)).toBe('G');
+    expect(wnbaPosition('C', guard)).toBe('C');
+    expect(wnbaPosition('G-F', forward)).toBe('G-F');
+    expect(wnbaPosition(' f ', guard)).toBe(' f ');
+    expect(wnbaPosition('NA', guard)).toBe('G');
+    expect(wnbaPosition('NA', rimProtector)).toBe('C');
+    expect(wnbaPosition('', forward)).toBe('F');
+  });
+  it('plays a placed player at the spots the label names, not at small forward', () => {
+    // Before, "NA" meant SF: a center at center or a point guard at the point cost 18 percent.
+    expect(wnbaFit(wnbaPosition('NA', rimProtector), 'C')).toBe(1);
+    expect(wnbaFit(wnbaPosition('NA', rimProtector), 'PF')).toBe(1);
+    expect(wnbaFit(wnbaPosition('NA', guard), 'PG')).toBe(1);
+    expect(wnbaFit(wnbaPosition('NA', guard), 'SG')).toBe(1);
+    expect(wnbaFit('NA', 'C')).toBe(0.82);
+    expect(wnbaFit('NA', 'PG')).toBe(0.82);
+    expect(wnbaSlots(wnbaPosition('NA', swingman))).toEqual(['SG', 'SF']);
   });
 });
 

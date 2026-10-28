@@ -1,7 +1,8 @@
-import { and, desc, eq, sql as dsql } from 'drizzle-orm';
+import { and, desc, eq, gte, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { seasonValue } from '@/lib/game/eightytwo';
-import { wnbaSlots } from '@/lib/game/fortyfour';
+import { WNBA_MIN_GP, inferWnbaPosition, wnbaSlots } from '@/lib/game/fortyfour';
+import { isListedPosition } from '@/lib/game/eightytwo';
 import { get, idsFrom, leaderIds, lineFrom, nameOf, pool, readStats } from './nba-sync';
 import { getRedis } from './redis';
 
@@ -94,5 +95,12 @@ export async function wnbaSpotCheck() {
     const counts = await db.select({ pos: schema.wnbaPlayers.position, n: dsql<number>`count(*)::int` }).from(schema.wnbaPlayers).groupBy(schema.wnbaPlayers.position);
     const [aja] = await db.select({ name: schema.wnbaPlayers.fullName, pos: schema.wnbaPlayers.position }).from(schema.wnbaPlayers).where(dsql`${schema.wnbaPlayers.fullName} ilike '%ja wilson%'`).limit(1);
     console.log('[wnba] positions', counts.map((c) => `${c.pos} ${c.n}`).join(', '), '|', aja ? `${aja.name} is listed ${aja.pos} and fills ${wnbaSlots(aja.pos).join(' or ')}` : "A'ja Wilson is not stored");
+    // ESPN lists no position before about 2010; those seasons are placed from their line (inferWnbaPosition). Say how many and how they came out.
+    const lines = await db.select({ pos: schema.wnbaPlayers.position, ps: schema.wnbaPlayerSeasons }).from(schema.wnbaPlayerSeasons)
+      .innerJoin(schema.wnbaPlayers, eq(schema.wnbaPlayers.id, schema.wnbaPlayerSeasons.playerId)).where(gte(schema.wnbaPlayerSeasons.gp, WNBA_MIN_GP));
+    const placed: Record<string, number> = {};
+    let unlisted = 0;
+    for (const { pos, ps } of lines) if (!isListedPosition(pos)) { unlisted++; const p = inferWnbaPosition(ps); placed[p] = (placed[p] ?? 0) + 1; }
+    console.log(`[wnba] positions placed from the stat line: ${unlisted} of ${lines.length} rotation seasons (${Object.entries(placed).map(([k, v]) => `${k} ${v}`).join(', ')})`);
   } catch (e) { console.warn('[wnba] positions check failed', (e as Error).message); }
 }
