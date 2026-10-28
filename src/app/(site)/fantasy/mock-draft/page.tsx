@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { loadFantasyPlayers } from '@/lib/server/fantasy-data';
+import { orAtBuild } from '@/lib/seo/safe';
 import { rankPlayers } from '@/lib/fantasy/rank';
 import { slim } from '@/lib/fantasy/slim';
 import { MockDraft } from './MockDraft';
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const players = rankPlayers(await loadFantasyPlayers().catch(() => [])).slice(0, 260).map(slim);
+  const players = rankPlayers(await orAtBuild(loadFantasyPlayers(), [])).slice(0, 260).map(slim);
   return (
     <div className="container section ft-scope" style={{ maxWidth: 1100 }}>
       <p className="eyebrow"><Link href="/fantasy">Fantasy</Link> · Mock draft</p>

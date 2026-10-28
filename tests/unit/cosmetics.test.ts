@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canEquip, isOwnerEmail, NAME_COLORS, NAME_FONTS, OWNER_COLOR, OWNER_FONT, resolveStyle, unlocked } from '@/lib/cosmetics';
+import { canEquip, isOwnerAccount, isOwnerEmail, NAME_COLORS, NAME_FONTS, OWNER_COLOR, OWNER_FONT, resolveStyle, unlocked } from '@/lib/cosmetics';
 import { validateDisplayName, validateUsername } from '@/lib/server/username';
 
 describe('name styles', () => {
@@ -13,6 +13,15 @@ describe('name styles', () => {
     expect(canEquip('font', OWNER_FONT, 10_000)).toBe(false);
     expect(canEquip('color', OWNER_COLOR, 10_000)).toBe(false);
     expect(NAME_FONTS.some((f) => f.key === OWNER_FONT) || NAME_COLORS.some((c) => c.key === OWNER_COLOR)).toBe(false);
+  });
+  it("marks feedback from the owner's other account (Bot) as the owner's, and nothing else", () => {
+    expect(isOwnerAccount(null, 'Bot')).toBe(true);
+    expect(isOwnerAccount(null, 'bot')).toBe(true);
+    expect(isOwnerAccount('clujkeebs@aol.com', null)).toBe(true);
+    expect(isOwnerAccount('someone@example.com', 'Robot')).toBe(false);
+    expect(isOwnerAccount(null, null)).toBe(false);
+    // The owner style and the shop still follow the email alone: Bot gets no exclusives from this.
+    expect(isOwnerEmail('bot@example.com')).toBe(false);
   });
   it('grant the owner style from the account email only', () => {
     expect(isOwnerEmail('clujkeebs@aol.com')).toBe(true);

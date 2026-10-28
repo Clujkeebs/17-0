@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { loadFantasyPlayers } from '@/lib/server/fantasy-data';
+import { orAtBuild } from '@/lib/seo/safe';
 import { rankPlayers } from '@/lib/fantasy/rank';
 import { slim } from '@/lib/fantasy/slim';
 import { TierList } from './TierList';
@@ -10,7 +11,7 @@ export const metadata: Metadata = { title: 'Fantasy tier list maker', descriptio
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
   const t = (await searchParams).t ?? null;
-  const players = rankPlayers(await loadFantasyPlayers().catch(() => [])).map(slim);
+  const players = rankPlayers(await orAtBuild(loadFantasyPlayers(), [])).map(slim);
   return (
     <div className="container section" style={{ maxWidth: 900 }}>
       <p className="eyebrow"><Link href="/fantasy">Fantasy</Link> · Tier list</p>

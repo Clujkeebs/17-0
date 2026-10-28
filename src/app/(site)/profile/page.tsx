@@ -83,7 +83,7 @@ export default async function ProfilePage() {
       <div className="row" style={{ gap: 32, marginBottom: 32 }}>
         <div className="stat"><span className="v">{stats.longest}</span><span className="l">Longest streak</span></div>
         <div className="stat"><span className="v">{stats.played}</span><span className="l">Games played</span></div>
-        <div className="stat"><span className="v">{stats.bestRecord ?? '--'}</span><span className="l">Best 17-0 record</span></div>
+        <div className="stat"><span className="v">{stats.gamesTried}</span><span className="l">Games tried</span></div>
         <div className="stat"><span className="v" style={stats.perfectSeasons > 0 ? { color: 'var(--orange)' } : undefined}>{stats.perfectSeasons}</span><span className="l">Perfect seasons</span></div>
       </div>
 

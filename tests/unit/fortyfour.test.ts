@@ -4,7 +4,7 @@ import {
   type WnbaPick,
 } from '@/lib/game/fortyfour';
 import { modeKey } from '@/lib/game/difficulty';
-import { seasonValue } from '@/lib/game/eightytwo';
+import { fitMultiplier, seasonValue } from '@/lib/game/eightytwo';
 
 const line = (o: Partial<Parameters<typeof wnbaValue>[0]> = {}) => ({ gp: 40, mpg: 32, ppg: 22, rpg: 8, apg: 3, spg: 1.5, bpg: 1, tov: 2.5, fgPct: 0.48, tpPct: 0.36, ftPct: 0.85, ...o });
 const pick = (slot: (typeof WNBA_SLOTS)[number], value: number, position = 'G', apg = 3): WnbaPick => ({ slot, name: `Test ${slot}`, position, teamId: 1, season: 2024, value, apg });
@@ -56,10 +56,23 @@ describe('44-0 positions', () => {
     expect(wnbaSlots('F', 5.5)[0]).toBe('PG');
   });
   it('keeps the same out-of-position costs as 82-0', () => {
+    expect(wnbaFit('F', 'C')).toBe(0.94);
+    expect(wnbaFit('F', 'SG')).toBe(0.94);
+    expect(wnbaFit('G', 'SF')).toBe(0.94);
+    expect(wnbaFit('G', 'C')).toBe(0.7);
+  });
+  it('plays a listed center at power forward as well, since the league lists only G, F and C', () => {
+    expect(wnbaSlots('C')).toEqual(['C', 'PF']);
     expect(wnbaFit('C', 'C')).toBe(1);
-    expect(wnbaFit('C', 'PF')).toBe(0.94);
-    expect(wnbaFit('C', 'SF')).toBe(0.82);
+    expect(wnbaFit('C', 'PF')).toBe(1);
+    expect(wnbaFit('C', 'SF')).toBe(0.94);
+    expect(wnbaFit('C', 'SG')).toBe(0.82);
     expect(wnbaFit('C', 'PG')).toBe(0.7);
+    // Spacing in the listing does not matter, and the point-guard rule still stacks on top.
+    expect(wnbaSlots(' c ')).toEqual(['C', 'PF']);
+    expect(wnbaSlots('C', 5.5)).toEqual(['C', 'PG', 'PF']);
+    // The NBA game is unchanged: its listings have five positions, so a C is only a C.
+    expect(fitMultiplier('C', 'PF')).toBe(0.94);
   });
 });
 

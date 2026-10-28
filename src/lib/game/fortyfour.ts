@@ -46,8 +46,19 @@ export const WNBA_TEAM_RESPINS = 2;
 export const WNBA_MIN_GP = 10;
 /** WNBA assists run lower than the NBA's: a forward at five a game runs the offense and plays the point with no cost. */
 export const WNBA_PLAYMAKER_APG = 5;
-export const wnbaSlots = (position: string, apg?: number | null): WnbaSlot[] => naturalSlots(position, apg, WNBA_PLAYMAKER_APG);
-export const wnbaFit = (position: string, slot: WnbaSlot, apg?: number | null) => fitMultiplier(position, slot, apg, WNBA_PLAYMAKER_APG);
+/**
+ * ESPN lists a WNBA player as G, F or C and nothing finer. A guard covers both guard spots and a forward both forward
+ * spots, but a center covered only C, which put the league's centers (A'ja Wilson) out of position at the four. The
+ * WNBA's center is nearly always a power forward too, so a listed C is treated as PF-C: both spots, no cost.
+ */
+const listedCenter = (position: string) => position.toUpperCase().replace(/\s/g, '') === 'C';
+const wnbaListed = (position: string) => (listedCenter(position) ? 'PF-C' : position);
+/** The spots a player fills at no cost; a listed center is drafted at C first and can move to PF. */
+export const wnbaSlots = (position: string, apg?: number | null): WnbaSlot[] => {
+  const slots = naturalSlots(wnbaListed(position), apg, WNBA_PLAYMAKER_APG);
+  return listedCenter(position) ? [...slots.filter((s) => s === 'C'), ...slots.filter((s) => s !== 'C')] : slots;
+};
+export const wnbaFit = (position: string, slot: WnbaSlot, apg?: number | null) => fitMultiplier(wnbaListed(position), slot, apg, WNBA_PLAYMAKER_APG);
 export { PLAYMAKER_APG as NBA_PLAYMAKER_APG };
 
 /**

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowIcon } from '@/components/Icons';
 import { PlayerFace } from '@/components/game/PlayerFace';
 import { loadFantasyPlayers } from '@/lib/server/fantasy-data';
+import { orAtBuild } from '@/lib/seo/safe';
 import { rankPlayers, waiverTargets, type Ranked } from '@/lib/fantasy/rank';
 import '@/components/fantasy/fantasy.css';
 
@@ -50,7 +51,7 @@ function Board({ title, href, sub, rows }: { title: string; href: string; sub: s
 }
 
 export default async function FantasyHub() {
-  const ranked = rankPlayers(await loadFantasyPlayers().catch(() => []));
+  const ranked = rankPlayers(await orAtBuild(loadFantasyPlayers(), []));
   const top = ranked.slice(0, 5).map((p) => ({ p, right: p.value.toFixed(1), note: `#${p.overall}` }));
   const added = waiverTargets(ranked, 5);
   const trending = added.some((p) => p.trend > 0);

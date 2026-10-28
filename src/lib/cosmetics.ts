@@ -32,6 +32,14 @@ const OWNER_EMAILS = (process.env.OWNER_EMAILS ?? 'clujkeebs@aol.com').split(','
 export const isOwnerEmail = (email: string | null | undefined) => !!email && OWNER_EMAILS.includes(email.toLowerCase());
 export const ownerEmails = () => OWNER_EMAILS;
 
+/**
+ * The owner's other accounts: the owner said the account called Bot is theirs. This is used for one thing only, marking
+ * feedback left from these accounts as the owner's own request in the log. It grants nothing on the site.
+ */
+const OWNER_USERNAMES = (process.env.OWNER_USERNAMES ?? 'bot').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+export const isOwnerAccount = (email: string | null | undefined, username: string | null | undefined) =>
+  isOwnerEmail(email) || (!!username && OWNER_USERNAMES.includes(username.toLowerCase()));
+
 export const unlocked = (list: StyleOption[], longestStreak: number) => list.filter((o) => longestStreak >= o.unlock).map((o) => o.key);
 
 /** Whether this player may equip this style. Owner-only keys are never equippable; the owner gets them automatically. */

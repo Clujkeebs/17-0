@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { loadFantasyPlayers } from '@/lib/server/fantasy-data';
+import { orAtBuild } from '@/lib/seo/safe';
 import { F_POS, rankPlayers, type FPos } from '@/lib/fantasy/rank';
 import { wide } from '@/lib/fantasy/slim';
 import { RankingsBoard } from './RankingsBoard';
@@ -13,7 +14,7 @@ export default async function Rankings({ searchParams }: { searchParams: Promise
   const pos = sp.pos?.toUpperCase();
   const sort = sp.sort === 'hot' || sp.sort === 'cold' ? sp.sort : 'rank';
   const initial = F_POS.includes(pos as FPos) ? (pos as FPos) : 'ALL';
-  const players = rankPlayers(await loadFantasyPlayers().catch(() => [])).slice(0, 320).map(wide);
+  const players = rankPlayers(await orAtBuild(loadFantasyPlayers(), [])).slice(0, 320).map(wide);
   return (
     <div className="container section ft-scope" style={{ maxWidth: 860 }}>
       <p className="eyebrow"><Link href="/fantasy">Fantasy</Link> · Rankings</p>

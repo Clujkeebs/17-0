@@ -8,6 +8,11 @@ export const SITE_STARTED = '2026-09-28';
 
 export const UPDATES: Update[] = [
   {
+    date: '2026-10-28',
+    title: 'A profile stat for everyone, and WNBA centers at power forward',
+    body: 'Profiles now show Games tried, how many different games you have played, where they used to show a 17-0 record that read "--" for anyone who plays something else. In 44-0 a listed center can play power forward at no cost. The league lists players only as guard, forward or center, so A\'ja Wilson at the four used to lose 6 percent of her value for no good reason.',
+  },
+  {
     date: '2026-10-27',
     title: 'Tables that fit a phone, cleaner results, and a 44-0 page that matches the game',
     body: 'Tables on a phone now keep the number they are ranked by, so the Coaches page shows Impact and the player lists show OVR instead of hiding them off the side. A long name on a board ends in dots instead of being cut mid-letter. The 17-0 result no longer runs its point differential into the next line, a share card fits a long headline such as "Streak 24", and the 404 page shows one header instead of two. The Build a Player position cards line up, the blog list sits tighter on a tablet, and the 44-0 page no longer mentions eras, since it drafts from this season only.',

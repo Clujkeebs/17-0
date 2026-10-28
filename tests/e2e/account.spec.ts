@@ -39,7 +39,8 @@ test('account lifecycle', async ({ page, request }, info) => {
   await page.goto('/profile');
   await expect(page.getByText(/🔥/)).toBeVisible();
   await expect(page.locator('body')).toContainText('1');
-  await expect(page.locator('.stat', { hasText: 'Best 17-0 record' })).toContainText(/\d+-\d+/);
+  // One game played, so one game tried (the stat used to be a 17-0 record that read "--" for anyone who plays something else).
+  await expect(page.locator('.stat', { hasText: 'Games tried' }).locator('.v')).toHaveText('1');
   await expect(page.locator('.grade-sub', { hasText: /^Today$/ }).first()).toBeVisible();
 
   // Profile: edit the display name, locked styles stay locked, header shows the name, share and public page work.

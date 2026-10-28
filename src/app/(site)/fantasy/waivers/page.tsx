@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { loadFantasyPlayers } from '@/lib/server/fantasy-data';
+import { orAtBuild } from '@/lib/seo/safe';
 import { F_POS, rankPlayers, waiverTargets, type FPos } from '@/lib/fantasy/rank';
 import { FRow } from '@/components/fantasy/FRow';
 
@@ -12,7 +13,7 @@ const n = (v: number) => v.toLocaleString('en-US');
 export default async function Waivers({ searchParams }: { searchParams: Promise<{ pos?: string }> }) {
   const pos = (await searchParams).pos?.toUpperCase();
   const filter = F_POS.includes(pos as FPos) ? (pos as FPos) : null;
-  const all = rankPlayers(await loadFantasyPlayers().catch(() => []));
+  const all = rankPlayers(await orAtBuild(loadFantasyPlayers(), []));
   const list = waiverTargets(filter ? all.filter((p) => p.pos === filter) : all);
   const byAdds = list.some((p) => p.trend > 0);
   return (

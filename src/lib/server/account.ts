@@ -75,11 +75,7 @@ export async function getStreak(userId: string) {
 
 export async function getUserStats(userId: string) {
   const [totals, byTypeRows, recentRows, bestRows, streak, perfectSeasons] = await Promise.all([
-    // 17-0 results store wins in result_data; the best record comes from there.
-    db.select({
-      n: dsql<number>`count(*)::int`,
-      bestWins: dsql<number | null>`max((${schema.gameResults.resultData}->>'wins')::int) filter (where ${schema.gameResults.gameType} = '17-0')`,
-    }).from(schema.gameResults).where(eq(schema.gameResults.userId, userId)),
+    db.select({ n: dsql<number>`count(*)::int` }).from(schema.gameResults).where(eq(schema.gameResults.userId, userId)),
     db.select({
       gameType: schema.gameResults.gameType,
       n: dsql<number>`count(*)::int`,
@@ -111,10 +107,10 @@ export async function getUserStats(userId: string) {
     gameName: await gameName(r.gameType),
     summary: scoreSummary(r.gameType, r.resultData),
   })));
-  const bestWins = totals[0]?.bestWins ?? null;
   return {
     played: totals[0]?.n ?? 0, perfectSeasons,
-    bestRecord: bestWins == null ? null : `${bestWins}-${17 - bestWins}`,
+    /** How many different games they have played: a number that means something to everyone, whatever they play. */
+    gamesTried: byTypeRows.length,
     byType, recent, ...streak,
   };
 }
