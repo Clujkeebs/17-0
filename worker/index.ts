@@ -43,6 +43,10 @@ if (process.env.SENTRY_DSN) Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSam
 
 const connection = getRedis();
 const concurrency = { [QUEUE_NAMES.sync]: 1, [QUEUE_NAMES.newsletter]: 5, [QUEUE_NAMES.og]: 2 };
+// The sync job runs the calibrators, which hold the event loop for minutes at a time, so BullMQ's default 30 second lock
+// could not be renewed: the job counted as stalled and the whole sync ran a second time two minutes later, with a failure
+// filed each morning. A long lock costs only a slower restart of a job whose worker really died.
+const lockDuration: Partial<Record<string, number>> = { [QUEUE_NAMES.sync]: 15 * 60_000 };
 
 const handlers: Record<string, (job: Job) => Promise<unknown>> = {
   [QUEUE_NAMES.sync]: async (job) => {
@@ -73,7 +77,7 @@ const handlers: Record<string, (job: Job) => Promise<unknown>> = {
 };
 
 const workers = Object.entries(handlers).map(([name, fn]) => {
-  const w = new Worker(name, fn, { connection, concurrency: concurrency[name as keyof typeof concurrency] ?? 1 });
+  const w = new Worker(name, fn, { connection, concurrency: concurrency[name as keyof typeof concurrency] ?? 1, ...(lockDuration[name] ? { lockDuration: lockDuration[name] } : {}) });
   w.on('failed', (job, err) => {
     console.error(`[${name}] job ${job?.id} failed:`, err.message);
     Sentry.captureException(err, { tags: { queue: name } });
