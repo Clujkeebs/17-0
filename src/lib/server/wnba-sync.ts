@@ -1,6 +1,7 @@
 import { and, desc, eq, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { seasonValue } from '@/lib/game/eightytwo';
+import { wnbaSlots } from '@/lib/game/fortyfour';
 import { get, idsFrom, leaderIds, lineFrom, nameOf, pool, readStats } from './nba-sync';
 import { getRedis } from './redis';
 
@@ -87,4 +88,11 @@ export async function wnbaSpotCheck() {
   const fmt = (r: Awaited<ReturnType<typeof top>>) => r.map((x) => `${x.name} ${x.team} ${x.season} ${x.ppg.toFixed(1)}ppg v${x.value}`).join('; ');
   console.log(`[wnba] spot check ${last.s}`, fmt(await top(eq(schema.wnbaPlayerSeasons.season, last.s))));
   console.log('[wnba] spot check all-time', fmt(await top()));
+  // ESPN lists a player as G, F or C and nothing finer. Say how many of each there are and where a famous center fits in 44-0
+  // (a listed C plays PF and C at no cost), so the logs show the rule in use. Logging only: it never stops the sync.
+  try {
+    const counts = await db.select({ pos: schema.wnbaPlayers.position, n: dsql<number>`count(*)::int` }).from(schema.wnbaPlayers).groupBy(schema.wnbaPlayers.position);
+    const [aja] = await db.select({ name: schema.wnbaPlayers.fullName, pos: schema.wnbaPlayers.position }).from(schema.wnbaPlayers).where(dsql`${schema.wnbaPlayers.fullName} ilike '%ja wilson%'`).limit(1);
+    console.log('[wnba] positions', counts.map((c) => `${c.pos} ${c.n}`).join(', '), '|', aja ? `${aja.name} is listed ${aja.pos} and fills ${wnbaSlots(aja.pos).join(' or ')}` : "A'ja Wilson is not stored");
+  } catch (e) { console.warn('[wnba] positions check failed', (e as Error).message); }
 }
