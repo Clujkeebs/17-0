@@ -13,6 +13,12 @@ const config: NextConfig = {
   // One id per build (the Docker build passes the commit): a tab left open across a deploy reloads instead of mixing old and new files.
   deploymentId: process.env.NEXT_DEPLOYMENT_ID || undefined,
   poweredByHeader: false,
+  // A page Next generates on demand (a compare pair, a player nobody asked for yet, a made-up address) is written to
+  // .next/server/app as seven or eight files, 150 to 230 KB. The container counts those files as memory and a crawler walking
+  // /compare pairs filled a gigabyte. Pages made at build time stay on disk. Everything made later lives only in this
+  // in-memory cache, which holds cacheMaxMemorySize and drops the least recently used page when it is full.
+  cacheMaxMemorySize: 64 * 1024 * 1024,
+  experimental: { isrFlushToDisk: false },
   serverExternalPackages: ['bullmq', 'ioredis', 'playwright-core', 'bcryptjs'],
   images: {
     remotePatterns: [
