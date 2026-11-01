@@ -158,7 +158,8 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
             const pos = (a!.position as { abbreviation?: string } | undefined)?.abbreviation ?? 'F';
             const headshot = (a!.headshot as { href?: string } | undefined)?.href ?? null;
             await db.insert(schema.nbaPlayers).values({ id: pid, fullName: name, position: pos, headshot })
-              .onConflictDoUpdate({ target: schema.nbaPlayers.id, set: { fullName: name, position: pos, headshot } });
+              // ESPN has no photo for many '90s players; one added from Commons (nba-photos.ts) is kept when ESPN still has none.
+              .onConflictDoUpdate({ target: schema.nbaPlayers.id, set: { fullName: name, position: pos, headshot: dsql`coalesce(excluded.headshot, ${schema.nbaPlayers.headshot})` } });
             known.add(pid);
           }
           if (!stats.has(pid)) stats.set(pid, lineFrom(readStats(await get(`${CORE}/seasons/${season}/types/2/athletes/${pid}/statistics`, fetchImpl))));

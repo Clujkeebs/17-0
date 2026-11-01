@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { historySources } from '@/lib/server/nba-history';
+import { photoCredits } from '@/lib/server/nba-photos';
 
 export const revalidate = 3600;
 export const metadata: Metadata = { title: 'Credits', description: 'Credits for the free-licensed player photos and the basketball history used on Unbeaten.', alternates: { canonical: '/credits' } };
@@ -13,6 +14,7 @@ export default async function Credits() {
     .where(eq(schema.soccerPhotos.source, 'wiki')).catch(() => []);
   const seen = new Set<string>();
   const sources = historySources();
+  const nbaPhotos = photoCredits();
   const list = rows.filter((r) => !seen.has(r.name) && seen.add(r.name)).sort((a, b) => a.name.localeCompare(b.name));
   return (
     <div className="container section" style={{ maxWidth: 820 }}>
@@ -37,6 +39,14 @@ export default async function Credits() {
               {r.credit && <>{'. Photo: '}{r.page ? <a href={r.page} target="_blank" rel="noopener noreferrer">{r.credit}</a> : r.credit}</>}
             </li>
           ))}
+        </ul>
+      </details>
+      <h2 style={{ marginTop: 40 }}>NBA photos</h2>
+      <p className="muted">ESPN has no photo for many players of the 1990s and 2000s. Where English Wikipedia&apos;s article on the player shows a free-licensed photo from Wikimedia Commons, the game uses it, credited here with its author and licence.</p>
+      <details style={{ marginTop: 12 }}>
+        <summary>The {nbaPhotos.length} photos</summary>
+        <ul className="credits-list" style={{ columns: '2 18rem' }}>
+          {nbaPhotos.map((r) => <li key={r.name + r.credit}>{r.name}: {r.page ? <a href={r.page} target="_blank" rel="noopener noreferrer">{r.credit}</a> : r.credit}</li>)}
         </ul>
       </details>
     </div>

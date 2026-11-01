@@ -259,3 +259,15 @@ describe('photo credits', () => {
     expect(tidyCredit(`This Photo was taken by Wolfgang Moroder. Feel free to use my photos, but please mention me as the author. ${'x'.repeat(120)}, CC BY-SA 3.0`)).toBe('This Photo was taken by Wolfgang Moroder, CC BY-SA 3.0');
   });
 });
+
+describe('matching an article to an ESPN player', () => {
+  it('accepts an article whose career table lists the seasons ESPN has, and turns away a namesake', async () => {
+    // @ts-expect-error plain ESM script, no types
+    const { seasonMatch } = await import('../../scripts/build-nba-photos.mjs');
+    const head2 = (cells: string[]) => `<tr>${cells.map((c) => `<th>${c}</th>`).join('')}</tr>`;
+    const career = (years: string[]) => `<h2 id="Regular_season">Regular season</h2><table>${head2(['Year', 'Team', 'GP', 'MPG', 'RPG', 'APG', 'PPG'])}${years.map((y) => `<tr><td>${y}</td><td>${link(`${y}_Dallas_Mavericks_season`, 'Dallas')}</td><td>80</td><td>30.0</td><td>4.0</td><td>3.0</td><td>15.0</td></tr>`).join('')}</table>`;
+    expect(seasonMatch(career(['1995–96', '1996–97', '1997–98']), [1996, 1997, 1998])).toBe(1);
+    expect(seasonMatch(career(['2015–16', '2016–17']), [1996, 1997, 1998])).toBe(0);
+    expect(seasonMatch('<p>none</p>', [1996])).toBe(0);
+  });
+});

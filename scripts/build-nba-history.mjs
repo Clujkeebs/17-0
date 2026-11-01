@@ -176,7 +176,7 @@ export function tidyCredit(credit) {
 }
 
 /** Author, licence and a 160 px thumbnail for each Commons file, fifty files a request. Cached on disk. */
-async function photoMeta(files) {
+export async function photoMeta(files) {
   const cache = fs.existsSync(PHOTO_CACHE) ? JSON.parse(fs.readFileSync(PHOTO_CACHE, 'utf8')) : {};
   const todo = [...new Set(files)].filter((f) => !(f in cache));
   for (let i = 0; i < todo.length; i += 50) {

@@ -13,6 +13,7 @@ import { COACHES } from '../data/seed/coaches';
 import { PLAYERS } from '../data/seed/players';
 import { generateAttributes } from '../data/seed/attributes';
 import { loadNbaHistory } from '../src/lib/server/nba-history';
+import { loadNbaPhotos } from '../src/lib/server/nba-photos';
 
 const SEED_VERSION = 'seed-2027';
 const espnHeadshot = (id: string) => `https://a.espncdn.com/i/headshots/nfl/players/full/${id}.png`;
@@ -168,6 +169,10 @@ async function main() {
     const h = await loadNbaHistory();
     console.log('[seed] nba history', 'skipped' in h ? 'already loaded' : `loaded ${h.teams} team seasons, ${h.players} players, ${h.lines} lines in ${Date.now() - t1}ms`);
   } catch (e) { console.error('[seed] nba history failed', e); }
+  try {
+    const p = await loadNbaPhotos();
+    console.log('[seed] nba photos', 'skipped' in p ? 'already loaded' : `filled ${p.filled} of ${p.of}`);
+  } catch (e) { console.error('[seed] nba photos failed', e); }
 }
 
 main()
