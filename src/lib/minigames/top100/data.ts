@@ -1,7 +1,7 @@
 import { and, desc, eq, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { seasonLabel } from '@/lib/game/eightytwo';
-import { HISTORY_LAST } from '@/lib/game/nba-history';
+import { MINI_FROM } from '@/lib/game/nba-history';
 import { DATASET_TTL_MS, memoAsync } from '@/lib/memo';
 
 /** One ranked entry: the name to find and a hint that does not give it away. */
@@ -29,7 +29,7 @@ export const loadTop100 = memoAsync(DATASET_TTL_MS, async (): Promise<TopData> =
     db.select({ name: schema.nbaPlayers.fullName, pos: schema.nbaPlayers.rating2kPosition, r: schema.nbaPlayers.rating2k }).from(schema.nbaPlayers).where(isNotNull(schema.nbaPlayers.rating2k)).orderBy(desc(schema.nbaPlayers.rating2k)).limit(150),
     db.execute<{ name: string; pos: string; season: number; value: number }>(dsql`
       select distinct on (p.id) p.full_name as name, p.position as pos, s.season, s.value from nba_player_seasons s join nba_players p on p.id = s.player_id
-      where s.gp >= 40 and s.season > ${HISTORY_LAST} order by p.id, s.value desc`).catch(() => []),
+      where s.gp >= 40 and s.season >= ${MINI_FROM} order by p.id, s.value desc`).catch(() => []),
     db.select({ s: dsql<number>`max(${schema.mlbPlayerSeasons.season})::int` }).from(schema.mlbPlayerSeasons).catch(() => [{ s: 0 }]),
   ]);
   const latest = mlbLatest[0]?.s ?? 0;

@@ -312,7 +312,7 @@ export const SITE_POSTS: BlogPost[] = [
       {
         h2: 'The sources',
         paragraphs: [
-          `Nothing on this site is invented. Each number comes from a named public source and is refreshed on a schedule. Football player ratings come from EA Sports Madden NFL's official ratings pages. Football rosters, head coaches, historical season leaders and weekly scores come from ESPN's public data. NBA and WNBA per-game stats come from ESPN, except the NBA\'s 1959-60 through 1978-79 seasons, which ESPN barely has and which come from the career tables on English Wikipedia, credited on the [credits page](/credits). MLB seasons come from MLB's public Stats API. Soccer clubs, rosters and scoring leaders come from ESPN. Current NBA 2K overall ratings come from NBA2KLab's public ratings table and are credited wherever they are used.`,
+          `Nothing on this site is invented. Each number comes from a named public source and is refreshed on a schedule. Football player ratings come from EA Sports Madden NFL's official ratings pages. Football rosters, head coaches, historical season leaders and weekly scores come from ESPN's public data. NBA and WNBA per-game stats come from ESPN, except the NBA\'s 1959-60 through 1988-89 seasons, which ESPN barely has and which come from the career tables on English Wikipedia, credited on the [credits page](/credits). MLB seasons come from MLB's public Stats API. Soccer clubs, rosters and scoring leaders come from ESPN. Current NBA 2K overall ratings come from NBA2KLab's public ratings table and are credited wherever they are used.`,
           `Fantasy football values blend recent weekly points, the season so far and, early in the year, projections, using Sleeper's public data, with roster percentages from ESPN. Pick \'em schedules and results come from ESPN's scoreboard. Free-licensed soccer photos come from Wikimedia Commons and are credited on the [credits page](/credits).`,
         ],
       },
@@ -334,7 +334,7 @@ export const SITE_POSTS: BlogPost[] = [
             ['EA Sports Madden NFL ratings', 'Football player ratings and attributes', 'Weekly'],
             ['ESPN, football', 'Rosters, head coaches, season leaders since 1980, weekly scores', 'Rosters regularly; scores every 20 minutes during the season'],
             ['ESPN, basketball', 'NBA and WNBA per-game stats by season', 'Finished seasons stored once; current season refreshed'],
-            ['English Wikipedia', 'NBA per-game stats and rosters, 1959-60 to 1978-79', 'Copied once; changes only when the data is rebuilt'],
+            ['English Wikipedia', 'NBA per-game stats and rosters, 1959-60 to 1988-89', 'Copied once; changes only when the data is rebuilt'],
             ['MLB Stats API', 'MLB seasons since 1970', 'Finished seasons stored once; current season refreshed'],
             ['NBA2KLab', 'Current NBA 2K overall ratings', 'With the regular NBA refresh'],
             ['Sleeper and ESPN', 'Fantasy points, add counts and roster percentages', 'Points Monday, Tuesday and Friday; adds every few hours'],

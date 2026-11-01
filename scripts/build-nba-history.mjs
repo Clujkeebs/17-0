@@ -5,17 +5,22 @@
 // Everyone else gets a stable id of their own above a billion.
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
 const RAW = arg('raw', '/tmp/claude-0/nbahist-raw.json');
 const OUT = arg('out', 'data/nba-history/history.json');
 const ESPN = arg('espn', null);
-const FIRST = 1960, LAST = 1979;
+// --photos reads each player's article from the crawl cache for its lead photo, and asks Commons for the photo's author and licence.
+const CACHE = arg('cache', '/tmp/claude-0/nbahist-cache');
+const PHOTO_CACHE = arg('photo-cache', '/tmp/claude-0/nbahist-photos.json');
+const UA = 'UnbeatenBot/1.0 (https://playunbeaten.com; NBA history photo credits; one request at a time)';
+const FIRST = Number(arg('first', 1960)), LAST = Number(arg('last', 1989));
 
 /** ESPN's franchise ids (one id per franchise through moves), the colors of each, and ESPN's logo code where the team still has its name and city. */
 const FRANCHISES = {
-  1: { color: '#E03A3E' }, 2: { color: '#007A33' }, 4: { color: '#CE1141' }, 5: { color: '#860038' }, 7: { color: '#0E2240' }, 8: { color: '#C8102E' },
-  9: { color: '#1D428A' }, 10: { color: '#CE1141' }, 11: { color: '#002D62' }, 12: { color: '#C8102E' }, 13: { color: '#552583' }, 15: { color: '#00471B' },
+  1: { color: '#E03A3E' }, 2: { color: '#007A33' }, 3: { color: '#1D1160' }, 4: { color: '#CE1141' }, 5: { color: '#860038' }, 6: { color: '#00538C' }, 7: { color: '#0E2240' }, 8: { color: '#C8102E' },
+  9: { color: '#1D428A' }, 10: { color: '#CE1141' }, 11: { color: '#002D62' }, 12: { color: '#C8102E' }, 13: { color: '#552583' }, 14: { color: '#98002E' }, 15: { color: '#00471B' },
   17: { color: '#002A60' }, 18: { color: '#F58426' }, 20: { color: '#006BB6' }, 21: { color: '#E56020' }, 22: { color: '#E03A3E' }, 23: { color: '#5A2D81' },
   24: { color: '#8A8D8F' }, 25: { color: '#00653A' }, 26: { color: '#4B2E83' }, 27: { color: '#002B5C' },
 };
@@ -34,7 +39,10 @@ const SPANS = {
   9: [[1946, 1962, 'Philadelphia', 'Warriors', 'PHW', null], [1963, 1971, 'San Francisco', 'Warriors', 'SF', null], [1972, 2100, 'Golden State', 'Warriors', 'GS', 'gs']],
   10: [[1968, 1971, 'San Diego', 'Rockets', 'SD', null], [1972, 2100, 'Houston', 'Rockets', 'HOU', 'hou']],
   11: [[1977, 2100, 'Indiana', 'Pacers', 'IND', 'ind']],
-  12: [[1971, 1978, 'Buffalo', 'Braves', 'BUF', null], [1979, 1984, 'San Diego', 'Clippers', 'SD', null]],
+  3: [[1989, 2002, 'Charlotte', 'Hornets', 'CHA', null]],
+  6: [[1981, 2100, 'Dallas', 'Mavericks', 'DAL', 'dal']],
+  12: [[1971, 1978, 'Buffalo', 'Braves', 'BUF', null], [1979, 1984, 'San Diego', 'Clippers', 'SD', null], [1985, 2100, 'Los Angeles', 'Clippers', 'LAC', 'lac']],
+  14: [[1989, 2100, 'Miami', 'Heat', 'MIA', 'mia']],
   13: [[1946, 1960, 'Minneapolis', 'Lakers', 'MNL', null], [1961, 2100, 'Los Angeles', 'Lakers', 'LAL', 'lal']],
   15: [[1969, 2100, 'Milwaukee', 'Bucks', 'MIL', 'mil']],
   17: [[1977, 1977, 'New York', 'Nets', 'NY', null], [1978, 2011, 'New Jersey', 'Nets', 'NJ', null]],
@@ -42,10 +50,10 @@ const SPANS = {
   20: [[1946, 1963, 'Syracuse', 'Nationals', 'SYR', null], [1964, 2100, 'Philadelphia', '76ers', 'PHI', 'phi']],
   21: [[1969, 2100, 'Phoenix', 'Suns', 'PHX', 'phx']],
   22: [[1971, 2100, 'Portland', 'Trail Blazers', 'POR', 'por']],
-  23: [[1946, 1972, 'Cincinnati', 'Royals', 'CIN', null], [1973, 1974, 'Kansas City-Omaha', 'Kings', 'KCO', null], [1975, 1985, 'Kansas City', 'Kings', 'KC', null]],
+  23: [[1946, 1972, 'Cincinnati', 'Royals', 'CIN', null], [1973, 1974, 'Kansas City-Omaha', 'Kings', 'KCO', null], [1975, 1985, 'Kansas City', 'Kings', 'KC', null], [1986, 2100, 'Sacramento', 'Kings', 'SAC', 'sac']],
   24: [[1977, 2100, 'San Antonio', 'Spurs', 'SA', 'sa']],
   25: [[1968, 2008, 'Seattle', 'SuperSonics', 'SEA', null]],
-  26: [[1975, 1979, 'New Orleans', 'Jazz', 'NO', null]],
+  26: [[1975, 1979, 'New Orleans', 'Jazz', 'NO', null], [1980, 2100, 'Utah', 'Jazz', 'UTAH', 'utah']],
   27: [[1962, 1962, 'Chicago', 'Packers', 'CHP', null], [1963, 1963, 'Chicago', 'Zephyrs', 'CHZ', null], [1964, 1973, 'Baltimore', 'Bullets', 'BAL', null], [1974, 1974, 'Capital', 'Bullets', 'CAP', null], [1975, 1997, 'Washington', 'Bullets', 'WSH', null]],
 };
 /** Team name as a team-season article spells it -> ESPN franchise id. */
@@ -55,19 +63,21 @@ const BY_NAME = {
   'Cincinnati Royals': 23, 'Kansas City-Omaha Kings': 23, 'Kansas City Kings': 23, 'Chicago Packers': 27, 'Chicago Zephyrs': 27, 'Baltimore Bullets': 27,
   'Capital Bullets': 27, 'Washington Bullets': 27, 'Chicago Bulls': 4, 'San Diego Rockets': 10, 'Houston Rockets': 10, 'Seattle SuperSonics': 25,
   'Milwaukee Bucks': 15, 'Phoenix Suns': 21, 'Cleveland Cavaliers': 5, 'Buffalo Braves': 12, 'San Diego Clippers': 12, 'Portland Trail Blazers': 22,
-  'New Orleans Jazz': 26, 'New York Nets': 17, 'New Jersey Nets': 17, 'Denver Nuggets': 7, 'Indiana Pacers': 11, 'San Antonio Spurs': 24,
+  'New Orleans Jazz': 26, 'Utah Jazz': 26, 'Dallas Mavericks': 6, 'Miami Heat': 14, 'Charlotte Hornets': 3, 'Los Angeles Clippers': 12, 'Sacramento Kings': 23, 'New York Nets': 17, 'New Jersey Nets': 17, 'Denver Nuggets': 7, 'Indiana Pacers': 11, 'San Antonio Spurs': 24,
 };
 /** A city as a career table writes it, when the cell does not link to the team season. */
 const BY_CITY = {
-  boston: 2, minneapolis: 13, 'los angeles': 13, 'l.a. lakers': 13, 'san francisco': 9, 'golden state': 9, syracuse: 20, 'new york': 18, detroit: 8, 'st. louis': 1,
+  boston: 2, minneapolis: 13, 'los angeles': 13, 'san francisco': 9, 'golden state': 9, syracuse: 20, 'new york': 18, detroit: 8, 'st. louis': 1,
   atlanta: 1, cincinnati: 23, 'kansas city': 23, 'kansas city-omaha': 23, sacramento: 23, baltimore: 27, capital: 27, washington: 27, houston: 10, seattle: 25,
-  milwaukee: 15, phoenix: 21, cleveland: 5, buffalo: 12, portland: 22, 'new orleans': 26, 'new jersey': 17, denver: 7, indiana: 11, 'san antonio': 24,
+  milwaukee: 15, phoenix: 21, cleveland: 5, buffalo: 12, portland: 22, 'new orleans': 26, utah: 26, dallas: 6, miami: 14, charlotte: 3, 'l.a. clippers': 12, 'la clippers': 12, 'l.a. lakers': 13, 'new jersey': 17, denver: 7, indiana: 11, 'san antonio': 24,
 };
 const cityFranchise = (text, season) => {
   const t = text.toLowerCase().replace(/\s+/g, ' ').trim();
   if (t === 'philadelphia') return season <= 1962 ? 9 : 20;
   if (t === 'chicago') return season <= 1963 ? 27 : 4;
   if (t === 'san diego') return season <= 1971 ? 10 : 12;
+  // From 1984-85 Los Angeles has two teams; a cell that names only the city is not placed.
+  if (t === 'los angeles') return season >= 1985 ? null : 13;
   return BY_CITY[t] ?? null;
 };
 /** Franchise in a given season under its name then, or null when it did not play in the NBA. */
@@ -139,6 +149,62 @@ export function cleanRow(r) {
   return out;
 }
 
+/**
+ * The infobox photo of a player article, when it is a Wikimedia Commons file (free by Commons' rules). Files kept on
+ * English Wikipedia itself are often non-free and are left out. Returns the file name without "File:".
+ */
+export function photoFile(html) {
+  const ib = /<table[^>]*class="[^"]*infobox[^"]*"[\s\S]*?<\/table>/.exec(html)?.[0] ?? '';
+  const img = /<img[^>]*>/.exec(ib)?.[0];
+  if (!img || !/\/wikipedia\/commons\//.test(img)) return null;
+  const res = /resource="[^"]*\/File:([^"]+)"/.exec(img)?.[1];
+  if (!res) return null;
+  try { return decodeURIComponent(res).replace(/_/g, ' '); } catch { return res.replace(/_/g, ' '); }
+}
+
+const FREE = /^(cc[ -]?by|cc[ -]?by-sa|cc0|public domain|pd)/i;
+const plain = (h) => (h ?? '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
+
+/** Commons' author field as one plain line: a doubled "Unknown author" said once, and a long note cut to its first sentence. */
+export function tidyCredit(credit) {
+  const cut = credit.lastIndexOf(', ');
+  let who = cut > 0 ? credit.slice(0, cut) : credit;
+  const licence = cut > 0 ? credit.slice(cut + 2) : '';
+  who = who.replace(/(Unknown author|Unknown|Unidentified)\1/g, '$1');
+  if (who.length > 120) who = (/^.*?\.(?=\s|$)/.exec(who)?.[0] ?? who.slice(0, 120)).trim().replace(/\.$/, '');
+  return licence ? `${who}, ${licence}` : who;
+}
+
+/** Author, licence and a 160 px thumbnail for each Commons file, fifty files a request. Cached on disk. */
+async function photoMeta(files) {
+  const cache = fs.existsSync(PHOTO_CACHE) ? JSON.parse(fs.readFileSync(PHOTO_CACHE, 'utf8')) : {};
+  const todo = [...new Set(files)].filter((f) => !(f in cache));
+  for (let i = 0; i < todo.length; i += 50) {
+    const part = todo.slice(i, i + 50);
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=160&titles=${encodeURIComponent(part.map((f) => `File:${f}`).join('|'))}`;
+    let j = null;
+    for (let tries = 0; tries < 5 && !j; tries++) {
+      await new Promise((r) => setTimeout(r, 1500 * (tries + 1)));
+      const r = await fetch(url, { headers: { 'user-agent': UA } }).catch(() => null);
+      if (r?.ok) j = await r.json();
+      else console.error(`  commons ${r?.status ?? 'error'}, retrying`);
+    }
+    if (!j) break;
+    const norm = new Map((j.query?.normalized ?? []).map((n) => [n.to, n.from]));
+    for (const page of Object.values(j.query?.pages ?? {})) {
+      const asked = (norm.get(page.title) ?? page.title).replace(/^File:/, '');
+      const info = page.imageinfo?.[0];
+      const m = info?.extmetadata ?? {};
+      const licence = plain(m.LicenseShortName?.value);
+      cache[asked] = info?.thumburl && FREE.test(licence) ? { url: info.thumburl, credit: `${plain(m.Artist?.value) || 'Unknown author'}, ${licence}`, page: info.descriptionurl } : null;
+    }
+    for (const f of part) if (!(f in cache)) cache[f] = null;
+    fs.writeFileSync(PHOTO_CACHE, JSON.stringify(cache));
+    console.error(`  photos ${Math.min(i + 50, todo.length)} of ${todo.length}`);
+  }
+  return cache;
+}
+
 const SUFFIX = / (jr|sr|ii|iii|iv)$/;
 const nameKey = (name) => ascii(name).replace(SUFFIX, '');
 const lastKey = (name) => nameKey(name).split(' ').pop();
@@ -191,15 +257,24 @@ async function main() {
   for (const [title, p] of Object.entries(raw.players)) { const k = ascii(p.name); byName.set(k, [...(byName.get(k) ?? []), title]); }
   const extra = new Map(); // article title -> Map(`${season}:${franchise}` -> { r, team })
   const stat = { teamRows: 0, unmatched: 0, filled: 0, topped: 0, agreed: 0, differ: [] };
+  // A player's points in his own article, for the team pages to be checked against.
+  const articlePpg = (who, season, franchise) => {
+    for (const t of raw.players[who]?.tables ?? []) for (const r of t.rows) if (r.season === season && teamOf(r.team, r.season, r.teamText)?.franchise === franchise) return r.ppg;
+    return null;
+  };
+  stat.distrusted = [];
   for (const [tsTitle, rows] of Object.entries(raw.teamStats ?? {})) {
     if (!rows?.length) continue;
     const season = raw.rosters[tsTitle].season;
     const team = season >= FIRST && season <= LAST ? teamOf(tsTitle, season) : null;
     if (!team) continue;
     const rosterByName = new Map(raw.rosters[tsTitle].roster.map((x) => [ascii(x.name), x.title]));
+    const resolve = (r) => { const k = ascii(r.name); return r.title && raw.players[r.title] ? r.title : rosterByName.get(k) ?? (byName.get(k)?.length === 1 ? byName.get(k)[0] : null); };
+    // A team page that disagrees with three or more of its players' own articles is not used at all (the 1985-86 SuperSonics).
+    const disagree = rows.filter((r) => { const who = resolve(r); const a = who ? articlePpg(who, season, team.franchise) : null; return a != null && Math.abs(a - r.ppg) > 0.6; }).length;
+    if (disagree >= 3) { stat.distrusted.push(`${tsTitle} (${disagree} rows)`); continue; }
     for (const r of rows) {
-      const k = ascii(r.name);
-      const who = r.title && raw.players[r.title] ? r.title : rosterByName.get(k) ?? (byName.get(k)?.length === 1 ? byName.get(k)[0] : null);
+      const who = resolve(r);
       if (!who || !raw.players[who]) { stat.unmatched++; continue; }
       if (!extra.has(who)) extra.set(who, new Map());
       const c = cleanRow({ season, gp: r.gp, mpg: r.mpg, ppg: r.ppg, rpg: r.rpg, apg: r.apg, spg: r.spg, bpg: r.bpg, fg: r.fg, ft: r.ft, tp: null, pos: r.pos });
@@ -235,7 +310,7 @@ async function main() {
       for (const f of ['mpg', 'rpg', 'apg', 'spg', 'bpg', 'fg', 'ft']) if (have.r[f] == null && e.r[f] != null) { have.r = { ...have.r, [f]: e.r[f] }; stat.topped++; }
     }
     if (!mine.size) { skipped.thinPlayers++; continue; }
-    kept.push({ title, p, mine, late, name: nameOf(p.title ?? title), first: Math.min(...[...mine.values()].map((x) => x.r.season)) });
+    kept.push({ title, raw: title, p, mine, late, name: nameOf(p.title ?? title), first: Math.min(...[...mine.values()].map((x) => x.r.season)) });
   }
 
   // A roster can link a redirect ("Lew Alcindor"); the page is the article under its real title, which may already be kept.
@@ -258,11 +333,25 @@ async function main() {
     console.error(`${espn.size} players matched to ESPN; ${lone.length} with seasons from 1985 on have no ESPN record: ${lone.map((k) => k.name).join(', ')}`);
   }
 
+  const photos = new Map();
+  if (process.argv.includes('--photos')) {
+    const fileOf = new Map();
+    for (const k of unique) {
+      const f = path.join(CACHE, crypto.createHash('sha1').update(`https://en.wikipedia.org/wiki/${k.raw}`).digest('hex') + '.html');
+      const file = fs.existsSync(f) ? photoFile(fs.readFileSync(f, 'utf8')) : null;
+      if (file) fileOf.set(k.title, file);
+    }
+    const meta = await photoMeta([...fileOf.values()]);
+    for (const [title, file] of fileOf) if (meta[file]) photos.set(title, { ...meta[file], credit: tidyCredit(meta[file].credit) });
+    console.error(`${photos.size} of ${unique.length} players have a free photo (${fileOf.size} articles show one on Commons)`);
+  }
+
   for (const { title, p, mine, name } of unique) {
     const id = espn.get(title)?.id ?? syntheticId(title);
     if (used.has(id)) throw new Error(`id collision on ${title}`);
     used.add(id);
-    players.push([id, name, positionOf(p.position, rosterPos.get(title) ?? [...mine.values()].map((x) => x.r.pos).find(Boolean)), title, p.bday ?? null]);
+    const ph = photos.get(title);
+    players.push([id, name, positionOf(p.position, rosterPos.get(title) ?? [...mine.values()].map((x) => x.r.pos).find(Boolean)), title, p.bday ?? null, ph?.url ?? null, ph?.credit ?? null, ph?.page ?? null]);
     for (const { r, team } of mine.values()) {
       const key = `${r.season}:${team.franchise}`;
       if (!teamSeasons.has(key)) teamSeasons.set(key, [r.season, team.franchise, team.location, team.nickname, team.abbr, FRANCHISES[team.franchise].color, team.logo ? `https://a.espncdn.com/i/teamlogos/nba/500/${team.logo}.png` : null]);
@@ -272,19 +361,20 @@ async function main() {
   lines.sort((a, b) => a[2] - b[2] || a[1] - b[1] || a[0] - b[0]);
   players.sort((a, b) => a[0] - b[0]);
   const out = {
-    version: 1,
-    source: 'Per-game lines from the career tables of English Wikipedia articles (CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/); team seasons and rosters from its team-season articles. Built by scripts/crawl-nba-history.mjs and scripts/build-nba-history.mjs.',
+    version: 2,
+    source: 'Per-game lines from the career tables of English Wikipedia articles (CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/); team seasons and rosters from its team-season articles; player photos from Wikimedia Commons, each under its own free licence (photoCredit). Built by scripts/crawl-nba-history.mjs and scripts/build-nba-history.mjs.',
     crawledAt: raw.crawledAt,
-    columns: { teams: ['season', 'franchise', 'location', 'name', 'abbr', 'color', 'logo'], players: ['id', 'name', 'position', 'wikipedia', 'born'], lines: ['player', 'franchise', 'season', 'gp', 'mpg', 'ppg', 'rpg', 'apg', 'spg', 'bpg', 'fg', 'ft'] },
+    columns: { teams: ['season', 'franchise', 'location', 'name', 'abbr', 'color', 'logo'], players: ['id', 'name', 'position', 'wikipedia', 'born', 'photo', 'photoCredit', 'photoPage'], lines: ['player', 'franchise', 'season', 'gp', 'mpg', 'ppg', 'rpg', 'apg', 'spg', 'bpg', 'fg', 'ft'] },
     teams: [...teamSeasons.values()].sort((a, b) => a[0] - b[0] || a[1] - b[1]),
     players,
     lines,
   };
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(out));
-  console.error(`wrote ${OUT}: ${out.teams.length} team seasons, ${players.length} players, ${lines.length} lines (skipped ${skipped.noTeam} with no NBA team, ${skipped.outOfRange} outside 1960-79, ${skipped.thinPlayers} players with no usable row; ESPN ids ${players.filter((p) => p[0] < 1e9).length})`);
+  console.error(`wrote ${OUT}: ${out.teams.length} team seasons, ${players.length} players, ${lines.length} lines (skipped ${skipped.noTeam} with no NBA team, ${skipped.outOfRange} outside ${FIRST}-${LAST}, ${skipped.thinPlayers} players with no usable row; ESPN ids ${players.filter((p) => p[0] < 1e9).length})`);
   if (skipped.nonsense.length) console.error(`dropped ${skipped.nonsense.length} rows no player could have produced:\n  ${skipped.nonsense.join('\n  ')}`);
   console.error(`team pages: ${stat.teamRows} rows matched (${stat.unmatched} not), ${stat.filled} seasons filled in, ${stat.agreed} agreed with the article (${stat.topped} blanks topped up), ${stat.differ.length} differ`);
   for (const d of stat.differ.slice(0, 40)) console.error(`  differ: ${d}`);
+  if (stat.distrusted.length) console.error(`team pages not used: ${stat.distrusted.join(', ')}`);
 }
 if (process.argv[1] && process.argv[1].endsWith('build-nba-history.mjs')) await main();

@@ -605,6 +605,7 @@ html[data-rules=hidden] .rules-card { display: none; }
   .lb-table td .plate { max-width: max(128px, calc(100vw - 190px)); }
   .lb-table td .plate .nm { flex-wrap: nowrap; }
   .lb-table:has(th:nth-child(4)) td .plate { max-width: max(120px, calc(100vw - 236px)); }
+  .lb-table:has(th:nth-child(5)) td .plate { max-width: max(104px, calc(100vw - 280px)); }
 }
 /* This week and All time carry a date as well; on a small phone the date gives way to the result. */
 @media (max-width: 480px) { .lb-table.lb-dated th:nth-child(4), .lb-table.lb-dated td:nth-child(4) { display: none; } }

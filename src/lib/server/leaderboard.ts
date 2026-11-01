@@ -69,7 +69,7 @@ export async function gameLeaderboard(gameType: string, period: Period, hardOnly
   });
 }
 
-export interface AllTimeRow { rank: number; username: string; points: number; games: number; best: number; style?: PlayerLook }
+export interface AllTimeRow { rank: number; username: string; points: number; games: number; best: number; /** Perfect seasons across the four draft games, counted as the Undefeated boards count them. */ perfect: number; style?: PlayerLook }
 
 /** All-time: points accumulate across every graded game. 17-0 = wins, Build a Player = rating / 10. */
 export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows: AllTimeRow[]; total: number }> {
@@ -87,8 +87,9 @@ export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows
     }).from(schema.gameResults).where(where).groupBy(schema.gameResults.userId)
       .orderBy(desc(pointsExpr), asc(dsql`min(${schema.gameResults.createdAt})`)).limit(perPage).offset((page - 1) * perPage);
     const [t] = await db.select({ n: dsql<number>`count(distinct ${schema.gameResults.userId})::int` }).from(schema.gameResults).where(where);
-    const styles = await stylesFor(rows.map((r) => r.userId ?? ''));
-    return { rows: rows.map((r, i) => ({ rank: (page - 1) * perPage + i + 1, username: r.username ?? 'anonymous', points: r.points, games: r.games, best: r.best, style: styles.get(r.userId ?? '') })), total: t?.n ?? 0 };
+    const ids = rows.map((r) => r.userId).filter((x): x is string => !!x);
+    const [styles, perfect] = await Promise.all([stylesFor(ids), perfectCounts(ids)]);
+    return { rows: rows.map((r, i) => ({ rank: (page - 1) * perPage + i + 1, username: r.username ?? 'anonymous', points: r.points, games: r.games, best: r.best, perfect: perfect.get(r.userId ?? '') ?? 0, style: styles.get(r.userId ?? '') })), total: t?.n ?? 0 };
   });
 }
 
@@ -109,6 +110,15 @@ export async function undefeatedLeaderboard(gameType: string, hardOnly = false, 
     const styles = await stylesFor(rows.map((r) => r.user_id));
     return rows.map((r, i) => ({ rank: i + 1, username: r.username, count: r.n, style: styles.get(r.user_id) }));
   });
+}
+
+/** Perfect seasons across the draft games for a page of players, in one query (the Overall board's Undefeated column). */
+async function perfectCounts(userIds: string[]): Promise<Map<string, number>> {
+  if (!userIds.length) return new Map();
+  const rows = await db.execute<{ user_id: string; n: number }>(dsql`
+    with perfect as (${perfectSeasonRows(dsql`user_id in (${dsql.join(userIds.map((id) => dsql`${id}`), dsql`, `)})`)})
+    select user_id, count(*)::int as n from perfect where ${countedPerfect} group by user_id`);
+  return new Map(rows.map((r) => [r.user_id, r.n]));
 }
 
 /** One player's perfect seasons across the draft games, counted the way the boards count them. */

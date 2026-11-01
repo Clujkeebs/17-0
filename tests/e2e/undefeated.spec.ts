@@ -40,7 +40,7 @@ test.beforeAll(async () => {
   for (let i = 0; i < 3; i++) await result(names.d, '17-0', 17, { flagged: true, daysAgo: i });
   for (let i = 0; i < 10; i++) await result(names.e, '17-0', 17, { daysAgo: i });
   const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
-  for (const k of await redis.keys('cache:lb:perfect:*')) await redis.del(k);
+  for (const k of [...await redis.keys('cache:lb:perfect:*'), ...await redis.keys('cache:lb:all:*')]) await redis.del(k);
   redis.disconnect();
 });
 
@@ -97,4 +97,15 @@ test('the profile counts perfect seasons in every draft game, the way the boards
   await expect(page.locator('.stat', { hasText: 'Perfect seasons' }).locator('.v')).toHaveText('4');
   await page.goto(`/u/${names.b}`);
   await expect(page.locator('.stat', { hasText: 'Perfect seasons' }).locator('.v')).toHaveText('6');
+});
+
+test('the Overall board counts each player\'s perfect seasons across the draft games', async ({ request }) => {
+  const found = new Map<string, number>();
+  for (let page = 1; page <= 20 && found.size < 3; page++) {
+    const body = await (await request.get(`/api/leaderboard/all-time?page=${page}`)).json() as { rows: { username: string; perfect: number }[] };
+    for (const r of body.rows) if (r.username.startsWith(P)) found.set(r.username.replace(P + '_', ''), r.perfect);
+    if (body.rows.length < 50) break;
+  }
+  // Ann three in 17-0 and one in 82-0; Bo five Casual (the cap) and one Today; Cy four. Dee's are flagged, Eve is hidden.
+  expect(Object.fromEntries(found)).toEqual({ ann: 4, bo: 6, cy: 4 });
 });

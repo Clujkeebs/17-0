@@ -84,7 +84,7 @@ export const MATH_POSTS: BlogPost[] = [
       {
         h2: 'The goal: one number per season',
         paragraphs: [
-          `82-0 needs to compare a 1989 center with a 2019 guard on the same scale, using only what the box score keeps for every player: per-game points, rebounds, assists, steals, blocks, turnovers and shooting percentages. ESPN has them from 1984-85, and the career tables on English Wikipedia cover the 1960s and 1970s. The rating is a box-score composite in the spirit of the game score metrics John Hollinger and others popularized. It does not try to be the best possible measure of basketball. It tries to be consistent, explainable and the same for everyone.`,
+          `82-0 needs to compare a 1989 center with a 2019 guard on the same scale, using only what the box score keeps for every player: per-game points, rebounds, assists, steals, blocks, turnovers and shooting percentages. ESPN has them from 1989-90, and the career tables on English Wikipedia cover the 1960s, 1970s and 1980s. The rating is a box-score composite in the spirit of the game score metrics John Hollinger and others popularized. It does not try to be the best possible measure of basketball. It tries to be consistent, explainable and the same for everyone.`,
           `Every rating is for a single season with a single franchise. When you see a player on a board, you are seeing his best season there in that era, rated from that year's numbers.`,
         ],
       },
@@ -110,11 +110,11 @@ export const MATH_POSTS: BlogPost[] = [
         ],
       },
       {
-        h2: 'The 1960s and 1970s are graded against their own league',
+        h2: 'The 1960s, 1970s and 1980s are graded against their own league',
         paragraphs: [
-          `The formula above cannot be used as it stands on 1959-60 through 1978-79. The league did not count steals and blocks until 1973-74, and it did not count turnovers at all, so those parts are left out. And the game changed enough between 1962 and 1979 that 20 points a game did not mean the same thing in each year.`,
+          `The formula above cannot be used as it stands on 1959-60 through 1988-89. The league did not count steals and blocks until 1973-74, and the career tables carry no turnovers, so those parts are left out until the steals and blocks were counted. And the game changed enough between 1962 and 1979 that 20 points a game did not mean the same thing in each year.`,
           `So each season is scored against its own league. Every rotation player that season (40 games, 15 minutes) is scored on points, rebounds, assists and the shooting adjustments, and the season's average and spread are measured. A player two standard deviations above his league lands two standard deviations above the modern average rotation player, and that becomes his raw score, which is then bent and scaled for sample size like any other. From 1973-74 steals and blocks join in, once most of the season's rotation had them recorded.`,
-          `The result is that Wilt Chamberlain's 50.4 points in 1961-62 is not compared with a modern 50, and an average starter of 1966 sits where an average starter of 2016 does. About half of the rotation players in every decade land between 65 and 79, and the best seasons of the 1960s and 1970s reach the high 90s.`,
+          `The result is that Wilt Chamberlain's 50.4 points in 1961-62 is not compared with a modern 50, and an average starter of 1966 sits where an average starter of 2016 does. About half of the rotation players in every decade land between 65 and 79, and the best seasons of each of those decades reach the high 90s.`,
         ],
       },
       {

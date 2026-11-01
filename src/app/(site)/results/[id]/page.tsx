@@ -244,7 +244,7 @@ function NbaResultPage({ r }: { r: { id: string; isDaily: boolean; dailyDate: st
             </tbody>
           </table>
         </div>
-        <p className="hint" style={{ marginTop: 16 }}>{d.edition === 'standard' ? <>Grades are each player&apos;s current NBA 2K overall (ratings via <a href="https://www.nba2klab.com/nba2k-player-ratings" rel="noopener noreferrer" target="_blank">NBA2KLab</a>).</> : <>Grades come from each player&apos;s real per-game stats (ESPN, and Wikipedia for the &apos;60s and &apos;70s) in his best season with that franchise in that era.</>}</p>
+        <p className="hint" style={{ marginTop: 16 }}>{d.edition === 'standard' ? <>Grades are each player&apos;s current NBA 2K overall (ratings via <a href="https://www.nba2klab.com/nba2k-player-ratings" rel="noopener noreferrer" target="_blank">NBA2KLab</a>).</> : <>Grades come from each player&apos;s real per-game stats (ESPN, and Wikipedia through the &apos;80s) in his best season with that franchise in that era.</>}</p>
       </div>
     </div>
   );

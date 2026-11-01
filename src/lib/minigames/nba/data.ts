@@ -1,7 +1,7 @@
-import { and, desc, eq, gt, gte, isNotNull, sql as dsql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { seasonLabel } from '@/lib/game/eightytwo';
-import { HISTORY_LAST } from '@/lib/game/nba-history';
+import { MINI_FROM } from '@/lib/game/nba-history';
 import { DATASET_TTL_MS, memoAsync } from '@/lib/memo';
 
 /** One player's season with one franchise, flattened for NBA mini games. */
@@ -16,13 +16,13 @@ export interface NbaGameData { seasons: NSeason[]; rated: NRated[] }
 
 /**
  * Rotation players only (40+ games, 15+ minutes), so every puzzle is about people fans have heard of. In memory for an hour.
- * The '60s and '70s that 82-0 draws from carry no turnovers and few steals or blocks, so these games start with ESPN's seasons.
+ * They start with 1984-85, as they always have: the '60s and '70s that 82-0 draws from carry no turnovers and few steals or blocks.
  */
 export const loadNbaGameData = memoAsync(DATASET_TTL_MS, async (): Promise<NbaGameData> => {
   const rows = await db.select({ ps: schema.nbaPlayerSeasons, p: schema.nbaPlayers, t: schema.nbaTeamSeasons }).from(schema.nbaPlayerSeasons)
     .innerJoin(schema.nbaPlayers, eq(schema.nbaPlayers.id, schema.nbaPlayerSeasons.playerId))
     .innerJoin(schema.nbaTeamSeasons, and(eq(schema.nbaTeamSeasons.teamId, schema.nbaPlayerSeasons.teamId), eq(schema.nbaTeamSeasons.season, schema.nbaPlayerSeasons.season)))
-    .where(and(gt(schema.nbaPlayerSeasons.season, HISTORY_LAST), gte(schema.nbaPlayerSeasons.gp, 40), gte(schema.nbaPlayerSeasons.mpg, 15)))
+    .where(and(gte(schema.nbaPlayerSeasons.season, MINI_FROM), gte(schema.nbaPlayerSeasons.gp, 40), gte(schema.nbaPlayerSeasons.mpg, 15)))
     .orderBy(dsql`${schema.nbaPlayerSeasons.season}, ${schema.nbaPlayerSeasons.teamId}, ${schema.nbaPlayerSeasons.playerId}`);
   const [ratedRows, teamRows] = await Promise.all([
     db.select().from(schema.nbaPlayers).where(and(isNotNull(schema.nbaPlayers.rating2k), isNotNull(schema.nbaPlayers.rating2kTeamId))),

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain ESM script, no types
 import { parsePlayerStats, parseRoster, parseSeasonIndex, parseInfobox, parseTeamStats, seasonEnd } from '../../scripts/nba-history-parse.mjs';
 // @ts-expect-error plain ESM script, no types
-import { cleanRow, matchEspn, positionOf, teamOf } from '../../scripts/build-nba-history.mjs';
+import { cleanRow, matchEspn, photoFile, positionOf, teamOf, tidyCredit } from '../../scripts/build-nba-history.mjs';
 
 const link = (title: string, text: string) => `<a rel="mw:WikiLink" href="https://en.wikipedia.org/wiki/${title}" title="${text}">${text}</a>`;
 const row = (cells: string[]) => `<tr>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`;
@@ -118,6 +118,12 @@ describe('team-season player statistics', () => {
     expect(first).toMatchObject({ gp: 60, mpg: 30, fg: 0.5, ft: 0.8, rpg: 5, apg: 2, ppg: 15, spg: null });
   });
 
+  it('divides a column headed as an average when it holds season totals', () => {
+    const labels = ['Player', 'GP', 'MPG', 'RPG', 'APG', 'PPG'];
+    const rows = Array.from({ length: 6 }, (_, i) => [`Player ${i + 1}`, '80', '2,400', '5.0', '3.0', '15.0']);
+    expect(parseTeamStats(html(labels, rows))[0]).toMatchObject({ gp: 80, mpg: 30 });
+  });
+
   it('skips the playoffs and a table of too few games', () => {
     const labels = ['Player', 'GP', 'MPG', 'RPG', 'APG', 'PPG'];
     const rows = Array.from({ length: 6 }, (_, i) => [`Player ${i + 1}`, '82', '30.0', '5.0', '3.0', '15.0']);
@@ -230,5 +236,26 @@ describe('matching a player to ESPN', () => {
   it('leaves two articles on one player without a match when neither is closer', () => {
     const found = matchEspn([kept('A', 'Robert Parish', [1985, 1986]), kept('B', 'Robert Parish', [1985, 1986])], dump);
     expect(found.size).toBe(0);
+  });
+});
+
+describe('player photos', () => {
+  const infobox = (img: string) => `<table class="infobox vcard"><tr><td>${img}</td></tr></table>`;
+  it('takes the infobox photo when it lives on Wikimedia Commons', () => {
+    const img = '<img resource="https://en.wikipedia.org/wiki/File:Wilt_Chamberlain_1960_(cropped).jpg" src="//upload.wikimedia.org/wikipedia/commons/thumb/1/11/Wilt.jpg/250px-Wilt.jpg">';
+    expect(photoFile(infobox(img))).toBe('Wilt Chamberlain 1960 (cropped).jpg');
+  });
+  it('leaves out files kept on English Wikipedia, which are often not free, and pages with no infobox photo', () => {
+    expect(photoFile(infobox('<img resource="https://en.wikipedia.org/wiki/File:Card.jpg" src="//upload.wikimedia.org/wikipedia/en/a/ab/Card.jpg">'))).toBeNull();
+    expect(photoFile(infobox('<span>no image</span>'))).toBeNull();
+    expect(photoFile('<p>no infobox</p>')).toBeNull();
+  });
+});
+
+describe('photo credits', () => {
+  it('says a doubled unknown author once and cuts a long note to its first sentence', () => {
+    expect(tidyCredit('Unknown authorUnknown author, Public domain')).toBe('Unknown author, Public domain');
+    expect(tidyCredit('Bill Allen, Public domain')).toBe('Bill Allen, Public domain');
+    expect(tidyCredit(`This Photo was taken by Wolfgang Moroder. Feel free to use my photos, but please mention me as the author. ${'x'.repeat(120)}, CC BY-SA 3.0`)).toBe('This Photo was taken by Wolfgang Moroder, CC BY-SA 3.0');
   });
 });

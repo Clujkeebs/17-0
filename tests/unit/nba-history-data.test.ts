@@ -16,11 +16,11 @@ const player = (name: string) => d.players.find((p) => p[1] === name)!;
 const season = (name: string, year: number, franchise?: number) => d.lines.find((l) => l[0] === player(name)[0] && l[2] === year && (franchise == null || l[1] === franchise))!;
 const WARRIORS = 9, KINGS = 23, BUCKS = 15, SPURS = 24, CELTICS = 2, LAKERS = 13, SIXERS = 20;
 
-describe('the 1960s and 1970s data file', () => {
+describe('the 1960s, 1970s and 1980s data file', () => {
   it('has every NBA team of every season, and none of the ABA', () => {
     const per: Record<number, number> = {};
     for (const t of d.teams) per[t[0]] = (per[t[0]] ?? 0) + 1;
-    expect(per).toEqual({ 1960: 8, 1961: 8, 1962: 9, 1963: 9, 1964: 9, 1965: 9, 1966: 9, 1967: 10, 1968: 12, 1969: 14, 1970: 14, 1971: 17, 1972: 17, 1973: 17, 1974: 17, 1975: 18, 1976: 18, 1977: 22, 1978: 22, 1979: 22 });
+    expect(per).toEqual({ 1960: 8, 1961: 8, 1962: 9, 1963: 9, 1964: 9, 1965: 9, 1966: 9, 1967: 10, 1968: 12, 1969: 14, 1970: 14, 1971: 17, 1972: 17, 1973: 17, 1974: 17, 1975: 18, 1976: 18, 1977: 22, 1978: 22, 1979: 22, 1980: 22, 1981: 23, 1982: 23, 1983: 23, 1984: 23, 1985: 23, 1986: 23, 1987: 23, 1988: 23, 1989: 25 });
     expect(new Set(d.teams.map((t) => `${t[0]}:${t[1]}`)).size).toBe(d.teams.length);
     // The Nuggets, Pacers, Spurs and Nets (franchises 7, 11, 24, 17) joined the NBA with the 1976-77 season.
     for (const t of d.teams.filter((x) => [7, 11, 24, 17].includes(x[1]))) expect(t[0]).toBeGreaterThanOrEqual(1977);
@@ -44,6 +44,15 @@ describe('the 1960s and 1970s data file', () => {
     expect(name(1978, 25)).toBe('Seattle SuperSonics');
     expect(name(1963, 27)).toBe('Chicago Zephyrs');
     expect(name(1979, 26)).toBe('New Orleans Jazz');
+    expect(name(1980, 26)).toBe('Utah Jazz');
+    expect(name(1981, 6)).toBe('Dallas Mavericks');
+    expect(name(1984, 12)).toBe('San Diego Clippers');
+    expect(name(1985, 12)).toBe('Los Angeles Clippers');
+    expect(name(1985, 23)).toBe('Kansas City Kings');
+    expect(name(1986, 23)).toBe('Sacramento Kings');
+    // ESPN files the first Charlotte Hornets under the franchise that became the Pelicans.
+    expect(name(1989, 3)).toBe('Charlotte Hornets');
+    expect(name(1989, 14)).toBe('Miami Heat');
   });
 
   it('keeps one line per player, franchise and season, each with a player and a team season behind it', () => {
@@ -55,8 +64,9 @@ describe('the 1960s and 1970s data file', () => {
       // An integer column holds it: ESPN's ids are small, the rest are made from the article title.
       expect(id).toBeLessThan(2_147_483_647);
     }
-    const names = d.players.map((p) => p[1]);
-    expect(new Set(names).size).toBe(names.length);
+    // Two people can share a name (there are two Eddie Johnsons), never a name and a birthday.
+    const people = d.players.map((p) => `${p[1]}|${p[4]}`);
+    expect(new Set(people).size).toBe(people.length);
     const teams = new Set(d.teams.map((t) => `${t[0]}:${t[1]}`));
     const known = new Set(ids);
     const seen = new Set<string>();
@@ -96,7 +106,7 @@ describe('the 1960s and 1970s data file', () => {
     const by = new Map<string, number>();
     for (const l of d.lines) if (l[3] >= 20) by.set(`${l[2]}:${l[1]}`, (by.get(`${l[2]}:${l[1]}`) ?? 0) + 1);
     for (const t of d.teams) expect(by.get(`${t[0]}:${t[1]}`) ?? 0, `${t[0]} ${t[2]} ${t[3]}`).toBeGreaterThanOrEqual(8);
-    for (const [from, to] of [[1960, 1969], [1970, 1979]]) {
+    for (const [from, to] of [[1960, 1969], [1970, 1979], [1980, 1989]]) {
       const franchises = new Map<number, Set<number>>();
       for (const l of d.lines) if (l[2] >= from && l[2] <= to && l[3] >= 20) franchises.set(l[1], (franchises.get(l[1]) ?? new Set()).add(l[0]));
       expect([...franchises.values()].filter((s) => s.size >= 5).length).toBeGreaterThanOrEqual(10);
@@ -114,6 +124,10 @@ describe('the 1960s and 1970s data file', () => {
     expect(season('George Gervin', 1978, SPURS)).toMatchObject({ 3: 82, 4: 34.8, 5: 27.2, 6: 5.1, 7: 3.7 });
     expect(season('George Gervin', 1979, SPURS)).toMatchObject({ 5: 29.6 });
     expect(season('Julius Erving', 1977, SIXERS)).toMatchObject({ 5: 21.6 });
+    expect(season('Larry Bird', 1985, CELTICS)).toMatchObject({ 3: 80, 5: 28.7, 6: 10.5, 7: 6.6 });
+    expect(season('Kevin McHale', 1987, CELTICS)).toMatchObject({ 5: 26.1, 10: 0.604 });
+    expect(season('Magic Johnson', 1987, LAKERS)).toMatchObject({ 5: 23.9, 7: 12.2 });
+    expect(season('Michael Jordan', 1987, 4)).toMatchObject({ 3: 82, 5: 37.1 });
   });
 
   it('splits a season between two teams when a player was traded', () => {
@@ -123,12 +137,13 @@ describe('the 1960s and 1970s data file', () => {
 
   it('has no ABA seasons for the players who left it for the NBA', () => {
     // Erving played the ABA from 1972 to 1976, Gervin 1973 to 1976: only their NBA years are here.
-    expect(d.lines.filter((l) => l[0] === player('Julius Erving')[0]).map((l) => l[2])).toEqual([1977, 1978, 1979]);
-    expect(d.lines.filter((l) => l[0] === player('George Gervin')[0]).map((l) => l[2])).toEqual([1977, 1978, 1979]);
+    const years = (n: string) => d.lines.filter((l) => l[0] === player(n)[0]).map((l) => l[2]).sort((a, b) => a - b);
+    expect(years('Julius Erving')).toEqual([1977, 1978, 1979, 1980, 1981, 1982, 1983, 1984, 1985, 1986, 1987]);
+    expect(years('George Gervin')).toEqual([1977, 1978, 1979, 1980, 1981, 1982, 1983, 1984, 1985, 1986]);
   });
 });
 
-describe('the 1960s and 1970s values', () => {
+describe('the 1960s, 1970s and 1980s values', () => {
   const rows = historyRows();
   const name = new Map(d.players.map((p) => [p[0], p[1]]));
 
@@ -153,6 +168,11 @@ describe('the 1960s and 1970s values', () => {
     expect(at(0.5)).toBeGreaterThan(69); expect(at(0.5)).toBeLessThan(74);
     expect(at(0.9)).toBeGreaterThan(85); expect(at(0.9)).toBeLessThan(90);
     expect(at(0.99)).toBeGreaterThan(93); expect(at(0.99)).toBeLessThan(98);
+  });
+
+  it('keeps ESPN\'s id for a player both sources hold, so he is one person across eras', () => {
+    expect(player('Michael Jordan')[0]).toBe(1035);
+    expect(player('Magic Johnson')[0]).toBe(2334);
   });
 
   it('holds no steals or blocks from before 1974, when the league did not count them', () => {

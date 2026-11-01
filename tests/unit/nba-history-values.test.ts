@@ -10,9 +10,9 @@ function league(season: number, scale = 1, extra: Partial<HistoryLine> = {}): Hi
 }
 
 describe('history values', () => {
-  it('covers 1960 to 1979 and steals are counted from 1974', () => {
+  it('covers 1960 to 1989 and steals are counted from 1974', () => {
     expect(HISTORY_FIRST).toBe(1960);
-    expect(HISTORY_LAST).toBe(1979);
+    expect(HISTORY_LAST).toBe(1989);
     expect(STOCKS_FROM).toBe(1974);
   });
 

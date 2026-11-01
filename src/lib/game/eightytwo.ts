@@ -13,11 +13,11 @@ export type NbaSlot = (typeof NBA_SLOTS)[number];
 export const NBA_SLOT_NAMES: Record<NbaSlot, string> = { PG: 'Point guard', SG: 'Shooting guard', SF: 'Small forward', PF: 'Power forward', C: 'Center' };
 
 export const ERAS = [
-  // ESPN has next to nothing before 1984-85, so the '60s and '70s come from Wikipedia's career tables (nba-history.ts)
-  // and the '80s start with ESPN's data in 1985.
+  // ESPN has next to nothing before 1984-85 and a thin late '80s, so the '60s, '70s and '80s come from Wikipedia's
+  // career tables (nba-history.ts) and ESPN's data starts with 1989-90.
   { key: '1960s', label: "'60s", from: 1960, to: 1969 },
   { key: '1970s', label: "'70s", from: 1970, to: 1979 },
-  { key: '1980s', label: "'80s", from: 1985, to: 1989 },
+  { key: '1980s', label: "'80s", from: 1980, to: 1989 },
   { key: '1990s', label: "'90s", from: 1990, to: 1999 },
   { key: '2000s', label: "'00s", from: 2000, to: 2009 },
   { key: '2010s', label: "'10s", from: 2010, to: 2019 },
@@ -106,7 +106,7 @@ export interface NbaSlotResult { slot: NbaSlot; name: string; position: string; 
 export interface NbaResult { slots: NbaSlotResult[]; teamStrength: number; /** Team strength that locks in 82-0. */ perfectAt?: number; wins: number; losses: number; narrative: string[]; score: number }
 
 /** Fitted to all seven eras (about 3 percent perfect for a careful drafter); the worker refits it nightly. */
-export const NBA_WIN_FLOOR_DEFAULT = 71.3;
+export const NBA_WIN_FLOOR_DEFAULT = 70.6;
 export const NBA_WIN_SPAN = 24;
 
 export function gradeNbaRoster(seed: string, picks: NbaPick[], winFloor = NBA_WIN_FLOOR_DEFAULT): NbaResult {

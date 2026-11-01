@@ -378,7 +378,7 @@ export const STRATEGY_POSTS: BlogPost[] = [
       {
         h2: 'How the game is laid out',
         paragraphs: [
-          `82-0 has five rounds. Each round spins an era and then a franchise, and you draft one player from that team in that era. There are seven eras: the 1960s, 1970s, 1980s (from 1985, where ESPN's per-player data starts), 1990s, 2000s, 2010s and 2020s. Each era can be used once, so five picks cover five of the seven decades. Easy mode gives you two re-spins for the era and two for the team. Hard mode hides the stats and gives none.`,
+          `82-0 has five rounds. Each round spins an era and then a franchise, and you draft one player from that team in that era. There are seven eras: the 1960s, 1970s, 1980s, 1990s, 2000s, 2010s and 2020s, each named for the years its seasons end. Each era can be used once, so five picks cover five of the seven decades. Easy mode gives you two re-spins for the era and two for the team. Hard mode hides the stats and gives none.`,
           `Every player on a board appears at his best season with that franchise in that era, graded from his real per-game stats on a 40 to 99 scale. A player needs at least 20 games with the franchise that season to be on its board. When all five slots are filled, the lineup is simulated over 82 games.`,
         ],
       },
@@ -425,7 +425,7 @@ export const STRATEGY_POSTS: BlogPost[] = [
       {
         h2: `What the data covers`,
         paragraphs: [
-          `Stats from 1984-85 on come from ESPN's per-game records, so the 1980s era runs from the 1985 season through 1989. The 1960s and 1970s come from the career tables on English Wikipedia: every NBA team from 1959-60 through 1978-79 and the players on it, with no ABA seasons. The five seasons between 1978-79 and 1984-85 are not in the game. Each player is shown at the single season that grades best for that franchise in that era, not at his career average. A player with fewer than 20 games for a team in a season does not appear on its board, which keeps late-season cameos off the list.`,
+          `Stats from 1989-90 on come from ESPN's per-game records. ESPN has next to nothing before 1984-85 and a thin late 1980s, so the 1960s, 1970s and 1980s come from the career tables on English Wikipedia: every NBA team from 1959-60 through 1988-89 and the players on it, with no ABA seasons. Each player is shown at the single season that grades best for that franchise in that era, not at his career average. A player with fewer than 20 games for a team in a season does not appear on its board, which keeps late-season cameos off the list.`,
           `Standard mode is a different edition. It grades today's rosters on current NBA 2K overall ratings instead of historical stats, with two team re-spins and no eras. It is a Casual mode, and results credit NBA2KLab for the ratings. Hard mode hides the numbers in either edition.`,
         ],
       },

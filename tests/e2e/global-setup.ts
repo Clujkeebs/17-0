@@ -28,11 +28,11 @@ async function seedWnba() {
 
 async function seedNba() {
   const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
-  // The seed loads the real '60s and '70s (nba-history.ts). The specs search these boards for "Test" players, so the real rows are set
+  // The seed loads the real '60s, '70s and '80s (nba-history.ts). The specs search these boards for "Test" players, so the real rows are set
   // aside here and stand-in franchises fill all seven eras. The loader's version flag stays set, so a later seed leaves them out.
   // (The real ones are ESPN's small ids and the history's made-up ones from 1,000,000,000 up; the stand-ins sit between 9,000,000 and 9,999,999, the shared star at 9,990,001.)
-  await sql`delete from nba_player_seasons where season <= 1979 and (player_id < 9000000 or player_id >= 1000000000)`;
-  await sql`delete from nba_team_seasons where season <= 1979 and team_id < 9000`;
+  await sql`delete from nba_player_seasons where season <= 1989 and (player_id < 9000000 or player_id >= 1000000000)`;
+  await sql`delete from nba_team_seasons where season <= 1989 and team_id < 9000`;
   // Keyed on the '60s stand-ins, the newest addition, so a database seeded before the '60s and '70s existed is topped up (every insert is idempotent).
   const [{ n }] = await sql`select count(*)::int as n from nba_player_seasons where player_id between 9000000 and 9899999 and season = 1965`;
   if (n === 0) {
@@ -65,7 +65,7 @@ async function seedNba() {
     await redis.del('nba:2k-teams', 'nba:era-teams');
     redis.disconnect();
   }
-  // The era list is cached for an hour: forget the one built before the real '60s and '70s were set aside.
+  // The era list is cached for an hour: forget the one built before the real '60s, '70s and '80s were set aside.
   const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
   await redis.del('nba:era-teams');
   redis.disconnect();

@@ -118,8 +118,12 @@ export function parseTeamStats(html) {
     if (ix.player !== 0 || ix.gp < 0 || (ix.ppg < 0 && ix.pts < 0) || (ix.rpg < 0 && ix.reb < 0)) continue;
     const body = trs.slice(1).map(cellsOf).filter((cells) => cells.length >= head.length - 1);
     const num = (cells, i) => (i >= 0 && cells[i] ? NUM(cells[i].html) : null);
-    // A column of totals is told from one of averages by its largest value.
-    const total = (i, limit) => i >= 0 && Math.max(0, ...body.map((cells) => num(cells, i) ?? 0)) > limit;
+    // A column of totals is told from one of averages by its middle value, so one team-totals row cannot tip it.
+    const total = (i, limit) => {
+      if (i < 0) return false;
+      const v = body.filter((cells) => (num(cells, ix.gp) ?? 0) >= 20).map((cells) => num(cells, i)).filter((x) => x != null).sort((a, b) => a - b);
+      return v.length > 0 && v[Math.floor(v.length / 2)] > limit;
+    };
     const out = [];
     for (const cells of body) {
       const name = text(cells[0].html).replace(/[*†‡§#^]+/g, '').trim();
@@ -127,7 +131,8 @@ export function parseTeamStats(html) {
       const gp = num(cells, ix.gp);
       if (gp == null || gp <= 0 || gp > 90) continue;
       const per = (avgIx, totIx, limit) => {
-        if (avgIx >= 0) { const v = num(cells, avgIx); if (v != null) return v; }
+        // A column headed as an average sometimes holds totals (the 1985-86 SuperSonics list season minutes under MPG).
+        if (avgIx >= 0) { const v = num(cells, avgIx); if (v != null) return total(avgIx, limit) ? Math.round((v / gp) * 10) / 10 : v; }
         if (totIx >= 0) { const v = num(cells, totIx); return v == null ? null : total(totIx, limit) ? Math.round((v / gp) * 10) / 10 : v; }
         return null;
       };

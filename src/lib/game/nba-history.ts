@@ -1,17 +1,20 @@
 import { seasonRaw, valueFromRaw, type SeasonLine } from './eightytwo';
 
 /**
- * The '60s and '70s of 82-0. ESPN has almost nothing for these years, so the per-game lines come from Wikipedia's
- * career tables (data/nba-history/history.json, built by scripts/crawl-nba-history.mjs and scripts/build-nba-history.mjs).
+ * The '60s, '70s and '80s of 82-0. ESPN has almost nothing before 1985 and a thin late '80s, so the per-game lines
+ * come from Wikipedia's career tables (data/nba-history/history.json, built by scripts/crawl-nba-history.mjs and
+ * scripts/build-nba-history.mjs).
  * Pace, rebounding and the shot count of those leagues are nothing like today's, so a raw line is not comparable: each
  * season is graded against its own league and then placed on the scale the modern seasons use.
  */
 
-/** First and last seasons covered, by end year: 1960 is 1959-60. */
+/** First and last seasons covered, by end year: 1960 is 1959-60, 1989 is 1988-89. */
 export const HISTORY_FIRST = 1960;
-export const HISTORY_LAST = 1979;
+export const HISTORY_LAST = 1989;
 /** The league first counted steals and blocks in 1973-74. Before that they are left out for everyone. */
 export const STOCKS_FROM = 1974;
+/** The NBA mini games and the Top 100 start here, as they always have ("every season since 1984-85"). */
+export const MINI_FROM = 1985;
 /** Mean and spread of the composite over today's rotation players (40+ games, 15+ minutes, 1985 to 2027, from ESPN). */
 export const MODERN_RAW = { mean: 22.5, sd: 9.9 } as const;
 

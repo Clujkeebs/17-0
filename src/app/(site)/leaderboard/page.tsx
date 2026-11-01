@@ -115,11 +115,11 @@ export default async function Leaderboard({ searchParams }: { searchParams: SP }
         )
       ) : (
         <>
-          <p className="muted">Points across every game: one per 17-0 win, rating divided by ten in Build a Player. Ties go to whoever got there first.</p>
+          <p className="muted">Points across every game: one per 17-0 win, rating divided by ten in Build a Player. Ties go to whoever got there first. Perfect counts undefeated seasons in 17-0, 82-0, 162-0 and 44-0, the same way the Undefeated boards do.</p>
           {all.rows.length ? (
             <div className="table-wrap" tabIndex={0} role="region" aria-label="Scrollable table"><table className="lb-table">
-              <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Points</th><th scope="col" className="num">Games</th></tr></thead>
-              <tbody>{all.rows.map((r) => <tr key={r.rank} className={r.rank <= 3 ? `lb-top lb-${r.rank}` : undefined}><td className="num"><span className="lb-rank">{r.rank}</span></td><td><Player u={r.username} style={r.style} /></td><td className="num">{r.points}</td><td className="num">{r.games}</td></tr>)}</tbody>
+              <thead><tr><th scope="col" className="num">#</th><th scope="col">Player</th><th scope="col" className="num">Points</th><th scope="col" className="num">Games</th><th scope="col" className="num"><abbr title="Undefeated seasons">Perfect</abbr></th></tr></thead>
+              <tbody>{all.rows.map((r) => <tr key={r.rank} className={r.rank <= 3 ? `lb-top lb-${r.rank}` : undefined}><td className="num"><span className="lb-rank">{r.rank}</span></td><td><Player u={r.username} style={r.style} /></td><td className="num">{r.points}</td><td className="num">{r.games}</td><td className="num">{r.perfect}</td></tr>)}</tbody>
             </table></div>
           ) : !error && <div className="card"><p>The overall table is empty. Every game you play while signed in counts.</p></div>}
           {pages > 1 && (

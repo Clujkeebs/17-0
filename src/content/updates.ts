@@ -9,6 +9,11 @@ export const SITE_STARTED = '2026-09-28';
 export const UPDATES: Update[] = [
   {
     date: '2026-11-01',
+    title: 'The whole \'80s in 82-0, and perfect seasons on the Overall board',
+    body: 'The \'80s era now runs from 1979-80 to 1988-89 and holds every team\'s full rotation: Larry Bird, Kevin McHale, Magic Johnson, Isiah Thomas and the rest. ESPN only had a thin slice of 1985 to 1989, so the decade now comes from Wikipedia\'s career tables like the \'60s and \'70s, graded against its own league. The Overall leaderboard gets a Perfect column: undefeated seasons across 17-0, 82-0, 162-0 and 44-0, counted the way the Undefeated boards count them.',
+  },
+  {
+    date: '2026-11-01',
     title: 'The \'60s and \'70s come to 82-0',
     body: '82-0 now spins seven eras, from the \'60s to the \'20s, and each game still uses five. The new decades hold every NBA team of the time and the players on them: Wilt Chamberlain\'s 50-point season, Bill Russell\'s Celtics, Kareem in Milwaukee, George Gervin in San Antonio. ESPN has almost nothing before 1985, so these numbers come from Wikipedia\'s career tables, credited on the Credits page. Each season is graded against its own league, so a \'62 center and a \'12 guard sit on one scale. ABA seasons are not in. The nightly balance fits the win line to the new eras.',
   },
