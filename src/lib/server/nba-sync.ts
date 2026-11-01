@@ -1,4 +1,4 @@
-import { and, eq, sql as dsql } from 'drizzle-orm';
+import { and, eq, gte, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { seasonValue } from '@/lib/game/eightytwo';
 import { getRedis } from './redis';
@@ -96,7 +96,8 @@ const VALUE_VERSION = 3;
 export async function rescoreNba() {
   const [ver] = await db.select().from(schema.gameConfigs).where(and(eq(schema.gameConfigs.gameType, '82-0'), eq(schema.gameConfigs.configKey, 'value_version'))).limit(1);
   if (Number(ver?.configValue ?? 1) >= VALUE_VERSION) return 0;
-  const rows = await db.select().from(schema.nbaPlayerSeasons);
+  // Before ESPN's coverage starts (1985) the rows belong to nba-history.ts, whose values are graded season by season.
+  const rows = await db.select().from(schema.nbaPlayerSeasons).where(gte(schema.nbaPlayerSeasons.season, FIRST_SEASON));
   const changed = rows.map((r) => ({ r, v: seasonValue(r) })).filter(({ r, v }) => v !== r.value);
   for (let i = 0; i < changed.length; i += 500) {
     const chunk = changed.slice(i, i + 500);
@@ -118,8 +119,9 @@ export async function syncNba(opts: { from?: number; to?: number; fetchImpl?: ty
   if (!lock) { console.log('[nba] sync already running'); return null; }
   const [ver] = await db.select().from(schema.gameConfigs).where(and(eq(schema.gameConfigs.gameType, '82-0'), eq(schema.gameConfigs.configKey, 'data_version'))).limit(1);
   if (Number(ver?.configValue ?? 0) < DATA_VERSION) {
-    await db.delete(schema.nbaPlayerSeasons);
-    await db.delete(schema.nbaTeamSeasons);
+    // Only ESPN's seasons: the 1960 to 1979 rows come from nba-history.ts and are not ESPN's to rebuild.
+    await db.delete(schema.nbaPlayerSeasons).where(gte(schema.nbaPlayerSeasons.season, FIRST_SEASON));
+    await db.delete(schema.nbaTeamSeasons).where(gte(schema.nbaTeamSeasons.season, FIRST_SEASON));
     if (ver) await db.update(schema.gameConfigs).set({ configValue: DATA_VERSION, updatedAt: new Date() }).where(eq(schema.gameConfigs.id, ver.id));
     else await db.insert(schema.gameConfigs).values({ gameType: '82-0', configKey: 'data_version', configValue: DATA_VERSION, updatedBy: 'nba-sync' });
     console.log('[nba] cleared stored seasons for a rebuild, data version', DATA_VERSION);
@@ -206,6 +208,9 @@ const MUST_HAVE: [string, string, number, number][] = [
   ['Larry Bird', 'BOS', 1985, 1989], ['Magic Johnson', 'LAL', 1985, 1989], ['Michael Jordan', 'CHI', 1985, 1998], ['Hakeem Olajuwon', 'HOU', 1990, 1999],
   ['Shaquille O\'Neal', 'LAL', 2000, 2004], ['Tim Duncan', 'SA', 2000, 2009], ['Kobe Bryant', 'LAL', 2000, 2009], ['LeBron James', 'CLE', 2004, 2010],
   ['Dirk Nowitzki', 'DAL', 2000, 2009], ['Stephen Curry', 'GS', 2010, 2019], ['Nikola Jokic', 'DEN', 2020, 2029], ['Giannis Antetokounmpo', 'MIL', 2020, 2029],
+  // The '60s and '70s come from the seed (nba-history.ts), not from this sync; they are here so a wipe of those rows shows in the logs.
+  ['Wilt Chamberlain', 'PHW', 1960, 1962], ['Bill Russell', 'BOS', 1960, 1969], ['Jerry West', 'LAL', 1961, 1974], ['Kareem Abdul-Jabbar', 'MIL', 1970, 1975],
+  ['George Gervin', 'SA', 1977, 1979], ['Julius Erving', 'PHI', 1977, 1979],
 ];
 export async function nbaStarCheck() {
   const out: string[] = [];

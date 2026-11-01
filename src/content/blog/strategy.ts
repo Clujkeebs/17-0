@@ -378,7 +378,7 @@ export const STRATEGY_POSTS: BlogPost[] = [
       {
         h2: 'How the game is laid out',
         paragraphs: [
-          `82-0 has five rounds. Each round spins an era and then a franchise, and you draft one player from that team in that era. The eras are the 1980s (from 1985, where ESPN's per-player data starts), the 1990s, 2000s, 2010s and 2020s, and each era can be used once, so five picks cover five decades. Easy mode gives you two re-spins for the era and two for the team. Hard mode hides the stats and gives none.`,
+          `82-0 has five rounds. Each round spins an era and then a franchise, and you draft one player from that team in that era. There are seven eras: the 1960s, 1970s, 1980s (from 1985, where ESPN's per-player data starts), 1990s, 2000s, 2010s and 2020s. Each era can be used once, so five picks cover five of the seven decades. Easy mode gives you two re-spins for the era and two for the team. Hard mode hides the stats and gives none.`,
           `Every player on a board appears at his best season with that franchise in that era, graded from his real per-game stats on a 40 to 99 scale. A player needs at least 20 games with the franchise that season to be on its board. When all five slots are filled, the lineup is simulated over 82 games.`,
         ],
       },
@@ -419,20 +419,20 @@ export const STRATEGY_POSTS: BlogPost[] = [
         h2: 'Using the re-spins',
         paragraphs: [
           `Two kinds of re-spin means two different bets. An era re-spin moves to a different decade and keeps the franchise when it also played in the new one, so only the era changes. A team re-spin keeps the era and swaps the franchise. Use an era re-spin when the franchise is right but the decade is thin for it, and a team re-spin when the decade is right and the team's best players at your open slots are below the standard you want.`,
-          `Eras you have already drafted from drop out of the spin, so every spin lands on a decade you still need. That has a consequence on the last round: only one era is left, so an era re-spin has nowhere to go and only team re-spins work. Spend era re-spins early, when they have the most places to go, and keep a team re-spin for the end.`,
+          `Eras you have already drafted from drop out of the spin, so every spin lands on a decade you still need. With seven eras and five picks, even the last round has two other eras to move to, so an era re-spin always has somewhere to go. Spend them where a franchise is thin in the decade it landed on, and keep a team re-spin for the end.`,
         ],
       },
       {
         h2: `What the data covers`,
         paragraphs: [
-          `Stats come from ESPN's per-game records, which start with the 1984-85 season, so the 1980s era runs from the 1985 season through 1989. Each player is shown at the single season that grades best for that franchise in that era, not at his career average. A player with fewer than 20 games for a team in a season does not appear on its board, which keeps late-season cameos off the list.`,
+          `Stats from 1984-85 on come from ESPN's per-game records, so the 1980s era runs from the 1985 season through 1989. The 1960s and 1970s come from the career tables on English Wikipedia: every NBA team from 1959-60 through 1978-79 and the players on it, with no ABA seasons. The five seasons between 1978-79 and 1984-85 are not in the game. Each player is shown at the single season that grades best for that franchise in that era, not at his career average. A player with fewer than 20 games for a team in a season does not appear on its board, which keeps late-season cameos off the list.`,
           `Standard mode is a different edition. It grades today's rosters on current NBA 2K overall ratings instead of historical stats, with two team re-spins and no eras. It is a Casual mode, and results credit NBA2KLab for the ratings. Hard mode hides the numbers in either edition.`,
         ],
       },
       {
         h2: `A sample draft, with invented numbers`,
         paragraphs: [
-          `Suppose round one lands on the 2010s and a franchise with a 93 wing. Take him at small forward. Round two lands on the 1990s: a 90 center and an 80 guard. Take the center. Round three, the 2000s, offers an 88 point guard, and he fills the point. Round four lands on the 1980s and an 86 shooting guard. Round five, the last era left, offers an 84 power forward.`,
+          `Suppose round one lands on the 2010s and a franchise with a 93 wing. Take him at small forward. Round two lands on the 1990s: a 90 center and an 80 guard. Take the center. Round three, the 2000s, offers an 88 point guard, and he fills the point. Round four lands on the 1980s and an 86 shooting guard. Round five lands on the 1970s and offers an 84 power forward.`,
           `The five values are 88, 86, 93, 84 and 90, which average 88.2. At the base line of 70 and a span of 24, that projects to (88.2 minus 70) divided by 24, times 82, which is about 62 wins before the roll. To lock in 82-0 the average has to reach 94. Every point of lineup strength is worth about 3.4 wins, so a lineup that is two points short is not a few games off a perfect season, it is seven.`,
         ],
       },
@@ -444,7 +444,7 @@ export const STRATEGY_POSTS: BlogPost[] = [
         list: [
           `Drafting five of the same position. Check the arrangement as you go, because a center at guard keeps only 70 percent of his value.`,
           `Chasing the biggest name instead of the best season. The board shows the single best season in the era, so a star's ordinary year in a weak era can grade below a role player's best.`,
-          `Spending the era re-spins late. They have the most places to go in the first rounds. In the last round only one era is left and only team re-spins work.`,
+          `Spending the era re-spins late. They have the most places to go in the first rounds, and every round uses up an era.`,
           `Forgetting playmakers. A forward or center at seven assists a game plays the point at no cost, which frees the guard spot for the best available player.`,
         ],
       },

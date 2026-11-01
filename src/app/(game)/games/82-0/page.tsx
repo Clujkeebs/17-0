@@ -14,7 +14,7 @@ import { nbaReady } from '@/lib/server/nba-game';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: '82-0: Spin an era, spin a team, draft a perfect NBA season',
-  description: 'Five spins. Each lands on an NBA era and a franchise. Draft one player from each, graded on his real stats, set your lineup and see if it goes 82-0.',
+  description: 'Five spins. Each lands on an NBA era, from the \'60s to the \'20s, and a franchise. Draft one player from each, graded on his real stats, set your lineup and see if it goes 82-0.',
   alternates: { canonical: '/games/82-0' },
 };
 

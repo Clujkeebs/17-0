@@ -176,7 +176,7 @@ export function EightyTwoGame({ franchises, signedIn, playedTodayId = null, init
         {error ? <section className="g-done"><p role="alert" className="field-error">{error}</p><button className="btn btn-primary" onClick={() => setSheet(true)}>Try again</button></section> : (
           <section className="g-intro" style={{ maxWidth: 'none', paddingTop: 16 }}>
             <h2 className="g-title">Spin an era.<br />Spin a team. Go <span style={{ whiteSpace: 'nowrap' }}>82-0.</span></h2>
-            <p className="g-lede">Five spins, each an era and then a franchise, and every era only once. Take one player from each, graded on his real stats from his best season there, and move anyone between positions before the season tips off.</p>
+            <p className="g-lede">Five spins, each an era and then a franchise, from the &apos;60s to the &apos;20s, and every era only once. Take one player from each, graded on his real stats from his best season there, and move anyone between positions before the season tips off.</p>
             <button className="btn btn-primary btn-lg" onClick={() => setSheet(true)} disabled={busy === 'start'}>{busy === 'start' ? 'Spinning' : 'Set up a game'}</button>
           </section>
         )}

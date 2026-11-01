@@ -12,6 +12,7 @@ import { TEAMS } from '../data/seed/teams';
 import { COACHES } from '../data/seed/coaches';
 import { PLAYERS } from '../data/seed/players';
 import { generateAttributes } from '../data/seed/attributes';
+import { loadNbaHistory } from '../src/lib/server/nba-history';
 
 const SEED_VERSION = 'seed-2027';
 const espnHeadshot = (id: string) => `https://a.espncdn.com/i/headshots/nfl/players/full/${id}.png`;
@@ -161,6 +162,12 @@ async function main() {
   const [{ n }] = await db.select({ n: dsql<number>`count(*)::int` }).from(schema.players)
     .where(inArray(schema.players.maddenVersion, [SEED_VERSION]));
   console.log(`[seed] teams=${teamIds.size} players=${players.upserted} (seed rows=${n}, history+${players.historyInserted}) coaches=${coaches} configs+${configs} in ${Date.now() - t0}ms`);
+  // The '60s and '70s of 82-0. A failure here must not keep the site from starting; the next boot tries again.
+  try {
+    const t1 = Date.now();
+    const h = await loadNbaHistory();
+    console.log('[seed] nba history', 'skipped' in h ? 'already loaded' : `loaded ${h.teams} team seasons, ${h.players} players, ${h.lines} lines in ${Date.now() - t1}ms`);
+  } catch (e) { console.error('[seed] nba history failed', e); }
 }
 
 main()

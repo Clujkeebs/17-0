@@ -13,7 +13,10 @@ export type NbaSlot = (typeof NBA_SLOTS)[number];
 export const NBA_SLOT_NAMES: Record<NbaSlot, string> = { PG: 'Point guard', SG: 'Shooting guard', SF: 'Small forward', PF: 'Power forward', C: 'Center' };
 
 export const ERAS = [
-  // ESPN's stats start with 1984-85, so the '80s are 1985 to 1989.
+  // ESPN has next to nothing before 1984-85, so the '60s and '70s come from Wikipedia's career tables (nba-history.ts)
+  // and the '80s start with ESPN's data in 1985.
+  { key: '1960s', label: "'60s", from: 1960, to: 1969 },
+  { key: '1970s', label: "'70s", from: 1970, to: 1979 },
   { key: '1980s', label: "'80s", from: 1985, to: 1989 },
   { key: '1990s', label: "'90s", from: 1990, to: 1999 },
   { key: '2000s', label: "'00s", from: 2000, to: 2009 },
@@ -27,7 +30,7 @@ export const isEra = (x: unknown): x is EraKey => typeof x === 'string' && ERAS.
 export const seasonLabel = (season: number) => `${season - 1}-${String(season % 100).padStart(2, '0')}`;
 
 export const NBA_ROUNDS = NBA_SLOTS.length;
-/** Like the original 82-0: each era can be drafted from once, so five picks cover all five eras. */
+/** Like the original 82-0: each era can be drafted from once, so five of the seven eras are in play in any game. */
 export const ERA_PICKS_MAX = 1;
 /** Two re-spins for the era and two for the team, per game (one each felt too tight once every era can only be used once). Hard mode has none. */
 export const ERA_RESPINS = 2;
@@ -73,6 +76,14 @@ export interface SeasonLine { gp: number; mpg: number; ppg: number; rpg: number;
  * greatest seasons ever land near 99: a star's good year and his best year read differently.
  */
 export function seasonValue(s: SeasonLine, fullSampleGp = 40): number {
+  return valueFromRaw(seasonRaw(s), s.gp, fullSampleGp);
+}
+
+/**
+ * The composite before it is scaled. `stocks: false` leaves out steals, blocks and turnovers, which the league did
+ * not count before 1973-74: the '60s and '70s are graded on what was recorded, each season against its own league.
+ */
+export function seasonRaw(s: SeasonLine, opts: { stocks?: boolean } = {}): number {
   const tov = s.tov ?? 0.12 * (s.ppg + s.apg);
   const eff = s.fgPct != null && s.ppg >= 5 ? (s.fgPct - 0.46) * 40 : 0;
   // Shooting beyond the field goal: great three-point and free-throw shooters (Reggie Miller) score more per shot
@@ -80,8 +91,13 @@ export function seasonValue(s: SeasonLine, fullSampleGp = 40): number {
   const scorer = s.ppg >= 10;
   const three = scorer && s.tpPct != null ? Math.min(3.5, Math.max(0, s.tpPct - 0.35) * 30) : 0;
   const line = scorer && s.ftPct != null ? clamp((s.ftPct - 0.77) * 15, -1.5, 2.5) : 0;
-  const raw = s.ppg + 1.2 * s.rpg + 1.5 * s.apg + 2.5 * s.spg + 2 * s.bpg - 1.5 * tov + eff + three + line;
-  const sample = clamp(s.gp / fullSampleGp, 0, 1);
+  const stocks = opts.stocks === false ? 0 : 2.5 * s.spg + 2 * s.bpg - 1.5 * tov;
+  return s.ppg + 1.2 * s.rpg + 1.5 * s.apg + stocks + eff + three + line;
+}
+
+/** Scales a composite to 40-99, bends the top, and pulls tiny samples toward replacement level. */
+export function valueFromRaw(raw: number, gp: number, fullSampleGp = 40): number {
+  const sample = clamp(gp / fullSampleGp, 0, 1);
   return Math.round(clamp(softTop(50 + raw * 1.02), 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
 }
 
@@ -89,7 +105,8 @@ export interface NbaPick { slot: NbaSlot; name: string; position: string; teamId
 export interface NbaSlotResult { slot: NbaSlot; name: string; position: string; teamId: number; season: number; value: number; fit: number; grade: number; letter: string }
 export interface NbaResult { slots: NbaSlotResult[]; teamStrength: number; /** Team strength that locks in 82-0. */ perfectAt?: number; wins: number; losses: number; narrative: string[]; score: number }
 
-export const NBA_WIN_FLOOR_DEFAULT = 70;
+/** Fitted to all seven eras (about 3 percent perfect for a careful drafter); the worker refits it nightly. */
+export const NBA_WIN_FLOOR_DEFAULT = 71.3;
 export const NBA_WIN_SPAN = 24;
 
 export function gradeNbaRoster(seed: string, picks: NbaPick[], winFloor = NBA_WIN_FLOOR_DEFAULT): NbaResult {

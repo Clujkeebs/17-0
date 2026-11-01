@@ -93,7 +93,7 @@ export function SpinningReel({ pool }: { pool: ReelTeam[] }) {
 
 const ERA_CELL = 96;
 /** Era colors on the reel: each decade gets its own swatch so the spin reads at a glance. */
-const ERA_TINT: Record<string, string> = { '1970s': '#B45309', '1980s': '#BE185D', '1990s': '#6D28D9', '2000s': '#1D4ED8', '2010s': '#0F766E', '2020s': '#C8102E', '1997-2002': '#B45309', '2003-2008': '#BE185D', '2009-2014': '#6D28D9', '2015-2020': '#0F766E', '2021-now': '#C8102E' };
+const ERA_TINT: Record<string, string> = { '1960s': '#0A0A0A', '1970s': '#B45309', '1980s': '#BE185D', '1990s': '#6D28D9', '2000s': '#1D4ED8', '2010s': '#0F766E', '2020s': '#C8102E', '1997-2002': '#B45309', '2003-2008': '#BE185D', '2009-2014': '#6D28D9', '2015-2020': '#0F766E', '2021-now': '#C8102E' };
 
 /**
  * The era spins like the team does: a short slot reel of decades that lands on the one the server drew.

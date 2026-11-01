@@ -20,7 +20,7 @@ export function GET() {
 
 > ${SITE.description}
 
-${SITE.name} (${SITE.url}) is a free, independent sports games site. No download, no real-money play. Every game has a daily ranked board (the same puzzle for everyone) and unlimited casual play. Player data: EA Sports Madden NFL ratings, ESPN (NBA history since 1984-85, NFL history), MLB's public Stats API, Sleeper (fantasy), NBA2KLab (NBA 2K ratings). Not affiliated with any league or team.
+${SITE.name} (${SITE.url}) is a free, independent sports games site. No download, no real-money play. Every game has a daily ranked board (the same puzzle for everyone) and unlimited casual play. Player data: EA Sports Madden NFL ratings, ESPN (NBA history since 1984-85, NFL history), English Wikipedia (NBA 1959-60 to 1978-79, CC BY-SA 4.0), MLB's public Stats API, Sleeper (fantasy), NBA2KLab (NBA 2K ratings). Not affiliated with any league or team.
 
 ## Draft games
 ${draft}

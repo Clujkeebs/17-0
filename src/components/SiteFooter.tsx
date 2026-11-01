@@ -39,7 +39,7 @@ export function SiteFooter() {
               <li><Link href="/about">About</Link></li>
               <li><Link href="/updates">Updates</Link></li>
               <li><Link href="/contact">Contact</Link></li>
-              <li><Link href="/credits">Photo credits</Link></li>
+              <li><Link href="/credits">Credits</Link></li>
             </ul>
             <span className="eyebrow">Legal</span>
             <ul className="footer-links">

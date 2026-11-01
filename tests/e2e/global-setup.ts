@@ -28,10 +28,16 @@ async function seedWnba() {
 
 async function seedNba() {
   const sql = postgres(process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gridiron', { max: 1 });
-  const [{ n }] = await sql`select count(*)::int as n from nba_player_seasons where player_id >= 9000000`;
+  // The seed loads the real '60s and '70s (nba-history.ts). The specs search these boards for "Test" players, so the real rows are set
+  // aside here and stand-in franchises fill all seven eras. The loader's version flag stays set, so a later seed leaves them out.
+  // (The real ones are ESPN's small ids and the history's made-up ones from 1,000,000,000 up; the stand-ins sit between 9,000,000 and 9,999,999, the shared star at 9,990,001.)
+  await sql`delete from nba_player_seasons where season <= 1979 and (player_id < 9000000 or player_id >= 1000000000)`;
+  await sql`delete from nba_team_seasons where season <= 1979 and team_id < 9000`;
+  // Keyed on the '60s stand-ins, the newest addition, so a database seeded before the '60s and '70s existed is topped up (every insert is idempotent).
+  const [{ n }] = await sql`select count(*)::int as n from nba_player_seasons where player_id between 9000000 and 9899999 and season = 1965`;
   if (n === 0) {
     const pos = ['PG', 'SG', 'SF', 'PF', 'C', 'G', 'F'];
-    const eraSeasons = [1985, 1995, 2005, 2015, 2024];
+    const eraSeasons = [1965, 1975, 1985, 1995, 2005, 2015, 2024];
     for (let t = 1; t <= 12; t++) {
       for (const season of eraSeasons) {
         await sql`insert into nba_team_seasons (team_id, season, name, location, abbreviation, color) values (${9000 + t}, ${season}, ${`Testers ${t}`}, ${'Test City'}, ${`T${t}`}, ${'#335577'}) on conflict do nothing`;
@@ -59,6 +65,10 @@ async function seedNba() {
     await redis.del('nba:2k-teams', 'nba:era-teams');
     redis.disconnect();
   }
+  // The era list is cached for an hour: forget the one built before the real '60s and '70s were set aside.
+  const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+  await redis.del('nba:era-teams');
+  redis.disconnect();
   await sql.end();
 }
 
@@ -186,7 +196,7 @@ async function seedStars() {
   await sql`delete from nba_player_seasons where player_id = 9990001`;
   await sql`insert into nba_players (id, full_name, position) values (9990001, 'Test Twice Star', 'SF') on conflict do nothing`;
   await sql`insert into nba_player_seasons (player_id, team_id, season, gp, mpg, ppg, rpg, apg, spg, bpg, tov, fg_pct, value)
-    select 9990001, 9000 + t, s, 70, 30, 4, 2, 1, 0.5, 0.2, 1, 0.45, 55 from generate_series(1, 12) t, unnest(${[1985, 1995, 2005, 2015, 2024]}::int[]) s`;
+    select 9990001, 9000 + t, s, 70, 30, 4, 2, 1, 0.5, 0.2, 1, 0.45, 55 from generate_series(1, 12) t, unnest(${[1965, 1975, 1985, 1995, 2005, 2015, 2024]}::int[]) s`;
   await sql`delete from wnba_player_seasons where player_id = 9990002`;
   await sql`insert into wnba_players (id, full_name, position) values (9990002, 'Test Twice Star', 'F') on conflict do nothing`;
   await sql`insert into wnba_player_seasons (player_id, team_id, season, gp, mpg, ppg, rpg, apg, spg, bpg, tov, fg_pct, value)

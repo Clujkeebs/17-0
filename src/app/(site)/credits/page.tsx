@@ -1,27 +1,39 @@
 import type { Metadata } from 'next';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db';
+import { historySources } from '@/lib/server/nba-history';
 
 export const revalidate = 3600;
-export const metadata: Metadata = { title: 'Photo credits', description: 'Credits for the free-licensed player photos used on Unbeaten.', alternates: { canonical: '/credits' } };
+export const metadata: Metadata = { title: 'Credits', description: 'Credits for the free-licensed player photos and the basketball history used on Unbeaten.', alternates: { canonical: '/credits' } };
 
-/** Every Wikimedia Commons photo the soccer games use, with its author and license. */
+/** Every Wikimedia Commons photo the soccer games use, and the Wikipedia articles behind 82-0's '60s and '70s, each with its license. */
 export default async function Credits() {
   const rows = await db.select({ name: schema.soccerLeaders.name, credit: schema.soccerPhotos.credit, page: schema.soccerPhotos.page })
     .from(schema.soccerPhotos).innerJoin(schema.soccerLeaders, eq(schema.soccerLeaders.playerId, schema.soccerPhotos.playerId))
     .where(eq(schema.soccerPhotos.source, 'wiki')).catch(() => []);
   const seen = new Set<string>();
+  const sources = historySources();
   const list = rows.filter((r) => !seen.has(r.name) && seen.add(r.name)).sort((a, b) => a.name.localeCompare(b.name));
   return (
     <div className="container section" style={{ maxWidth: 820 }}>
-      <span className="eyebrow">Credits</span>
-      <h1>Photo credits</h1>
+      <span className="eyebrow">Sources</span>
+      <h1>Credits</h1>
+      <h2>Photos</h2>
       <p className="muted">NFL, NBA, WNBA, MLB and most soccer player photos come from public team and league sources and are used to identify the players. Where those have no photo, soccer players get a free-licensed photo from Wikimedia Commons, credited below. Each links to the player&apos;s Wikipedia article.</p>
       {list.length === 0 ? <p>No Commons photos in use yet.</p> : (
         <ul className="credits-list">
           {list.map((r) => <li key={r.name}><a href={r.page ?? '#'} target="_blank" rel="noopener noreferrer">{r.name}</a>: {r.credit}</li>)}
         </ul>
       )}
+      <h2 style={{ marginTop: 40 }}>Basketball history</h2>
+      <p className="muted">The &apos;60s and &apos;70s in <a href="/games/82-0">82-0</a> cover the 1959-60 through 1978-79 NBA seasons. ESPN has next to nothing for those years, so the rosters and each player&apos;s per-game numbers come from English Wikipedia, from its team-season articles and the career tables in the players&apos; own articles. That text is available under the <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons Attribution-ShareAlike 4.0 License</a>.</p>
+      <p className="muted">We changed it. The numbers were copied once, checked against each other where two articles list the same season, and left out when they could not be right. Each season is then graded by us against its own league, so those grades are ours and not Wikipedia&apos;s. ABA seasons are not included. The articles are listed here, each with its history and authors on Wikipedia.</p>
+      <details style={{ marginTop: 12 }}>
+        <summary>The {sources.length} player articles</summary>
+        <ul className="credits-list" style={{ columns: '2 14rem' }}>
+          {sources.map((r) => <li key={r.article}><a href={`https://en.wikipedia.org/wiki/${encodeURI(r.article)}`} target="_blank" rel="noopener noreferrer">{r.name}</a></li>)}
+        </ul>
+      </details>
     </div>
   );
 }

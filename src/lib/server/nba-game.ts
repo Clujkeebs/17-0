@@ -60,7 +60,8 @@ const hashToken = (t: string) => createHash('sha256').update(t).digest('hex');
 async function eraTeams(): Promise<Record<EraKey, number[]>> {
   const r = getRedis();
   const cached = await r.get('nba:era-teams').catch(() => null);
-  if (cached) return JSON.parse(cached);
+  // A list cached before an era was added has no entry for it: build it again rather than serve a gap.
+  if (cached) { const hit = JSON.parse(cached) as Record<EraKey, number[]>; if (ERAS.every((e) => Array.isArray(hit[e.key]))) return hit; }
   const out = {} as Record<EraKey, number[]>;
   for (const e of ERAS) {
     const rows = await db.select({ teamId: schema.nbaPlayerSeasons.teamId, n: dsql<number>`count(distinct ${schema.nbaPlayerSeasons.playerId})::int` })
@@ -191,7 +192,7 @@ async function state(sessionId: string, p: NbaPayload): Promise<NbaState> {
     return { slot, pick: { ...hide(pl), teamName: `${hit.t.location} ${hit.t.name}`.trim(), teamColor: hit.t.color, logoUrl: hit.t.logoUrl, fit } };
   });
   const usedEras = p.edition === 'standard' ? [] : [...fullEras(p)];
-  // An era re-spin needs somewhere to go: on the last pick only one era is left.
+  // An era re-spin needs somewhere to go: an era that is not this one and has not given its pick.
   const otherEras = ERAS.filter((e) => e.key !== p.current?.era && !usedEras.includes(e.key)).length;
   return {
     sessionId, index, total: NBA_ROUNDS, done, hard: p.hard, usedEras,

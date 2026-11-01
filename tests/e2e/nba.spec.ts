@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 import Redis from 'ioredis';
 import postgres from 'postgres';
 
-// Test databases have no ESPN history. Stand-in franchises and players (ids from 9,000,000 up, names marked
-// "Test") give every era a full board so the whole 82-0 flow can run.
+// Test databases have no ESPN history, and global-setup sets the real '60s and '70s aside. Stand-in franchises and players
+// (ids from 9,000,000 up, names marked "Test") give all seven eras a full board so the whole 82-0 flow can run.
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('gl-cookie-ack', '1'); });

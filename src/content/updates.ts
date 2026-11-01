@@ -8,6 +8,11 @@ export const SITE_STARTED = '2026-09-28';
 
 export const UPDATES: Update[] = [
   {
+    date: '2026-11-01',
+    title: 'The \'60s and \'70s come to 82-0',
+    body: '82-0 now spins seven eras, from the \'60s to the \'20s, and each game still uses five. The new decades hold every NBA team of the time and the players on them: Wilt Chamberlain\'s 50-point season, Bill Russell\'s Celtics, Kareem in Milwaukee, George Gervin in San Antonio. ESPN has almost nothing before 1985, so these numbers come from Wikipedia\'s career tables, credited on the Credits page. Each season is graded against its own league, so a \'62 center and a \'12 guard sit on one scale. ABA seasons are not in. The nightly balance fits the win line to the new eras.',
+  },
+  {
     date: '2026-10-28',
     title: 'A profile stat for everyone, and better positions in 44-0',
     body: 'Profiles now show Games tried, how many different games you have played, where they used to show a 17-0 record that read "--" for anyone who plays something else. In 44-0 a listed center can play power forward at no cost. The league lists players only as guard, forward or center, so A\'ja Wilson at the four used to lose 6 percent of her value for no good reason. ESPN has no position for most players before 2010, so those cards read "NA" and played as small forwards. Each is now placed from her stats, so a center plays center.',
