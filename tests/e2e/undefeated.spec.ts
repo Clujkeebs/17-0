@@ -22,6 +22,13 @@ async function result(user: string, game: string, wins: number, opts: { daily?: 
       ${!!opts.flagged}, ${noon(opts.daysAgo ?? 0)} + make_interval(mins => ${opts.minute ?? 0}))`;
 }
 
+async function mini(user: string, game: string, perfect: boolean, opts: { daily?: boolean; minute?: number } = {}) {
+  const [u] = await sql`select id from user_accounts where username = ${user}`;
+  await sql`insert into game_results (user_id, username, game_type, is_daily, daily_date, result_data, score, flagged, created_at)
+    values (${u.id}, ${user}, ${game}, ${!!opts.daily}, ${opts.daily ? today() : null}, ${sql.json({ summary: perfect ? '5/5' : '3/5', detail: {}, perfect })}, 5,
+      false, ${noon(0)} + make_interval(mins => ${opts.minute ?? 0}))`;
+}
+
 test.beforeAll(async () => {
   for (const n of Object.values(names)) await sql`insert into user_accounts (username, email, display_name) values (${n}, ${n + '@x.test'}, ${n})`;
   await sql`update user_accounts set lb_hidden = true where username = ${names.e}`;
@@ -39,6 +46,14 @@ test.beforeAll(async () => {
   // Dee's perfect seasons are flagged, and Eve is hidden from boards: neither appears.
   for (let i = 0; i < 3; i++) await result(names.d, '17-0', 17, { flagged: true, daysAgo: i });
   for (let i = 0; i < 10; i++) await result(names.e, '17-0', 17, { daysAgo: i });
+  // Cy's mini games, for the Overall Perfect column only: seven Casual perfects in one day across different games (five
+  // count, the cap is shared by the mini games), a Today perfect, a mini that was not perfect, and a Build a Player row
+  // carrying a stray perfect flag (never counts). The Undefeated boards and his profile still say four.
+  const minis = ['higher-lower', 'rank-em', 'connections', 'top-ten', 'grid', 'name-that-team', 'mystery-player'];
+  for (let i = 0; i < minis.length; i++) await mini(names.c, minis[i], true, { minute: i });
+  await mini(names.c, 'higher-lower', true, { daily: true, minute: 30 });
+  await mini(names.c, 'rank-em', false, { minute: 40 });
+  await mini(names.c, 'build-a-player', true, { minute: 50 });
   const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
   for (const k of [...await redis.keys('cache:lb:perfect:*'), ...await redis.keys('cache:lb:all:*')]) await redis.del(k);
   redis.disconnect();
@@ -99,13 +114,14 @@ test('the profile counts perfect seasons in every draft game, the way the boards
   await expect(page.locator('.stat', { hasText: 'Perfect seasons' }).locator('.v')).toHaveText('6');
 });
 
-test('the Overall board counts each player\'s perfect seasons across the draft games', async ({ request }) => {
+test('the Overall board counts each player\'s perfect games, draft seasons and mini games', async ({ request }) => {
   const found = new Map<string, number>();
   for (let page = 1; page <= 20 && found.size < 3; page++) {
     const body = await (await request.get(`/api/leaderboard/all-time?page=${page}`)).json() as { rows: { username: string; perfect: number }[] };
     for (const r of body.rows) if (r.username.startsWith(P)) found.set(r.username.replace(P + '_', ''), r.perfect);
     if (body.rows.length < 50) break;
   }
-  // Ann three in 17-0 and one in 82-0; Bo five Casual (the cap) and one Today; Cy four. Dee's are flagged, Eve is hidden.
-  expect(Object.fromEntries(found)).toEqual({ ann: 4, bo: 6, cy: 4 });
+  // Ann three in 17-0 and one in 82-0; Bo five Casual (the cap) and one Today; Cy four seasons plus five Casual minis and
+  // one Today mini. Dee's are flagged, Eve is hidden.
+  expect(Object.fromEntries(found)).toEqual({ ann: 4, bo: 6, cy: 10 });
 });

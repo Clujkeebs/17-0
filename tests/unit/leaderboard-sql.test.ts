@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PgDialect } from 'drizzle-orm/pg-core';
-import { CASUAL_PERFECTS_PER_DAY, SEASON_GAMES, allTimePointsExpr, countedPerfect, hasUndefeated, perfectResult, perfectSeasonRows } from '@/lib/server/leaderboard-sql';
+import { CASUAL_PERFECTS_PER_DAY, SEASON_GAMES, allTimePointsExpr, countedPerfect, hasUndefeated, perfectAnyResult, perfectResult, perfectSeasonRows } from '@/lib/server/leaderboard-sql';
 
 describe('all-time points SQL', () => {
   it('coalesces missing wins/rating so mini-game rows count as 0 points, never NULL', () => {
@@ -36,7 +36,7 @@ describe('undefeated board SQL', () => {
   it('leaves flagged results and guests out, and numbers each player\'s results per game, kind and Eastern day', () => {
     const { sql: text } = render(perfectSeasonRows());
     expect(text).toContain('user_id is not null and not flagged');
-    expect(text).toContain('partition by user_id, game_type, is_daily');
+    expect(text).toMatch(/partition by user_id, case when game_type in \(\$1, \$2, \$3, \$4\) then game_type else 'mini' end, is_daily/);
     expect(text).toContain(`at time zone 'America/New_York'`);
   });
 
@@ -45,5 +45,15 @@ describe('undefeated board SQL', () => {
     const { sql: text, params } = render(countedPerfect);
     expect(text).toBe('(is_daily or nth <= $1)');
     expect(params).toEqual([5]);
+  });
+
+  it('counts a perfect mini game on the Overall board, but never Build a Player or a draft game\'s own perfect flag', () => {
+    const { sql: text, params } = render(perfectAnyResult);
+    expect(text).toContain(`result_data->>'perfect' = 'true'`);
+    expect(params.slice(8)).toEqual(['17-0', '82-0', '162-0', '44-0', 'build-a-player']);
+    expect(text).toContain('game_type not in');
+    // The Undefeated boards and the profile stay on undefeated seasons only.
+    expect(render(perfectSeasonRows()).sql).not.toContain(`'perfect'`);
+    expect(render(perfectSeasonRows(undefined, perfectAnyResult)).sql).toContain(`result_data->>'perfect' = 'true'`);
   });
 });

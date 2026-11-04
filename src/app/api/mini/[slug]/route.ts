@@ -86,7 +86,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
       userId, username: session?.user?.username ?? null, gameType: slug, isDaily: mode === 'today', dailyDate: mode === 'today' ? date : null,
       resultData, score: result.score,
     }).returning({ id: schema.gameResults.id });
-    if (mode === 'today') await Promise.all([invalidatePrefix(`lb:daily:${slug}:`), invalidatePrefix(`lb:week:${slug}:`), invalidatePrefix(`lb:all:${slug}:`)]).catch(() => {});
+    // The Overall board (`lb:all:{page}`) counts every signed-in result and its Perfect column counts perfect mini games.
+    await Promise.all([mode === 'today' ? invalidatePrefix(`lb:daily:${slug}:`) : null, mode === 'today' ? invalidatePrefix(`lb:week:${slug}:`) : null, userId ? invalidatePrefix('lb:all:') : null]).catch(() => {});
     if (userId) await earnForResult(userId, slug, mode === 'today', !!result.perfect, row.id).catch((e) => console.warn('[points] earn failed', (e as Error).message));
     return json({ id: row.id, score: result.score, ...resultData });
   } catch {

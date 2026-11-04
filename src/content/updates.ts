@@ -8,6 +8,11 @@ export const SITE_STARTED = '2026-09-28';
 
 export const UPDATES: Update[] = [
   {
+    date: '2026-11-04',
+    title: 'Perfect mini games count on the Overall board',
+    body: 'The Perfect column on the Overall leaderboard now counts every game, not just the four draft games. A mini game counts when it ends with nothing missed: every round right, a puzzle solved with no mistakes, a ranking with every pair in order. Every Today one counts. Casual ones count up to five a day across all the mini games, on top of five a day per draft game.',
+  },
+  {
     date: '2026-11-01',
     title: 'The whole \'80s in 82-0, and perfect seasons on the Overall board',
     body: 'The \'80s era now runs from 1979-80 to 1988-89 and holds every team\'s full rotation: Larry Bird, Kevin McHale, Magic Johnson, Isiah Thomas and the rest. ESPN only had a thin slice of 1985 to 1989, so the decade now comes from Wikipedia\'s career tables like the \'60s and \'70s, graded against its own league. The Overall leaderboard gets a Perfect column: undefeated seasons across 17-0, 82-0, 162-0 and 44-0, counted the way the Undefeated boards count them.',

@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, isNotNull, sql as dsql } from 'drizzle-orm';
 import { db, schema } from '@/db';
 import { cached } from './redis';
-import { SEASON_GAMES, allTimePointsExpr, countedPerfect, perfectSeasonRows } from './leaderboard-sql';
+import { SEASON_GAMES, allTimePointsExpr, countedPerfect, perfectAnyResult, perfectSeasonRows } from './leaderboard-sql';
 import { scoreSummary } from './result-summary';
 import { dailyDateET } from '@/lib/game/daily';
 import { isOwnerEmail, resolveStyle, type PlayerLook } from '@/lib/cosmetics';
@@ -69,7 +69,7 @@ export async function gameLeaderboard(gameType: string, period: Period, hardOnly
   });
 }
 
-export interface AllTimeRow { rank: number; username: string; points: number; games: number; best: number; /** Perfect seasons across the four draft games, counted as the Undefeated boards count them. */ perfect: number; style?: PlayerLook }
+export interface AllTimeRow { rank: number; username: string; points: number; games: number; best: number; /** Perfect results in every game: undefeated seasons plus perfect mini games, Casual ones capped per day. */ perfect: number; style?: PlayerLook }
 
 /** All-time: points accumulate across every graded game. 17-0 = wins, Build a Player = rating / 10. */
 export async function allTimeLeaderboard(page = 1, perPage = 50): Promise<{ rows: AllTimeRow[]; total: number }> {
@@ -112,11 +112,11 @@ export async function undefeatedLeaderboard(gameType: string, hardOnly = false, 
   });
 }
 
-/** Perfect seasons across the draft games for a page of players, in one query (the Overall board's Undefeated column). */
+/** Perfect results in every game for a page of players, in one query (the Overall board's Perfect column). */
 async function perfectCounts(userIds: string[]): Promise<Map<string, number>> {
   if (!userIds.length) return new Map();
   const rows = await db.execute<{ user_id: string; n: number }>(dsql`
-    with perfect as (${perfectSeasonRows(dsql`user_id in (${dsql.join(userIds.map((id) => dsql`${id}`), dsql`, `)})`)})
+    with perfect as (${perfectSeasonRows(dsql`user_id in (${dsql.join(userIds.map((id) => dsql`${id}`), dsql`, `)})`, perfectAnyResult)})
     select user_id, count(*)::int as n from perfect where ${countedPerfect} group by user_id`);
   return new Map(rows.map((r) => [r.user_id, r.n]));
 }
