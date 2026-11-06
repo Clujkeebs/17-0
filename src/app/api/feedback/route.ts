@@ -6,6 +6,7 @@ import { db, schema } from '@/db';
 import { clientIp, errorJson, hashIp, json } from '@/lib/server/request';
 import { limitByIp } from '@/lib/server/rate-limit';
 import { isOwnerAccount } from '@/lib/cosmetics';
+import { feedbackLogLine } from '@/lib/server/feedback-log';
 
 const Body = z.object({
   rating: z.number().int().min(1).max(5),
@@ -29,9 +30,9 @@ export async function POST(req: Request) {
     console.error('[feedback]', (e as Error).message);
     return errorJson(500, 'That did not send. Try again in a minute.');
   }
-  // One JSON line per response so the daily review can read them straight from the web logs. fromOwner is set here, from the
-  // signed-in session (the owner's account or the account called Bot), never from anything in the message.
+  // One JSON line per response so the daily review can read them straight from the web logs. The username (guests have
+  // none) and fromOwner are set here, from the signed-in session, never from anything in the message.
   const fromOwner = isOwnerAccount(s?.user?.email, s?.user?.username);
-  console.log(`[feedback] ${JSON.stringify({ rating, page: page ?? null, signedIn: !!s?.user?.id, ...(fromOwner ? { fromOwner: true } : {}), message })}`);
+  console.log(feedbackLogLine({ rating, page: page ?? null, signedIn: !!s?.user?.id, username: s?.user?.username, fromOwner, message }));
   return json({ ok: true });
 }
