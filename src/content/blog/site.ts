@@ -413,6 +413,7 @@ export const SITE_POSTS: BlogPost[] = [
           `Team strength: the weighted average of the grades. It decides the record.`,
           `Fit: the share of a player's value he keeps when he plays a slot that is not his own. 100, 94, 82 or 70 percent in basketball.`,
           `Playmaker rule: a basketball season with enough assists (seven in the NBA, five in the WNBA) plays the point at no cost.`,
+          `Combo-guard rule (82-0 Standard): a guard who scores 20 or more a game plays both guard spots at no cost.`,
           `Win line: the strength that projects to zero wins. A span above it spreads wins up to a perfect season.`,
           `Perfect line: the strength at which a perfect season is locked in, shown on your result when you fall short.`,
           `Luck roll: a small seeded random number added to the projection. It only helps a team that is below the perfect line.`,

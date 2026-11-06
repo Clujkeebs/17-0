@@ -11,7 +11,7 @@ import { modeKey } from '@/lib/game/difficulty';
 import { createRng } from '@/lib/game/prng';
 import { dailyDateET, dailySeed } from '@/lib/game/daily';
 import {
-  ERAS, ERA_PICKS_MAX, ERA_RESPINS, NBA_ROUNDS, NBA_SLOTS, TEAM_RESPINS, eraOf, fitMultiplier, gradeNbaRoster, naturalSlots, seasonLabel,
+  ERAS, ERA_PICKS_MAX, ERA_RESPINS, NBA_ROUNDS, NBA_SLOTS, TEAM_RESPINS, eraOf, PLAYMAKER_APG, currentLine, fitForSlots, gradeNbaRoster, naturalSlots, seasonLabel,
   type EraKey, type NbaPick, type NbaSlot,
 } from '@/lib/game/eightytwo';
 
@@ -99,11 +99,12 @@ async function board2k(teamId: number): Promise<NbaTeamView | null> {
   const [t] = await db.select().from(schema.nbaTeamSeasons).where(eq(schema.nbaTeamSeasons.teamId, teamId)).orderBy(dsql`${schema.nbaTeamSeasons.season} desc`).limit(1);
   if (!t) return null;
   const rows = await db.select().from(schema.nbaPlayers).where(and(eq(schema.nbaPlayers.rating2kTeamId, teamId), dsql`${schema.nbaPlayers.rating2k} is not null`));
-  const lines = rows.length ? await db.select().from(schema.nbaPlayerSeasons).where(and(inArray(schema.nbaPlayerSeasons.playerId, rows.map((r) => r.id)), eq(schema.nbaPlayerSeasons.season, t.season))) : [];
+  // Each player's current line (his latest season with 20+ games) decides the playmaker and combo-guard rules.
+  const lines = rows.length ? await db.select().from(schema.nbaPlayerSeasons).where(and(inArray(schema.nbaPlayerSeasons.playerId, rows.map((r) => r.id)), gte(schema.nbaPlayerSeasons.season, t.season - 1))) : [];
   const players = rows.sort((a, b) => b.rating2k! - a.rating2k!).map((p) => {
-    const l = lines.find((x) => x.playerId === p.id);
+    const l = currentLine(lines.filter((x) => x.playerId === p.id));
     const pos = p.rating2kPosition ?? p.position;
-    return { id: p.id, name: p.fullName, position: pos, season: t.season, seasonLabel: 'NBA 2K', value: p.rating2k!, ppg: l?.ppg ?? 0, rpg: l?.rpg ?? 0, apg: l?.apg ?? 0, headshot: p.headshot, fits: naturalSlots(pos, l?.apg) };
+    return { id: p.id, name: p.fullName, position: pos, season: t.season, seasonLabel: 'NBA 2K', value: p.rating2k!, ppg: l?.ppg ?? 0, rpg: l?.rpg ?? 0, apg: l?.apg ?? 0, headshot: p.headshot, fits: naturalSlots(pos, l?.apg, PLAYMAKER_APG, l?.ppg) };
   });
   return { id: teamId, era: '2020s', eraLabel: '2K', name: t.name, location: t.location, abbreviation: t.abbreviation, color: t.color ?? '#555555', logoUrl: t.logoUrl, players };
 }
@@ -188,7 +189,7 @@ async function state(sessionId: string, p: NbaPayload): Promise<NbaState> {
     if (!hit) return { slot, pick: null };
     const pl = hit.t?.players.find((y) => y.id === hit.x.playerId);
     if (!pl || !hit.t) return { slot, pick: null };
-    const fit = fitMultiplier(pl.position, slot, pl.apg);
+    const fit = fitForSlots(pl.fits, slot);
     return { slot, pick: { ...hide(pl), teamName: `${hit.t.location} ${hit.t.name}`.trim(), teamColor: hit.t.color, logoUrl: hit.t.logoUrl, fit } };
   });
   const usedEras = p.edition === 'standard' ? [] : [...fullEras(p)];
@@ -284,14 +285,14 @@ export async function gradeNba(ctx: { sessionId: string; token: string; userId?:
   const rated = standard ? await db.select().from(schema.nbaPlayers).where(inArray(schema.nbaPlayers.id, ids)) : [];
   const rows = await db.select({ ps: schema.nbaPlayerSeasons, p: schema.nbaPlayers }).from(schema.nbaPlayerSeasons)
     .innerJoin(schema.nbaPlayers, eq(schema.nbaPlayers.id, schema.nbaPlayerSeasons.playerId)).where(inArray(schema.nbaPlayerSeasons.playerId, ids));
-  // Standard plays today's rosters: a player's latest season says whether he runs the point.
-  const lastApg = new Map<number, number>();
-  for (const r of [...rows].sort((a, b) => a.ps.season - b.ps.season)) lastApg.set(r.p.id, r.ps.apg);
+  // Standard plays today's rosters: a player's current line (latest season with 20+ games) says whether he runs the
+  // point or scores like a combo guard. The board shows the same fits.
+  const current = (id: number) => currentLine(rows.filter((r) => r.p.id === id).map((r) => r.ps));
   const picks: NbaPick[] = p.picks.map((x) => {
     if (standard) {
       const r = rated.find((y) => y.id === x.playerId);
       if (!r || r.rating2k == null) throw new NbaError('Unknown player.');
-      return { slot: x.slot, name: r.fullName, position: r.rating2kPosition ?? r.position, teamId: x.teamId, season: x.season, value: r.rating2k, apg: lastApg.get(r.id) };
+      return { slot: x.slot, name: r.fullName, position: r.rating2kPosition ?? r.position, teamId: x.teamId, season: x.season, value: r.rating2k, apg: current(r.id)?.apg, ppg: current(r.id)?.ppg };
     }
     const r = rows.find((y) => y.p.id === x.playerId && y.ps.teamId === x.teamId && y.ps.season === x.season);
     if (!r) throw new NbaError('Unknown player.');

@@ -1,12 +1,12 @@
-import { eq, gte, isNotNull } from 'drizzle-orm';
+import { eq, gte, inArray, isNotNull } from 'drizzle-orm';
 import { db, schema } from '@/db';
-import { ERAS, ERA_PICKS_MAX, ERA_RESPINS, NBA_SLOTS, TEAM_RESPINS, fitMultiplier, gradeNbaRoster, type EraKey, type NbaPick, type NbaSlot } from '@/lib/game/eightytwo';
+import { ERAS, ERA_PICKS_MAX, ERA_RESPINS, NBA_SLOTS, PLAYMAKER_APG, TEAM_RESPINS, currentLine, fitMultiplier, gradeNbaRoster, type EraKey, type NbaPick, type NbaSlot } from '@/lib/game/eightytwo';
 import { createRng } from '@/lib/game/prng';
 import { getRedis } from './redis';
 import { NBA_FLOOR_KEY, NBA_FLOOR_KEY_2K, getNbaFloor } from './nba-floor';
 import { describeStats, statsFromWins } from '@/lib/game/difficulty';
 
-type Cand = { pid: number; name: string; position: string; teamId: number; season: number; value: number; apg?: number };
+type Cand = { pid: number; name: string; position: string; teamId: number; season: number; value: number; apg?: number; ppg?: number };
 /** A careful drafter using both re-spins goes 82-0 about this often (was 6 percent; owners asked for harder). */
 const TARGET_P17 = 0.03;
 const RESPIN_BELOW = 85;
@@ -18,7 +18,7 @@ const PERMS: number[][] = [];
 export function bestLineup(c: Cand[]): NbaPick[] {
   let best: number[] = PERMS[0], bv = -1;
   for (const p of PERMS) {
-    const v = p.reduce((s, ci, si) => s + c[ci].value * fitMultiplier(c[ci].position, NBA_SLOTS[si], c[ci].apg), 0);
+    const v = p.reduce((s, ci, si) => s + c[ci].value * fitMultiplier(c[ci].position, NBA_SLOTS[si], c[ci].apg, PLAYMAKER_APG, c[ci].ppg), 0);
     if (v > bv) { bv = v; best = p; }
   }
   return best.map((ci, si) => ({ ...c[ci], slot: NBA_SLOTS[si] as NbaSlot }));
@@ -86,10 +86,15 @@ function simulate(b: Awaited<ReturnType<typeof boards>>, mode: 'greedy' | 'respi
 /** Standard boards: each franchise's current roster on NBA 2K overalls, as one era. */
 async function boards2k() {
   const rows = await db.select().from(schema.nbaPlayers).where(isNotNull(schema.nbaPlayers.rating2k));
+  // The same current line the game uses (latest season with 20+ games), for the playmaker and combo-guard rules.
+  const lines = rows.length ? await db.select().from(schema.nbaPlayerSeasons).where(inArray(schema.nbaPlayerSeasons.playerId, rows.map((r) => r.id))) : [];
+  const byPlayer = new Map<number, (typeof lines)[number][]>();
+  for (const l of lines) byPlayer.set(l.playerId, [...(byPlayer.get(l.playerId) ?? []), l]);
   const byTeam = new Map<number, Cand[]>();
   for (const p of rows) {
     if (p.rating2kTeamId == null) continue;
-    byTeam.set(p.rating2kTeamId, [...(byTeam.get(p.rating2kTeamId) ?? []), { pid: p.id, name: p.fullName, position: p.rating2kPosition ?? p.position, teamId: p.rating2kTeamId, season: 0, value: p.rating2k! }]);
+    const l = currentLine(byPlayer.get(p.id) ?? []);
+    byTeam.set(p.rating2kTeamId, [...(byTeam.get(p.rating2kTeamId) ?? []), { pid: p.id, name: p.fullName, position: p.rating2kPosition ?? p.position, teamId: p.rating2kTeamId, season: 0, value: p.rating2k!, apg: l?.apg, ppg: l?.ppg }]);
   }
   const era = new Map([...byTeam].filter(([, l]) => l.length >= 5).map(([t, l]) => [t, l.sort((a, b) => b.value - a.value)]));
   return new Map<EraKey, Map<number, Cand[]>>(ERAS.map((e) => [e.key, e.key === '2020s' ? era : new Map()]));

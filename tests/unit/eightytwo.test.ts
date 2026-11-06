@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ERAS, ERA_PICKS_MAX, NBA_ROUNDS, eraOf, fitMultiplier, gradeNbaRoster, isEra, naturalSlots, seasonLabel, seasonValue, NBA_SLOTS, type NbaPick } from '@/lib/game/eightytwo';
+import { COMBO_GUARD_PPG, ERAS, ERA_PICKS_MAX, NBA_ROUNDS, PLAYMAKER_APG, currentLine, eraOf, fitForSlots, fitMultiplier, gradeNbaRoster, isEra, naturalSlots, seasonLabel, seasonValue, NBA_SLOTS, type NbaPick } from '@/lib/game/eightytwo';
 
 const jordan96 = { gp: 82, mpg: 37.7, ppg: 30.4, rpg: 6.6, apg: 4.3, spg: 2.2, bpg: 0.5, tov: 2.4, fgPct: 0.495 };
 const starter = { gp: 75, mpg: 30, ppg: 15, rpg: 5, apg: 3, spg: 1, bpg: 0.5, tov: 2, fgPct: 0.46 };
@@ -20,6 +20,26 @@ describe('82-0 values and fit', () => {
     expect(fitMultiplier('PG', 'PG')).toBe(1);
     expect(fitMultiplier('SG', 'PG')).toBeLessThan(1);
     expect(fitMultiplier('C', 'PG')).toBeLessThan(fitMultiplier('SF', 'PG'));
+  });
+  it('lets a guard who scores 20 a game play both guard spots (Standard\'s combo-guard rule)', () => {
+    expect(COMBO_GUARD_PPG).toBe(20);
+    // Luka, Shai, Curry and Brunson are listed PG by 2K.
+    expect(naturalSlots('PG', 8.2, PLAYMAKER_APG, 33.5)).toEqual(['PG', 'SG']);
+    expect(fitMultiplier('PG', 'SG', 6.4, PLAYMAKER_APG, 31.1)).toBe(1);
+    expect(fitMultiplier('SG', 'PG', 4.5, PLAYMAKER_APG, 22.7)).toBe(1);
+    // Below the line, or with no points passed (Classic), a PG still pays to play the two.
+    expect(fitMultiplier('PG', 'SG', 6, PLAYMAKER_APG, 19.9)).toBe(0.94);
+    expect(fitMultiplier('PG', 'SG', 6)).toBe(0.94);
+    // Only guards: a scoring forward does not move to the backcourt.
+    expect(naturalSlots('SF', 3, PLAYMAKER_APG, 28)).toEqual(['SF']);
+    expect(fitForSlots(['PG', 'SG'], 'SF')).toBe(0.94);
+  });
+  it('reads a player\'s current line from his latest season with 20 games, not a week-old one', () => {
+    const lines = [{ season: 2026, gp: 64, ppg: 33.5 }, { season: 2027, gp: 5, ppg: 36.2 }, { season: 2025, gp: 70, ppg: 28 }];
+    expect(currentLine(lines)?.season).toBe(2026);
+    expect(currentLine([{ season: 2027, gp: 25, ppg: 30 }, ...lines])?.season).toBe(2027);
+    expect(currentLine([{ season: 2027, gp: 3, ppg: 9 }])?.season).toBe(2027);
+    expect(currentLine([])).toBeUndefined();
   });
   it('labels ESPN seasons by both years', () => {
     expect(seasonLabel(1996)).toBe('1995-96');

@@ -40,9 +40,24 @@ export const TEAM_RESPINS = 2;
 /** A season with this many assists a game runs an offense: he plays the point with no cost (Jokic, LeBron, Magic). */
 export const PLAYMAKER_APG = 7;
 
-export function naturalSlots(position: string, apg?: number | null, playmakerApg = PLAYMAKER_APG): NbaSlot[] {
-  const own = listedSlots(position);
+/**
+ * 82-0 Standard only: a guard who scores this much a game is a combo guard and plays both guard spots at no cost
+ * (Luka Doncic, Shai Gilgeous-Alexander, Stephen Curry and Jalen Brunson are listed PG by 2K and score like a two).
+ * Classic grades every season on its own line and never passes points.
+ */
+export const COMBO_GUARD_PPG = 20;
+
+export function naturalSlots(position: string, apg?: number | null, playmakerApg = PLAYMAKER_APG, ppg?: number | null): NbaSlot[] {
+  let own = listedSlots(position);
+  if (ppg != null && ppg >= COMBO_GUARD_PPG && own.length === 1 && (own[0] === 'PG' || own[0] === 'SG')) own = ['PG', 'SG'];
   return apg != null && apg >= playmakerApg && !own.includes('PG') ? ['PG', ...own] : own;
+}
+
+/** A Standard player's current line: his latest season with this many games, so a week-old season's five games never decide it. */
+export const CURRENT_LINE_MIN_GP = 20;
+export function currentLine<T extends { season: number; gp: number }>(lines: T[]): T | undefined {
+  const sorted = [...lines].sort((a, b) => b.season - a.season);
+  return sorted.find((l) => l.gp >= CURRENT_LINE_MIN_GP) ?? sorted[0];
 }
 
 const LISTED: Record<string, NbaSlot[]> = {
@@ -61,8 +76,13 @@ function listedSlots(position: string): NbaSlot[] {
  * Playing out of position costs a share of the player's value: one spot over (a shooting guard at the point)
  * costs a little, two or more spots (a center at guard) costs a lot. This is what makes moving players matter.
  */
-export function fitMultiplier(position: string, slot: NbaSlot, apg?: number | null, playmakerApg = PLAYMAKER_APG): number {
-  const nat = naturalSlots(position, apg, playmakerApg).map((s) => NBA_SLOTS.indexOf(s));
+export function fitMultiplier(position: string, slot: NbaSlot, apg?: number | null, playmakerApg = PLAYMAKER_APG, ppg?: number | null): number {
+  return fitForSlots(naturalSlots(position, apg, playmakerApg, ppg), slot);
+}
+
+/** The cost of a slot for a player whose natural slots are already known (a draft board's `fits`). */
+export function fitForSlots(natural: NbaSlot[], slot: NbaSlot): number {
+  const nat = natural.map((s) => NBA_SLOTS.indexOf(s));
   const d = Math.min(...nat.map((i) => Math.abs(i - NBA_SLOTS.indexOf(slot))));
   return d === 0 ? 1 : d === 1 ? 0.94 : d === 2 ? 0.82 : 0.7;
 }
@@ -101,7 +121,7 @@ export function valueFromRaw(raw: number, gp: number, fullSampleGp = 40): number
   return Math.round(clamp(softTop(50 + raw * 1.02), 40, 99) * sample * 10 + 50 * (1 - sample) * 10) / 10;
 }
 
-export interface NbaPick { slot: NbaSlot; name: string; position: string; teamId: number; season: number; value: number; /** That season's assists a game: 7+ plays the point at no cost. */ apg?: number | null }
+export interface NbaPick { slot: NbaSlot; name: string; position: string; teamId: number; season: number; value: number; /** That season's assists a game: 7+ plays the point at no cost. */ apg?: number | null; /** Standard only: his current points a game, for the combo-guard rule. */ ppg?: number | null }
 export interface NbaSlotResult { slot: NbaSlot; name: string; position: string; teamId: number; season: number; value: number; fit: number; grade: number; letter: string }
 export interface NbaResult { slots: NbaSlotResult[]; teamStrength: number; /** Team strength that locks in 82-0. */ perfectAt?: number; wins: number; losses: number; narrative: string[]; score: number }
 
@@ -113,7 +133,7 @@ export function gradeNbaRoster(seed: string, picks: NbaPick[], winFloor = NBA_WI
   const slots = NBA_SLOTS.map((slot) => {
     const p = picks.find((x) => x.slot === slot);
     if (!p) throw new Error(`Missing pick for ${slot}`);
-    const fit = fitMultiplier(p.position, slot, p.apg);
+    const fit = fitMultiplier(p.position, slot, p.apg, PLAYMAKER_APG, p.ppg);
     const grade = Math.round(p.value * fit * 10) / 10;
     return { slot, name: p.name, position: p.position, teamId: p.teamId, season: p.season, value: p.value, fit, grade, letter: letterGrade(grade) };
   });

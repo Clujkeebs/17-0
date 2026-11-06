@@ -8,6 +8,11 @@ export const SITE_STARTED = '2026-09-28';
 
 export const UPDATES: Update[] = [
   {
+    date: '2026-11-06',
+    title: 'Scoring guards play both guard spots in 82-0 Standard',
+    body: 'In 82-0 Standard, a guard who scores 20 or more points a game now plays point guard and shooting guard at no cost. Luka Doncic, Shai Gilgeous-Alexander, Stephen Curry and Jalen Brunson are listed at the point by 2K and score like twos, so a lineup with two of them no longer loses value. The scoring line is read from his latest season with at least 20 games, so a hot first week does not decide it.',
+  },
+  {
     date: '2026-11-04',
     title: 'Perfect mini games count on the Overall board',
     body: 'The Perfect column on the Overall leaderboard now counts every game, not just the four draft games. A mini game counts when it ends with nothing missed: every round right, a puzzle solved with no mistakes, a ranking with every pair in order. Every Today one counts. Casual ones count up to five a day across all the mini games, on top of five a day per draft game.',
