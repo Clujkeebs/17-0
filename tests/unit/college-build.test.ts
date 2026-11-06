@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUILD_TRAITS, benchOf, bestBuild, hoopsBuildPlayer, norm } from '@/lib/minigames/college/build';
+import { nbaBuildPlayer } from '@/lib/minigames/nba/games';
 import { CFB_SKILLS, bestCfbBuild, cfbBench, cfbBuildPlayer } from '@/lib/minigames/college/games';
 import type { NbaGameData, NSeason } from '@/lib/minigames/nba/data';
 import type { CfbData, CfbLine } from '@/lib/minigames/college/data';
@@ -92,5 +93,19 @@ describe('Build a Player: college football', () => {
   });
   it('says the stats are loading when fewer than five schools have a full set', () => {
     expect(() => cfbBuildPlayer.generate('x', { lines: cfb.lines.filter((l) => l.teamId <= 3) })).toThrow(/still loading/);
+  });
+});
+
+describe('Build a Player: NBA', () => {
+  it('is the hoops build on NBA teams, called teams and not programs', () => {
+    expect(nbaBuildPlayer.slug).toBe('nba-build-a-player');
+    expect(nbaBuildPlayer.sport).toBe('nba');
+    expect(nbaBuildPlayer.howTo.join(' ')).toContain('one NBA team in one real season');
+    expect(nbaBuildPlayer.howTo.join(' ')).not.toContain('program');
+    const p = nbaBuildPlayer.generate('nba-seed', hoops);
+    expect(p.rounds).toHaveLength(5);
+    expect(() => nbaBuildPlayer.score(p, [])).toThrow('Make a pick from every team.');
+    const best = bestBuild(p.rounds, p.bench);
+    expect(nbaBuildPlayer.score(p, best.picks).perfect).toBe(true);
   });
 });

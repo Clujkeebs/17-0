@@ -25,8 +25,8 @@ for (const [slug, rounds] of GAMES) {
   });
 }
 
-for (const slug of ['cbb-build-a-player', 'wcbb-build-a-player']) {
-  test(`${slug}: a player and a skill from each of five programs`, async ({ page }) => {
+for (const slug of ['cbb-build-a-player', 'wcbb-build-a-player', 'nba-build-a-player']) {
+  test(`${slug}: a player and a skill from each of five programs or teams`, async ({ page }) => {
     await page.goto(`/games/${slug}`);
     await page.getByRole('tab', { name: 'Casual' }).click();
     const build = page.getByRole('button', { name: 'Build my player' });

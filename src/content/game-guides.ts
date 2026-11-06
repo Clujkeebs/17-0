@@ -20,7 +20,7 @@ type Family =
 
 /** Which kind of game a slug is. Order matters: the first match wins. */
 const FAMILY: [RegExp, Family][] = [
-  [/^(cfb|cbb|wcbb)-build-a-player$|^build-a-soccer-player$/, 'build'],
+  [/^(cfb|cbb|wcbb|nba)-build-a-player$|^build-a-soccer-player$/, 'build'],
   [/^top-100-/, 'top100'],
   [/^(sports-connections|sports-wordle|sports-strands|sports-crossword)$/, 'puzzle'],
   [/^soccer-(top-scorer|assist-king)$/, 'who-led'],
@@ -377,7 +377,9 @@ const TEXT: Record<Family, Builder> = {
     }
     return {
       about: [
-        `In ${n} you build one player from five real seasons. Each round shows one ${f.k === 'wcbb' ? 'women\'s' : 'men\'s'} college basketball program in one real season, with six of its rotation players. You take one player from each program and give that player's season a skill: Scoring, Rebounding, Playmaking, Steals or Blocks. Each skill is used once.`,
+        f.k === 'nba'
+          ? `In ${n} you build one player from five real NBA seasons. Each round shows one NBA team in one real season since 1984-85, with six of its rotation players. You take one player from each team and give that player's season a skill: Scoring, Rebounding, Playmaking, Steals or Blocks. Each skill is used once.`
+          : `In ${n} you build one player from five real seasons. Each round shows one ${f.k === 'wcbb' ? 'women\'s' : 'men\'s'} college basketball program in one real season, with six of its rotation players. You take one player from each program and give that player's season a skill: Scoring, Rebounding, Playmaking, Steals or Blocks. Each skill is used once.`,
         `Your player gets those numbers, each scored against a star's level, and 100 means a star at everything. The seasons come from ${f.data}. The reveal shows the best build the board allowed.`,
       ],
       tips: skillTips,

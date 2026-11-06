@@ -111,7 +111,9 @@ test('Games page has a Basketball tab with 82-0 and the NBA puzzles', async ({ p
   await expect(page).toHaveURL(/sport=nba/);
   await expect(page.getByRole('link', { name: /82-0/ }).first()).toBeVisible();
   await expect(page.locator('a.hub-card[href="/games/nba-who-led"]')).toBeVisible();
-  await expect(page.locator('main').getByRole('link', { name: /Build a Player/ })).toHaveCount(0);
+  // The football Build a Player stays on its own tab; the NBA one is here.
+  await expect(page.locator('main a[href="/games/build-a-player"]')).toHaveCount(0);
+  await expect(page.locator('a.hub-card[href="/games/nba-build-a-player"]').first()).toBeVisible();
   // WNBA has its own tab.
   await page.getByRole('navigation', { name: 'Sport' }).getByRole('link', { name: 'WNBA' }).click();
   await expect(page).toHaveURL(/sport=wnba/);

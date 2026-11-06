@@ -2,6 +2,7 @@ import { createRng, type Rng } from '@/lib/game/prng';
 import type { MiniGame } from '../types';
 import { ncard, rcard, type NbaGameData, type NRated, type NSeason } from './data';
 import { starIds, topBy } from '../prominent';
+import { hoopsBuildPlayer } from '../college/build';
 
 /**
  * Basketball mini games, built on real per-game stats (ESPN) since 1984-85. Each one reuses a football game's
@@ -266,4 +267,7 @@ export const nba2kGuess: MiniGame<{ rounds: Guess2kRound[] }, number[], NbaGameD
 };
 
 /** Registered NBA mini games, in hub order. */
-export const nbaGames = [nbaHigherLower, nbaBlindResume, nbaWhoLed, nbaWhoseTeam, nba2kHigherLower, nba2kRankEm, nba2kGuess];
+/** Build a Player on NBA seasons since 1984-85: the college hoops game, with teams instead of programs. */
+export const nbaBuildPlayer = hoopsBuildPlayer({ slug: 'nba-build-a-player', sport: 'nba', league: 'NBA', unit: 'team', name: 'Build a Player: NBA', tagline: 'Five NBA teams, five real seasons. Take scoring from one, rebounding from another, and build the best player you can.' });
+
+export const nbaGames = [nbaHigherLower, nbaBlindResume, nbaWhoLed, nbaWhoseTeam, nba2kHigherLower, nba2kRankEm, nba2kGuess, nbaBuildPlayer];

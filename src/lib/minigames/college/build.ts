@@ -3,7 +3,7 @@ import type { MiniGame } from '../types';
 import type { NbaGameData, NSeason } from '../nba/data';
 
 /**
- * Build a Player for basketball, on real per-game lines. Five programs, one real season from each (a rotation player on
+ * Build a Player for basketball, on real per-game lines (college programs or NBA teams). Five programs, one real season from each (a rotation player on
  * that team that year), and each season lends one skill: scoring, rebounding, playmaking, steals or blocks, each used once.
  * Every skill is scored against what a star puts up in that league's data (its 95th percentile), so 100 means a star at
  * everything. The reveal shows the best build the board allowed.
@@ -58,12 +58,13 @@ const lineOf = (rounds: BuildRound[], answer: BuildAnswer[]) => {
   return { line: out, from };
 };
 
-export function hoopsBuildPlayer(meta: { slug: string; name: string; tagline: string; sport: 'cbb' | 'wcbb'; league: string }): MiniGame<{ rounds: BuildRound[]; bench: Bench }, BuildAnswer[], NbaGameData> {
+export function hoopsBuildPlayer(meta: { slug: string; name: string; tagline: string; sport: 'cbb' | 'wcbb' | 'nba'; league: string; /** What a round is called: a college program or a pro team. */ unit?: 'program' | 'team' }): MiniGame<{ rounds: BuildRound[]; bench: Bench }, BuildAnswer[], NbaGameData> {
+  const unit = meta.unit ?? 'program';
   return {
     slug: meta.slug, sport: meta.sport, name: meta.name, tagline: meta.tagline,
     howTo: [
-      `Each round shows one ${meta.league} program in one real season, with six of its rotation players.`,
-      'Take one player from each program and give his season a skill: Scoring, Rebounding, Playmaking, Steals or Blocks. Use each skill once.',
+      `Each round shows one ${meta.league} ${unit} in one real season, with six of its rotation players.`,
+      `Take one player from each ${unit} and give his season a skill: Scoring, Rebounding, Playmaking, Steals or Blocks. Use each skill once.`,
       'Your player gets those numbers. Each is scored against a star\'s level, and 100 means a star at everything. The reveal shows the best build this board allowed.',
     ],
     generate(seed, data) {
@@ -93,10 +94,10 @@ export function hoopsBuildPlayer(meta: { slug: string; name: string; tagline: st
       })),
     }),
     score(p, answer) {
-      if (!Array.isArray(answer) || answer.length !== p.rounds.length) throw new Error('Make a pick from every program.');
+      if (!Array.isArray(answer) || answer.length !== p.rounds.length) throw new Error(`Make a pick from every ${unit}.`);
       const traits = new Set(answer.map((a) => a?.trait));
       if (traits.size !== BUILD_TRAITS.length || !BUILD_TRAITS.every((t) => traits.has(t.key))) throw new Error('Use each skill once.');
-      answer.forEach((a, i) => { if (!Number.isInteger(a.pick) || a.pick < 0 || a.pick >= p.rounds[i].options.length) throw new Error('Pick a player from every program.'); });
+      answer.forEach((a, i) => { if (!Number.isInteger(a.pick) || a.pick < 0 || a.pick >= p.rounds[i].options.length) throw new Error(`Pick a player from every ${unit}.`); });
       const bench = p.bench;
       const total = answer.reduce((s, a, i) => s + norm(p.rounds[i].options[a.pick], a.trait, bench), 0);
       const best = bestBuild(p.rounds, bench);

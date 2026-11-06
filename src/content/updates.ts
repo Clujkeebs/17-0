@@ -9,6 +9,11 @@ export const SITE_STARTED = '2026-09-28';
 export const UPDATES: Update[] = [
   {
     date: '2026-11-06',
+    title: 'Build a Player: NBA',
+    body: 'A new basketball game. Five NBA teams, each in one real season since 1984-85, with six of their rotation players. Take one player from each team and give his season a skill: Scoring, Rebounding, Playmaking, Steals or Blocks, each used once. Your player gets those numbers, scored against a star\'s level, and the reveal shows the best build the board allowed. Play it Today for the leaderboard or in Casual as often as you like.',
+  },
+  {
+    date: '2026-11-06',
     title: 'Scoring guards play both guard spots in 82-0 Standard',
     body: 'In 82-0 Standard, a guard who scores 20 or more points a game now plays point guard and shooting guard at no cost. Luka Doncic, Shai Gilgeous-Alexander, Stephen Curry and Jalen Brunson are listed at the point by 2K and score like twos, so a lineup with two of them no longer loses value. The scoring line is read from his latest season with at least 20 games, so a hot first week does not decide it.',
   },

@@ -4,7 +4,7 @@ import { MiniGameShell } from '../MiniGameShell';
 import { TeamTag } from '../TeamTag';
 import { PlayerFace } from '@/components/game/PlayerFace';
 
-type Meta = { slug: string; name: string; tagline: string; howTo: string[] };
+type Meta = { slug: string; name: string; tagline: string; howTo: string[]; /** What a round is called on screen. Default Program. */ unit?: 'Program' | 'Team' };
 
 /* ------------------------------------------------------------------ basketball */
 type Trait = 'scoring' | 'rebounding' | 'playmaking' | 'steals' | 'blocks';
@@ -28,11 +28,11 @@ function HSummary({ title, l }: { title: string; l: HLine }) {
   );
 }
 
-/** Build a Player for college basketball: one real season from each of five programs, each lending one skill. */
+/** Build a Player for basketball (college or NBA): one real season from each of five programs or teams, each lending one skill. */
 export function HoopsBuild({ signedIn, meta }: { signedIn: boolean; meta: Meta }) {
   return (
     <MiniGameShell<HP> {...meta} signedIn={signedIn}
-      render={({ puzzle, submit, busy }) => <HoopsPlay puzzle={puzzle} submit={submit} busy={busy} />}
+      render={({ puzzle, submit, busy }) => <HoopsPlay puzzle={puzzle} submit={submit} busy={busy} unit={meta.unit ?? 'Program'} />}
       renderResult={(r) => {
         const d = r.detail as HD;
         return <div style={{ display: 'grid', gap: 12 }}><HSummary title="Your player" l={d} /><HSummary title="Best build on this board" l={d.best} /></div>;
@@ -40,7 +40,7 @@ export function HoopsBuild({ signedIn, meta }: { signedIn: boolean; meta: Meta }
   );
 }
 
-function HoopsPlay({ puzzle, submit, busy }: { puzzle: HP; submit: (a: unknown) => Promise<unknown>; busy: boolean }) {
+function HoopsPlay({ puzzle, submit, busy, unit }: { puzzle: HP; submit: (a: unknown) => Promise<unknown>; busy: boolean; unit: 'Program' | 'Team' }) {
   const [pick, setPick] = useState<(number | null)[]>(puzzle.rounds.map(() => null));
   const [trait, setTrait] = useState<(Trait | null)[]>(puzzle.rounds.map(() => null));
   const ready = pick.every((x) => x !== null) && trait.every((x) => x !== null);
@@ -49,7 +49,7 @@ function HoopsPlay({ puzzle, submit, busy }: { puzzle: HP; submit: (a: unknown) 
     <div style={{ display: 'grid', gap: 18 }}>
       {puzzle.rounds.map((r, i) => (
         <section key={r.team.abbr + i} className="m-card sb-club" aria-label={`${r.team.name} ${r.season}: pick a player and a skill`}>
-          <p className="m-kicker" style={{ margin: '0 0 8px' }}>Program {i + 1} · <TeamTag abbr={r.team.abbr} logoUrl={r.team.logo} color={r.team.color} /> {r.team.name}, {r.season}</p>
+          <p className="m-kicker" style={{ margin: '0 0 8px' }}>{unit} {i + 1} · <TeamTag abbr={r.team.abbr} logoUrl={r.team.logo} color={r.team.color} /> {r.team.name}, {r.season}</p>
           <div role="radiogroup" aria-label={`${r.team.name} players`} style={{ display: 'grid', gap: 8 }}>
             {r.options.map((o, k) => (
               <button key={o.id} type="button" role="radio" aria-checked={pick[i] === k} className={`m-opt${pick[i] === k ? ' on' : ''}`} disabled={busy}

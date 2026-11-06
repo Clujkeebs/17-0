@@ -44,6 +44,7 @@ export const gamesFor = (sport: Sport) => GAMES.filter((g) => g.sport === sport)
  * sport tabs, so a game on a tab nobody opened still gets seen. Add a line when a game ships; old lines can stay.
  */
 export const ADDED: Record<string, string> = {
+  'nba-build-a-player': '2026-11-06',
   '44-0': '2026-10-13',
   'cfb-build-a-player': '2026-10-13', 'cbb-build-a-player': '2026-10-13', 'wcbb-build-a-player': '2026-10-13',
   'cfb-higher-lower': '2026-10-12', 'cfb-blind-resume': '2026-10-12', 'cfb-who-led': '2026-10-12', 'cfb-whose-team': '2026-10-12',
